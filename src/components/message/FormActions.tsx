@@ -50,11 +50,12 @@ export function useFormActions() {
     setUploadProgress(0);
     const interval = setInterval(() => {
       setUploadProgress((prev) => {
-        if (prev >= 100) {
+        const newValue = prev + 5;
+        if (newValue >= 100) {
           clearInterval(interval);
           return 100;
         }
-        return prev + 5;
+        return newValue;
       });
     }, 200);
   };
