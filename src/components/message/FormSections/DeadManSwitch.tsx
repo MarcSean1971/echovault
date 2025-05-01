@@ -7,11 +7,10 @@ import { SwitchToggle } from "./DeadManSwitchComponents/SwitchToggle";
 import { ConditionTypeSelector } from "./DeadManSwitchComponents/ConditionTypeSelector";
 import { TimeThresholdSelector } from "./DeadManSwitchComponents/TimeThresholdSelector";
 import { RecipientsSelector } from "./RecipientsSelector";
-import { DatePicker } from "./DeadManSwitchComponents/DatePicker";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
-import { RecurringPatternSelector } from "./DeadManSwitchComponents/RecurringPatternSelector";
+import { ScheduledDateSection } from "./DeadManSwitchComponents/ScheduledDateSection";
+import { GroupConfirmation } from "./DeadManSwitchComponents/GroupConfirmation";
+import { PanicTrigger } from "./DeadManSwitchComponents/PanicTrigger";
+import { AdvancedOptions } from "./DeadManSwitchComponents/AdvancedOptions";
 
 interface DeadManSwitchProps {
   enableDeadManSwitch: boolean;
@@ -69,7 +68,7 @@ export function DeadManSwitch({
     loadRecipients();
   }, [userId, enableDeadManSwitch]);
 
-  // Fix: Use an arrow function that returns the new array instead of a function that modifies prev
+  // Handle recipient selection
   const handleRecipientSelect = (recipientId: string) => {
     setSelectedRecipients(
       selectedRecipients.includes(recipientId)
@@ -109,52 +108,23 @@ export function DeadManSwitch({
           )}
           
           {conditionType === 'scheduled_date' && (
-            <div className="space-y-4">
-              <DatePicker
-                selectedDate={triggerDate}
-                setSelectedDate={setTriggerDate}
-                label="Select Delivery Date & Time"
-              />
-              
-              <RecurringPatternSelector
-                pattern={recurringPattern}
-                setPattern={setRecurringPattern}
-              />
-            </div>
+            <ScheduledDateSection
+              triggerDate={triggerDate}
+              setTriggerDate={setTriggerDate}
+              recurringPattern={recurringPattern}
+              setRecurringPattern={setRecurringPattern}
+            />
           )}
           
           {conditionType === 'group_confirmation' && (
-            <div className="space-y-4">
-              <div>
-                <Label className="mb-2 block">Number of confirmations required</Label>
-                <div className="flex items-center space-x-4">
-                  <Slider
-                    value={[confirmationsRequired]}
-                    onValueChange={(value) => setConfirmationsRequired(value[0])}
-                    min={1}
-                    max={10}
-                    step={1}
-                    className="flex-1"
-                  />
-                  <span className="font-medium w-8 text-center">{confirmationsRequired}</span>
-                </div>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Message will be sent when at least {confirmationsRequired} recipient(s) confirm delivery.
-                </p>
-              </div>
-            </div>
+            <GroupConfirmation
+              confirmationsRequired={confirmationsRequired}
+              setConfirmationsRequired={setConfirmationsRequired}
+            />
           )}
           
           {conditionType === 'panic_trigger' && (
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-md border border-yellow-200 dark:border-yellow-800">
-              <h4 className="text-yellow-800 dark:text-yellow-200 font-medium mb-2">
-                Manual Panic Trigger
-              </h4>
-              <p className="text-yellow-700 dark:text-yellow-300 text-sm">
-                This will create a message that you can manually trigger in an emergency situation.
-                A panic button will be available for you to send this message instantly when needed.
-              </p>
-            </div>
+            <PanicTrigger />
           )}
           
           <RecipientsSelector
@@ -164,46 +134,12 @@ export function DeadManSwitch({
             isLoading={isLoading}
           />
           
-          <div className="pt-4 border-t">
-            <h4 className="font-medium mb-3">Advanced Options</h4>
-            
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="pin-code">Recipient PIN Code (Optional)</Label>
-                <Input 
-                  id="pin-code"
-                  type="text"
-                  placeholder="Enter a PIN code to restrict access"
-                  value={pinCode}
-                  onChange={(e) => setPinCode(e.target.value)}
-                  className="mt-1"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Recipients will need to enter this PIN to access your message.
-                </p>
-              </div>
-              
-              <div>
-                <Label>Unlock Delay (Hours)</Label>
-                <div className="flex items-center space-x-4 mt-1">
-                  <Slider
-                    value={[unlockDelay]}
-                    onValueChange={(value) => setUnlockDelay(value[0])}
-                    min={0}
-                    max={72}
-                    step={1}
-                    className="flex-1"
-                  />
-                  <span className="font-medium w-8 text-center">{unlockDelay}</span>
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {unlockDelay > 0 
-                    ? `Message will be accessible ${unlockDelay} hours after triggering.`
-                    : "Message will be accessible immediately upon triggering."}
-                </p>
-              </div>
-            </div>
-          </div>
+          <AdvancedOptions
+            pinCode={pinCode}
+            setPinCode={setPinCode}
+            unlockDelay={unlockDelay}
+            setUnlockDelay={setUnlockDelay}
+          />
         </div>
       </CardContent>
     </Card>

@@ -1,232 +1,127 @@
 
-import { getAuthClient } from "@/lib/supabaseClient";
-import { MessageCondition, Recipient, TriggerType, RecurringPattern } from "@/types/message";
+import { supabase } from "@/lib/supabaseClient";
+import { MessageCondition, TriggerType } from "@/types/message";
 
-interface MessageConditionOptions {
+interface CreateConditionOptions {
   hoursThreshold?: number;
-  triggerDate?: string;
-  recurringPattern?: RecurringPattern | null;
   confirmationRequired?: number;
+  triggerDate?: string;
+  recurringPattern?: any;
+  recipients: Array<{
+    id: string;
+    name: string;
+    email: string;
+    phone?: string;
+  }>;
+  pinCode?: string;
   unlockDelayHours?: number;
   expiryHours?: number;
-  pinCode?: string;
-  recipients: Recipient[];
 }
 
 export async function createMessageCondition(
   messageId: string,
   conditionType: TriggerType,
-  options: MessageConditionOptions
+  options: CreateConditionOptions
 ): Promise<MessageCondition> {
-  try {
-    const client = await getAuthClient();
-    
-    const { data, error } = await client
-      .from('message_conditions')
-      .insert({
-        message_id: messageId,
-        condition_type: conditionType,
-        hours_threshold: options.hoursThreshold,
-        trigger_date: options.triggerDate,
-        recurring_pattern: options.recurringPattern,
-        confirmation_required: options.confirmationRequired,
-        unlock_delay_hours: options.unlockDelayHours,
-        expiry_hours: options.expiryHours,
-        pin_code: options.pinCode,
-        recipients: options.recipients,
-        active: true
-      })
-      .select();
+  const {
+    hoursThreshold = 72,
+    confirmationRequired = 0,
+    triggerDate,
+    recurringPattern,
+    recipients,
+    pinCode,
+    unlockDelayHours,
+    expiryHours,
+  } = options;
 
-    if (error) throw error;
-    
-    return data[0] as unknown as MessageCondition;
-  } catch (error) {
+  const { data, error } = await supabase
+    .from("message_conditions")
+    .insert({
+      message_id: messageId,
+      condition_type: conditionType,
+      hours_threshold: hoursThreshold,
+      trigger_date: triggerDate || null,
+      recurring_pattern: recurringPattern || null,
+      confirmation_required: confirmationRequired,
+      confirmations_received: 0,
+      unlock_delay_hours: unlockDelayHours || 0,
+      expiry_hours: expiryHours || 0,
+      pin_code: pinCode || null,
+      recipients: recipients,
+      active: true,
+    })
+    .select()
+    .single();
+
+  if (error) {
     console.error("Error creating message condition:", error);
-    throw error;
+    throw new Error(error.message || "Failed to create message condition");
   }
+
+  return data as MessageCondition;
+}
+
+export async function fetchMessageConditions(userId: string): Promise<MessageCondition[]> {
+  const { data, error } = await supabase
+    .from("message_conditions")
+    .select("*, messages!inner(*)")
+    .eq("messages.user_id", userId);
+
+  if (error) {
+    console.error("Error fetching message conditions:", error);
+    throw new Error(error.message || "Failed to fetch message conditions");
+  }
+
+  return data.map((condition: any) => {
+    // Fix field names to match our expected types
+    return {
+      id: condition.id,
+      message_id: condition.message_id,
+      condition_type: condition.condition_type,
+      hours_threshold: condition.hours_threshold,
+      trigger_date: condition.trigger_date,
+      recurring_pattern: condition.recurring_pattern,
+      confirmation_required: condition.confirmation_required,
+      confirmations_received: condition.confirmations_received,
+      unlock_delay_hours: condition.unlock_delay_hours,
+      expiry_hours: condition.expiry_hours,
+      pin_code: condition.pin_code,
+      recipients: condition.recipients,
+      active: condition.active,
+      last_checked: condition.last_checked,
+      created_at: condition.created_at,
+      updated_at: condition.updated_at
+    };
+  });
 }
 
 export async function updateMessageCondition(
-  id: string,
+  conditionId: string,
   updates: Partial<MessageCondition>
 ): Promise<MessageCondition> {
-  try {
-    const client = await getAuthClient();
-    
-    const { data, error } = await client
-      .from('message_conditions')
-      .update(updates)
-      .eq('id', id)
-      .select();
+  const { data, error } = await supabase
+    .from("message_conditions")
+    .update(updates)
+    .eq("id", conditionId)
+    .select()
+    .single();
 
-    if (error) throw error;
-    
-    return data[0] as unknown as MessageCondition;
-  } catch (error) {
+  if (error) {
     console.error("Error updating message condition:", error);
-    throw error;
+    throw new Error(error.message || "Failed to update message condition");
   }
+
+  return data as MessageCondition;
 }
 
-export async function fetchMessageConditions(messageId: string): Promise<MessageCondition[]> {
-  try {
-    const client = await getAuthClient();
-    
-    const { data, error } = await client
-      .from('message_conditions')
-      .select('*')
-      .eq('message_id', messageId);
+export async function deleteMessageCondition(conditionId: string): Promise<void> {
+  const { error } = await supabase
+    .from("message_conditions")
+    .delete()
+    .eq("id", conditionId);
 
-    if (error) throw error;
-    
-    return data as unknown as MessageCondition[];
-  } catch (error) {
-    console.error("Error fetching message conditions:", error);
-    throw error;
-  }
-}
-
-// Note: This function requires a "check_ins" table that doesn't exist yet
-// We'll need to add a SQL migration for this later, but removing the function body for now
-export async function performCheckIn(userId: string, method: 'app' | 'email' | 'sms' | 'biometric', deviceInfo?: string, location?: { latitude: number; longitude: number }): Promise<void> {
-  try {
-    const client = await getAuthClient();
-    
-    // Update the last_checked timestamp for all of the user's active conditions
-    const { error: updateError } = await client
-      .from('message_conditions')
-      .update({ last_checked: new Date().toISOString() })
-      .eq('active', true)
-      .in('condition_type', ['no_check_in', 'regular_check_in']);
-      
-    if (updateError) throw updateError;
-    
-    // We'll implement the check-in recording functionality once we have the table
-    console.log(`Check-in recorded for user ${userId} via ${method}`);
-    
-  } catch (error) {
-    console.error("Error performing check-in:", error);
-    throw error;
-  }
-}
-
-export async function getNextCheckInDeadline(userId: string): Promise<{ deadline: Date | null; messageId: string | null }> {
-  try {
-    const client = await getAuthClient();
-    
-    // Get active conditions that require check-ins
-    const { data, error } = await client
-      .from('message_conditions')
-      .select('*')
-      .eq('active', true)
-      .in('condition_type', ['no_check_in', 'regular_check_in']);
-      
-    if (error) throw error;
-    
-    if (!data || data.length === 0) {
-      return { deadline: null, messageId: null };
-    }
-    
-    // Calculate the deadline for each condition and find the earliest
-    const now = new Date();
-    let earliestDeadline: Date | null = null;
-    let earliestMessageId: string | null = null;
-    
-    data.forEach((condition) => {
-      const typedCondition = condition as unknown as MessageCondition;
-      const lastChecked = new Date(typedCondition.last_checked);
-      
-      if (typedCondition.condition_type === 'no_check_in' && typedCondition.hours_threshold) {
-        const deadline = new Date(lastChecked);
-        deadline.setHours(deadline.getHours() + typedCondition.hours_threshold);
-        
-        if (!earliestDeadline || deadline < earliestDeadline) {
-          earliestDeadline = deadline;
-          earliestMessageId = typedCondition.message_id;
-        }
-      }
-      else if (typedCondition.condition_type === 'regular_check_in' && typedCondition.hours_threshold) {
-        const deadline = new Date(lastChecked);
-        deadline.setHours(deadline.getHours() + typedCondition.hours_threshold);
-        
-        if (!earliestDeadline || deadline < earliestDeadline) {
-          earliestDeadline = deadline;
-          earliestMessageId = typedCondition.message_id;
-        }
-      }
-    });
-    
-    return { deadline: earliestDeadline, messageId: earliestMessageId };
-  } catch (error) {
-    console.error("Error getting next check-in deadline:", error);
-    throw error;
-  }
-}
-
-// Note: This function requires a "message_triggers" table that doesn't exist yet
-// We'll need to add a SQL migration for this later, but removing the function body for now
-export async function triggerManualPanic(userId: string, messageId: string): Promise<void> {
-  try {
-    const client = await getAuthClient();
-    
-    // Find any panic trigger conditions for this message
-    const { data, error } = await client
-      .from('message_conditions')
-      .select('*')
-      .eq('message_id', messageId)
-      .eq('condition_type', 'panic_trigger')
-      .eq('active', true);
-      
-    if (error) throw error;
-    
-    if (!data || data.length === 0) {
-      throw new Error("No panic trigger condition found for this message");
-    }
-    
-    // We'll implement the trigger recording functionality once we have the table
-    console.log(`Panic trigger activated for message ${messageId}`);
-    
-  } catch (error) {
-    console.error("Error triggering manual panic:", error);
-    throw error;
-  }
-}
-
-export async function getUpcomingScheduledMessages(userId: string): Promise<Array<{ messageId: string; triggerDate: Date; title: string }>> {
-  try {
-    const client = await getAuthClient();
-    
-    // Get active scheduled date conditions
-    const { data, error } = await client
-      .from('message_conditions')
-      .select('*, messages:message_id(title)')
-      .eq('condition_type', 'scheduled_date')
-      .eq('active', true);
-      
-    if (error) throw error;
-    
-    if (!data || data.length === 0) {
-      return [];
-    }
-    
-    const now = new Date();
-    const upcomingMessages = data
-      .filter(condition => {
-        if (!condition.trigger_date) return false;
-        const triggerDate = new Date(condition.trigger_date);
-        return triggerDate > now;
-      })
-      .map(condition => ({
-        messageId: condition.message_id,
-        triggerDate: new Date(condition.trigger_date as string),
-        title: (condition.messages as any)?.title || 'Untitled Message'
-      }))
-      .sort((a, b) => a.triggerDate.getTime() - b.triggerDate.getTime());
-    
-    return upcomingMessages;
-  } catch (error) {
-    console.error("Error getting upcoming scheduled messages:", error);
-    throw error;
+  if (error) {
+    console.error("Error deleting message condition:", error);
+    throw new Error(error.message || "Failed to delete message condition");
   }
 }

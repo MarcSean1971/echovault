@@ -36,6 +36,11 @@ export function CreateMessageForm({ onCancel }: CreateMessageFormProps) {
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
   const [triggerDate, setTriggerDate] = useState<Date | undefined>(undefined);
   const [recurringPattern, setRecurringPattern] = useState<RecurringPattern | null>(null);
+  // Advanced settings
+  const [pinCode, setPinCode] = useState("");
+  const [unlockDelay, setUnlockDelay] = useState(0);
+  // Group confirmation setting
+  const [confirmationsRequired, setConfirmationsRequired] = useState(3);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,6 +90,15 @@ export function CreateMessageForm({ onCancel }: CreateMessageFormProps) {
         }
         else if (conditionType === 'group_confirmation') {
           conditionOptions.confirmationRequired = confirmationsRequired;
+        }
+        
+        // Add advanced options if they are set
+        if (pinCode) {
+          conditionOptions.pinCode = pinCode;
+        }
+        
+        if (unlockDelay > 0) {
+          conditionOptions.unlockDelayHours = unlockDelay;
         }
         
         await createMessageCondition(
@@ -139,9 +153,6 @@ export function CreateMessageForm({ onCancel }: CreateMessageFormProps) {
       });
     }, 200);
   };
-
-  // Get confirmationsRequired from the parent scope
-  const confirmationsRequired = 3;
 
   return (
     <>
