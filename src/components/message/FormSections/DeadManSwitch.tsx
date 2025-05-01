@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { fetchRecipients } from "@/services/messages";
 import { Card, CardContent } from "@/components/ui/card";
-import { Recipient, TriggerType, RecurringPattern } from "@/types/message";
+import { Recipient } from "@/types/message";
 import { SwitchToggle } from "./DeadManSwitchComponents/SwitchToggle";
 import { ConditionTypeSelector } from "./DeadManSwitchComponents/ConditionTypeSelector";
 import { TimeThresholdSelector } from "./DeadManSwitchComponents/TimeThresholdSelector";
@@ -11,43 +11,34 @@ import { ScheduledDateSection } from "./DeadManSwitchComponents/ScheduledDateSec
 import { GroupConfirmation } from "./DeadManSwitchComponents/GroupConfirmation";
 import { PanicTrigger } from "./DeadManSwitchComponents/PanicTrigger";
 import { AdvancedOptions } from "./DeadManSwitchComponents/AdvancedOptions";
+import { useMessageForm } from "../MessageFormContext";
+import { useAuth } from "@/contexts/AuthContext";
 
-interface DeadManSwitchProps {
-  enableDeadManSwitch: boolean;
-  setEnableDeadManSwitch: (value: boolean) => void;
-  conditionType: TriggerType;
-  setConditionType: (value: TriggerType) => void;
-  hoursThreshold: number;
-  setHoursThreshold: (value: number) => void;
-  selectedRecipients: string[];
-  setSelectedRecipients: (value: string[]) => void;
-  userId: string | null;
-  triggerDate: Date | undefined;
-  setTriggerDate: (value: Date | undefined) => void;
-  recurringPattern: RecurringPattern | null;
-  setRecurringPattern: (value: RecurringPattern | null) => void;
-}
+export function DeadManSwitch() {
+  const { userId } = useAuth();
+  const {
+    enableDeadManSwitch,
+    setEnableDeadManSwitch,
+    conditionType,
+    setConditionType,
+    hoursThreshold,
+    setHoursThreshold,
+    selectedRecipients,
+    setSelectedRecipients,
+    triggerDate,
+    setTriggerDate,
+    recurringPattern,
+    setRecurringPattern,
+    pinCode,
+    setPinCode,
+    unlockDelay,
+    setUnlockDelay,
+    confirmationsRequired,
+    setConfirmationsRequired
+  } = useMessageForm();
 
-export function DeadManSwitch({
-  enableDeadManSwitch,
-  setEnableDeadManSwitch,
-  conditionType,
-  setConditionType,
-  hoursThreshold,
-  setHoursThreshold,
-  selectedRecipients,
-  setSelectedRecipients,
-  userId,
-  triggerDate,
-  setTriggerDate,
-  recurringPattern,
-  setRecurringPattern
-}: DeadManSwitchProps) {
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [confirmationsRequired, setConfirmationsRequired] = useState(3);
-  const [pinCode, setPinCode] = useState("");
-  const [unlockDelay, setUnlockDelay] = useState(0);
   
   // Fetch available recipients when component mounts
   useEffect(() => {

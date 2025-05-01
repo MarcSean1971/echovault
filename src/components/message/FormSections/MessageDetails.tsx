@@ -1,36 +1,26 @@
 
-import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AIEnhancer } from "@/components/AIEnhancer";
 import { MessageTypeUnavailable } from "../MessageTypeUnavailable";
-import { FileUploader, FileAttachment } from "@/components/FileUploader";
+import { FileUploader } from "@/components/FileUploader";
+import { useMessageForm } from "../MessageFormContext";
 
-interface MessageDetailsProps {
-  title: string;
-  setTitle: (title: string) => void;
-  content: string;
-  setContent: (content: string) => void;
-  messageType: string;
-  setMessageType: (messageType: string) => void;
-  files: FileAttachment[];
-  setFiles: (files: FileAttachment[]) => void;
-  isLoading: boolean;
-}
+export function MessageDetails() {
+  const {
+    title,
+    setTitle,
+    content,
+    setContent,
+    messageType,
+    setMessageType,
+    files,
+    setFiles,
+    isLoading
+  } = useMessageForm();
 
-export function MessageDetails({
-  title,
-  setTitle,
-  content,
-  setContent,
-  messageType,
-  setMessageType,
-  files,
-  setFiles,
-  isLoading,
-}: MessageDetailsProps) {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
