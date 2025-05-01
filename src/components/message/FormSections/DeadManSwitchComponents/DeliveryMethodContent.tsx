@@ -85,7 +85,6 @@ export function DeliveryMethodContent({
           <TimeThresholdSelector
             hoursThreshold={hoursThreshold}
             setHoursThreshold={setHoursThreshold}
-            label="Send Message Every"
           />
         );
         
@@ -101,14 +100,22 @@ export function DeliveryMethodContent({
         
       case 'group_confirmation':
         return (
-          <GroupConfirmation />
+          <GroupConfirmation
+            confirmationsRequired={3}
+            setConfirmationsRequired={() => {}}
+          />
         );
         
       case 'panic_trigger':
         return (
           <PanicTrigger
-            panicTriggerConfig={panicTriggerConfig}
-            setPanicTriggerConfig={setPanicTriggerConfig}
+            config={panicTriggerConfig || {
+              enabled: true,
+              methods: ['app'],
+              cancel_window_seconds: 10,
+              bypass_logging: false
+            }}
+            setConfig={setPanicTriggerConfig}
           />
         );
         
@@ -119,6 +126,8 @@ export function DeliveryMethodContent({
             setHoursThreshold={setHoursThreshold}
             recurringPattern={recurringPattern}
             setRecurringPattern={setRecurringPattern}
+            reminderHours={reminderHours}
+            setReminderHours={setReminderHours}
           />
         );
         
@@ -127,8 +136,12 @@ export function DeliveryMethodContent({
           <InactivityToDate
             hoursThreshold={hoursThreshold}
             setHoursThreshold={setHoursThreshold}
+            minutesThreshold={minutesThreshold}
+            setMinutesThreshold={setMinutesThreshold}
             triggerDate={triggerDate}
             setTriggerDate={setTriggerDate}
+            recurringPattern={recurringPattern}
+            setRecurringPattern={setRecurringPattern}
           />
         );
         

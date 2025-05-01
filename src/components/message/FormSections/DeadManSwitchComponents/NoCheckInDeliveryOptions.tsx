@@ -2,17 +2,26 @@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Calendar, Clock, Repeat } from "lucide-react";
+import { RecurringPattern } from "@/types/message";
 
 type DeliveryOption = "once" | "recurring" | "specific_date";
 
 interface NoCheckInDeliveryOptionsProps {
   deliveryOption: DeliveryOption;
   setDeliveryOption: (option: DeliveryOption) => void;
+  recurringPattern: RecurringPattern | null;
+  setRecurringPattern: (pattern: RecurringPattern | null) => void;
+  triggerDate: Date | null;
+  setTriggerDate: (date: Date | null) => void;
 }
 
 export function NoCheckInDeliveryOptions({
   deliveryOption,
-  setDeliveryOption
+  setDeliveryOption,
+  recurringPattern,
+  setRecurringPattern,
+  triggerDate,
+  setTriggerDate
 }: NoCheckInDeliveryOptionsProps) {
   return (
     <div className="space-y-4 mt-4">
