@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Message } from "@/types/message";
 import { FileAttachment } from "@/components/FileUploader";

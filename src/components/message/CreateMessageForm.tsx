@@ -178,7 +178,7 @@ export function CreateMessageForm({ onCancel }: CreateMessageFormProps) {
 
       {/* Upload Progress Dialog */}
       <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
-        <DialogContent className="sm:max-w-md" hideClose>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Uploading Files</DialogTitle>
           </DialogHeader>
