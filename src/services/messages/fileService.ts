@@ -1,46 +1,68 @@
 
-import { supabase } from "@/integrations/supabase/client";
+import { getAuthClient } from "@/lib/supabaseClient";
 import { FileAttachment } from "@/components/FileUploader";
 
-// Function to upload files to Supabase storage
-export async function uploadAttachments(
-  userId: string, 
-  attachments: FileAttachment[]
-): Promise<Array<{path: string, name: string, size: number, type: string}>> {
-  const uploadPromises = attachments.map(async (attachment) => {
-    const file = attachment.file;
-    const filePath = `${userId}/${Date.now()}_${file.name}`;
+// Create a storage client for files
+export async function uploadAttachments(userId: string, files: FileAttachment[]) {
+  try {
+    const client = await getAuthClient();
     
-    const { data, error } = await supabase.storage
-      .from('message_attachments')
-      .upload(filePath, file);
+    // Process each file
+    const uploadPromises = files.map(async (file) => {
+      // Create a unique file path
+      const filePath = `${userId}/${Date.now()}-${file.name}`;
       
+      // Upload to storage
+      const { error } = await client.storage
+        .from('attachments')
+        .upload(filePath, file.file);
+      
+      if (error) throw error;
+      
+      // Return the file info to be stored in the message
+      return {
+        path: filePath,
+        name: file.name,
+        size: file.size,
+        type: file.type
+      };
+    });
+    
+    return await Promise.all(uploadPromises);
+  } catch (error) {
+    console.error('Error uploading attachments:', error);
+    throw error;
+  }
+}
+
+export async function deleteAttachment(path: string) {
+  try {
+    const client = await getAuthClient();
+    
+    const { error } = await client.storage
+      .from('attachments')
+      .remove([path]);
+    
     if (error) throw error;
-    
-    return {
-      path: data.path,
-      name: file.name,
-      size: file.size,
-      type: file.type
-    };
-  });
-  
-  // Upload all files in parallel
-  return Promise.all(uploadPromises);
+    return true;
+  } catch (error) {
+    console.error('Error deleting attachment:', error);
+    throw error;
+  }
 }
 
-// Function to get a signed URL for a file
-export async function getFileUrl(path: string): Promise<string> {
-  const { data } = await supabase.storage
-    .from('message_attachments')
-    .createSignedUrl(path, 3600); // 1 hour expiry
+export async function getAttachmentUrl(path: string) {
+  try {
+    const client = await getAuthClient();
     
-  return data?.signedUrl || '';
-}
-
-// Function to delete an attachment from storage
-export async function deleteAttachment(path: string): Promise<void> {
-  await supabase.storage
-    .from('message_attachments')
-    .remove([path]);
+    const { data, error } = await client.storage
+      .from('attachments')
+      .createSignedUrl(path, 3600); // URL expires in 1 hour
+    
+    if (error) throw error;
+    return data.signedUrl;
+  } catch (error) {
+    console.error('Error creating signed URL:', error);
+    throw error;
+  }
 }

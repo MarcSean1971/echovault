@@ -1,12 +1,14 @@
 
-import { supabase } from "@/integrations/supabase/client";
+import { getAuthClient } from "@/lib/supabaseClient";
 import { Message } from "@/types/message";
 import { FileAttachment } from "@/components/FileUploader";
 import { uploadAttachments } from "./fileService";
 
 export async function fetchMessages(messageType: string | null = null) {
   try {
-    let query = supabase
+    const client = await getAuthClient();
+    
+    let query = client
       .from('messages')
       .select('*')
       .order('created_at', { ascending: false });
@@ -37,7 +39,9 @@ export async function fetchMessages(messageType: string | null = null) {
 
 export async function deleteMessage(id: string) {
   try {
-    const { error } = await supabase
+    const client = await getAuthClient();
+    
+    const { error } = await client
       .from('messages')
       .delete()
       .eq('id', id);
@@ -65,7 +69,9 @@ export async function createMessage(
       : [];
 
     // Then create the message with attachment references
-    const { data, error } = await supabase
+    const client = await getAuthClient();
+    
+    const { data, error } = await client
       .from('messages')
       .insert({
         user_id: userId,

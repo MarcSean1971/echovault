@@ -1,10 +1,13 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { Recipient } from "@/types/message";
+import { getAuthClient } from "@/lib/supabaseClient";
 
 export async function fetchRecipients(): Promise<Recipient[]> {
   try {
-    const { data, error } = await supabase
+    const client = await getAuthClient();
+    
+    const { data, error } = await client
       .from('recipients')
       .select('*')
       .order('name', { ascending: true });
@@ -25,7 +28,9 @@ export async function createRecipient(
   phone?: string
 ): Promise<Recipient> {
   try {
-    const { data, error } = await supabase
+    const client = await getAuthClient();
+    
+    const { data, error } = await client
       .from('recipients')
       .insert({
         user_id: userId,
@@ -46,7 +51,9 @@ export async function createRecipient(
 
 export async function deleteRecipient(id: string): Promise<boolean> {
   try {
-    const { error } = await supabase
+    const client = await getAuthClient();
+    
+    const { error } = await client
       .from('recipients')
       .delete()
       .eq('id', id);

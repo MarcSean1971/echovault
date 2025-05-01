@@ -5,6 +5,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "./contexts/AuthContext";
+import { useEffect } from "react";
 
 import AppLayout from "./components/layout/AppLayout";
 import ProtectedLayout from "./components/layout/ProtectedLayout";
@@ -24,39 +25,46 @@ import UploadFile from "./pages/UploadFile";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <BrowserRouter>
-        <AuthProvider>
-          <Toaster />
-          <Sonner />
-          <Routes>
-            {/* Public routes */}
-            <Route path="/" element={<AppLayout />}>
-              <Route index element={<Home />} />
-              <Route path="login" element={<Login />} />
-              <Route path="register" element={<Register />} />
-            </Route>
-            
-            {/* Protected routes */}
-            <Route path="/" element={<ProtectedLayout />}>
-              <Route path="dashboard" element={<Dashboard />} />
-              <Route path="create-message" element={<CreateMessage />} />
-              <Route path="messages" element={<Messages />} />
-              <Route path="message/:id" element={<MessageDetail />} />
-              <Route path="message/:id/edit" element={<MessageEdit />} />
-              <Route path="recipients" element={<Recipients />} />
-              <Route path="upload-file" element={<UploadFile />} />
-            </Route>
-            
-            {/* Catch-all route */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  // Clear any stale auth state on app load
+  useEffect(() => {
+    // This is a good place to handle any initialization logic
+  }, []);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <BrowserRouter>
+          <AuthProvider>
+            <Toaster />
+            <Sonner />
+            <Routes>
+              {/* Public routes */}
+              <Route path="/" element={<AppLayout />}>
+                <Route index element={<Home />} />
+                <Route path="login" element={<Login />} />
+                <Route path="register" element={<Register />} />
+              </Route>
+              
+              {/* Protected routes */}
+              <Route path="/" element={<ProtectedLayout />}>
+                <Route path="dashboard" element={<Dashboard />} />
+                <Route path="create-message" element={<CreateMessage />} />
+                <Route path="messages" element={<Messages />} />
+                <Route path="message/:id" element={<MessageDetail />} />
+                <Route path="message/:id/edit" element={<MessageEdit />} />
+                <Route path="recipients" element={<Recipients />} />
+                <Route path="upload-file" element={<UploadFile />} />
+              </Route>
+              
+              {/* Catch-all route */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
