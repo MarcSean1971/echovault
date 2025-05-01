@@ -1,31 +1,34 @@
 
+import { Button } from "@/components/ui/button";
+import { CustomTimeInput } from "./CustomTimeInput";
 import { ConditionTypeSelector } from "./ConditionTypeSelector";
 import { TimeThresholdSelector } from "./TimeThresholdSelector";
-import { ScheduledDateSection } from "./ScheduledDateSection";
-import { PanicTrigger } from "./PanicTrigger";
-import { NoCheckInDeliveryOptions } from "./NoCheckInDeliveryOptions";
-import { RecurringPatternSelector } from "./RecurringPatternSelector";
 import { ReminderSettings } from "./ReminderSettings";
+import { NoCheckInDeliveryOptions } from "./NoCheckInDeliveryOptions";
+import { ScheduledDateSection } from "./ScheduledDateSection";
+import { GroupConfirmation } from "./GroupConfirmation";
 import { InactivityToDate } from "./InactivityToDate";
-import { TriggerType } from "@/types/message";
+import { InactivityToRecurring } from "./InactivityToRecurring";
+import { PanicTrigger } from "./PanicTrigger";
+import { TriggerType, DeliveryOption, RecurringPattern, PanicTriggerConfig } from "@/types/message";
 
 interface DeliveryMethodContentProps {
   conditionType: TriggerType;
-  setConditionType: (value: TriggerType) => void;
+  setConditionType: (type: TriggerType) => void;
   hoursThreshold: number;
-  setHoursThreshold: (value: number) => void;
+  setHoursThreshold: (hours: number) => void;
   minutesThreshold: number;
-  setMinutesThreshold: (value: number) => void;
-  deliveryOption: string;
-  setDeliveryOption: (value: any) => void;
-  recurringPattern: any;
-  setRecurringPattern: (value: any) => void;
-  triggerDate: Date | undefined;
-  setTriggerDate: (value: Date | undefined) => void;
-  panicTriggerConfig: any;
-  setPanicTriggerConfig: (value: any) => void;
+  setMinutesThreshold: (minutes: number) => void;
+  deliveryOption: DeliveryOption;
+  setDeliveryOption: (option: DeliveryOption) => void;
+  recurringPattern: RecurringPattern | null;
+  setRecurringPattern: (pattern: RecurringPattern | null) => void;
+  triggerDate: Date | null;
+  setTriggerDate: (date: Date | null) => void;
+  panicTriggerConfig: PanicTriggerConfig | undefined;
+  setPanicTriggerConfig: (config: PanicTriggerConfig) => void;
   reminderHours: number[];
-  setReminderHours: (value: number[]) => void;
+  setReminderHours: (hours: number[]) => void;
   setActiveTab: (tab: string) => void;
 }
 
@@ -48,96 +51,108 @@ export function DeliveryMethodContent({
   setReminderHours,
   setActiveTab
 }: DeliveryMethodContentProps) {
+  
+  // Render different options based on selected condition type
+  const renderConditionOptions = () => {
+    switch (conditionType) {
+      case 'no_check_in':
+        return (
+          <div className="space-y-6">
+            <CustomTimeInput
+              hours={hoursThreshold}
+              setHours={setHoursThreshold}
+              minutes={minutesThreshold}
+              setMinutes={setMinutesThreshold}
+              label="Time without check-in before message is sent"
+            />
+            <NoCheckInDeliveryOptions
+              deliveryOption={deliveryOption}
+              setDeliveryOption={setDeliveryOption}
+              recurringPattern={recurringPattern}
+              setRecurringPattern={setRecurringPattern}
+              triggerDate={triggerDate}
+              setTriggerDate={setTriggerDate}
+            />
+            <ReminderSettings
+              reminderHours={reminderHours}
+              setReminderHours={setReminderHours}
+            />
+          </div>
+        );
+        
+      case 'regular_check_in':
+        return (
+          <TimeThresholdSelector
+            hoursThreshold={hoursThreshold}
+            setHoursThreshold={setHoursThreshold}
+            label="Send Message Every"
+          />
+        );
+        
+      case 'scheduled_date':
+        return (
+          <ScheduledDateSection
+            triggerDate={triggerDate}
+            setTriggerDate={setTriggerDate}
+            recurringPattern={recurringPattern}
+            setRecurringPattern={setRecurringPattern}
+          />
+        );
+        
+      case 'group_confirmation':
+        return (
+          <GroupConfirmation />
+        );
+        
+      case 'panic_trigger':
+        return (
+          <PanicTrigger
+            panicTriggerConfig={panicTriggerConfig}
+            setPanicTriggerConfig={setPanicTriggerConfig}
+          />
+        );
+        
+      case 'inactivity_to_recurring':
+        return (
+          <InactivityToRecurring
+            hoursThreshold={hoursThreshold}
+            setHoursThreshold={setHoursThreshold}
+            recurringPattern={recurringPattern}
+            setRecurringPattern={setRecurringPattern}
+          />
+        );
+        
+      case 'inactivity_to_date':
+        return (
+          <InactivityToDate
+            hoursThreshold={hoursThreshold}
+            setHoursThreshold={setHoursThreshold}
+            triggerDate={triggerDate}
+            setTriggerDate={setTriggerDate}
+          />
+        );
+        
+      default:
+        return null;
+    }
+  };
+  
   return (
     <div className="space-y-6">
       <ConditionTypeSelector
         conditionType={conditionType}
         setConditionType={setConditionType}
       />
-
-      {conditionType === 'no_check_in' && (
-        <>
-          <TimeThresholdSelector
-            conditionType={conditionType}
-            hoursThreshold={hoursThreshold}
-            setHoursThreshold={setHoursThreshold}
-            minutesThreshold={minutesThreshold}
-            setMinutesThreshold={setMinutesThreshold}
-          />
-          
-          <NoCheckInDeliveryOptions
-            deliveryOption={deliveryOption}
-            setDeliveryOption={setDeliveryOption}
-          />
-          
-          {deliveryOption === "recurring" && (
-            <div className="mt-4 pl-4 border-l-2 border-muted">
-              <RecurringPatternSelector
-                pattern={recurringPattern}
-                setPattern={setRecurringPattern}
-                forceEnabled={true}
-              />
-            </div>
-          )}
-          
-          {deliveryOption === "specific_date" && (
-            <div className="mt-4 pl-4 border-l-2 border-muted">
-              <ScheduledDateSection
-                triggerDate={triggerDate}
-                setTriggerDate={setTriggerDate}
-                recurringPattern={recurringPattern}
-                setRecurringPattern={setRecurringPattern}
-              />
-            </div>
-          )}
-          
-          <ReminderSettings
-            reminderHours={reminderHours}
-            setReminderHours={setReminderHours}
-            maxHours={hoursThreshold + (minutesThreshold / 60)}
-          />
-        </>
-      )}
       
-      {conditionType === 'scheduled_date' && (
-        <ScheduledDateSection
-          triggerDate={triggerDate}
-          setTriggerDate={setTriggerDate}
-          recurringPattern={recurringPattern}
-          setRecurringPattern={setRecurringPattern}
-        />
-      )}
-      
-      {conditionType === 'inactivity_to_date' && (
-        <InactivityToDate
-          hoursThreshold={hoursThreshold}
-          setHoursThreshold={setHoursThreshold}
-          minutesThreshold={minutesThreshold}
-          setMinutesThreshold={setMinutesThreshold}
-          triggerDate={triggerDate}
-          setTriggerDate={setTriggerDate}
-          recurringPattern={recurringPattern}
-          setRecurringPattern={setRecurringPattern}
-          reminderHours={reminderHours}
-          setReminderHours={setReminderHours}
-        />
-      )}
-      
-      {conditionType === 'panic_trigger' && (
-        <PanicTrigger 
-          config={panicTriggerConfig}
-          setConfig={setPanicTriggerConfig}
-        />
-      )}
+      {renderConditionOptions()}
       
       <div className="pt-4 flex justify-end">
-        <button 
+        <Button 
           type="button"
           onClick={() => setActiveTab("recipients")}
-          className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
         >
-          Next: Choose Recipients
-        </button>
+          Next: Set Recipients
+        </Button>
       </div>
     </div>
   );
