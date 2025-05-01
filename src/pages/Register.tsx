@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,6 +7,12 @@ import { useState } from "react";
 import { toast } from "@/components/ui/use-toast";
 import { EyeIcon, EyeOffIcon, KeyIcon, LockIcon, MailIcon, UserIcon } from "lucide-react";
 import { useSignUp, useAuth } from "@clerk/clerk-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
+// Check if we're in development mode (using the clerk test publishable key)
+const isDevelopment = import.meta.env.DEV || 
+  (window.location.hostname === 'localhost') || 
+  document.querySelector('script[src*="clerk.accounts.dev"]') !== null;
 
 export default function Register() {
   const [firstName, setFirstName] = useState("");
@@ -18,6 +23,7 @@ export default function Register() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showVerificationInfo, setShowVerificationInfo] = useState(false);
   const { isSignedIn } = useAuth();
   const navigate = useNavigate();
   const { signUp, setActive } = useSignUp();
@@ -76,9 +82,12 @@ export default function Register() {
         }
       } else {
         // Email verification may be needed
+        setShowVerificationInfo(true);
         toast({
           title: "Verification required",
-          description: "Please check your email to complete registration"
+          description: isDevelopment 
+            ? "In development mode, verification emails aren't sent. Check your Clerk dashboard." 
+            : "Please check your email to complete registration"
         });
       }
     } catch (error: any) {
@@ -111,6 +120,25 @@ export default function Register() {
               Create your EchoVault account to get started
             </CardDescription>
           </CardHeader>
+          
+          {showVerificationInfo && isDevelopment && (
+            <div className="px-6">
+              <Alert className="mb-4">
+                <AlertTitle>Development Mode</AlertTitle>
+                <AlertDescription>
+                  In development mode, verification emails are not actually sent to your inbox. 
+                  Instead, you can view them in your <a 
+                    href="https://dashboard.clerk.com/" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-primary font-medium hover:underline"
+                  >
+                    Clerk dashboard
+                  </a> under Users &rarr; select your user &rarr; Emails tab.
+                </AlertDescription>
+              </Alert>
+            </div>
+          )}
           
           <form onSubmit={handleRegister}>
             <CardContent className="space-y-4">
@@ -233,6 +261,12 @@ export default function Register() {
               >
                 {isLoading ? "Creating account..." : "Create account"}
               </Button>
+              
+              {isDevelopment && (
+                <p className="text-sm text-muted-foreground text-center px-2">
+                  In development mode, verification emails appear in the Clerk dashboard, not your inbox
+                </p>
+              )}
               
               <div className="text-center text-sm">
                 Already have an account?{" "}
