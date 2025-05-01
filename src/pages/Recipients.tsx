@@ -14,7 +14,7 @@ import { setSupabaseToken } from "@/lib/supabaseClient";
 
 export default function Recipients() {
   const navigate = useNavigate();
-  const { userId, getToken, isSignedIn } = useAuth();
+  const { userId, isSignedIn } = useAuth();
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   
   const [newName, setNewName] = useState("");
@@ -24,20 +24,14 @@ export default function Recipients() {
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
-  // Update token whenever auth state changes
+  // Update authentication status when auth state changes
   useEffect(() => {
-    const setupAuthToken = async () => {
-      if (isSignedIn) {
-        const token = await getToken();
-        setSupabaseToken(token);
-        console.log("Auth token updated:", token ? "Token received" : "No token");
-      } else {
-        setSupabaseToken(null);
-      }
-    };
-    
-    setupAuthToken();
-  }, [isSignedIn, getToken]);
+    if (isSignedIn) {
+      console.log("User is signed in, userId:", userId);
+    } else {
+      console.log("User is not signed in");
+    }
+  }, [isSignedIn, userId]);
 
   // Fetch recipients on component mount
   useEffect(() => {
@@ -46,10 +40,6 @@ export default function Recipients() {
     const loadRecipients = async () => {
       setIsInitialLoading(true);
       try {
-        // Ensure we have a fresh token
-        const token = await getToken();
-        setSupabaseToken(token);
-        
         const data = await fetchRecipients();
         setRecipients(data);
       } catch (error: any) {
@@ -65,7 +55,7 @@ export default function Recipients() {
     };
     
     loadRecipients();
-  }, [userId, getToken]);
+  }, [userId]);
 
   const handleAddRecipient = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,10 +71,6 @@ export default function Recipients() {
     setIsLoading(true);
 
     try {
-      // Ensure we have a fresh token before creating
-      const token = await getToken();
-      setSupabaseToken(token);
-      
       console.log("Creating recipient for user:", userId);
       const newRecipient = await createRecipient(
         userId,
@@ -118,10 +104,6 @@ export default function Recipients() {
 
   const handleRemoveRecipient = async (id: string) => {
     try {
-      // Ensure we have a fresh token before deleting
-      const token = await getToken();
-      setSupabaseToken(token);
-      
       await deleteRecipient(id);
       setRecipients(recipients.filter(recipient => recipient.id !== id));
       

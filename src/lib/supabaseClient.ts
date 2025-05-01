@@ -11,3 +11,10 @@ export const hasAuthToken = async () => {
   const { data } = await supabase.auth.getSession();
   return !!data.session;
 };
+
+// Function to set auth token (compatibility wrapper)
+export const setSupabaseToken = (token: string | null) => {
+  console.log("Supabase token management is now handled automatically by the Supabase client");
+  // No need to manually set tokens with Supabase client
+  return;
+};
