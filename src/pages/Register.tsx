@@ -43,9 +43,8 @@ export default function Register() {
     setIsLoading(true);
 
     try {
+      // First create the user with email and password only
       const result = await signUp.create({
-        firstName,
-        lastName,
         emailAddress: email,
         password,
       });
@@ -53,11 +52,28 @@ export default function Register() {
       if (result.status === "complete") {
         // Sign up was successful
         await setActive({ session: result.createdSessionId });
-        toast({
-          title: "Registration successful",
-          description: "Welcome to EchoVault"
-        });
-        navigate("/dashboard");
+        
+        // Update the user with first name and last name
+        try {
+          await result.update({
+            firstName,
+            lastName,
+          });
+          
+          toast({
+            title: "Registration successful",
+            description: "Welcome to EchoVault"
+          });
+          navigate("/dashboard");
+        } catch (updateError: any) {
+          console.error("Error updating user profile:", updateError);
+          // Still proceed since the account was created successfully
+          toast({
+            title: "Registration successful",
+            description: "Welcome to EchoVault (profile details couldn't be saved)"
+          });
+          navigate("/dashboard");
+        }
       } else {
         // Email verification may be needed
         toast({
