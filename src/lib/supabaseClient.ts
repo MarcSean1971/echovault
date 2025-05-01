@@ -1,5 +1,6 @@
 
 import { supabase, getSupabaseWithAuth } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Global token storage (temporary solution)
 let currentToken: string | null = null;
@@ -11,5 +12,8 @@ export const setSupabaseToken = (token: string | null) => {
 
 // Function to get an authenticated client using the stored token
 export const getAuthClient = async () => {
-  return getSupabaseWithAuth(currentToken || undefined);
+  if (!currentToken) {
+    console.warn("No authentication token available, using anonymous client");
+  }
+  return getSupabaseWithAuth(currentToken || "");
 };

@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -11,10 +10,11 @@ import { Plus, Trash, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { fetchRecipients, createRecipient, deleteRecipient } from "@/services/messages/recipientService";
 import { Recipient } from "@/types/message";
+import { setSupabaseToken } from "@/lib/supabaseClient";
 
 export default function Recipients() {
   const navigate = useNavigate();
-  const { userId } = useAuth();
+  const { userId, getToken, isSignedIn } = useAuth();
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   
   const [newName, setNewName] = useState("");
@@ -24,6 +24,21 @@ export default function Recipients() {
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
+  // Update token whenever auth state changes
+  useEffect(() => {
+    const setupAuthToken = async () => {
+      if (isSignedIn) {
+        const token = await getToken();
+        setSupabaseToken(token);
+        console.log("Auth token updated:", token ? "Token received" : "No token");
+      } else {
+        setSupabaseToken(null);
+      }
+    };
+    
+    setupAuthToken();
+  }, [isSignedIn, getToken]);
+
   // Fetch recipients on component mount
   useEffect(() => {
     if (!userId) return;
@@ -31,12 +46,17 @@ export default function Recipients() {
     const loadRecipients = async () => {
       setIsInitialLoading(true);
       try {
+        // Ensure we have a fresh token
+        const token = await getToken();
+        setSupabaseToken(token);
+        
         const data = await fetchRecipients();
         setRecipients(data);
-      } catch (error) {
+      } catch (error: any) {
+        console.error("Failed to load recipients:", error);
         toast({
           title: "Error",
-          description: "Failed to load your recipients",
+          description: error.message || "Failed to load your recipients",
           variant: "destructive"
         });
       } finally {
@@ -45,15 +65,27 @@ export default function Recipients() {
     };
     
     loadRecipients();
-  }, [userId]);
+  }, [userId, getToken]);
 
   const handleAddRecipient = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userId) return;
+    if (!userId) {
+      toast({
+        title: "Authentication error",
+        description: "You must be signed in to add recipients",
+        variant: "destructive"
+      });
+      return;
+    }
     
     setIsLoading(true);
 
     try {
+      // Ensure we have a fresh token before creating
+      const token = await getToken();
+      setSupabaseToken(token);
+      
+      console.log("Creating recipient for user:", userId);
       const newRecipient = await createRecipient(
         userId,
         newName,
@@ -61,7 +93,7 @@ export default function Recipients() {
         newPhone || undefined
       );
       
-      setRecipients([...recipients, newRecipient]);
+      setRecipients(prevRecipients => [...prevRecipients, newRecipient]);
       
       toast({
         title: "Recipient added",
@@ -72,10 +104,11 @@ export default function Recipients() {
       setNewEmail("");
       setNewPhone("");
       setIsDialogOpen(false);
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Error adding recipient:", error);
       toast({
         title: "Error",
-        description: "There was a problem adding the recipient",
+        description: error.message || "There was a problem adding the recipient",
         variant: "destructive"
       });
     } finally {
@@ -85,6 +118,10 @@ export default function Recipients() {
 
   const handleRemoveRecipient = async (id: string) => {
     try {
+      // Ensure we have a fresh token before deleting
+      const token = await getToken();
+      setSupabaseToken(token);
+      
       await deleteRecipient(id);
       setRecipients(recipients.filter(recipient => recipient.id !== id));
       
@@ -92,10 +129,11 @@ export default function Recipients() {
         title: "Recipient removed",
         description: "The recipient has been removed from your list"
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Error removing recipient:", error);
       toast({
         title: "Error",
-        description: "There was a problem removing the recipient",
+        description: error.message || "There was a problem removing the recipient",
         variant: "destructive"
       });
     }

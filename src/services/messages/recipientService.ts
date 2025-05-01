@@ -2,6 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { Recipient } from "@/types/message";
 import { getAuthClient } from "@/lib/supabaseClient";
+import { toast } from "@/components/ui/use-toast";
 
 export async function fetchRecipients(): Promise<Recipient[]> {
   try {
@@ -12,7 +13,10 @@ export async function fetchRecipients(): Promise<Recipient[]> {
       .select('*')
       .order('name', { ascending: true });
       
-    if (error) throw error;
+    if (error) {
+      console.error("Supabase error fetching recipients:", error);
+      throw error;
+    }
     
     return data as Recipient[];
   } catch (error) {
@@ -28,6 +32,7 @@ export async function createRecipient(
   phone?: string
 ): Promise<Recipient> {
   try {
+    console.log("Creating recipient with userId:", userId);
     const client = await getAuthClient();
     
     const { data, error } = await client
@@ -40,10 +45,17 @@ export async function createRecipient(
       })
       .select();
 
-    if (error) throw error;
+    if (error) {
+      console.error("Supabase error creating recipient:", error);
+      throw error;
+    }
+    
+    if (!data || data.length === 0) {
+      throw new Error("No data returned after creating recipient");
+    }
     
     return data[0] as Recipient;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating recipient:", error);
     throw error;
   }
@@ -58,7 +70,10 @@ export async function deleteRecipient(id: string): Promise<boolean> {
       .delete()
       .eq('id', id);
       
-    if (error) throw error;
+    if (error) {
+      console.error("Supabase error deleting recipient:", error);
+      throw error;
+    }
     
     return true;
   } catch (error) {

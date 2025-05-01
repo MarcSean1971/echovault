@@ -2,6 +2,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth as useClerkAuth, useUser } from '@clerk/clerk-react';
 import { setSupabaseToken } from '@/lib/supabaseClient';
+import { toast } from '@/components/ui/use-toast';
 
 interface AuthContextType {
   isLoaded: boolean;
@@ -29,6 +30,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return token;
     } catch (error) {
       console.error("Error getting token:", error);
+      toast({
+        title: "Authentication Error",
+        description: "Failed to get authentication token. Please try signing in again.",
+        variant: "destructive"
+      });
       return null;
     }
   };
