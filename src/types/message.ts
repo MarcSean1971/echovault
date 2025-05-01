@@ -22,18 +22,22 @@ export type TriggerType =
   | 'group_confirmation'
   | 'panic_trigger';
 
+export type RecurringPatternType = 'daily' | 'weekly' | 'monthly' | 'yearly';
+
+export interface RecurringPattern {
+  type: RecurringPatternType;
+  interval: number;
+  day?: number;
+  month?: number;
+}
+
 export type MessageCondition = {
   id: string;
   message_id: string;
   condition_type: TriggerType;
   hours_threshold?: number;
   trigger_date?: string;
-  recurring_pattern?: {
-    type: 'daily' | 'weekly' | 'monthly' | 'yearly';
-    interval: number;
-    day?: number;
-    month?: number;
-  } | null;
+  recurring_pattern?: RecurringPattern | null;
   confirmation_required?: number;
   confirmations_received?: number;
   unlock_delay_hours?: number;
@@ -69,4 +73,3 @@ export type CheckIn = {
     longitude: number;
   } | null;
 };
-

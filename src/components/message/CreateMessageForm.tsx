@@ -12,7 +12,7 @@ import { FileAttachment } from "@/components/FileUploader";
 import { MessageDetails } from "./FormSections/MessageDetails";
 import { DeadManSwitch } from "./FormSections/DeadManSwitch";
 import { UploadProgressDialog } from "./FormSections/UploadProgressDialog";
-import { TriggerType } from "@/types/message";
+import { TriggerType, RecurringPattern } from "@/types/message";
 
 interface CreateMessageFormProps {
   onCancel: () => void;
@@ -34,6 +34,8 @@ export function CreateMessageForm({ onCancel }: CreateMessageFormProps) {
   const [conditionType, setConditionType] = useState<TriggerType>('no_check_in');
   const [hoursThreshold, setHoursThreshold] = useState(72); // Default 72 hours (3 days)
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
+  const [triggerDate, setTriggerDate] = useState<Date | undefined>(undefined);
+  const [recurringPattern, setRecurringPattern] = useState<RecurringPattern | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,13 +70,27 @@ export function CreateMessageForm({ onCancel }: CreateMessageFormProps) {
       if (enableDeadManSwitch && selectedRecipients.length > 0) {
         const selectedRecipientObjects = await fetchSelectedRecipients(selectedRecipients);
         
+        // Prepare condition options based on the selected type
+        const conditionOptions: any = {
+          recipients: selectedRecipientObjects
+        };
+        
+        // Set specific options based on condition type
+        if (conditionType === 'no_check_in' || conditionType === 'regular_check_in') {
+          conditionOptions.hoursThreshold = hoursThreshold;
+        } 
+        else if (conditionType === 'scheduled_date' && triggerDate) {
+          conditionOptions.triggerDate = triggerDate.toISOString();
+          conditionOptions.recurringPattern = recurringPattern;
+        }
+        else if (conditionType === 'group_confirmation') {
+          conditionOptions.confirmationRequired = confirmationsRequired;
+        }
+        
         await createMessageCondition(
           newMessage.id,
           conditionType,
-          {
-            hoursThreshold,
-            recipients: selectedRecipientObjects
-          }
+          conditionOptions
         );
       }
       
@@ -124,6 +140,9 @@ export function CreateMessageForm({ onCancel }: CreateMessageFormProps) {
     }, 200);
   };
 
+  // Get confirmationsRequired from the parent scope
+  const confirmationsRequired = 3;
+
   return (
     <>
       <Card>
@@ -154,6 +173,10 @@ export function CreateMessageForm({ onCancel }: CreateMessageFormProps) {
               selectedRecipients={selectedRecipients}
               setSelectedRecipients={setSelectedRecipients}
               userId={userId}
+              triggerDate={triggerDate}
+              setTriggerDate={setTriggerDate}
+              recurringPattern={recurringPattern}
+              setRecurringPattern={setRecurringPattern}
             />
           </CardContent>
           <CardFooter className="flex justify-between">

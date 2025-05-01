@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { fetchRecipients } from "@/services/messages";
 import { Card, CardContent } from "@/components/ui/card";
-import { Recipient, TriggerType } from "@/types/message";
+import { Recipient, TriggerType, RecurringPattern } from "@/types/message";
 import { SwitchToggle } from "./DeadManSwitchComponents/SwitchToggle";
 import { ConditionTypeSelector } from "./DeadManSwitchComponents/ConditionTypeSelector";
 import { TimeThresholdSelector } from "./DeadManSwitchComponents/TimeThresholdSelector";
@@ -11,12 +11,7 @@ import { DatePicker } from "./DeadManSwitchComponents/DatePicker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { RecurringPatternSelector } from "./DeadManSwitchComponents/RecurringPatternSelector";
 
 interface DeadManSwitchProps {
   enableDeadManSwitch: boolean;
@@ -28,6 +23,10 @@ interface DeadManSwitchProps {
   selectedRecipients: string[];
   setSelectedRecipients: (value: string[]) => void;
   userId: string | null;
+  triggerDate: Date | undefined;
+  setTriggerDate: (value: Date | undefined) => void;
+  recurringPattern: RecurringPattern | null;
+  setRecurringPattern: (value: RecurringPattern | null) => void;
 }
 
 export function DeadManSwitch({
@@ -39,11 +38,14 @@ export function DeadManSwitch({
   setHoursThreshold,
   selectedRecipients,
   setSelectedRecipients,
-  userId
+  userId,
+  triggerDate,
+  setTriggerDate,
+  recurringPattern,
+  setRecurringPattern
 }: DeadManSwitchProps) {
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [triggerDate, setTriggerDate] = useState<Date | undefined>(undefined);
   const [confirmationsRequired, setConfirmationsRequired] = useState(3);
   const [pinCode, setPinCode] = useState("");
   const [unlockDelay, setUnlockDelay] = useState(0);
@@ -107,41 +109,17 @@ export function DeadManSwitch({
           )}
           
           {conditionType === 'scheduled_date' && (
-            <div className="space-y-2">
-              <Label htmlFor="trigger-date">Select Delivery Date & Time</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    id="trigger-date"
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !triggerDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {triggerDate ? format(triggerDate, "PPP") : "Select date"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={triggerDate}
-                    onSelect={setTriggerDate}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+            <div className="space-y-4">
+              <DatePicker
+                selectedDate={triggerDate}
+                setSelectedDate={setTriggerDate}
+                label="Select Delivery Date & Time"
+              />
               
-              <div className="pt-2">
-                <Label htmlFor="trigger-time">Time</Label>
-                <Input
-                  id="trigger-time"
-                  type="time"
-                  className="mt-1"
-                  // Assuming we'll handle time and date separately
-                />
-              </div>
+              <RecurringPatternSelector
+                pattern={recurringPattern}
+                setPattern={setRecurringPattern}
+              />
             </div>
           )}
           

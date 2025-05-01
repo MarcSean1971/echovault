@@ -1,16 +1,11 @@
 
 import { getAuthClient } from "@/lib/supabaseClient";
-import { MessageCondition, Recipient, TriggerType } from "@/types/message";
+import { MessageCondition, Recipient, TriggerType, RecurringPattern } from "@/types/message";
 
 interface MessageConditionOptions {
   hoursThreshold?: number;
   triggerDate?: string;
-  recurringPattern?: {
-    type: 'daily' | 'weekly' | 'monthly' | 'yearly';
-    interval: number;
-    day?: number;
-    month?: number;
-  } | null;
+  recurringPattern?: RecurringPattern | null;
   confirmationRequired?: number;
   unlockDelayHours?: number;
   expiryHours?: number;
@@ -194,6 +189,44 @@ export async function triggerManualPanic(userId: string, messageId: string): Pro
     
   } catch (error) {
     console.error("Error triggering manual panic:", error);
+    throw error;
+  }
+}
+
+export async function getUpcomingScheduledMessages(userId: string): Promise<Array<{ messageId: string; triggerDate: Date; title: string }>> {
+  try {
+    const client = await getAuthClient();
+    
+    // Get active scheduled date conditions
+    const { data, error } = await client
+      .from('message_conditions')
+      .select('*, messages:message_id(title)')
+      .eq('condition_type', 'scheduled_date')
+      .eq('active', true);
+      
+    if (error) throw error;
+    
+    if (!data || data.length === 0) {
+      return [];
+    }
+    
+    const now = new Date();
+    const upcomingMessages = data
+      .filter(condition => {
+        if (!condition.trigger_date) return false;
+        const triggerDate = new Date(condition.trigger_date);
+        return triggerDate > now;
+      })
+      .map(condition => ({
+        messageId: condition.message_id,
+        triggerDate: new Date(condition.trigger_date as string),
+        title: (condition.messages as any)?.title || 'Untitled Message'
+      }))
+      .sort((a, b) => a.triggerDate.getTime() - b.triggerDate.getTime());
+    
+    return upcomingMessages;
+  } catch (error) {
+    console.error("Error getting upcoming scheduled messages:", error);
     throw error;
   }
 }
