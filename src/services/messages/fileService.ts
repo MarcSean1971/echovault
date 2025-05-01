@@ -12,9 +12,9 @@ export async function uploadAttachments(userId: string, files: FileAttachment[])
       // Create a unique file path
       const filePath = `${userId}/${Date.now()}-${file.name}`;
       
-      // Upload to storage
+      // Upload to storage - use message_attachments bucket (fix for "bucket not found" error)
       const { error } = await client.storage
-        .from('attachments')
+        .from('message_attachments')
         .upload(filePath, file.file);
       
       if (error) throw error;
@@ -40,7 +40,7 @@ export async function deleteAttachment(path: string) {
     const client = await getAuthClient();
     
     const { error } = await client.storage
-      .from('attachments')
+      .from('message_attachments')
       .remove([path]);
     
     if (error) throw error;
@@ -56,7 +56,7 @@ export async function getAttachmentUrl(path: string) {
     const client = await getAuthClient();
     
     const { data, error } = await client.storage
-      .from('attachments')
+      .from('message_attachments')
       .createSignedUrl(path, 3600); // URL expires in 1 hour
     
     if (error) throw error;

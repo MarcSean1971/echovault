@@ -1,8 +1,14 @@
 
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Bell, Settings } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  NavigationMenu,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  navigationMenuTriggerStyle,
+} from "@/components/ui/navigation-menu";
 
 interface DesktopNavProps {
   userImage: string | null;
@@ -12,36 +18,46 @@ interface DesktopNavProps {
 export function DesktopNav({ userImage, initials }: DesktopNavProps) {
   return (
     <>
-      <nav className="hidden md:flex space-x-6">
-        <Link to="/dashboard" className="text-foreground/80 hover:text-primary transition-colors">
-          Dashboard
-        </Link>
-        <Link to="/create-message" className="text-foreground/80 hover:text-primary transition-colors">
-          Messages
-        </Link>
-        <Link to="/recipients" className="text-foreground/80 hover:text-primary transition-colors">
-          Recipients
-        </Link>
-      </nav>
+      <NavigationMenu className="hidden md:flex">
+        <NavigationMenuList>
+          <NavigationMenuItem>
+            <Link to="/dashboard" legacyBehavior passHref>
+              <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                Dashboard
+              </NavigationMenuLink>
+            </Link>
+          </NavigationMenuItem>
+          <NavigationMenuItem>
+            <Link to="/create-message" legacyBehavior passHref>
+              <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                Messages
+              </NavigationMenuLink>
+            </Link>
+          </NavigationMenuItem>
+          <NavigationMenuItem>
+            <Link to="/recipients" legacyBehavior passHref>
+              <NavigationMenuLink className={navigationMenuTriggerStyle()}>
+                Recipients
+              </NavigationMenuLink>
+            </Link>
+          </NavigationMenuItem>
+        </NavigationMenuList>
+      </NavigationMenu>
       
-      <div className="hidden md:flex items-center space-x-3">
-        <Button variant="ghost" size="icon" className="rounded-full" aria-label="Notifications">
-          <Bell className="h-5 w-5" />
-        </Button>
-        
-        <Button variant="outline" size="icon" className="rounded-full" aria-label="Settings">
-          <Settings className="h-5 w-5" />
-        </Button>
-        
-        <Button asChild className="bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity">
+      <div className="hidden md:flex items-center space-x-4">
+        <Button 
+          asChild 
+          className="bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity"
+          size="sm"
+        >
           <Link to="/check-in">Check In</Link>
         </Button>
         
-        <Avatar className="h-9 w-9 transition-transform hover:scale-105">
+        <Avatar className="h-9 w-9 transition-transform hover:scale-105 cursor-pointer border-2 border-transparent hover:border-primary/20">
           {userImage ? (
             <AvatarImage src={userImage} alt="User profile" />
           ) : (
-            <AvatarFallback className="bg-primary text-white">{initials}</AvatarFallback>
+            <AvatarFallback className="bg-primary/10 text-primary">{initials}</AvatarFallback>
           )}
         </Avatar>
       </div>

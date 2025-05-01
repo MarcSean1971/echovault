@@ -6,8 +6,8 @@ import { Menu } from "lucide-react";
 
 export function GuestNav() {
   return (
-    <div className="flex items-center space-x-2">
-      <Button variant="outline" asChild className="hidden sm:flex">
+    <div className="flex items-center space-x-3">
+      <Button variant="ghost" asChild className="hidden sm:flex">
         <Link to="/login">Sign in</Link>
       </Button>
       <Button asChild className="bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity">
@@ -17,17 +17,20 @@ export function GuestNav() {
       {/* Mobile menu for non-logged in users */}
       <Sheet>
         <SheetTrigger asChild>
-          <Button variant="ghost" size="icon" className="sm:hidden">
-            <Menu className="h-6 w-6" />
+          <Button variant="ghost" size="icon" className="sm:hidden rounded-full">
+            <Menu className="h-5 w-5" />
           </Button>
         </SheetTrigger>
-        <SheetContent side="right">
-          <nav className="grid gap-6 py-6">
-            <div className="flex items-center justify-center mb-4">
-              <h2 className="text-xl font-bold gradient-text">EchoVault</h2>
+        <SheetContent side="right" className="backdrop-blur-md bg-background/90 border-l">
+          <nav className="flex flex-col h-full py-6">
+            <div className="flex items-center justify-center mb-8">
+              <span className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                EchoVault
+              </span>
             </div>
-            <div className="grid gap-3">
-              <Button asChild className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity">
+            
+            <div className="mt-auto space-y-3">
+              <Button className="w-full" asChild>
                 <Link to="/register">Get Started</Link>
               </Button>
               <Button variant="outline" asChild className="w-full">
