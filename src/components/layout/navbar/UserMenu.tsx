@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Settings } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useClerk } from "@clerk/clerk-react";
+import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/components/ui/use-toast";
 import { MessageSquare, Users2 } from "lucide-react";
 
@@ -14,16 +14,12 @@ interface UserMenuProps {
 }
 
 export function UserMenu({ userImage, initials }: UserMenuProps) {
-  const { signOut } = useClerk();
+  const { signOut } = useAuth();
   const navigate = useNavigate();
 
   const handleSignOut = async () => {
     try {
       await signOut();
-      toast({
-        title: "Signed out successfully",
-        description: "You have been signed out of your account"
-      });
       navigate("/login");
     } catch (error) {
       console.error("Sign out error:", error);

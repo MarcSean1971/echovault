@@ -3,7 +3,7 @@ import { Outlet, useNavigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import Navbar from "./Navbar";
 import { useEffect, useState } from "react";
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface AppLayoutProps {
   isLoggedIn?: boolean;
@@ -19,7 +19,7 @@ export default function AppLayout({ isLoggedIn = false }: AppLayoutProps) {
     setMounted(true);
   }, []);
 
-  // Use the auth check from Clerk if available
+  // Use the auth check from context
   const authStatus = isLoaded ? isSignedIn : isLoggedIn;
 
   if (!mounted) return null;

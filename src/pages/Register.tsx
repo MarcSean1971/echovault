@@ -1,18 +1,31 @@
 
-import { useAuth } from "@clerk/clerk-react";
 import { useNavigate } from "react-router-dom";
 import { Logo } from "@/components/layout/navbar/Logo";
 import { RegistrationForm } from "@/components/auth/RegistrationForm";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useAuth } from "@/contexts/AuthContext";
+import { useEffect, useState } from "react";
 
 export default function Register() {
-  const { isSignedIn } = useAuth();
+  const { isSignedIn, isLoaded } = useAuth();
   const navigate = useNavigate();
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   // If already signed in, redirect to dashboard
-  if (isSignedIn) {
-    navigate("/dashboard");
-    return null;
+  useEffect(() => {
+    if (isLoaded && isSignedIn) {
+      setIsRedirecting(true);
+      navigate("/dashboard");
+    }
+  }, [isLoaded, isSignedIn, navigate]);
+
+  // If we're still checking auth or redirecting, show a loading state
+  if (!isLoaded || isRedirecting) {
+    return (
+      <div className="container flex items-center justify-center min-h-screen">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    );
   }
 
   return (

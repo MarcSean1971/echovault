@@ -1,5 +1,5 @@
 
-import { useAuth, useUser } from "@clerk/clerk-react";
+import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
 import { Logo } from "./navbar/Logo";
 import { DesktopNav } from "./navbar/DesktopNav";
@@ -11,25 +11,22 @@ interface NavbarProps {
 }
 
 export default function Navbar({ isLoggedIn = false }: NavbarProps) {
-  const { isSignedIn, isLoaded } = useAuth();
-  const { user } = useUser();
-  const [initials, setInitials] = useState("U");
+  const { isSignedIn, isLoaded, profile, getInitials } = useAuth();
   const [userImage, setUserImage] = useState<string | null>(null);
+  const [initials, setInitials] = useState("U");
 
   // Determine user initials and image when user data is loaded
   useEffect(() => {
-    if (user) {
-      // Get first letter of first and last name if available
-      const firstInitial = user.firstName ? user.firstName[0] : "";
-      const lastInitial = user.lastName ? user.lastName[0] : "";
-      setInitials((firstInitial + lastInitial).toUpperCase() || "U");
-      
-      // Set user image if available
-      setUserImage(user.imageUrl);
+    if (profile) {
+      setInitials(getInitials());
+      setUserImage(profile.avatar_url);
+    } else {
+      setInitials("U");
+      setUserImage(null);
     }
-  }, [user]);
+  }, [profile, getInitials]);
 
-  // Use the auth check from Clerk if available, otherwise fall back to prop
+  // Use the auth check from context if available, otherwise fall back to prop
   const authenticated = isLoaded ? isSignedIn : isLoggedIn;
 
   return (

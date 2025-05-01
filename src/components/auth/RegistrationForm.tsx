@@ -1,7 +1,6 @@
 
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useSignUp } from "@clerk/clerk-react";
 import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,11 +10,12 @@ import { CardContent, CardFooter } from "@/components/ui/card";
 import { PasswordInput } from "./PasswordInput";
 import { VerificationAlert } from "./VerificationAlert";
 import { UserIcon, MailIcon, LockIcon, KeyIcon } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { AuthError } from "@supabase/supabase-js";
 
-// Check if we're in development mode (using the clerk test publishable key)
+// Check if we're in development mode
 const isDevelopment = import.meta.env.DEV || 
-  (window.location.hostname === 'localhost') || 
-  document.querySelector('script[src*="clerk.accounts.dev"]') !== null;
+  (window.location.hostname === 'localhost');
 
 export function RegistrationForm() {
   const [firstName, setFirstName] = useState("");
@@ -27,7 +27,6 @@ export function RegistrationForm() {
   const [showVerificationInfo, setShowVerificationInfo] = useState(false);
   
   const navigate = useNavigate();
-  const { signUp, setActive } = useSignUp();
   
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,52 +43,44 @@ export function RegistrationForm() {
     setIsLoading(true);
 
     try {
-      // First create the user with email and password only
-      const result = await signUp.create({
-        emailAddress: email,
+      // Sign up with Supabase, including metadata for the profile
+      const { data, error } = await supabase.auth.signUp({
+        email,
         password,
+        options: {
+          data: {
+            first_name: firstName,
+            last_name: lastName
+          },
+          emailRedirectTo: window.location.origin + '/login'
+        }
       });
 
-      if (result.status === "complete") {
-        // Sign up was successful
-        await setActive({ session: result.createdSessionId });
-        
-        // Update the user with first name and last name
-        try {
-          await result.update({
-            firstName,
-            lastName,
-          });
-          
-          toast({
-            title: "Registration successful",
-            description: "Welcome to EchoVault"
-          });
-          navigate("/dashboard");
-        } catch (updateError: any) {
-          console.error("Error updating user profile:", updateError);
-          // Still proceed since the account was created successfully
-          toast({
-            title: "Registration successful",
-            description: "Welcome to EchoVault (profile details couldn't be saved)"
-          });
-          navigate("/dashboard");
-        }
-      } else {
-        // Email verification may be needed
+      if (error) throw error;
+
+      if (data.user && !data.user.email_confirmed_at) {
+        // Email verification needed
         setShowVerificationInfo(true);
         toast({
           title: "Verification required",
           description: isDevelopment 
-            ? "In development mode, verification emails aren't sent. Check your Clerk dashboard." 
+            ? "In development mode, check the URL in the email Supabase sent. Check the Auth users page in Supabase dashboard." 
             : "Please check your email to complete registration"
         });
+      } else {
+        // User is signed in
+        toast({
+          title: "Registration successful",
+          description: "Welcome to EchoVault"
+        });
+        navigate("/dashboard");
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Registration error:", error);
+      const authError = error as AuthError;
       toast({
         title: "Registration failed",
-        description: error.errors?.[0]?.message || "Please check your information and try again",
+        description: authError.message || "Please check your information and try again",
         variant: "destructive"
       });
     } finally {
@@ -184,7 +175,7 @@ export function RegistrationForm() {
         
         {isDevelopment && (
           <p className="text-sm text-muted-foreground text-center px-2">
-            In development mode, verification emails appear in the Clerk dashboard, not your inbox
+            In development mode, check the Supabase dashboard for verification emails
           </p>
         )}
         

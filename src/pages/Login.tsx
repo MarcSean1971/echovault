@@ -7,10 +7,12 @@ import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { toast } from "@/components/ui/use-toast";
 import { MailIcon, LockIcon } from "lucide-react";
-import { useSignIn, useAuth } from "@clerk/clerk-react";
 import { Logo } from "@/components/layout/navbar/Logo";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { VerificationAlert } from "@/components/auth/VerificationAlert";
+import { supabase } from "@/integrations/supabase/client";
+import { AuthError } from "@supabase/supabase-js";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -19,7 +21,6 @@ export default function Login() {
   const [isRedirecting, setIsRedirecting] = useState(false);
   const { isSignedIn, isLoaded } = useAuth();
   const navigate = useNavigate();
-  const { signIn, setActive } = useSignIn();
   const isDevelopment = import.meta.env.DEV;
 
   // If already signed in, redirect to dashboard
@@ -44,29 +45,24 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      const result = await signIn.create({
-        identifier: email,
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
         password,
       });
 
-      if (result.status === "complete") {
-        await setActive({ session: result.createdSessionId });
-        toast({
-          title: "Login successful",
-          description: "Welcome back to EchoVault"
-        });
-        navigate("/dashboard");
-      } else {
-        toast({
-          title: "Additional verification needed",
-          description: "Please complete the verification step"
-        });
-      }
-    } catch (error: any) {
+      if (error) throw error;
+
+      toast({
+        title: "Login successful",
+        description: "Welcome back to EchoVault"
+      });
+      navigate("/dashboard");
+    } catch (error) {
       console.error("Login error:", error);
+      const authError = error as AuthError;
       toast({
         title: "Login failed",
-        description: error.errors?.[0]?.message || "Please check your credentials and try again",
+        description: authError.message || "Please check your credentials and try again",
         variant: "destructive"
       });
     } finally {
