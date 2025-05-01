@@ -8,9 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState } from "react";
 import { toast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function CreateMessage() {
   const navigate = useNavigate();
+  const { userId } = useAuth();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [messageType, setMessageType] = useState("text");
@@ -18,11 +21,30 @@ export default function CreateMessage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!userId) {
+      toast({
+        title: "Authentication error",
+        description: "You must be signed in to create a message",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      // Will be implemented with Supabase
-      console.log("Create message:", { title, content, messageType });
+      // Save message to Supabase
+      const { error } = await supabase
+        .from('messages')
+        .insert({
+          user_id: userId,
+          title,
+          content,
+          message_type: messageType
+        });
+
+      if (error) throw error;
       
       toast({
         title: "Message created",
@@ -30,10 +52,11 @@ export default function CreateMessage() {
       });
       
       navigate("/dashboard");
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Error creating message:", error);
       toast({
         title: "Error",
-        description: "There was a problem creating your message",
+        description: error.message || "There was a problem creating your message",
         variant: "destructive"
       });
     } finally {

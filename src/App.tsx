@@ -16,6 +16,9 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import CreateMessage from "./pages/CreateMessage";
+import Messages from "./pages/Messages";
+import MessageDetail from "./pages/MessageDetail";
+import MessageEdit from "./pages/MessageEdit";
 import Recipients from "./pages/Recipients";
 import UploadFile from "./pages/UploadFile";
 
@@ -40,6 +43,9 @@ const App = () => (
             <Route path="/" element={<ProtectedLayout />}>
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="create-message" element={<CreateMessage />} />
+              <Route path="messages" element={<Messages />} />
+              <Route path="message/:id" element={<MessageDetail />} />
+              <Route path="message/:id/edit" element={<MessageEdit />} />
               <Route path="recipients" element={<Recipients />} />
               <Route path="upload-file" element={<UploadFile />} />
             </Route>
