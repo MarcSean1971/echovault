@@ -1,9 +1,10 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "@/components/ui/use-toast";
 import { MailIcon, LockIcon } from "lucide-react";
 import { useSignIn, useAuth } from "@clerk/clerk-react";
@@ -15,15 +16,27 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const { isSignedIn } = useAuth();
+  const [isRedirecting, setIsRedirecting] = useState(false);
+  const { isSignedIn, isLoaded } = useAuth();
   const navigate = useNavigate();
   const { signIn, setActive } = useSignIn();
   const isDevelopment = import.meta.env.DEV;
 
   // If already signed in, redirect to dashboard
-  if (isSignedIn) {
-    navigate("/dashboard");
-    return null;
+  useEffect(() => {
+    if (isLoaded && isSignedIn) {
+      setIsRedirecting(true);
+      navigate("/dashboard");
+    }
+  }, [isLoaded, isSignedIn, navigate]);
+
+  // If we're still checking auth or redirecting, show a loading state
+  if (!isLoaded || isRedirecting) {
+    return (
+      <div className="container flex items-center justify-center min-h-screen">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    );
   }
 
   const handleLogin = async (e: React.FormEvent) => {

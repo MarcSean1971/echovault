@@ -23,11 +23,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const getToken = async () => {
     if (!clerk.isSignedIn) return null;
     try {
-      // Get a JWT that is configured for use with Supabase
-      const token = await clerk.getToken({
-        template: "supabase" // This requires Clerk JWT Templates setup - default template will be used if not configured
-      });
-      return token;
+      // Try to get a JWT with the supabase template first
+      try {
+        const token = await clerk.getToken({
+          template: "supabase" // First try with supabase template
+        });
+        return token;
+      } catch (templateError) {
+        console.warn("Supabase template not found, falling back to default token");
+        // Fall back to default token if supabase template doesn't exist
+        const token = await clerk.getToken();
+        return token;
+      }
     } catch (error) {
       console.error("Error getting token:", error);
       toast({
@@ -46,7 +53,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Update the Supabase token when auth state changes
       if (clerk.isSignedIn) {
         getToken().then(token => {
-          setSupabaseToken(token);
+          if (token) {
+            console.log("Setting Supabase token");
+            setSupabaseToken(token);
+          } else {
+            console.warn("No token available from Clerk");
+            setSupabaseToken(null);
+          }
         });
       } else {
         setSupabaseToken(null);

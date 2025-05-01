@@ -35,6 +35,10 @@ export async function createRecipient(
     console.log("Creating recipient with userId:", userId);
     const client = await getAuthClient();
     
+    // First check if we're authenticated
+    const session = await client.auth.getSession();
+    console.log("Current session status:", session ? "Active" : "No session");
+    
     const { data, error } = await client
       .from('recipients')
       .insert({
@@ -47,6 +51,13 @@ export async function createRecipient(
 
     if (error) {
       console.error("Supabase error creating recipient:", error);
+      if (error.message.includes('auth') || error.message.includes('permission')) {
+        toast({
+          title: "Authentication Error",
+          description: "Your session may have expired. Please sign in again.",
+          variant: "destructive"
+        });
+      }
       throw error;
     }
     

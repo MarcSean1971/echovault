@@ -22,12 +22,30 @@ import MessageDetail from "./pages/MessageDetail";
 import MessageEdit from "./pages/MessageEdit";
 import Recipients from "./pages/Recipients";
 
-const queryClient = new QueryClient();
+// Create a new query client with error handling
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+      onError: (error) => {
+        console.error("Query error:", error);
+      }
+    },
+    mutations: {
+      retry: 1,
+      onError: (error) => {
+        console.error("Mutation error:", error);
+      }
+    }
+  }
+});
 
 const App = () => {
   // Clear any stale auth state on app load
   useEffect(() => {
     // This is a good place to handle any initialization logic
+    console.log("App initialized");
   }, []);
 
   return (

@@ -2,7 +2,7 @@
 import { Navigate, Outlet } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import Navbar from "./Navbar";
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
 
 export default function ProtectedLayout() {
@@ -11,7 +11,11 @@ export default function ProtectedLayout() {
 
   useEffect(() => {
     if (isLoaded) {
-      setIsChecking(false);
+      // Give a small delay to ensure auth state is properly checked
+      const timer = setTimeout(() => {
+        setIsChecking(false);
+      }, 500);
+      return () => clearTimeout(timer);
     }
   }, [isLoaded]);
 
