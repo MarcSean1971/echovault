@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,8 +20,8 @@ export default function CheckIn() {
     
     const loadNextDeadline = async () => {
       try {
-        const { deadline } = await getNextCheckInDeadline(userId);
-        setNextDeadline(deadline);
+        const result = await getNextCheckInDeadline(userId);
+        setNextDeadline(result.deadline);
       } catch (error) {
         console.error("Error fetching next deadline:", error);
         toast({
@@ -66,8 +65,8 @@ export default function CheckIn() {
       });
       
       // Reload the next deadline
-      const { deadline } = await getNextCheckInDeadline(userId);
-      setNextDeadline(deadline);
+      const result = await getNextCheckInDeadline(userId);
+      setNextDeadline(result.deadline);
     } catch (error) {
       console.error("Error checking in:", error);
       toast({

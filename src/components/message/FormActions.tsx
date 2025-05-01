@@ -1,4 +1,3 @@
-
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
@@ -44,7 +43,7 @@ export function useFormActions() {
   const simulateUploadProgress = () => {
     setUploadProgress(0);
     const interval = setInterval(() => {
-      setUploadProgress(prev => {
+      setUploadProgress((prev: number) => {
         if (prev >= 100) {
           clearInterval(interval);
           return 100;

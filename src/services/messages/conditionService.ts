@@ -135,12 +135,51 @@ export async function deleteMessageCondition(conditionId: string): Promise<void>
 }
 
 // Add these missing functions to fix the CheckIn.tsx errors
-export async function performCheckIn() {
+export async function performCheckIn(userId: string, method: string) {
   // Implementation will be added later
-  return { success: true };
+  const client = await getAuthClient();
+  
+  const { data, error } = await client
+    .from("check_ins")
+    .insert({
+      user_id: userId,
+      method: method,
+      timestamp: new Date().toISOString()
+    })
+    .select();
+
+  if (error) {
+    console.error("Error performing check-in:", error);
+    throw new Error(error.message || "Failed to perform check-in");
+  }
+
+  return { success: true, data };
 }
 
-export async function getNextCheckInDeadline() {
+export async function getNextCheckInDeadline(userId: string) {
   // Implementation will be added later
-  return new Date();
+  const client = await getAuthClient();
+  
+  // Get the user's latest check-in time and conditions that require regular check-ins
+  const { data, error } = await client
+    .from("message_conditions")
+    .select("*, messages!inner(*)")
+    .eq("messages.user_id", userId)
+    .in("condition_type", ["no_check_in", "regular_check_in"])
+    .eq("active", true)
+    .order("hours_threshold", { ascending: true });
+
+  if (error) {
+    console.error("Error getting next check-in deadline:", error);
+    throw new Error(error.message || "Failed to get next check-in deadline");
+  }
+
+  // For now, return a simple placeholder deadline that's 24 hours from now
+  const deadline = new Date();
+  deadline.setHours(deadline.getHours() + 24);
+  
+  return {
+    deadline: deadline,
+    conditions: data || []
+  };
 }
