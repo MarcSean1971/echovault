@@ -9,7 +9,6 @@ import { toast } from "@/components/ui/use-toast";
 import { MailIcon, LockIcon } from "lucide-react";
 import { Logo } from "@/components/layout/navbar/Logo";
 import { PasswordInput } from "@/components/auth/PasswordInput";
-import { VerificationAlert } from "@/components/auth/VerificationAlert";
 import { supabase } from "@/integrations/supabase/client";
 import { AuthError } from "@supabase/supabase-js";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,7 +20,6 @@ export default function Login() {
   const [isRedirecting, setIsRedirecting] = useState(false);
   const { isSignedIn, isLoaded } = useAuth();
   const navigate = useNavigate();
-  const isDevelopment = import.meta.env.DEV;
 
   // If already signed in, redirect to dashboard
   useEffect(() => {
@@ -145,8 +143,6 @@ export default function Login() {
               </div>
             </CardFooter>
           </form>
-          
-          <VerificationAlert isDevelopment={isDevelopment} />
         </Card>
       </div>
     </div>

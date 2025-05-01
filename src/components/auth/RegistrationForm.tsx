@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import { Link } from "react-router-dom";
 import { CardContent, CardFooter } from "@/components/ui/card";
 import { PasswordInput } from "./PasswordInput";
-import { VerificationAlert } from "./VerificationAlert";
 import { UserIcon, MailIcon, LockIcon, KeyIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AuthError } from "@supabase/supabase-js";
@@ -24,7 +23,6 @@ export function RegistrationForm() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [showVerificationInfo, setShowVerificationInfo] = useState(false);
   
   const navigate = useNavigate();
   
@@ -60,11 +58,10 @@ export function RegistrationForm() {
 
       if (data.user && !data.user.email_confirmed_at) {
         // Email verification needed
-        setShowVerificationInfo(true);
         toast({
           title: "Verification required",
           description: isDevelopment 
-            ? "In development mode, check the URL in the email Supabase sent. Check the Auth users page in Supabase dashboard." 
+            ? "In development mode, check the Supabase dashboard for verification emails." 
             : "Please check your email to complete registration"
         });
       } else {
@@ -90,8 +87,6 @@ export function RegistrationForm() {
 
   return (
     <form onSubmit={handleRegister}>
-      {showVerificationInfo && <VerificationAlert isDevelopment={isDevelopment} />}
-      
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
