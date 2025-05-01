@@ -168,12 +168,6 @@ export function RegistrationForm() {
           {isLoading ? "Creating account..." : "Create account"}
         </Button>
         
-        {isDevelopment && (
-          <p className="text-sm text-muted-foreground text-center px-2">
-            In development mode, check the Supabase dashboard for verification emails
-          </p>
-        )}
-        
         <div className="text-center text-sm">
           Already have an account?{" "}
           <Link to="/login" className="font-medium text-primary hover:underline">
