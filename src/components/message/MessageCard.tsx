@@ -8,7 +8,7 @@ import {
   CardContent,
   CardFooter,
 } from "@/components/ui/card";
-import { MessageSquare, File, Video, Trash2, Edit, ArrowRight } from "lucide-react";
+import { MessageSquare, File, Video, Trash2, Edit, ArrowRight, Paperclip } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Message } from "@/types/message";
 
@@ -41,6 +41,7 @@ export const formatDate = (dateString: string) => {
 
 export function MessageCard({ message, onDelete }: MessageCardProps) {
   const navigate = useNavigate();
+  const hasAttachments = message.attachments && message.attachments.length > 0;
 
   return (
     <Card key={message.id} className="overflow-hidden">
@@ -64,6 +65,15 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
           <p className="text-muted-foreground italic">
             {message.message_type === 'voice' ? 'Voice message' : 'Video message'}
           </p>
+        )}
+        
+        {hasAttachments && (
+          <div className="mt-3 pt-3 border-t">
+            <div className="flex items-center text-sm text-muted-foreground">
+              <Paperclip className="h-4 w-4 mr-1" />
+              <span>{message.attachments!.length} attachment{message.attachments!.length !== 1 ? 's' : ''}</span>
+            </div>
+          </div>
         )}
       </CardContent>
       <CardFooter className="flex justify-between border-t pt-4">
