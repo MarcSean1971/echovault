@@ -39,3 +39,24 @@ export async function deleteMessage(id: string) {
     throw error;
   }
 }
+
+export async function createMessage(userId: string, title: string, content: string | null, messageType: string) {
+  try {
+    const { data, error } = await supabase
+      .from('messages')
+      .insert({
+        user_id: userId,
+        title,
+        content,
+        message_type: messageType
+      })
+      .select();
+
+    if (error) throw error;
+    
+    return data?.[0] as Message;
+  } catch (error) {
+    console.error("Error creating message:", error);
+    throw error;
+  }
+}
