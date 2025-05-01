@@ -1,10 +1,22 @@
+
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+
+import AppLayout from "./components/layout/AppLayout";
+import ProtectedLayout from "./components/layout/ProtectedLayout";
+
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import Home from "./pages/Home";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import Dashboard from "./pages/Dashboard";
+import CreateMessage from "./pages/CreateMessage";
+import Recipients from "./pages/Recipients";
+import UploadFile from "./pages/UploadFile";
 
 const queryClient = new QueryClient();
 
@@ -15,8 +27,22 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          {/* Public routes */}
+          <Route path="/" element={<AppLayout />}>
+            <Route index element={<Home />} />
+            <Route path="login" element={<Login />} />
+            <Route path="register" element={<Register />} />
+          </Route>
+          
+          {/* Protected routes */}
+          <Route path="/" element={<ProtectedLayout />}>
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="create-message" element={<CreateMessage />} />
+            <Route path="recipients" element={<Recipients />} />
+            <Route path="upload-file" element={<UploadFile />} />
+          </Route>
+          
+          {/* Catch-all route */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
