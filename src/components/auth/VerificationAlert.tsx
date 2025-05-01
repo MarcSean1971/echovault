@@ -15,13 +15,13 @@ export function VerificationAlert({ isDevelopment }: VerificationAlertProps) {
         <AlertDescription>
           In development mode, verification emails are not actually sent to your inbox. 
           Instead, you can view them in your <a 
-            href="https://dashboard.clerk.com/" 
+            href="https://supabase.com/dashboard/project/onwthrpgcnfydxzzmyot/auth/users" 
             target="_blank" 
             rel="noopener noreferrer"
             className="text-primary font-medium hover:underline"
           >
-            Clerk dashboard
-          </a> under Users &rarr; select your user &rarr; Emails tab.
+            Supabase dashboard
+          </a> under Authentication &rarr; Users &rarr; select your user.
         </AlertDescription>
       </Alert>
     </div>
