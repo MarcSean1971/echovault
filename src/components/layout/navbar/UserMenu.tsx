@@ -6,7 +6,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useClerk } from "@clerk/clerk-react";
 import { toast } from "@/components/ui/use-toast";
-import { MessageSquare, Upload, Users2 } from "lucide-react";
+import { MessageSquare, Users2 } from "lucide-react";
 
 interface UserMenuProps {
   userImage: string | null;
@@ -71,11 +71,6 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
               <Button variant="ghost" asChild className="justify-start">
                 <Link to="/create-message" className="flex gap-2">
                   <MessageSquare className="h-5 w-5" />Messages
-                </Link>
-              </Button>
-              <Button variant="ghost" asChild className="justify-start">
-                <Link to="/upload-file" className="flex gap-2">
-                  <Upload className="h-5 w-5" />Files
                 </Link>
               </Button>
               <Button variant="ghost" asChild className="justify-start">

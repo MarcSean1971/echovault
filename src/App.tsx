@@ -21,7 +21,6 @@ import Messages from "./pages/Messages";
 import MessageDetail from "./pages/MessageDetail";
 import MessageEdit from "./pages/MessageEdit";
 import Recipients from "./pages/Recipients";
-import UploadFile from "./pages/UploadFile";
 
 const queryClient = new QueryClient();
 
@@ -54,7 +53,6 @@ const App = () => {
                 <Route path="message/:id" element={<MessageDetail />} />
                 <Route path="message/:id/edit" element={<MessageEdit />} />
                 <Route path="recipients" element={<Recipients />} />
-                <Route path="upload-file" element={<UploadFile />} />
               </Route>
               
               {/* Catch-all route */}

@@ -19,9 +19,6 @@ export function DesktopNav({ userImage, initials }: DesktopNavProps) {
         <Link to="/create-message" className="text-foreground/80 hover:text-primary transition-colors">
           Messages
         </Link>
-        <Link to="/upload-file" className="text-foreground/80 hover:text-primary transition-colors">
-          Files
-        </Link>
         <Link to="/recipients" className="text-foreground/80 hover:text-primary transition-colors">
           Recipients
         </Link>
