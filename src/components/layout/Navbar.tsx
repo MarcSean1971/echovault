@@ -1,15 +1,59 @@
 
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
-import { Bell, Menu, MessageSquare, Settings, Upload, UserCircle, Users2 } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Bell, Menu, MessageSquare, Settings, Upload, Users2 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAuth, useUser, useClerk } from "@clerk/clerk-react";
+import { useState, useEffect } from "react";
+import { toast } from "@/components/ui/use-toast";
 
 interface NavbarProps {
   isLoggedIn?: boolean;
 }
 
 export default function Navbar({ isLoggedIn = false }: NavbarProps) {
+  const { isSignedIn, isLoaded } = useAuth();
+  const { user } = useUser();
+  const { signOut } = useClerk();
+  const navigate = useNavigate();
+  const [initials, setInitials] = useState("U");
+  const [userImage, setUserImage] = useState<string | null>(null);
+
+  // Determine user initials and image when user data is loaded
+  useEffect(() => {
+    if (user) {
+      // Get first letter of first and last name if available
+      const firstInitial = user.firstName ? user.firstName[0] : "";
+      const lastInitial = user.lastName ? user.lastName[0] : "";
+      setInitials((firstInitial + lastInitial).toUpperCase() || "U");
+      
+      // Set user image if available
+      setUserImage(user.imageUrl);
+    }
+  }, [user]);
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "Signed out successfully",
+        description: "You have been signed out of your account"
+      });
+      navigate("/login");
+    } catch (error) {
+      console.error("Sign out error:", error);
+      toast({
+        title: "Sign out failed",
+        description: "There was an issue signing you out",
+        variant: "destructive"
+      });
+    }
+  };
+
+  // Use the auth check from Clerk if available, otherwise fall back to prop
+  const authenticated = isLoaded ? isSignedIn : isLoggedIn;
+
   return (
     <header className="sticky top-0 z-30 w-full border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
@@ -19,7 +63,7 @@ export default function Navbar({ isLoggedIn = false }: NavbarProps) {
           </Link>
           
           {/* Desktop navigation */}
-          {isLoggedIn && (
+          {authenticated && (
             <nav className="hidden md:flex space-x-6">
               <Link to="/dashboard" className="text-foreground/80 hover:text-primary transition-colors">
                 Dashboard
@@ -37,7 +81,7 @@ export default function Navbar({ isLoggedIn = false }: NavbarProps) {
           )}
         </div>
 
-        {isLoggedIn ? (
+        {authenticated ? (
           <div className="flex items-center space-x-3">
             <Button variant="ghost" size="icon" className="rounded-full" aria-label="Notifications">
               <Bell className="h-5 w-5" />
@@ -52,7 +96,11 @@ export default function Navbar({ isLoggedIn = false }: NavbarProps) {
             </Button>
             
             <Avatar className="h-9 w-9 transition-transform hover:scale-105">
-              <AvatarFallback className="bg-primary text-white">U</AvatarFallback>
+              {userImage ? (
+                <AvatarImage src={userImage} alt="User profile" />
+              ) : (
+                <AvatarFallback className="bg-primary text-white">{initials}</AvatarFallback>
+              )}
             </Avatar>
             
             {/* Mobile menu */}
@@ -66,7 +114,11 @@ export default function Navbar({ isLoggedIn = false }: NavbarProps) {
                 <nav className="grid gap-6 py-6">
                   <div className="flex items-center justify-center mb-4">
                     <Avatar className="h-16 w-16">
-                      <AvatarFallback className="bg-primary text-white text-xl">U</AvatarFallback>
+                      {userImage ? (
+                        <AvatarImage src={userImage} alt="User profile" />
+                      ) : (
+                        <AvatarFallback className="bg-primary text-white text-xl">{initials}</AvatarFallback>
+                      )}
                     </Avatar>
                   </div>
                   
@@ -75,7 +127,7 @@ export default function Navbar({ isLoggedIn = false }: NavbarProps) {
                     <div className="grid gap-1.5">
                       <Button variant="ghost" asChild className="justify-start">
                         <Link to="/dashboard" className="flex gap-2">
-                          <UserCircle className="h-5 w-5" />Dashboard
+                          Dashboard
                         </Link>
                       </Button>
                       <Button variant="ghost" asChild className="justify-start">
@@ -105,8 +157,8 @@ export default function Navbar({ isLoggedIn = false }: NavbarProps) {
                     <Link to="/check-in">Check In Now</Link>
                   </Button>
                   
-                  <Button variant="outline" asChild>
-                    <Link to="/logout">Sign out</Link>
+                  <Button variant="outline" onClick={handleSignOut}>
+                    Sign out
                   </Button>
                 </nav>
               </SheetContent>

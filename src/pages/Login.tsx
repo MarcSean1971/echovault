@@ -3,33 +3,55 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { toast } from "@/components/ui/use-toast";
 import { EyeIcon, EyeOffIcon, LockIcon, MailIcon } from "lucide-react";
+import { useSignIn, useAuth } from "@clerk/clerk-react";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const { isSignedIn } = useAuth();
+  const navigate = useNavigate();
+  const { signIn, setActive } = useSignIn();
+
+  // If already signed in, redirect to dashboard
+  if (isSignedIn) {
+    navigate("/dashboard");
+    return null;
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      // Authentication will be implemented with Supabase
-      console.log("Login with:", { email, password });
-      
-      toast({
-        title: "Login functionality coming soon",
-        description: "This feature will be implemented with Supabase integration"
+      const result = await signIn.create({
+        identifier: email,
+        password,
       });
-    } catch (error) {
+
+      if (result.status === "complete") {
+        await setActive({ session: result.createdSessionId });
+        toast({
+          title: "Login successful",
+          description: "Welcome back to EchoVault"
+        });
+        navigate("/dashboard");
+      } else {
+        toast({
+          title: "Additional verification needed",
+          description: "Please complete the verification step"
+        });
+      }
+    } catch (error: any) {
+      console.error("Login error:", error);
       toast({
         title: "Login failed",
-        description: "Please check your credentials and try again",
+        description: error.errors?.[0]?.message || "Please check your credentials and try again",
         variant: "destructive"
       });
     } finally {

@@ -3,18 +3,30 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { toast } from "@/components/ui/use-toast";
 import { EyeIcon, EyeOffIcon, KeyIcon, LockIcon, MailIcon, UserIcon } from "lucide-react";
+import { useSignUp, useAuth } from "@clerk/clerk-react";
 
 export default function Register() {
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const { isSignedIn } = useAuth();
+  const navigate = useNavigate();
+  const { signUp, setActive } = useSignUp();
+
+  // If already signed in, redirect to dashboard
+  if (isSignedIn) {
+    navigate("/dashboard");
+    return null;
+  }
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,17 +43,33 @@ export default function Register() {
     setIsLoading(true);
 
     try {
-      // Registration will be implemented with Supabase
-      console.log("Register with:", { email, password });
-      
-      toast({
-        title: "Registration functionality coming soon",
-        description: "This feature will be implemented with Supabase integration"
+      const result = await signUp.create({
+        firstName,
+        lastName,
+        emailAddress: email,
+        password,
       });
-    } catch (error) {
+
+      if (result.status === "complete") {
+        // Sign up was successful
+        await setActive({ session: result.createdSessionId });
+        toast({
+          title: "Registration successful",
+          description: "Welcome to EchoVault"
+        });
+        navigate("/dashboard");
+      } else {
+        // Email verification may be needed
+        toast({
+          title: "Verification required",
+          description: "Please check your email to complete registration"
+        });
+      }
+    } catch (error: any) {
+      console.error("Registration error:", error);
       toast({
         title: "Registration failed",
-        description: "Please check your information and try again",
+        description: error.errors?.[0]?.message || "Please check your information and try again",
         variant: "destructive"
       });
     } finally {
@@ -70,6 +98,40 @@ export default function Register() {
           
           <form onSubmit={handleRegister}>
             <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="firstName">First Name</Label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <UserIcon className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <Input 
+                      id="firstName" 
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      className="pl-10"
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last Name</Label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <UserIcon className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <Input 
+                      id="lastName" 
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      className="pl-10"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+              
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <div className="relative">
