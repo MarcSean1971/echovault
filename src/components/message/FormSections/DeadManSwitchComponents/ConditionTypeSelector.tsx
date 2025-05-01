@@ -43,26 +43,6 @@ export function ConditionTypeSelector({
         </div>
         
         <div className="flex items-start space-x-2 p-3 rounded-md border hover:bg-muted/50 transition-colors">
-          <RadioGroupItem value="inactivity_to_date" id="inactivity-to-date" className="mt-1" />
-          <div className="space-y-1">
-            <div className="flex items-center">
-              <Label htmlFor="inactivity-to-date" className="font-medium cursor-pointer">No check-in then specific date</Label>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <ArrowDown className="h-4 w-4 ml-2 text-muted-foreground cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="w-[280px]">Two-phase trigger: First detects when you haven't checked in, then sends on a specific date after that.</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-            <p className="text-sm text-muted-foreground">First detect inactivity, then deliver on a specific date after that</p>
-          </div>
-        </div>
-        
-        <div className="flex items-start space-x-2 p-3 rounded-md border hover:bg-muted/50 transition-colors">
           <RadioGroupItem value="scheduled_date" id="scheduled-date" className="mt-1" />
           <div className="space-y-1">
             <div className="flex items-center">
