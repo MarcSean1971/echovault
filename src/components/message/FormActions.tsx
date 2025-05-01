@@ -49,8 +49,9 @@ export function useFormActions() {
   const simulateUploadProgress = () => {
     setUploadProgress(0);
     const interval = setInterval(() => {
-      setUploadProgress((prev) => {
-        const newValue = prev + 5;
+      // Fix: Type error by explicitly declaring newValue as a number
+      setUploadProgress((prevProgress: number) => {
+        const newValue = prevProgress + 5;
         if (newValue >= 100) {
           clearInterval(interval);
           return 100;
