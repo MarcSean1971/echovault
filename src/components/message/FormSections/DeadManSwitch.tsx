@@ -11,6 +11,9 @@ import { ScheduledDateSection } from "./DeadManSwitchComponents/ScheduledDateSec
 import { GroupConfirmation } from "./DeadManSwitchComponents/GroupConfirmation";
 import { PanicTrigger } from "./DeadManSwitchComponents/PanicTrigger";
 import { AdvancedOptions } from "./DeadManSwitchComponents/AdvancedOptions";
+import { InactivityToRecurring } from "./DeadManSwitchComponents/InactivityToRecurring";
+import { InactivityToDate } from "./DeadManSwitchComponents/InactivityToDate";
+import { ReminderSettings } from "./DeadManSwitchComponents/ReminderSettings";
 import { useMessageForm } from "../MessageFormContext";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -29,10 +32,20 @@ export function DeadManSwitch() {
     setTriggerDate,
     recurringPattern,
     setRecurringPattern,
+    secondaryTriggerDate,
+    setSecondaryTriggerDate,
+    secondaryRecurringPattern,
+    setSecondaryRecurringPattern,
+    reminderHours,
+    setReminderHours,
+    panicTriggerConfig,
+    setPanicTriggerConfig,
     pinCode,
     setPinCode,
     unlockDelay,
     setUnlockDelay,
+    expiryHours,
+    setExpiryHours,
     confirmationsRequired,
     setConfirmationsRequired
   } = useMessageForm();
@@ -91,11 +104,18 @@ export function DeadManSwitch() {
           />
 
           {(conditionType === 'no_check_in' || conditionType === 'regular_check_in') && (
-            <TimeThresholdSelector
-              conditionType={conditionType}
-              hoursThreshold={hoursThreshold}
-              setHoursThreshold={setHoursThreshold}
-            />
+            <>
+              <TimeThresholdSelector
+                conditionType={conditionType}
+                hoursThreshold={hoursThreshold}
+                setHoursThreshold={setHoursThreshold}
+              />
+              <ReminderSettings
+                reminderHours={reminderHours}
+                setReminderHours={setReminderHours}
+                maxHours={hoursThreshold}
+              />
+            </>
           )}
           
           {conditionType === 'scheduled_date' && (
@@ -115,7 +135,34 @@ export function DeadManSwitch() {
           )}
           
           {conditionType === 'panic_trigger' && (
-            <PanicTrigger />
+            <PanicTrigger 
+              config={panicTriggerConfig}
+              setConfig={setPanicTriggerConfig}
+            />
+          )}
+          
+          {conditionType === 'inactivity_to_recurring' && (
+            <InactivityToRecurring
+              hoursThreshold={hoursThreshold}
+              setHoursThreshold={setHoursThreshold}
+              recurringPattern={secondaryRecurringPattern}
+              setRecurringPattern={setSecondaryRecurringPattern}
+              reminderHours={reminderHours}
+              setReminderHours={setReminderHours}
+            />
+          )}
+          
+          {conditionType === 'inactivity_to_date' && (
+            <InactivityToDate
+              hoursThreshold={hoursThreshold}
+              setHoursThreshold={setHoursThreshold}
+              triggerDate={secondaryTriggerDate}
+              setTriggerDate={setSecondaryTriggerDate}
+              recurringPattern={secondaryRecurringPattern}
+              setRecurringPattern={setSecondaryRecurringPattern}
+              reminderHours={reminderHours}
+              setReminderHours={setReminderHours}
+            />
           )}
           
           <RecipientsSelector
@@ -130,6 +177,8 @@ export function DeadManSwitch() {
             setPinCode={setPinCode}
             unlockDelay={unlockDelay}
             setUnlockDelay={setUnlockDelay}
+            expiryHours={expiryHours}
+            setExpiryHours={setExpiryHours}
           />
         </div>
       </CardContent>

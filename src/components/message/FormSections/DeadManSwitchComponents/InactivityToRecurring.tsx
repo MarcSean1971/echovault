@@ -1,0 +1,58 @@
+
+import { TimeThresholdSelector } from "./TimeThresholdSelector";
+import { RecurringPatternSelector } from "./RecurringPatternSelector";
+import { ReminderSettings } from "./ReminderSettings";
+import { RecurringPattern } from "@/types/message";
+import { Separator } from "@/components/ui/separator";
+
+interface InactivityToRecurringProps {
+  hoursThreshold: number;
+  setHoursThreshold: (value: number) => void;
+  recurringPattern: RecurringPattern | null;
+  setRecurringPattern: (pattern: RecurringPattern | null) => void;
+  reminderHours: number[];
+  setReminderHours: (value: number[]) => void;
+}
+
+export function InactivityToRecurring({
+  hoursThreshold,
+  setHoursThreshold,
+  recurringPattern,
+  setRecurringPattern,
+  reminderHours,
+  setReminderHours
+}: InactivityToRecurringProps) {
+  return (
+    <div className="space-y-6">
+      <div className="space-y-4">
+        <h3 className="font-medium">First Phase: Inactivity Detection</h3>
+        <TimeThresholdSelector
+          conditionType="no_check_in"
+          hoursThreshold={hoursThreshold}
+          setHoursThreshold={setHoursThreshold}
+        />
+        
+        <ReminderSettings
+          reminderHours={reminderHours}
+          setReminderHours={setReminderHours}
+          maxHours={hoursThreshold}
+        />
+      </div>
+      
+      <Separator />
+      
+      <div className="space-y-4">
+        <h3 className="font-medium">Second Phase: Recurring Schedule</h3>
+        <p className="text-sm text-muted-foreground">
+          After the inactivity period, the message will be sent on this recurring schedule:
+        </p>
+        
+        <RecurringPatternSelector
+          pattern={recurringPattern}
+          setPattern={setRecurringPattern}
+          forceEnabled={true}
+        />
+      </div>
+    </div>
+  );
+}

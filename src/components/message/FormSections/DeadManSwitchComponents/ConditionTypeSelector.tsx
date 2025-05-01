@@ -40,6 +40,14 @@ export function ConditionTypeSelector({
           <RadioGroupItem value="panic_trigger" id="panic-trigger" />
           <Label htmlFor="panic-trigger">Manual panic trigger</Label>
         </div>
+        <div className="flex items-center space-x-2">
+          <RadioGroupItem value="inactivity_to_recurring" id="inactivity-to-recurring" />
+          <Label htmlFor="inactivity-to-recurring">Inactivity → Then recurring schedule</Label>
+        </div>
+        <div className="flex items-center space-x-2">
+          <RadioGroupItem value="inactivity_to_date" id="inactivity-to-date" />
+          <Label htmlFor="inactivity-to-date">Inactivity → Then specific date</Label>
+        </div>
       </RadioGroup>
     </div>
   );

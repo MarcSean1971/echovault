@@ -3,7 +3,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export type RecurringPatternType = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
@@ -12,20 +12,35 @@ export interface RecurringPattern {
   interval: number;
   day?: number;
   month?: number;
+  startTime?: string;
 }
 
 interface RecurringPatternSelectorProps {
   pattern: RecurringPattern | null;
   setPattern: (pattern: RecurringPattern | null) => void;
+  forceEnabled?: boolean;
 }
 
 export function RecurringPatternSelector({
   pattern,
-  setPattern
+  setPattern,
+  forceEnabled = false
 }: RecurringPatternSelectorProps) {
-  const [isRecurring, setIsRecurring] = useState(!!pattern);
+  const [isRecurring, setIsRecurring] = useState(!!pattern || forceEnabled);
+  
+  // If forceEnabled changes, update isRecurring
+  useEffect(() => {
+    if (forceEnabled && !isRecurring) {
+      setIsRecurring(true);
+      if (!pattern) {
+        setPattern({ type: 'daily', interval: 1 });
+      }
+    }
+  }, [forceEnabled, isRecurring, pattern, setPattern]);
   
   const handleRecurringChange = (value: string) => {
+    if (forceEnabled) return; // Can't disable if forced
+    
     const isEnabled = value === "yes";
     setIsRecurring(isEnabled);
     
@@ -63,32 +78,40 @@ export function RecurringPatternSelector({
     }
   };
   
+  const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (pattern) {
+      setPattern({ ...pattern, startTime: e.target.value });
+    }
+  };
+  
   return (
     <div className="space-y-4">
-      <div>
-        <Label className="mb-2 block">Make this recurring?</Label>
-        <RadioGroup 
-          value={isRecurring ? "yes" : "no"} 
-          onValueChange={handleRecurringChange}
-          className="flex space-x-4"
-        >
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="yes" id="recurring-yes" />
-            <Label htmlFor="recurring-yes">Yes</Label>
-          </div>
-          <div className="flex items-center space-x-2">
-            <RadioGroupItem value="no" id="recurring-no" />
-            <Label htmlFor="recurring-no">No</Label>
-          </div>
-        </RadioGroup>
-      </div>
+      {!forceEnabled && (
+        <div>
+          <Label className="mb-2 block">Make this recurring?</Label>
+          <RadioGroup 
+            value={isRecurring ? "yes" : "no"} 
+            onValueChange={handleRecurringChange}
+            className="flex space-x-4"
+          >
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="yes" id="recurring-yes" />
+              <Label htmlFor="recurring-yes">Yes</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="no" id="recurring-no" />
+              <Label htmlFor="recurring-no">No</Label>
+            </div>
+          </RadioGroup>
+        </div>
+      )}
       
-      {isRecurring && pattern && (
+      {isRecurring && (
         <div className="space-y-4 pt-2">
           <div>
             <Label htmlFor="recurring-type" className="mb-2 block">Repeat</Label>
             <Select 
-              value={pattern.type}
+              value={pattern?.type || 'daily'}
               onValueChange={(value) => handleTypeChange(value as RecurringPatternType)}
             >
               <SelectTrigger id="recurring-type">
@@ -106,21 +129,21 @@ export function RecurringPatternSelector({
           <div>
             <Label htmlFor="recurring-interval" className="mb-2 block">
               Every
-              {pattern.type === 'daily' ? ' X days' : ''}
-              {pattern.type === 'weekly' ? ' X weeks' : ''}
-              {pattern.type === 'monthly' ? ' X months' : ''}
-              {pattern.type === 'yearly' ? ' X years' : ''}
+              {pattern?.type === 'daily' ? ' X days' : ''}
+              {pattern?.type === 'weekly' ? ' X weeks' : ''}
+              {pattern?.type === 'monthly' ? ' X months' : ''}
+              {pattern?.type === 'yearly' ? ' X years' : ''}
             </Label>
             <Input
               id="recurring-interval"
               type="number"
               min={1}
-              value={pattern.interval}
+              value={pattern?.interval || 1}
               onChange={handleIntervalChange}
             />
           </div>
           
-          {pattern.type === 'weekly' && (
+          {pattern?.type === 'weekly' && (
             <div>
               <Label className="mb-2 block">On day</Label>
               <Select 
@@ -143,7 +166,7 @@ export function RecurringPatternSelector({
             </div>
           )}
           
-          {pattern.type === 'monthly' && (
+          {pattern?.type === 'monthly' && (
             <div>
               <Label className="mb-2 block">On day of month</Label>
               <Select
@@ -164,7 +187,7 @@ export function RecurringPatternSelector({
             </div>
           )}
           
-          {pattern.type === 'yearly' && (
+          {pattern?.type === 'yearly' && (
             <>
               <div>
                 <Label className="mb-2 block">Month</Label>
@@ -212,6 +235,16 @@ export function RecurringPatternSelector({
               </div>
             </>
           )}
+          
+          <div>
+            <Label htmlFor="start-time" className="mb-2 block">Start time (optional)</Label>
+            <Input
+              id="start-time"
+              type="time"
+              value={pattern?.startTime || ""}
+              onChange={handleTimeChange}
+            />
+          </div>
         </div>
       )}
     </div>

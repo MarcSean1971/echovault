@@ -9,13 +9,17 @@ interface AdvancedOptionsProps {
   setPinCode: (value: string) => void;
   unlockDelay: number;
   setUnlockDelay: (value: number) => void;
+  expiryHours: number;
+  setExpiryHours: (value: number) => void;
 }
 
 export function AdvancedOptions({
   pinCode,
   setPinCode,
   unlockDelay,
-  setUnlockDelay
+  setUnlockDelay,
+  expiryHours,
+  setExpiryHours
 }: AdvancedOptionsProps) {
   return (
     <div className="pt-4 border-t">
@@ -54,6 +58,28 @@ export function AdvancedOptions({
             {unlockDelay > 0 
               ? `Message will be accessible ${unlockDelay} hours after triggering.`
               : "Message will be accessible immediately upon triggering."}
+          </p>
+        </div>
+        
+        <div>
+          <Label>Message Expiry (Hours)</Label>
+          <div className="flex items-center space-x-4 mt-1">
+            <Slider
+              value={[expiryHours]}
+              onValueChange={(value) => setExpiryHours(value[0])}
+              min={0}
+              max={720}
+              step={24}
+              className="flex-1"
+            />
+            <span className="font-medium w-12 text-center">
+              {expiryHours > 0 ? expiryHours : "None"}
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            {expiryHours > 0 
+              ? `Message will expire ${expiryHours} hours after delivery (${Math.floor(expiryHours / 24)} days).`
+              : "Message will not expire (available forever)."}
           </p>
         </div>
       </div>

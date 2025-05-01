@@ -1,7 +1,11 @@
 
 import { createContext, useContext, ReactNode, useState } from "react";
 import { FileAttachment } from "@/components/FileUploader";
-import { TriggerType, RecurringPattern } from "@/types/message";
+import { 
+  TriggerType, 
+  RecurringPattern, 
+  PanicTriggerConfig 
+} from "@/types/message";
 
 interface MessageFormContextType {
   // Message Details
@@ -28,6 +32,20 @@ interface MessageFormContextType {
   recurringPattern: RecurringPattern | null;
   setRecurringPattern: (value: RecurringPattern | null) => void;
   
+  // New: Secondary trigger options for combined triggers
+  secondaryTriggerDate: Date | undefined;
+  setSecondaryTriggerDate: (value: Date | undefined) => void;
+  secondaryRecurringPattern: RecurringPattern | null;
+  setSecondaryRecurringPattern: (value: RecurringPattern | null) => void;
+  
+  // New: Reminder settings
+  reminderHours: number[];
+  setReminderHours: (value: number[]) => void;
+  
+  // New: Panic trigger configuration
+  panicTriggerConfig: PanicTriggerConfig;
+  setPanicTriggerConfig: (value: PanicTriggerConfig) => void;
+  
   // Advanced settings
   pinCode: string;
   setPinCode: (value: string) => void;
@@ -35,6 +53,8 @@ interface MessageFormContextType {
   setUnlockDelay: (value: number) => void;
   confirmationsRequired: number;
   setConfirmationsRequired: (value: number) => void;
+  expiryHours: number;
+  setExpiryHours: (value: number) => void;
   
   // Form state
   isLoading: boolean;
@@ -66,10 +86,26 @@ export function MessageFormProvider({ children }: MessageFormProviderProps) {
   const [triggerDate, setTriggerDate] = useState<Date | undefined>(undefined);
   const [recurringPattern, setRecurringPattern] = useState<RecurringPattern | null>(null);
   
+  // Secondary trigger options for combined triggers
+  const [secondaryTriggerDate, setSecondaryTriggerDate] = useState<Date | undefined>(undefined);
+  const [secondaryRecurringPattern, setSecondaryRecurringPattern] = useState<RecurringPattern | null>(null);
+  
+  // Reminder settings
+  const [reminderHours, setReminderHours] = useState<number[]>([24]); // Default 24-hour reminder
+  
+  // Panic trigger configuration
+  const [panicTriggerConfig, setPanicTriggerConfig] = useState<PanicTriggerConfig>({
+    enabled: false,
+    methods: ['app'],
+    cancel_window_seconds: 10,
+    bypass_logging: false
+  });
+  
   // Advanced settings
   const [pinCode, setPinCode] = useState("");
   const [unlockDelay, setUnlockDelay] = useState(0);
   const [confirmationsRequired, setConfirmationsRequired] = useState(3);
+  const [expiryHours, setExpiryHours] = useState(0); // 0 means no expiry
   
   // Form state
   const [isLoading, setIsLoading] = useState(false);
@@ -97,12 +133,22 @@ export function MessageFormProvider({ children }: MessageFormProviderProps) {
     setTriggerDate,
     recurringPattern,
     setRecurringPattern,
+    secondaryTriggerDate,
+    setSecondaryTriggerDate,
+    secondaryRecurringPattern,
+    setSecondaryRecurringPattern,
+    reminderHours,
+    setReminderHours,
+    panicTriggerConfig,
+    setPanicTriggerConfig,
     pinCode,
     setPinCode,
     unlockDelay,
     setUnlockDelay,
     confirmationsRequired,
     setConfirmationsRequired,
+    expiryHours,
+    setExpiryHours,
     isLoading,
     setIsLoading,
     uploadProgress,
