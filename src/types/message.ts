@@ -24,6 +24,8 @@ export type TriggerType =
   | 'inactivity_to_recurring' // NEW: Inactivity → Then Recurring
   | 'inactivity_to_date';    // NEW: Inactivity → Then Specific Date
 
+export type DeliveryOption = "once" | "recurring" | "specific_date";
+
 export type RecurringPatternType = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
 export interface RecurringPattern {
@@ -62,6 +64,9 @@ export type MessageCondition = {
   
   // Reminder settings
   reminder_hours?: number[];
+  
+  // New: Delivery option for no_check_in
+  delivery_option?: DeliveryOption;
   
   // Recipients
   recipients: Array<{

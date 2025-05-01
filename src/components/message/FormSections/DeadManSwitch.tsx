@@ -13,6 +13,9 @@ import { SecurityOptions } from "./DeadManSwitchComponents/SecurityOptions";
 import { useMessageForm } from "../MessageFormContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { NoCheckInDeliveryOptions } from "./DeadManSwitchComponents/NoCheckInDeliveryOptions";
+import { RecurringPatternSelector } from "./DeadManSwitchComponents/RecurringPatternSelector";
+import { ReminderSettings } from "./DeadManSwitchComponents/ReminderSettings";
 
 export function DeadManSwitch() {
   const { userId } = useAuth();
@@ -36,7 +39,11 @@ export function DeadManSwitch() {
     unlockDelay,
     setUnlockDelay,
     expiryHours,
-    setExpiryHours
+    setExpiryHours,
+    deliveryOption,
+    setDeliveryOption,
+    reminderHours,
+    setReminderHours
   } = useMessageForm();
 
   const [recipients, setRecipients] = useState<Recipient[]>([]);
@@ -101,11 +108,45 @@ export function DeadManSwitch() {
             />
 
             {conditionType === 'no_check_in' && (
-              <TimeThresholdSelector
-                conditionType={conditionType}
-                hoursThreshold={hoursThreshold}
-                setHoursThreshold={setHoursThreshold}
-              />
+              <>
+                <TimeThresholdSelector
+                  conditionType={conditionType}
+                  hoursThreshold={hoursThreshold}
+                  setHoursThreshold={setHoursThreshold}
+                />
+                
+                <NoCheckInDeliveryOptions
+                  deliveryOption={deliveryOption}
+                  setDeliveryOption={setDeliveryOption}
+                />
+                
+                {deliveryOption === "recurring" && (
+                  <div className="mt-4 pl-4 border-l-2 border-muted">
+                    <RecurringPatternSelector
+                      pattern={recurringPattern}
+                      setPattern={setRecurringPattern}
+                      forceEnabled={true}
+                    />
+                  </div>
+                )}
+                
+                {deliveryOption === "specific_date" && (
+                  <div className="mt-4 pl-4 border-l-2 border-muted">
+                    <ScheduledDateSection
+                      triggerDate={triggerDate}
+                      setTriggerDate={setTriggerDate}
+                      recurringPattern={recurringPattern}
+                      setRecurringPattern={setRecurringPattern}
+                    />
+                  </div>
+                )}
+                
+                <ReminderSettings
+                  reminderHours={reminderHours}
+                  setReminderHours={setReminderHours}
+                  maxHours={hoursThreshold}
+                />
+              </>
             )}
             
             {conditionType === 'scheduled_date' && (

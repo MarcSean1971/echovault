@@ -30,6 +30,7 @@ export function useFormActions() {
     setIsLoading,
     setShowUploadDialog,
     setUploadProgress,
+    deliveryOption,
   } = useMessageForm();
 
   const isFormValid = () => {
@@ -39,6 +40,15 @@ export function useFormActions() {
     
     // Validate recipients
     if (enableDeadManSwitch && selectedRecipients.length === 0) return false;
+    
+    // Validate delivery options
+    if (conditionType === 'no_check_in') {
+      if (deliveryOption === 'specific_date' && !triggerDate) return false;
+      if (deliveryOption === 'recurring' && !recurringPattern) return false;
+    }
+    
+    // Validate scheduled date
+    if (conditionType === 'scheduled_date' && !triggerDate) return false;
     
     return true;
   };
@@ -113,8 +123,24 @@ export function useFormActions() {
           reminderHours: reminderHours || [24]  // Default to 24-hour reminder
         };
 
+        // Handle different delivery options for no_check_in
+        if (conditionType === 'no_check_in') {
+          // For recurring delivery
+          if (deliveryOption === 'recurring' && recurringPattern) {
+            Object.assign(conditionOptions, { recurringPattern });
+          }
+          
+          // For specific date delivery
+          if (deliveryOption === 'specific_date' && triggerDate) {
+            Object.assign(conditionOptions, {
+              triggerDate: triggerDate.toISOString(),
+              recurringPattern
+            });
+          }
+        }
+        
         // Add date-specific options if needed
-        if (conditionType === 'scheduled_date' && triggerDate) {
+        else if (conditionType === 'scheduled_date' && triggerDate) {
           Object.assign(conditionOptions, {
             triggerDate: triggerDate.toISOString(),
             recurringPattern
@@ -122,7 +148,7 @@ export function useFormActions() {
         }
         
         // Add panic trigger configuration
-        if (conditionType === 'panic_trigger') {
+        else if (conditionType === 'panic_trigger') {
           Object.assign(conditionOptions, {
             panicTriggerConfig
           });

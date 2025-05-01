@@ -7,6 +7,8 @@ import {
   PanicTriggerConfig 
 } from "@/types/message";
 
+type DeliveryOption = "once" | "recurring" | "specific_date";
+
 interface MessageFormContextType {
   // Message Details
   title: string;
@@ -32,17 +34,21 @@ interface MessageFormContextType {
   recurringPattern: RecurringPattern | null;
   setRecurringPattern: (value: RecurringPattern | null) => void;
   
-  // New: Secondary trigger options for combined triggers
+  // New: Delivery option for no_check_in
+  deliveryOption: DeliveryOption;
+  setDeliveryOption: (value: DeliveryOption) => void;
+  
+  // Secondary trigger options for combined triggers
   secondaryTriggerDate: Date | undefined;
   setSecondaryTriggerDate: (value: Date | undefined) => void;
   secondaryRecurringPattern: RecurringPattern | null;
   setSecondaryRecurringPattern: (value: RecurringPattern | null) => void;
   
-  // New: Reminder settings
+  // Reminder settings
   reminderHours: number[];
   setReminderHours: (value: number[]) => void;
   
-  // New: Panic trigger configuration
+  // Panic trigger configuration
   panicTriggerConfig: PanicTriggerConfig;
   setPanicTriggerConfig: (value: PanicTriggerConfig) => void;
   
@@ -85,6 +91,9 @@ export function MessageFormProvider({ children }: MessageFormProviderProps) {
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
   const [triggerDate, setTriggerDate] = useState<Date | undefined>(undefined);
   const [recurringPattern, setRecurringPattern] = useState<RecurringPattern | null>(null);
+  
+  // New: Delivery option for no_check_in
+  const [deliveryOption, setDeliveryOption] = useState<DeliveryOption>("once");
   
   // Secondary trigger options for combined triggers
   const [secondaryTriggerDate, setSecondaryTriggerDate] = useState<Date | undefined>(undefined);
@@ -133,6 +142,8 @@ export function MessageFormProvider({ children }: MessageFormProviderProps) {
     setTriggerDate,
     recurringPattern,
     setRecurringPattern,
+    deliveryOption,
+    setDeliveryOption,
     secondaryTriggerDate,
     setSecondaryTriggerDate,
     secondaryRecurringPattern,
