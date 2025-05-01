@@ -15,11 +15,30 @@ export type Message = {
   }> | null;
 };
 
+export type TriggerType = 
+  | 'no_check_in' 
+  | 'regular_check_in' 
+  | 'scheduled_date'
+  | 'group_confirmation'
+  | 'panic_trigger';
+
 export type MessageCondition = {
   id: string;
   message_id: string;
-  condition_type: 'no_check_in' | 'regular_check_in';
-  hours_threshold: number;
+  condition_type: TriggerType;
+  hours_threshold?: number;
+  trigger_date?: string;
+  recurring_pattern?: {
+    type: 'daily' | 'weekly' | 'monthly' | 'yearly';
+    interval: number;
+    day?: number;
+    month?: number;
+  } | null;
+  confirmation_required?: number;
+  confirmations_received?: number;
+  unlock_delay_hours?: number;
+  expiry_hours?: number;
+  pin_code?: string;
   recipients: Array<{
     id: string;
     name: string;
@@ -37,4 +56,16 @@ export type Recipient = {
   name: string;
   email: string;
   phone?: string;
+};
+
+export type CheckIn = {
+  id: string;
+  user_id: string;
+  timestamp: string;
+  method: 'app' | 'email' | 'sms' | 'biometric';
+  device_info?: string;
+  location?: {
+    latitude: number;
+    longitude: number;
+  } | null;
 };

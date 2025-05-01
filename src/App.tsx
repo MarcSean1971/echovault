@@ -21,6 +21,8 @@ import Messages from "./pages/Messages";
 import MessageDetail from "./pages/MessageDetail";
 import MessageEdit from "./pages/MessageEdit";
 import Recipients from "./pages/Recipients";
+import CheckIn from "./pages/CheckIn";
+import CheckIns from "./pages/CheckIns";
 
 // Create a new query client with error handling
 const queryClient = new QueryClient({
@@ -75,6 +77,8 @@ const App = () => {
                 <Route path="message/:id" element={<MessageDetail />} />
                 <Route path="message/:id/edit" element={<MessageEdit />} />
                 <Route path="recipients" element={<Recipients />} />
+                <Route path="check-in" element={<CheckIn />} />
+                <Route path="check-ins" element={<CheckIns />} />
               </Route>
               
               {/* Catch-all route */}

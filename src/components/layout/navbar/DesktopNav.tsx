@@ -27,12 +27,17 @@ export function DesktopNav({ userImage, initials }: DesktopNavProps) {
           </NavigationMenuItem>
           <NavigationMenuItem>
             <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-              <Link to="/create-message">Messages</Link>
+              <Link to="/messages">Messages</Link>
             </NavigationMenuLink>
           </NavigationMenuItem>
           <NavigationMenuItem>
             <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
               <Link to="/recipients">Recipients</Link>
+            </NavigationMenuLink>
+          </NavigationMenuItem>
+          <NavigationMenuItem>
+            <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
+              <Link to="/check-ins">Check-ins</Link>
             </NavigationMenuLink>
           </NavigationMenuItem>
         </NavigationMenuList>
