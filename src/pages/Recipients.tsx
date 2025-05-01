@@ -4,43 +4,62 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import { Plus, Trash, User } from "lucide-react";
-
-interface Recipient {
-  id: string;
-  name: string;
-  email: string;
-  phone?: string;
-}
+import { useAuth } from "@/contexts/AuthContext";
+import { fetchRecipients, createRecipient, deleteRecipient } from "@/services/messageService";
+import { Recipient } from "@/types/message";
 
 export default function Recipients() {
   const navigate = useNavigate();
-  const [recipients, setRecipients] = useState<Recipient[]>([
-    { id: "1", name: "John Doe", email: "john@example.com", phone: "555-1234" },
-    { id: "2", name: "Jane Smith", email: "jane@example.com" }
-  ]);
+  const { userId } = useAuth();
+  const [recipients, setRecipients] = useState<Recipient[]>([]);
   
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+
+  // Fetch recipients on component mount
+  useEffect(() => {
+    if (!userId) return;
+    
+    const loadRecipients = async () => {
+      setIsInitialLoading(true);
+      try {
+        const data = await fetchRecipients();
+        setRecipients(data);
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to load your recipients",
+          variant: "destructive"
+        });
+      } finally {
+        setIsInitialLoading(false);
+      }
+    };
+    
+    loadRecipients();
+  }, [userId]);
 
   const handleAddRecipient = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!userId) return;
+    
     setIsLoading(true);
 
     try {
-      // Will be implemented with Supabase
-      const newRecipient: Recipient = {
-        id: Date.now().toString(),
-        name: newName,
-        email: newEmail,
-        phone: newPhone || undefined
-      };
+      const newRecipient = await createRecipient(
+        userId,
+        newName,
+        newEmail,
+        newPhone || undefined
+      );
       
       setRecipients([...recipients, newRecipient]);
       
@@ -64,12 +83,22 @@ export default function Recipients() {
     }
   };
 
-  const handleRemoveRecipient = (id: string) => {
-    setRecipients(recipients.filter(recipient => recipient.id !== id));
-    toast({
-      title: "Recipient removed",
-      description: "The recipient has been removed from your list"
-    });
+  const handleRemoveRecipient = async (id: string) => {
+    try {
+      await deleteRecipient(id);
+      setRecipients(recipients.filter(recipient => recipient.id !== id));
+      
+      toast({
+        title: "Recipient removed",
+        description: "The recipient has been removed from your list"
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "There was a problem removing the recipient",
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -142,7 +171,11 @@ export default function Recipients() {
           <CardTitle>Your Trusted Contacts</CardTitle>
         </CardHeader>
         <CardContent>
-          {recipients.length === 0 ? (
+          {isInitialLoading ? (
+            <div className="text-center py-6">
+              <p className="text-muted-foreground">Loading recipients...</p>
+            </div>
+          ) : recipients.length === 0 ? (
             <div className="text-center py-6">
               <p className="text-muted-foreground">You haven't added any recipients yet.</p>
             </div>

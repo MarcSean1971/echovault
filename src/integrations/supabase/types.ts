@@ -9,6 +9,50 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      message_conditions: {
+        Row: {
+          active: boolean
+          condition_type: string
+          created_at: string
+          hours_threshold: number
+          id: string
+          last_checked: string
+          message_id: string
+          recipients: Json
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          condition_type: string
+          created_at?: string
+          hours_threshold: number
+          id?: string
+          last_checked?: string
+          message_id: string
+          recipients: Json
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          condition_type?: string
+          created_at?: string
+          hours_threshold?: number
+          id?: string
+          last_checked?: string
+          message_id?: string
+          recipients?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_conditions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           attachments: Json | null
@@ -37,6 +81,36 @@ export type Database = {
           id?: string
           message_type?: string
           title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      recipients: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string
+          phone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          name: string
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          phone?: string | null
           updated_at?: string
           user_id?: string
         }
