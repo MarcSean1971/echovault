@@ -1,4 +1,3 @@
-
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle, Send } from "lucide-react";
 import { Label } from "@/components/ui/label";
@@ -14,12 +13,12 @@ interface PanicTriggerProps {
 export function PanicTrigger({ config, setConfig }: PanicTriggerProps) {
   return (
     <div className="space-y-4">
-      <Alert variant="destructive" className="bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800">
-        <AlertTriangle className="h-4 w-4 text-yellow-800 dark:text-yellow-200" />
-        <AlertTitle className="text-yellow-800 dark:text-yellow-200 font-medium">
+      <Alert variant="destructive">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertTitle className="font-medium">
           Emergency Panic Button
         </AlertTitle>
-        <AlertDescription className="text-yellow-700 dark:text-yellow-300 text-sm">
+        <AlertDescription className="text-sm">
           This creates a button that you can press in an emergency to send your message instantly.
         </AlertDescription>
       </Alert>
