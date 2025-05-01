@@ -6,7 +6,7 @@ import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { MessageFilter } from "@/components/message/MessageFilter";
 import { MessageGrid } from "@/components/message/MessageGrid";
-import { fetchMessages, deleteMessage } from "@/services/messageService";
+import { fetchMessages, deleteMessage } from "@/services/messages/messageService";
 import { Message } from "@/types/message";
 
 export default function Messages() {

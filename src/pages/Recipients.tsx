@@ -9,7 +9,7 @@ import { toast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import { Plus, Trash, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { fetchRecipients, createRecipient, deleteRecipient } from "@/services/messageService";
+import { fetchRecipients, createRecipient, deleteRecipient } from "@/services/messages/recipientService";
 import { Recipient } from "@/types/message";
 
 export default function Recipients() {

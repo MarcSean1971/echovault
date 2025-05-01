@@ -1,26 +1,23 @@
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { fetchRecipients } from "@/services/messages";
+import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus } from "lucide-react";
+import { RecipientsSelector } from "./RecipientsSelector";
 import { Recipient } from "@/types/message";
-import { fetchRecipients } from "@/services/messageService";
 
 interface DeadManSwitchProps {
   enableDeadManSwitch: boolean;
-  setEnableDeadManSwitch: (enable: boolean) => void;
+  setEnableDeadManSwitch: (value: boolean) => void;
   conditionType: 'no_check_in' | 'regular_check_in';
-  setConditionType: (type: 'no_check_in' | 'regular_check_in') => void;
+  setConditionType: (value: 'no_check_in' | 'regular_check_in') => void;
   hoursThreshold: number;
-  setHoursThreshold: (hours: number) => void;
+  setHoursThreshold: (value: number) => void;
   selectedRecipients: string[];
-  setSelectedRecipients: (recipients: string[]) => void;
+  setSelectedRecipients: (value: string[]) => void;
   userId: string | null;
 }
 
@@ -35,203 +32,123 @@ export function DeadManSwitch({
   setSelectedRecipients,
   userId
 }: DeadManSwitchProps) {
-  const navigate = useNavigate();
-  const [showRecipientsSheet, setShowRecipientsSheet] = useState(false);
   const [recipients, setRecipients] = useState<Recipient[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch recipients on component mount
+  // Fetch available recipients when component mounts
   useEffect(() => {
-    if (userId) {
-      const loadRecipients = async () => {
-        try {
-          const data = await fetchRecipients();
-          setRecipients(data);
-        } catch (error) {
-          console.error("Error fetching recipients:", error);
-        }
-      };
-      
-      loadRecipients();
-    }
-  }, [userId]);
+    if (!userId || !enableDeadManSwitch) return;
 
-  const toggleRecipientSelection = (recipientId: string) => {
-    setSelectedRecipients(prev => 
-      prev.includes(recipientId)
-        ? prev.filter(id => id !== recipientId)
-        : [...prev, recipientId]
-    );
+    const loadRecipients = async () => {
+      setIsLoading(true);
+      try {
+        const data = await fetchRecipients();
+        setRecipients(data);
+      } catch (error) {
+        console.error("Error fetching recipients:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadRecipients();
+  }, [userId, enableDeadManSwitch]);
+
+  // Fixed: the error was that we were updating a non-array with an array function
+  const handleRecipientSelect = (recipientId: string) => {
+    setSelectedRecipients((prev: string[]) => {
+      if (prev.includes(recipientId)) {
+        return prev.filter(id => id !== recipientId);
+      } else {
+        return [...prev, recipientId];
+      }
+    });
   };
 
-  return (
-    <div className="border rounded-lg p-4 space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="font-medium">Dead Man's Switch</h3>
-          <p className="text-sm text-muted-foreground">
-            Release this message to trusted recipients if you don't check in
-          </p>
-        </div>
-        <Switch
-          checked={enableDeadManSwitch}
-          onCheckedChange={setEnableDeadManSwitch}
-          id="dead-man-switch"
-        />
-      </div>
+  if (!enableDeadManSwitch) {
+    return (
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="dead-man-switch"
+              checked={enableDeadManSwitch}
+              onCheckedChange={setEnableDeadManSwitch}
+            />
+            <Label htmlFor="dead-man-switch">
+              Enable dead man's switch
+            </Label>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
-      {enableDeadManSwitch && (
-        <div className="space-y-4 pt-2">
-          <div className="space-y-2">
-            <Label htmlFor="condition-type">Release Condition</Label>
-            <Select
+  return (
+    <Card>
+      <CardContent className="pt-6 space-y-6">
+        <div className="flex items-center justify-between">
+          <Label htmlFor="dead-man-switch" className="font-medium text-lg">
+            Dead Man's Switch
+          </Label>
+          <Switch
+            id="dead-man-switch"
+            checked={enableDeadManSwitch}
+            onCheckedChange={setEnableDeadManSwitch}
+          />
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <Label className="mb-2 block">Condition Type</Label>
+            <RadioGroup 
               value={conditionType}
-              onValueChange={(value: 'no_check_in' | 'regular_check_in') => setConditionType(value)}
+              onValueChange={(value) => setConditionType(value as 'no_check_in' | 'regular_check_in')}
+              className="flex flex-col space-y-2"
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Select condition type" />
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="no_check_in" id="no-check-in" />
+                <Label htmlFor="no-check-in">Send if I don't check in</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="regular_check_in" id="regular-check-in" />
+                <Label htmlFor="regular-check-in">Send on a regular schedule</Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          <div>
+            <Label htmlFor="hours-threshold" className="mb-2 block">
+              {conditionType === 'no_check_in' 
+                ? 'Hours without check-in before sending' 
+                : 'Send every X hours'}
+            </Label>
+            <Select 
+              value={hoursThreshold.toString()} 
+              onValueChange={(value) => setHoursThreshold(Number(value))}
+            >
+              <SelectTrigger id="hours-threshold">
+                <SelectValue placeholder="Select hours" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="no_check_in">If I don't check in</SelectItem>
-                <SelectItem value="regular_check_in">If I miss a regular check-in</SelectItem>
+                <SelectItem value="24">24 hours (1 day)</SelectItem>
+                <SelectItem value="48">48 hours (2 days)</SelectItem>
+                <SelectItem value="72">72 hours (3 days)</SelectItem>
+                <SelectItem value="168">168 hours (1 week)</SelectItem>
+                <SelectItem value="336">336 hours (2 weeks)</SelectItem>
+                <SelectItem value="720">720 hours (30 days)</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="hours-threshold">Time Threshold (hours)</Label>
-            <Input
-              id="hours-threshold"
-              type="number"
-              min={1}
-              max={8760} // 1 year in hours
-              value={hoursThreshold}
-              onChange={(e) => setHoursThreshold(Number(e.target.value))}
-            />
-            <p className="text-sm text-muted-foreground">
-              {conditionType === 'no_check_in' 
-                ? "Message will be released if you don't check in within this time period"
-                : "Message will be released if you miss your regular check-in by this amount of time"}
-            </p>
-          </div>
-
-          <RecipientsSelector 
-            recipients={recipients} 
-            selectedRecipients={selectedRecipients} 
-            toggleRecipientSelection={toggleRecipientSelection}
-            showRecipientsSheet={showRecipientsSheet}
-            setShowRecipientsSheet={setShowRecipientsSheet}
-            navigate={navigate}
+          <RecipientsSelector
+            recipients={recipients}
+            selectedRecipients={selectedRecipients}
+            onSelectRecipient={handleRecipientSelect}
+            isLoading={isLoading}
           />
         </div>
-      )}
-    </div>
-  );
-}
-
-interface RecipientsSelectorProps {
-  recipients: Recipient[];
-  selectedRecipients: string[];
-  toggleRecipientSelection: (id: string) => void;
-  showRecipientsSheet: boolean;
-  setShowRecipientsSheet: (show: boolean) => void;
-  navigate: (path: string) => void;
-}
-
-function RecipientsSelector({
-  recipients,
-  selectedRecipients,
-  toggleRecipientSelection,
-  showRecipientsSheet,
-  setShowRecipientsSheet,
-  navigate
-}: RecipientsSelectorProps) {
-  return (
-    <div className="space-y-2">
-      <div className="flex justify-between items-center">
-        <Label>Select Recipients</Label>
-        <Button 
-          type="button" 
-          variant="outline" 
-          size="sm"
-          onClick={() => navigate('/recipients')}
-        >
-          <Plus className="h-4 w-4 mr-1" /> Add Recipient
-        </Button>
-      </div>
-      
-      <Sheet open={showRecipientsSheet} onOpenChange={setShowRecipientsSheet}>
-        <SheetTrigger asChild>
-          <Button 
-            type="button" 
-            variant="outline" 
-            className="w-full justify-between"
-          >
-            {selectedRecipients.length 
-              ? `${selectedRecipients.length} recipient(s) selected` 
-              : "Select recipients"}
-            <span className="sr-only">Select recipients</span>
-          </Button>
-        </SheetTrigger>
-        <SheetContent>
-          <SheetHeader>
-            <SheetTitle>Select Recipients</SheetTitle>
-            <SheetDescription>
-              Choose who should receive this message if the dead man's switch is triggered
-            </SheetDescription>
-          </SheetHeader>
-          
-          <div className="my-6 space-y-4">
-            {recipients.length === 0 ? (
-              <div className="text-center py-4">
-                <p className="text-muted-foreground">No recipients added yet.</p>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  className="mt-2"
-                  onClick={() => {
-                    setShowRecipientsSheet(false);
-                    navigate('/recipients');
-                  }}
-                >
-                  <Plus className="h-4 w-4 mr-1" /> Add Recipient
-                </Button>
-              </div>
-            ) : (
-              recipients.map(recipient => (
-                <div key={recipient.id} className="flex items-center space-x-2">
-                  <Checkbox 
-                    id={`recipient-${recipient.id}`} 
-                    checked={selectedRecipients.includes(recipient.id)}
-                    onCheckedChange={() => toggleRecipientSelection(recipient.id)}
-                  />
-                  <Label 
-                    htmlFor={`recipient-${recipient.id}`}
-                    className="flex-1 cursor-pointer"
-                  >
-                    <div className="font-medium">{recipient.name}</div>
-                    <div className="text-sm text-muted-foreground">{recipient.email}</div>
-                  </Label>
-                </div>
-              ))
-            )}
-          </div>
-          
-          <SheetFooter>
-            <Button 
-              type="button" 
-              onClick={() => setShowRecipientsSheet(false)}
-            >
-              Done
-            </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
-      
-      {selectedRecipients.length === 0 && (
-        <p className="text-sm text-red-500">
-          You must select at least one recipient
-        </p>
-      )}
-    </div>
+      </CardContent>
+    </Card>
   );
 }

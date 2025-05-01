@@ -5,7 +5,9 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { toast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { createMessage, createMessageCondition } from "@/services/messageService";
+import { createMessage } from "@/services/messages/messageService";
+import { createMessageCondition } from "@/services/messages/conditionService";
+import { fetchRecipients } from "@/services/messages/recipientService";
 import { FileAttachment } from "@/components/FileUploader";
 import { MessageDetails } from "./FormSections/MessageDetails";
 import { DeadManSwitch } from "./FormSections/DeadManSwitch";
