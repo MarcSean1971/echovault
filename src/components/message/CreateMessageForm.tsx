@@ -99,9 +99,7 @@ export function CreateMessageForm({ onCancel }: CreateMessageFormProps) {
   // This function gets full recipient objects from the selected IDs
   const fetchSelectedRecipients = async (ids: string[]) => {
     try {
-      const allRecipients = await import('@/services/messageService').then(
-        module => module.fetchRecipients()
-      );
+      const allRecipients = await fetchRecipients();
       return allRecipients.filter(recipient => ids.includes(recipient.id));
     } catch (error) {
       console.error("Error fetching recipients:", error);
