@@ -1,5 +1,4 @@
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertTriangle, Send } from "lucide-react";
+
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { PanicTriggerConfig } from "@/types/message";
@@ -13,16 +12,6 @@ interface PanicTriggerProps {
 export function PanicTrigger({ config, setConfig }: PanicTriggerProps) {
   return (
     <div className="space-y-4">
-      <Alert variant="destructive">
-        <AlertTriangle className="h-4 w-4" />
-        <AlertTitle className="font-medium">
-          Emergency Panic Button
-        </AlertTitle>
-        <AlertDescription className="text-sm">
-          This creates a button that you can press in an emergency to send your message instantly.
-        </AlertDescription>
-      </Alert>
-      
       <div className="space-y-4">
         <div className="space-y-2">
           <Label className="mb-2 block">How do you want to trigger this message?</Label>
