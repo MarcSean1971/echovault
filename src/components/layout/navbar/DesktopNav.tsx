@@ -21,25 +21,19 @@ export function DesktopNav({ userImage, initials }: DesktopNavProps) {
       <NavigationMenu className="hidden md:flex">
         <NavigationMenuList>
           <NavigationMenuItem>
-            <Link to="/dashboard" legacyBehavior passHref>
-              <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-                Dashboard
-              </NavigationMenuLink>
-            </Link>
+            <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
+              <Link to="/dashboard">Dashboard</Link>
+            </NavigationMenuLink>
           </NavigationMenuItem>
           <NavigationMenuItem>
-            <Link to="/create-message" legacyBehavior passHref>
-              <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-                Messages
-              </NavigationMenuLink>
-            </Link>
+            <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
+              <Link to="/create-message">Messages</Link>
+            </NavigationMenuLink>
           </NavigationMenuItem>
           <NavigationMenuItem>
-            <Link to="/recipients" legacyBehavior passHref>
-              <NavigationMenuLink className={navigationMenuTriggerStyle()}>
-                Recipients
-              </NavigationMenuLink>
-            </Link>
+            <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
+              <Link to="/recipients">Recipients</Link>
+            </NavigationMenuLink>
           </NavigationMenuItem>
         </NavigationMenuList>
       </NavigationMenu>
