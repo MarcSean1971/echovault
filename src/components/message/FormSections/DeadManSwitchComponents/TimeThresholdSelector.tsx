@@ -1,9 +1,10 @@
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { TriggerType } from "@/types/message";
 
 interface TimeThresholdSelectorProps {
-  conditionType: 'no_check_in' | 'regular_check_in';
+  conditionType: TriggerType;
   hoursThreshold: number;
   setHoursThreshold: (value: number) => void;
 }

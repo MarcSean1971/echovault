@@ -12,6 +12,7 @@ import { FileAttachment } from "@/components/FileUploader";
 import { MessageDetails } from "./FormSections/MessageDetails";
 import { DeadManSwitch } from "./FormSections/DeadManSwitch";
 import { UploadProgressDialog } from "./FormSections/UploadProgressDialog";
+import { TriggerType } from "@/types/message";
 
 interface CreateMessageFormProps {
   onCancel: () => void;
@@ -30,7 +31,7 @@ export function CreateMessageForm({ onCancel }: CreateMessageFormProps) {
   
   // Dead man's switch related states
   const [enableDeadManSwitch, setEnableDeadManSwitch] = useState(false);
-  const [conditionType, setConditionType] = useState<'no_check_in' | 'regular_check_in'>('no_check_in');
+  const [conditionType, setConditionType] = useState<TriggerType>('no_check_in');
   const [hoursThreshold, setHoursThreshold] = useState(72); // Default 72 hours (3 days)
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
 
@@ -70,8 +71,10 @@ export function CreateMessageForm({ onCancel }: CreateMessageFormProps) {
         await createMessageCondition(
           newMessage.id,
           conditionType,
-          hoursThreshold,
-          selectedRecipientObjects
+          {
+            hoursThreshold,
+            recipients: selectedRecipientObjects
+          }
         );
       }
       

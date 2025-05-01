@@ -17,7 +17,7 @@ export type Message = {
 
 export type TriggerType = 
   | 'no_check_in' 
-  | 'regular_check_in' 
+  | 'regular_check_in'
   | 'scheduled_date'
   | 'group_confirmation'
   | 'panic_trigger';
@@ -69,3 +69,4 @@ export type CheckIn = {
     longitude: number;
   } | null;
 };
+
