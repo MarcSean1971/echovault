@@ -2,7 +2,7 @@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { TriggerType } from "@/types/message";
-import { AlertCircle, Calendar, Bell, ArrowDown } from "lucide-react";
+import { AlertCircle, Calendar } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ConditionTypeSelectorProps {
@@ -59,26 +59,6 @@ export function ConditionTypeSelector({
               </TooltipProvider>
             </div>
             <p className="text-sm text-muted-foreground">Schedule for future delivery on a specific date and time</p>
-          </div>
-        </div>
-        
-        <div className="flex items-start space-x-2 p-3 rounded-md border hover:bg-muted/50 transition-colors">
-          <RadioGroupItem value="panic_trigger" id="panic-trigger" className="mt-1" />
-          <div className="space-y-1">
-            <div className="flex items-center">
-              <Label htmlFor="panic-trigger" className="font-medium cursor-pointer">Manual panic button</Label>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Bell className="h-4 w-4 ml-2 text-muted-foreground cursor-help" />
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p className="w-[220px]">Creates a button you can press in an emergency to instantly deliver this message.</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
-            <p className="text-sm text-muted-foreground">For emergency situations - sends message immediately when triggered</p>
           </div>
         </div>
       </RadioGroup>
