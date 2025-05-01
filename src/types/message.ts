@@ -21,8 +21,8 @@ export type TriggerType =
   | 'scheduled_date'        // Specific date delivery
   | 'group_confirmation'    // Group confirmation required
   | 'panic_trigger'         // Manual panic trigger
-  | 'inactivity_to_recurring' // NEW: Inactivity → Then Recurring
-  | 'inactivity_to_date';    // NEW: Inactivity → Then Specific Date
+  | 'inactivity_to_recurring' // Inactivity → Then Recurring
+  | 'inactivity_to_date';    // Inactivity → Then Specific Date
 
 export type DeliveryOption = "once" | "recurring" | "specific_date";
 
@@ -43,6 +43,7 @@ export type MessageCondition = {
   
   // Inactivity settings
   hours_threshold?: number;
+  minutes_threshold?: number; // New: minutes threshold
   
   // Date-based settings
   trigger_date?: string;
@@ -65,7 +66,7 @@ export type MessageCondition = {
   // Reminder settings
   reminder_hours?: number[];
   
-  // New: Delivery option for no_check_in
+  // Delivery option for no_check_in
   delivery_option?: DeliveryOption;
   
   // Recipients

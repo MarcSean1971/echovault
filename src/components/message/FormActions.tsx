@@ -19,6 +19,7 @@ export function useFormActions() {
     enableDeadManSwitch,
     conditionType,
     hoursThreshold,
+    minutesThreshold,
     selectedRecipients,
     triggerDate,
     recurringPattern,
@@ -46,6 +47,9 @@ export function useFormActions() {
       if (deliveryOption === 'specific_date' && !triggerDate) return false;
       if (deliveryOption === 'recurring' && !recurringPattern) return false;
     }
+    
+    // Validate combined trigger
+    if (conditionType === 'inactivity_to_date' && !triggerDate) return false;
     
     // Validate scheduled date
     if (conditionType === 'scheduled_date' && !triggerDate) return false;
@@ -114,8 +118,11 @@ export function useFormActions() {
           };
         });
         
+        // Calculate total hours including minutes
+        const totalHoursThreshold = hoursThreshold + (minutesThreshold / 60);
+        
         const conditionOptions = {
-          hoursThreshold,
+          hoursThreshold: totalHoursThreshold,
           recipients,
           pinCode: pinCode || undefined,
           unlockDelayHours: unlockDelay || undefined,
@@ -137,6 +144,14 @@ export function useFormActions() {
               recurringPattern
             });
           }
+        }
+        
+        // Handle combined inactivity_to_date condition
+        else if (conditionType === 'inactivity_to_date' && triggerDate) {
+          Object.assign(conditionOptions, {
+            triggerDate: triggerDate.toISOString(),
+            recurringPattern
+          });
         }
         
         // Add date-specific options if needed

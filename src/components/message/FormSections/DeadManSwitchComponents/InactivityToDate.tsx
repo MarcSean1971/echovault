@@ -5,10 +5,13 @@ import { RecurringPatternSelector } from "./RecurringPatternSelector";
 import { ReminderSettings } from "./ReminderSettings";
 import { RecurringPattern } from "@/types/message";
 import { Separator } from "@/components/ui/separator";
+import { CustomTimeInput } from "./CustomTimeInput";
 
 interface InactivityToDateProps {
   hoursThreshold: number;
   setHoursThreshold: (value: number) => void;
+  minutesThreshold: number;
+  setMinutesThreshold: (value: number) => void;
   triggerDate: Date | undefined;
   setTriggerDate: (date: Date | undefined) => void;
   recurringPattern: RecurringPattern | null;
@@ -20,6 +23,8 @@ interface InactivityToDateProps {
 export function InactivityToDate({
   hoursThreshold,
   setHoursThreshold,
+  minutesThreshold,
+  setMinutesThreshold,
   triggerDate,
   setTriggerDate,
   recurringPattern,
@@ -35,12 +40,14 @@ export function InactivityToDate({
           conditionType="no_check_in"
           hoursThreshold={hoursThreshold}
           setHoursThreshold={setHoursThreshold}
+          minutesThreshold={minutesThreshold}
+          setMinutesThreshold={setMinutesThreshold}
         />
         
         <ReminderSettings
           reminderHours={reminderHours}
           setReminderHours={setReminderHours}
-          maxHours={hoursThreshold}
+          maxHours={hoursThreshold + (minutesThreshold / 60)}
         />
       </div>
       

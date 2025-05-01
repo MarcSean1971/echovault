@@ -27,6 +27,9 @@ interface MessageFormContextType {
   setConditionType: (value: TriggerType) => void;
   hoursThreshold: number;
   setHoursThreshold: (value: number) => void;
+  // New: minutes threshold for custom time input
+  minutesThreshold: number;
+  setMinutesThreshold: (value: number) => void;
   selectedRecipients: string[];
   setSelectedRecipients: (value: string[]) => void;
   triggerDate: Date | undefined;
@@ -34,7 +37,7 @@ interface MessageFormContextType {
   recurringPattern: RecurringPattern | null;
   setRecurringPattern: (value: RecurringPattern | null) => void;
   
-  // New: Delivery option for no_check_in
+  // Delivery option for no_check_in
   deliveryOption: DeliveryOption;
   setDeliveryOption: (value: DeliveryOption) => void;
   
@@ -88,11 +91,12 @@ export function MessageFormProvider({ children }: MessageFormProviderProps) {
   const [enableDeadManSwitch, setEnableDeadManSwitch] = useState(false);
   const [conditionType, setConditionType] = useState<TriggerType>('no_check_in');
   const [hoursThreshold, setHoursThreshold] = useState(72);
+  const [minutesThreshold, setMinutesThreshold] = useState(0); // New: minutes threshold
   const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
   const [triggerDate, setTriggerDate] = useState<Date | undefined>(undefined);
   const [recurringPattern, setRecurringPattern] = useState<RecurringPattern | null>(null);
   
-  // New: Delivery option for no_check_in
+  // Delivery option for no_check_in
   const [deliveryOption, setDeliveryOption] = useState<DeliveryOption>("once");
   
   // Secondary trigger options for combined triggers
@@ -136,6 +140,8 @@ export function MessageFormProvider({ children }: MessageFormProviderProps) {
     setConditionType,
     hoursThreshold,
     setHoursThreshold,
+    minutesThreshold,
+    setMinutesThreshold,
     selectedRecipients,
     setSelectedRecipients,
     triggerDate,

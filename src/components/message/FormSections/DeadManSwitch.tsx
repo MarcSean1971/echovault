@@ -16,6 +16,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { NoCheckInDeliveryOptions } from "./DeadManSwitchComponents/NoCheckInDeliveryOptions";
 import { RecurringPatternSelector } from "./DeadManSwitchComponents/RecurringPatternSelector";
 import { ReminderSettings } from "./DeadManSwitchComponents/ReminderSettings";
+import { InactivityToDate } from "./DeadManSwitchComponents/InactivityToDate";
 
 export function DeadManSwitch() {
   const { userId } = useAuth();
@@ -26,6 +27,8 @@ export function DeadManSwitch() {
     setConditionType,
     hoursThreshold,
     setHoursThreshold,
+    minutesThreshold,
+    setMinutesThreshold,
     selectedRecipients,
     setSelectedRecipients,
     triggerDate,
@@ -113,6 +116,8 @@ export function DeadManSwitch() {
                   conditionType={conditionType}
                   hoursThreshold={hoursThreshold}
                   setHoursThreshold={setHoursThreshold}
+                  minutesThreshold={minutesThreshold}
+                  setMinutesThreshold={setMinutesThreshold}
                 />
                 
                 <NoCheckInDeliveryOptions
@@ -144,7 +149,7 @@ export function DeadManSwitch() {
                 <ReminderSettings
                   reminderHours={reminderHours}
                   setReminderHours={setReminderHours}
-                  maxHours={hoursThreshold}
+                  maxHours={hoursThreshold + (minutesThreshold / 60)}
                 />
               </>
             )}
@@ -155,6 +160,21 @@ export function DeadManSwitch() {
                 setTriggerDate={setTriggerDate}
                 recurringPattern={recurringPattern}
                 setRecurringPattern={setRecurringPattern}
+              />
+            )}
+            
+            {conditionType === 'inactivity_to_date' && (
+              <InactivityToDate
+                hoursThreshold={hoursThreshold}
+                setHoursThreshold={setHoursThreshold}
+                minutesThreshold={minutesThreshold}
+                setMinutesThreshold={setMinutesThreshold}
+                triggerDate={triggerDate}
+                setTriggerDate={setTriggerDate}
+                recurringPattern={recurringPattern}
+                setRecurringPattern={setRecurringPattern}
+                reminderHours={reminderHours}
+                setReminderHours={setReminderHours}
               />
             )}
             
