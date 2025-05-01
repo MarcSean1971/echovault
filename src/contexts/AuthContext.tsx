@@ -6,26 +6,27 @@ interface AuthContextType {
   isLoaded: boolean;
   isSignedIn: boolean | null;
   userId: string | null;
+  user?: any;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const { isLoaded, userId, isSignedIn } = useClerkAuth();
-  const { user } = useUser();
+  const clerk = useClerkAuth();
+  const userResult = useUser();
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
 
   useEffect(() => {
-    if (isLoaded) {
-      setIsAuthenticated(isSignedIn || false);
+    if (clerk.isLoaded) {
+      setIsAuthenticated(clerk.isSignedIn || false);
     }
-  }, [isLoaded, isSignedIn]);
+  }, [clerk.isLoaded, clerk.isSignedIn]);
 
   const value = {
-    isLoaded,
+    isLoaded: clerk.isLoaded,
     isSignedIn: isAuthenticated,
-    userId,
-    user
+    userId: clerk.userId,
+    user: userResult.user
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
