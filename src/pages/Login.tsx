@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,17 +5,20 @@ import { Label } from "@/components/ui/label";
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { toast } from "@/components/ui/use-toast";
-import { EyeIcon, EyeOffIcon, LockIcon, MailIcon } from "lucide-react";
+import { MailIcon, LockIcon } from "lucide-react";
 import { useSignIn, useAuth } from "@clerk/clerk-react";
+import { Logo } from "@/components/layout/navbar/Logo";
+import { PasswordInput } from "@/components/auth/PasswordInput";
+import { VerificationAlert } from "@/components/auth/VerificationAlert";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const { isSignedIn } = useAuth();
   const navigate = useNavigate();
   const { signIn, setActive } = useSignIn();
+  const isDevelopment = import.meta.env.DEV;
 
   // If already signed in, redirect to dashboard
   if (isSignedIn) {
@@ -59,13 +61,11 @@ export default function Login() {
     }
   };
 
-  const toggleShowPassword = () => setShowPassword(!showPassword);
-
   return (
     <div className="container flex items-center justify-center min-h-screen py-12 px-4 sm:px-6 lg:px-8">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-3xl sm:text-4xl font-bold gradient-text">EchoVault</h1>
+          <Logo />
           <p className="mt-2 text-muted-foreground">Your secure digital failsafe</p>
         </div>
         
@@ -108,30 +108,14 @@ export default function Login() {
                     Forgot password?
                   </Link>
                 </div>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <LockIcon className="h-5 w-5 text-muted-foreground" />
-                  </div>
-                  <Input 
-                    id="password" 
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10"
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={toggleShowPassword}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  >
-                    {showPassword ? (
-                      <EyeOffIcon className="h-5 w-5 text-muted-foreground hover:text-foreground" />
-                    ) : (
-                      <EyeIcon className="h-5 w-5 text-muted-foreground hover:text-foreground" />
-                    )}
-                  </button>
-                </div>
+                <PasswordInput
+                  id="password"
+                  label=""
+                  icon={<LockIcon className="h-5 w-5 text-muted-foreground" />}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Enter your password"
+                />
               </div>
             </CardContent>
             
@@ -152,6 +136,8 @@ export default function Login() {
               </div>
             </CardFooter>
           </form>
+          
+          <VerificationAlert isDevelopment={isDevelopment} />
         </Card>
       </div>
     </div>
