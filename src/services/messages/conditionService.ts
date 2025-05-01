@@ -1,4 +1,3 @@
-
 import { getAuthClient } from "@/lib/supabaseClient";
 import { 
   MessageCondition, 
@@ -77,9 +76,8 @@ export async function createMessageCondition(
       secondary_recurring_pattern: secondaryRecurringPattern || null,
       reminder_hours: reminderHours || null,
       panic_config: panicTriggerConfig || null,
-      active: true,
-      triggered: false,
-      delivered: false
+      active: true
+      // Note: We're not setting 'triggered' or 'delivered' here as they don't exist in the DB schema yet
     })
     .select()
     .single();
@@ -89,7 +87,12 @@ export async function createMessageCondition(
     throw new Error(error.message || "Failed to create message condition");
   }
 
-  return data as MessageCondition;
+  // Map the database result to our expected MessageCondition type with additional fields
+  return {
+    ...data,
+    triggered: false,
+    delivered: false
+  } as MessageCondition;
 }
 
 export async function fetchMessageConditions(userId: string): Promise<MessageCondition[]> {
@@ -126,8 +129,8 @@ export async function fetchMessageConditions(userId: string): Promise<MessageCon
       reminder_hours: condition.reminder_hours,
       panic_config: condition.panic_config,
       active: condition.active,
-      triggered: condition.triggered,
-      delivered: condition.delivered,
+      triggered: false,
+      delivered: false,
       last_checked: condition.last_checked,
       created_at: condition.created_at,
       updated_at: condition.updated_at
@@ -141,9 +144,12 @@ export async function updateMessageCondition(
 ): Promise<MessageCondition> {
   const client = await getAuthClient();
   
+  // Filter out properties that don't exist in the database
+  const { triggered, delivered, ...validUpdates } = updates;
+  
   const { data, error } = await client
     .from("message_conditions")
-    .update(updates)
+    .update(validUpdates)
     .eq("id", conditionId)
     .select()
     .single();
@@ -153,7 +159,12 @@ export async function updateMessageCondition(
     throw new Error(error.message || "Failed to update message condition");
   }
 
-  return data as MessageCondition;
+  // Add the missing properties back for the application layer
+  return {
+    ...data,
+    triggered: triggered ?? false,
+    delivered: delivered ?? false
+  } as MessageCondition;
 }
 
 export async function deleteMessageCondition(conditionId: string): Promise<void> {
@@ -262,7 +273,11 @@ export async function getNextCheckInDeadline(userId: string) {
     
     return {
       deadline: earliestDeadline,
-      conditions: data || []
+      conditions: data ? data.map(c => ({
+        ...c,
+        triggered: false,
+        delivered: false
+      })) : []
     };
   } catch (error: any) {
     console.error("Error getting next check-in deadline:", error);
@@ -289,12 +304,13 @@ export async function triggerPanicMessage(userId: string, messageId: string) {
       throw new Error("Message not found or you don't have permission to trigger it");
     }
     
-    // Mark the message as triggered
+    // Mark the message as triggered - note that we're not updating the DB with 'triggered'
+    // and 'delivered' since they don't exist in the schema yet. In a real implementation,
+    // these fields would be added to the database.
     const { error: updateError } = await client
       .from("message_conditions")
       .update({ 
-        triggered: true,
-        delivered: true // For panic, we consider it delivered immediately
+        active: false // We use active as a proxy for triggered for now
       })
       .eq("id", data.id);
       
@@ -330,14 +346,11 @@ export async function getMessageStatus(messageId: string) {
     }
     
     // Calculate status based on condition fields
+    // Since we don't have triggered/delivered in DB yet, we'll determine from active
     let status = 'armed';
     
-    if (data.triggered && data.delivered) {
-      status = 'delivered';
-    } else if (data.triggered && !data.delivered) {
-      status = 'triggered';
-    } else if (!data.active) {
-      status = 'cancelled';
+    if (!data.active) {
+      status = 'delivered'; // For now, we'll use active=false to mean delivered
     }
     
     // TODO: In future we'd check for viewed/unlocked statuses from recipient_interactions table
@@ -347,9 +360,6 @@ export async function getMessageStatus(messageId: string) {
       message_id: data.message_id,
       status: status,
       active: data.active,
-      triggered: data.triggered,
-      delivered: data.delivered,
-      last_checked: data.last_checked,
       condition_type: data.condition_type
     };
   } catch (error: any) {
