@@ -8,14 +8,11 @@ import { ConditionTypeSelector } from "./DeadManSwitchComponents/ConditionTypeSe
 import { TimeThresholdSelector } from "./DeadManSwitchComponents/TimeThresholdSelector";
 import { RecipientsSelector } from "./RecipientsSelector";
 import { ScheduledDateSection } from "./DeadManSwitchComponents/ScheduledDateSection";
-import { GroupConfirmation } from "./DeadManSwitchComponents/GroupConfirmation";
 import { PanicTrigger } from "./DeadManSwitchComponents/PanicTrigger";
-import { AdvancedOptions } from "./DeadManSwitchComponents/AdvancedOptions";
-import { InactivityToRecurring } from "./DeadManSwitchComponents/InactivityToRecurring";
-import { InactivityToDate } from "./DeadManSwitchComponents/InactivityToDate";
-import { ReminderSettings } from "./DeadManSwitchComponents/ReminderSettings";
+import { SecurityOptions } from "./DeadManSwitchComponents/SecurityOptions";
 import { useMessageForm } from "../MessageFormContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 export function DeadManSwitch() {
   const { userId } = useAuth();
@@ -32,12 +29,6 @@ export function DeadManSwitch() {
     setTriggerDate,
     recurringPattern,
     setRecurringPattern,
-    secondaryTriggerDate,
-    setSecondaryTriggerDate,
-    secondaryRecurringPattern,
-    setSecondaryRecurringPattern,
-    reminderHours,
-    setReminderHours,
     panicTriggerConfig,
     setPanicTriggerConfig,
     pinCode,
@@ -45,13 +36,12 @@ export function DeadManSwitch() {
     unlockDelay,
     setUnlockDelay,
     expiryHours,
-    setExpiryHours,
-    confirmationsRequired,
-    setConfirmationsRequired
+    setExpiryHours
   } = useMessageForm();
 
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState("delivery");
   
   // Fetch available recipients when component mounts
   useEffect(() => {
@@ -97,90 +87,101 @@ export function DeadManSwitch() {
           showLabel={true}
         />
 
-        <div className="space-y-4">
-          <ConditionTypeSelector
-            conditionType={conditionType}
-            setConditionType={setConditionType}
-          />
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
+          <TabsList className="grid grid-cols-3 mb-6">
+            <TabsTrigger value="delivery">1. Delivery Method</TabsTrigger>
+            <TabsTrigger value="recipients">2. Recipients</TabsTrigger>
+            <TabsTrigger value="security">3. Security</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="delivery" className="space-y-6">
+            <ConditionTypeSelector
+              conditionType={conditionType}
+              setConditionType={setConditionType}
+            />
 
-          {(conditionType === 'no_check_in' || conditionType === 'regular_check_in') && (
-            <>
+            {conditionType === 'no_check_in' && (
               <TimeThresholdSelector
                 conditionType={conditionType}
                 hoursThreshold={hoursThreshold}
                 setHoursThreshold={setHoursThreshold}
               />
-              <ReminderSettings
-                reminderHours={reminderHours}
-                setReminderHours={setReminderHours}
-                maxHours={hoursThreshold}
+            )}
+            
+            {conditionType === 'scheduled_date' && (
+              <ScheduledDateSection
+                triggerDate={triggerDate}
+                setTriggerDate={setTriggerDate}
+                recurringPattern={recurringPattern}
+                setRecurringPattern={setRecurringPattern}
               />
-            </>
-          )}
+            )}
+            
+            {conditionType === 'panic_trigger' && (
+              <PanicTrigger 
+                config={panicTriggerConfig}
+                setConfig={setPanicTriggerConfig}
+              />
+            )}
+            
+            <div className="pt-4 flex justify-end">
+              <button 
+                type="button"
+                onClick={() => setActiveTab("recipients")}
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+              >
+                Next: Choose Recipients
+              </button>
+            </div>
+          </TabsContent>
           
-          {conditionType === 'scheduled_date' && (
-            <ScheduledDateSection
-              triggerDate={triggerDate}
-              setTriggerDate={setTriggerDate}
-              recurringPattern={recurringPattern}
-              setRecurringPattern={setRecurringPattern}
+          <TabsContent value="recipients" className="space-y-6">
+            <RecipientsSelector
+              recipients={recipients}
+              selectedRecipients={selectedRecipients}
+              onSelectRecipient={handleRecipientSelect}
+              isLoading={isLoading}
             />
-          )}
+            
+            <div className="pt-4 flex justify-between">
+              <button 
+                type="button"
+                onClick={() => setActiveTab("delivery")}
+                className="px-4 py-2 border rounded-md hover:bg-muted transition-colors"
+              >
+                Back to Delivery Method
+              </button>
+              <button 
+                type="button"
+                onClick={() => setActiveTab("security")}
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+              >
+                Next: Security Options
+              </button>
+            </div>
+          </TabsContent>
           
-          {conditionType === 'group_confirmation' && (
-            <GroupConfirmation
-              confirmationsRequired={confirmationsRequired}
-              setConfirmationsRequired={setConfirmationsRequired}
+          <TabsContent value="security" className="space-y-6">
+            <SecurityOptions
+              pinCode={pinCode}
+              setPinCode={setPinCode}
+              unlockDelay={unlockDelay}
+              setUnlockDelay={setUnlockDelay}
+              expiryHours={expiryHours}
+              setExpiryHours={setExpiryHours}
             />
-          )}
-          
-          {conditionType === 'panic_trigger' && (
-            <PanicTrigger 
-              config={panicTriggerConfig}
-              setConfig={setPanicTriggerConfig}
-            />
-          )}
-          
-          {conditionType === 'inactivity_to_recurring' && (
-            <InactivityToRecurring
-              hoursThreshold={hoursThreshold}
-              setHoursThreshold={setHoursThreshold}
-              recurringPattern={secondaryRecurringPattern}
-              setRecurringPattern={setSecondaryRecurringPattern}
-              reminderHours={reminderHours}
-              setReminderHours={setReminderHours}
-            />
-          )}
-          
-          {conditionType === 'inactivity_to_date' && (
-            <InactivityToDate
-              hoursThreshold={hoursThreshold}
-              setHoursThreshold={setHoursThreshold}
-              triggerDate={secondaryTriggerDate}
-              setTriggerDate={setSecondaryTriggerDate}
-              recurringPattern={secondaryRecurringPattern}
-              setRecurringPattern={setSecondaryRecurringPattern}
-              reminderHours={reminderHours}
-              setReminderHours={setReminderHours}
-            />
-          )}
-          
-          <RecipientsSelector
-            recipients={recipients}
-            selectedRecipients={selectedRecipients}
-            onSelectRecipient={handleRecipientSelect}
-            isLoading={isLoading}
-          />
-          
-          <AdvancedOptions
-            pinCode={pinCode}
-            setPinCode={setPinCode}
-            unlockDelay={unlockDelay}
-            setUnlockDelay={setUnlockDelay}
-            expiryHours={expiryHours}
-            setExpiryHours={setExpiryHours}
-          />
-        </div>
+            
+            <div className="pt-4 flex justify-start">
+              <button 
+                type="button"
+                onClick={() => setActiveTab("recipients")}
+                className="px-4 py-2 border rounded-md hover:bg-muted transition-colors"
+              >
+                Back to Recipients
+              </button>
+            </div>
+          </TabsContent>
+        </Tabs>
       </CardContent>
     </Card>
   );

@@ -22,13 +22,10 @@ export function useFormActions() {
     selectedRecipients,
     triggerDate,
     recurringPattern,
-    secondaryTriggerDate,
-    secondaryRecurringPattern,
     reminderHours,
     panicTriggerConfig,
     pinCode,
     unlockDelay,
-    confirmationsRequired,
     expiryHours,
     setIsLoading,
     setShowUploadDialog,
@@ -48,16 +45,17 @@ export function useFormActions() {
 
   const simulateUploadProgress = () => {
     setUploadProgress(0);
+    let progressValue = 0;
+    
     const interval = setInterval(() => {
-      // Fix: Type error by explicitly declaring newValue as a number
-      setUploadProgress((prevProgress: number) => {
-        const newValue = prevProgress + 5;
-        if (newValue >= 100) {
-          clearInterval(interval);
-          return 100;
-        }
-        return newValue;
-      });
+      progressValue += 5;
+      
+      if (progressValue >= 100) {
+        clearInterval(interval);
+        setUploadProgress(100);
+      } else {
+        setUploadProgress(progressValue);
+      }
     }, 200);
   };
 
@@ -112,7 +110,7 @@ export function useFormActions() {
           pinCode: pinCode || undefined,
           unlockDelayHours: unlockDelay || undefined,
           expiryHours: expiryHours || undefined,
-          reminderHours
+          reminderHours: reminderHours || [24]  // Default to 24-hour reminder
         };
 
         // Add date-specific options if needed
@@ -120,29 +118,6 @@ export function useFormActions() {
           Object.assign(conditionOptions, {
             triggerDate: triggerDate.toISOString(),
             recurringPattern
-          });
-        }
-        
-        // Add group confirmation settings
-        if (conditionType === 'group_confirmation') {
-          Object.assign(conditionOptions, {
-            confirmationRequired: confirmationsRequired
-          });
-        }
-        
-        // Add secondary condition options for combined triggers
-        if (conditionType === 'inactivity_to_recurring') {
-          Object.assign(conditionOptions, {
-            secondaryConditionType: 'scheduled_date' as TriggerType,
-            secondaryRecurringPattern
-          });
-        }
-        
-        if (conditionType === 'inactivity_to_date' && secondaryTriggerDate) {
-          Object.assign(conditionOptions, {
-            secondaryConditionType: 'scheduled_date' as TriggerType,
-            secondaryTriggerDate: secondaryTriggerDate.toISOString(),
-            secondaryRecurringPattern
           });
         }
         

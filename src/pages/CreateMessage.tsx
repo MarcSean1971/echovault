@@ -5,6 +5,7 @@ import { CreateMessageForm } from "@/components/message/CreateMessageForm";
 import { TriggerDashboard } from "@/components/message/TriggerDashboard";
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PenLine, Clock } from "lucide-react";
 
 export default function CreateMessage() {
   const navigate = useNavigate();
@@ -21,8 +22,14 @@ export default function CreateMessage() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="create">Create New Message</TabsTrigger>
-          <TabsTrigger value="dashboard">Trigger Dashboard</TabsTrigger>
+          <TabsTrigger value="create" className="flex items-center">
+            <PenLine className="mr-2 h-4 w-4" />
+            Create New Message
+          </TabsTrigger>
+          <TabsTrigger value="dashboard" className="flex items-center">
+            <Clock className="mr-2 h-4 w-4" />
+            Trigger Dashboard
+          </TabsTrigger>
         </TabsList>
         
         <TabsContent value="create">
