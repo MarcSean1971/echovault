@@ -10,6 +10,7 @@ import { toast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { AIEnhancer } from "@/components/AIEnhancer";
 
 export default function CreateMessage() {
   const navigate = useNavigate();
@@ -109,7 +110,10 @@ export default function CreateMessage() {
 
             {messageType === "text" && (
               <div className="space-y-2">
-                <Label htmlFor="content">Message Content</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="content">Message Content</Label>
+                  <AIEnhancer content={content} onChange={setContent} />
+                </div>
                 <Textarea
                   id="content"
                   placeholder="Write your message here..."

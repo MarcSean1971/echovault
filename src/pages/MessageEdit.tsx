@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft } from "lucide-react";
+import { AIEnhancer } from "@/components/AIEnhancer";
 
 type Message = {
   id: string;
@@ -137,7 +138,10 @@ export default function MessageEdit() {
             
             {messageType === 'text' && (
               <div className="space-y-2">
-                <Label htmlFor="content">Message Content</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="content">Message Content</Label>
+                  <AIEnhancer content={content} onChange={setContent} />
+                </div>
                 <Textarea
                   id="content"
                   value={content}
