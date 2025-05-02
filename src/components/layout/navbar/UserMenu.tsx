@@ -13,7 +13,7 @@ interface UserMenuProps {
 }
 
 export function UserMenu({ userImage, initials, isAdmin = false }: UserMenuProps) {
-  const { signOut } = useAuth();
+  const { signOut, profile, user } = useAuth();
 
   return (
     <DropdownMenu>
@@ -33,13 +33,18 @@ export function UserMenu({ userImage, initials, isAdmin = false }: UserMenuProps
         <DropdownMenuLabel>
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">
-              {isAdmin && <span className="inline-flex items-center gap-1 text-destructive">
-                <ShieldAlert className="h-3 w-3" /> Admin
-              </span>}
+              {profile?.first_name && profile?.last_name 
+                ? `${profile.first_name} ${profile.last_name}`
+                : user?.email}
             </p>
             <p className="text-xs leading-none text-muted-foreground">
-              {isAdmin ? "Administrator Account" : "User Account"}
+              {user?.email}
             </p>
+            {isAdmin && (
+              <p className="text-xs text-destructive flex items-center gap-1 mt-1">
+                <ShieldAlert className="h-3 w-3" /> Admin Account
+              </p>
+            )}
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
@@ -48,6 +53,12 @@ export function UserMenu({ userImage, initials, isAdmin = false }: UserMenuProps
             <Link to="/profile" className="w-full cursor-pointer">
               <User className="mr-2 h-4 w-4" />
               <span>Profile</span>
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link to="/check-in" className="w-full cursor-pointer">
+              <User className="mr-2 h-4 w-4" />
+              <span>Check In</span>
             </Link>
           </DropdownMenuItem>
           {isAdmin && (

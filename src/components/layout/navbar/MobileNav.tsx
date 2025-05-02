@@ -2,7 +2,7 @@
 import { UserMenu } from "./UserMenu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Menu, ShieldAlert } from "lucide-react";
+import { Menu, ShieldAlert, Check } from "lucide-react";
 import { Link } from "react-router-dom";
 
 interface MobileNavProps {
@@ -56,6 +56,12 @@ export function MobileNav({ userImage, initials, isAdmin = false }: MobileNavPro
                   <Button variant="ghost" asChild className="justify-start w-full hover:bg-accent/10 transition-colors">
                     <Link to="/recipients">Recipients</Link>
                   </Button>
+                  <Button variant="ghost" asChild className="justify-start w-full hover:bg-accent/10 transition-colors">
+                    <Link to="/check-in" className="flex items-center gap-2">
+                      <Check className="h-4 w-4" />
+                      Check In
+                    </Link>
+                  </Button>
                 </>
               )}
             </div>
@@ -63,7 +69,10 @@ export function MobileNav({ userImage, initials, isAdmin = false }: MobileNavPro
             <div className="mt-auto space-y-3">
               {!isAdmin && (
                 <Button className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity shadow-md" asChild>
-                  <Link to="/check-in">Check In</Link>
+                  <Link to="/check-in" className="flex items-center gap-2">
+                    <Check className="h-4 w-4" />
+                    Check In
+                  </Link>
                 </Button>
               )}
               <div className="flex items-center justify-between pt-4">

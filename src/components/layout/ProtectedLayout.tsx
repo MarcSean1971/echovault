@@ -4,27 +4,20 @@ import { Toaster } from "@/components/ui/toaster";
 import Navbar from "./Navbar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
-import { isAdminEmail } from "@/utils/adminUtils";
 
 export default function ProtectedLayout() {
-  const { isLoaded, isSignedIn, user } = useAuth();
+  const { isLoaded, isSignedIn } = useAuth();
   const [isChecking, setIsChecking] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     if (isLoaded) {
-      // Check if user is admin
-      if (user?.email) {
-        setIsAdmin(isAdminEmail(user.email));
-      }
-      
       // Give a small delay to ensure auth state is properly checked
       const timer = setTimeout(() => {
         setIsChecking(false);
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [isLoaded, user]);
+  }, [isLoaded]);
 
   // Show loading state while checking authentication
   if (isChecking || !isLoaded) {
@@ -42,7 +35,7 @@ export default function ProtectedLayout() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <Navbar isLoggedIn={true} isAdmin={isAdmin} />
+      <Navbar isLoggedIn={true} />
       <Toaster />
       <main className="flex-1">
         <Outlet />
@@ -50,4 +43,3 @@ export default function ProtectedLayout() {
     </div>
   );
 }
-

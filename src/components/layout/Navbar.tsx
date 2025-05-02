@@ -15,9 +15,10 @@ interface NavbarProps {
 }
 
 export default function Navbar({ isLoggedIn = false, isAdmin = false }: NavbarProps) {
-  const { isSignedIn, isLoaded, profile, getInitials } = useAuth();
+  const { isSignedIn, isLoaded, profile, getInitials, user } = useAuth();
   const [userImage, setUserImage] = useState<string | null>(null);
   const [initials, setInitials] = useState("U");
+  const [showAdminLink, setShowAdminLink] = useState(false);
 
   // Determine user initials and image when user data is loaded
   useEffect(() => {
@@ -28,10 +29,18 @@ export default function Navbar({ isLoggedIn = false, isAdmin = false }: NavbarPr
       setInitials("U");
       setUserImage(null);
     }
-  }, [profile, getInitials]);
+
+    // Check if user is admin based on email
+    if (user?.email) {
+      import('@/utils/adminUtils').then(({ isAdminEmail }) => {
+        setShowAdminLink(isAdminEmail(user.email));
+      });
+    }
+  }, [profile, getInitials, user]);
 
   // Use the auth check from context if available, otherwise fall back to prop
   const authenticated = isLoaded ? isSignedIn : isLoggedIn;
+  const isUserAdmin = isAdmin || showAdminLink;
 
   return (
     <header className="sticky top-0 z-30 w-full border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60 shadow-sm">
@@ -41,12 +50,12 @@ export default function Navbar({ isLoggedIn = false, isAdmin = false }: NavbarPr
         {/* Desktop navigation */}
         {authenticated && (
           <div className="hidden md:block flex-1">
-            <DesktopNav userImage={userImage} initials={initials} isAdmin={isAdmin} />
+            <DesktopNav userImage={userImage} initials={initials} isAdmin={isUserAdmin} />
           </div>
         )}
         
         {/* Centered "Check In" button for larger screens only */}
-        {authenticated && !isAdmin && (
+        {authenticated && !isUserAdmin && (
           <div className="hidden md:block absolute left-1/2 transform -translate-x-1/2 z-20">
             <Button 
               asChild 
@@ -62,7 +71,7 @@ export default function Navbar({ isLoggedIn = false, isAdmin = false }: NavbarPr
         )}
         
         {/* Admin Button */}
-        {authenticated && isAdmin && (
+        {authenticated && isUserAdmin && (
           <div className="hidden md:block absolute left-1/2 transform -translate-x-1/2 z-20">
             <Button
               asChild
@@ -81,7 +90,7 @@ export default function Navbar({ isLoggedIn = false, isAdmin = false }: NavbarPr
         {/* Mobile navigation */}
         <div className="md:hidden flex flex-1 justify-end">
           {authenticated ? (
-            <MobileNav userImage={userImage} initials={initials} isAdmin={isAdmin} />
+            <MobileNav userImage={userImage} initials={initials} isAdmin={isUserAdmin} />
           ) : (
             <GuestNav />
           )}
