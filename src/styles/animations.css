@@ -108,10 +108,10 @@
   backdrop-filter: none !important;
 }
 
-/* Fix for avatar button hover issues */
-.radix-dropdown-trigger:hover + [data-radix-popper-content-wrapper] {
-  visibility: visible !important;
-  opacity: 1 !important;
+/* Disable hover effects for avatar button */
+.rounded-full[variant="ghost"]:hover {
+  background-color: transparent !important;
+  border-color: hsl(var(--border)) !important;
 }
 
 /* Enhance dropdown visibility */

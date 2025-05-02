@@ -24,10 +24,10 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button 
-          className="relative h-10 w-10 rounded-full border border-border hover:border-muted-foreground focus:ring-1 focus:ring-ring transition-all duration-200 focus:bg-transparent hover:bg-transparent"
+          className="relative h-10 w-10 rounded-full border border-border !hover:bg-transparent !hover:border-border focus:ring-1 focus:ring-ring"
           variant="ghost"
         >
-          <Avatar className="h-9 w-9 rounded-full">
+          <Avatar className="h-9 w-9 rounded-full pointer-events-none">
             {userImage ? (
               <AvatarImage src={userImage} alt="Profile picture" />
             ) : null}
