@@ -1,6 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { supabaseClient } from "../send-message-notifications/supabase-client.ts";
+import { supabaseClient } from "./supabase-client.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
