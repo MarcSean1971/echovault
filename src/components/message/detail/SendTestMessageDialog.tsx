@@ -16,6 +16,7 @@ import { toast } from "@/components/ui/use-toast";
 import { Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface SendTestMessageDialogProps {
   open: boolean;
@@ -35,6 +36,10 @@ export function SendTestMessageDialog({
   const [isSending, setIsSending] = useState(false);
   const [sentCount, setSentCount] = useState(0);
   const [hasSendingStarted, setHasSendingStarted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  // App name constant
+  const APP_NAME = "EchoVault";
 
   // Function to select/deselect all recipients
   const handleSelectAll = (checked: boolean) => {
@@ -61,11 +66,15 @@ export function SendTestMessageDialog({
     setIsSending(true);
     setHasSendingStarted(true);
     setSentCount(0);
+    setError(null);
     
     try {
       const selectedRecipientsData = recipients.filter(r => 
         selectedRecipients.includes(r.id)
       );
+      
+      let successCount = 0;
+      let lastError = null;
       
       for (const recipient of selectedRecipientsData) {
         try {
@@ -75,33 +84,52 @@ export function SendTestMessageDialog({
               recipientName: recipient.name,
               recipientEmail: recipient.email,
               senderName: user.email,
-              messageTitle
+              messageTitle,
+              appName: APP_NAME
             }
           });
           
           if (error) throw error;
           
+          successCount++;
           setSentCount(prev => prev + 1);
-        } catch (err) {
+        } catch (err: any) {
           console.error(`Error sending to ${recipient.email}:`, err);
+          lastError = err;
           // Continue with other recipients if one fails
         }
       }
       
-      toast({
-        title: "Test messages sent",
-        description: `Successfully sent ${sentCount} of ${selectedRecipientsData.length} test messages.`,
-      });
-      
-      // Close the dialog if all messages were sent successfully
-      if (sentCount === selectedRecipientsData.length) {
+      if (successCount === 0 && lastError) {
+        // If all emails failed, show an error
+        setError(lastError.message || "Failed to send test emails. Make sure you have domain verification set up in Resend.");
+        toast({
+          title: "Error sending emails",
+          description: "No test emails could be sent. Check console for details.",
+          variant: "destructive"
+        });
+      } else if (successCount < selectedRecipientsData.length) {
+        // Some succeeded but some failed
+        toast({
+          title: "Partially completed",
+          description: `Successfully sent ${successCount} of ${selectedRecipientsData.length} test messages.`,
+        });
+      } else {
+        // All succeeded
+        toast({
+          title: "Test messages sent",
+          description: `Successfully sent ${successCount} of ${selectedRecipientsData.length} test messages.`,
+        });
+        
+        // Close the dialog if all messages were sent successfully
         setTimeout(() => {
           onOpenChange(false);
           resetState();
         }, 1500);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error in sending test messages:", error);
+      setError(error.message || "There was a problem sending the test messages.");
       toast({
         title: "Error",
         description: "There was a problem sending the test messages.",
@@ -117,6 +145,7 @@ export function SendTestMessageDialog({
     setSelectedRecipients([]);
     setSentCount(0);
     setHasSendingStarted(false);
+    setError(null);
   };
 
   const handleOpenChange = (open: boolean) => {
@@ -171,6 +200,20 @@ export function SendTestMessageDialog({
               )}
             </div>
           </div>
+
+          {error && (
+            <Alert variant="destructive" className="text-sm">
+              <AlertDescription>
+                {error}
+                {error.includes("domain verification") && (
+                  <p className="mt-1">
+                    During testing, you can only send to your own verified email address. 
+                    To send to other addresses, verify your domain in Resend.
+                  </p>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
 
           {hasSendingStarted && (
             <div className="rounded-md bg-muted p-3">

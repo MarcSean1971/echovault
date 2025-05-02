@@ -24,7 +24,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { recipientName, recipientEmail, senderName, messageTitle, appName = "Dead Man's Switch" }: TestEmailRequest = await req.json();
+    const { recipientName, recipientEmail, senderName, messageTitle, appName = "EchoVault" }: TestEmailRequest = await req.json();
 
     if (!recipientEmail || !senderName || !messageTitle) {
       throw new Error("Missing required parameters");
@@ -33,7 +33,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log(`Sending test email to ${recipientEmail}`);
     
     const emailResponse = await resend.emails.send({
-      from: `${appName} <onboarding@resend.dev>`,
+      from: `${appName} <noreply@resend.dev>`,
       to: [recipientEmail],
       subject: `You've been added as a recipient for a secure message`,
       html: `
@@ -51,7 +51,7 @@ const handler = async (req: Request): Promise<Response> => {
           
           <div style="background-color: #f8fafc; border-left: 4px solid #2563eb; padding: 15px; margin: 20px 0; border-radius: 4px;">
             <p style="margin: 0; font-style: italic;">
-              <strong>What is a Dead Man's Switch?</strong> It's a security mechanism that activates when the sender stops checking in, ensuring important information reaches specified recipients only when needed.
+              <strong>What is EchoVault?</strong> It's a security mechanism that activates when specific conditions are met, ensuring important information reaches specified recipients only when needed.
             </p>
           </div>
           
@@ -83,8 +83,19 @@ const handler = async (req: Request): Promise<Response> => {
     });
   } catch (error: any) {
     console.error("Error in send-test-email function:", error);
+    
+    // More detailed error message
+    const errorMessage = error.message || "Unknown error";
+    const errorDetails = {
+      success: false, 
+      error: errorMessage,
+      details: error.statusCode === 403 ? 
+        "Resend requires domain verification. You may only send to your own verified email during testing." : 
+        error.toString()
+    };
+    
     return new Response(
-      JSON.stringify({ success: false, error: error.message }),
+      JSON.stringify(errorDetails),
       {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },
