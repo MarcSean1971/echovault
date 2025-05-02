@@ -9,6 +9,7 @@ import { ArrowLeft } from "lucide-react";
 import { Message } from "@/types/message";
 import { EditMessageForm } from "@/components/message/EditMessageForm";
 import { Spinner } from "@/components/ui/spinner";
+import { getConditionByMessageId } from "@/services/messages/conditionService";
 
 export default function MessageEdit() {
   const { id } = useParams<{ id: string }>();
@@ -16,6 +17,7 @@ export default function MessageEdit() {
   const { userId } = useAuth();
   const [message, setMessage] = useState<Message | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isArmed, setIsArmed] = useState(false);
 
   useEffect(() => {
     if (!userId || !id) return;
@@ -24,6 +26,20 @@ export default function MessageEdit() {
       setIsLoading(true);
       
       try {
+        // First check if message is armed
+        const condition = await getConditionByMessageId(id);
+        if (condition && condition.active) {
+          // Message is armed, redirect to message view
+          setIsArmed(true);
+          toast({
+            title: "Cannot edit armed message",
+            description: "Please disarm the message first before editing",
+            variant: "destructive"
+          });
+          navigate(`/message/${id}`);
+          return;
+        }
+        
         const { data, error } = await supabase
           .from('messages')
           .select('*')
@@ -58,11 +74,13 @@ export default function MessageEdit() {
     );
   }
 
-  if (!message) {
+  if (!message || isArmed) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Message not found</h1>
+          <h1 className="text-2xl font-bold mb-4">
+            {isArmed ? "Cannot edit armed message" : "Message not found"}
+          </h1>
           <Button onClick={() => navigate("/messages")}>
             Back to Messages
           </Button>

@@ -1,3 +1,4 @@
+
 import { MessageCondition, TriggerType } from "@/types/message";
 import { CreateConditionOptions } from "./conditions/types";
 import { 
@@ -10,6 +11,7 @@ import {
 import { performCheckIn, getNextCheckInDeadline } from "./conditions/checkInService";
 import { triggerPanicMessage } from "./conditions/panicTriggerService";
 import { getMessageStatus } from "./conditions/messageStatusService";
+import { armMessage, disarmMessage, getMessageDeadline } from "./conditions/messageArmingService";
 
 // Create a message condition
 export async function createMessageCondition(
@@ -51,3 +53,6 @@ export { triggerPanicMessage };
 
 // Re-export message status functions
 export { getMessageStatus };
+
+// Re-export arming/disarming functions
+export { armMessage, disarmMessage, getMessageDeadline };
