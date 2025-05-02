@@ -1,7 +1,7 @@
 
 import { MessageTimer } from "@/components/message/MessageTimer";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { cn } from "@/lib/utils";
-import { AlertCircle, Clock } from "lucide-react";
 
 interface DesktopTimerAlertProps {
   deadline: Date | null;
@@ -18,6 +18,12 @@ export function DesktopTimerAlert({ deadline, isArmed }: DesktopTimerAlertProps)
   const isVeryUrgent = timeLeft < 10 * 60 * 1000 && timeLeft > 0; // Less than 10 minutes
   const isExpired = timeLeft <= 0;
   
+  // Determine status for our badge
+  const status = isExpired ? "critical" : isVeryUrgent ? "critical" : isUrgent ? "warning" : "armed";
+  const title = isExpired ? "Delivery imminent" : 
+               isVeryUrgent ? "Critical countdown" : 
+               isUrgent ? "Urgent countdown" : "Delivery countdown";
+  
   return (
     <div className={cn(
       "rounded-md p-3 transition-all duration-300",
@@ -26,22 +32,15 @@ export function DesktopTimerAlert({ deadline, isArmed }: DesktopTimerAlertProps)
       isUrgent ? "bg-orange-500/5 border border-orange-500/30" : 
       "bg-amber-400/5 border border-amber-400/20"
     )}>
-      <p className={cn(
-        "text-sm font-medium mb-2 flex items-center gap-1.5",
-        isExpired ? "text-destructive" : 
-        isVeryUrgent ? "text-destructive" : 
-        isUrgent ? "text-orange-500" : 
-        "text-amber-500"
-      )}>
-        {isExpired || isVeryUrgent ? (
-          <AlertCircle className="h-4 w-4" />
-        ) : (
-          <Clock className="h-4 w-4" />
-        )}
-        {isExpired ? "Delivery imminent" : 
-         isVeryUrgent ? "Critical countdown" : 
-         isUrgent ? "Urgent countdown" : "Delivery countdown"}
-      </p>
+      <div className="mb-2">
+        <StatusBadge 
+          status={status}
+          pulseAnimation={isVeryUrgent}
+          className="font-medium"
+        >
+          {title}
+        </StatusBadge>
+      </div>
       <MessageTimer deadline={deadline} isArmed={isArmed} />
     </div>
   );

@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -13,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 import { Message, MessageCondition } from "@/types/message";
 import { useState, useEffect } from "react";
 import { MessageTimer } from "./MessageTimer";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { 
   getConditionByMessageId, 
   getMessageDeadline, 
@@ -147,9 +147,9 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
           </div>
           
           {isArmed && (
-            <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800 dark:bg-red-900 dark:text-red-200">
+            <StatusBadge status="armed" size="sm">
               Armed
-            </span>
+            </StatusBadge>
           )}
         </div>
         <CardDescription className="pt-2">

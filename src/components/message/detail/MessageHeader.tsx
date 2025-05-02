@@ -1,8 +1,8 @@
 
 import { Button } from "@/components/ui/button";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { Message } from "@/types/message";
 
 interface MessageHeaderProps {
@@ -13,39 +13,43 @@ interface MessageHeaderProps {
   handleArmMessage: () => Promise<void>;
 }
 
-export function MessageHeader({ 
-  message, 
+export function MessageHeader({
+  message,
   isArmed,
   isActionLoading,
   handleDisarmMessage,
-  handleArmMessage
+  handleArmMessage,
 }: MessageHeaderProps) {
   const navigate = useNavigate();
-  const isMobile = useIsMobile();
 
   return (
-    <div className="flex items-center justify-between gap-4 mb-2 md:mb-0">
-      <Button 
-        variant="ghost" 
-        onClick={() => navigate("/messages")}
-        size="sm"
-        className="hover:bg-transparent p-0 md:p-2"
-      >
-        <ArrowLeft className="mr-1 h-5 w-5" />
-        <span className="md:block">Back</span>
-      </Button>
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => navigate("/messages")}
+          className="rounded-full"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <h1 className="text-xl font-medium md:text-2xl">Message Details</h1>
+      </div>
       
-      {isMobile && (
-        <div>
+      <div className="flex items-center gap-3">
+        <StatusBadge status={isArmed ? "armed" : "disarmed"}>
+          {isArmed ? "Armed" : "Disarmed"}
+        </StatusBadge>
+        
+        <div className="hidden md:block">
           {isArmed ? (
             <Button
               variant="outline"
               size="sm"
               onClick={handleDisarmMessage}
               disabled={isActionLoading}
-              className="text-green-600 border-green-600"
+              className="text-green-600 hover:bg-green-50 hover:text-green-700"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 mr-1"><path d="M6 10v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V10M10 2h4a2 2 0 0 1 2 2v4H8V4a2 2 0 0 1 2-2Z"></path></svg>
               Disarm
             </Button>
           ) : (
@@ -54,14 +58,13 @@ export function MessageHeader({
               size="sm"
               onClick={handleArmMessage}
               disabled={isActionLoading}
-              className="text-destructive border-destructive"
+              className="text-destructive hover:bg-destructive/10"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 mr-1"><path d="M6 10v10a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V10M10 2h4a2 2 0 0 1 2 2v4H8V4a2 2 0 0 1 2-2Z"></path></svg>
               Arm
             </Button>
           )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

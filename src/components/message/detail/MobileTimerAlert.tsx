@@ -1,6 +1,6 @@
 
 import { MessageTimer } from "@/components/message/MessageTimer";
-import { AlertCircle, Clock } from "lucide-react";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { cn } from "@/lib/utils";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 
@@ -19,10 +19,16 @@ export function MobileTimerAlert({ deadline, isArmed }: MobileTimerAlertProps) {
   const isVeryUrgent = timeLeft < 10 * 60 * 1000 && timeLeft > 0; // Less than 10 minutes
   const isExpired = timeLeft <= 0;
   
+  // Determine status for our badge
+  const status = isExpired ? "critical" : isVeryUrgent ? "critical" : isUrgent ? "warning" : "armed";
+  const title = isExpired ? "Delivery imminent" : 
+               isVeryUrgent ? "Critical countdown" : 
+               isUrgent ? "Urgent countdown" : "Delivery countdown";
+  
   return (
     <div className="col-span-full">
       <Alert 
-        variant={isExpired ? "destructive" : isVeryUrgent ? "destructive" : "default"}
+        variant={isExpired || isVeryUrgent ? "destructive" : "default"}
         className={cn(
           "border transition-all duration-300",
           isExpired ? "bg-destructive/10 border-destructive" :
@@ -31,21 +37,14 @@ export function MobileTimerAlert({ deadline, isArmed }: MobileTimerAlertProps) {
           "bg-amber-400/5 border-amber-400/50"
         )}
       >
-        <div className={cn("flex items-center gap-2 mb-2", isVeryUrgent && "animate-pulse")}>
-          {isExpired || isVeryUrgent ? (
-            <AlertCircle className="h-4 w-4" />
-          ) : (
-            <Clock className="h-4 w-4" />
-          )}
-          <AlertTitle className={cn(
-            isExpired ? "text-destructive" : 
-            isVeryUrgent ? "text-destructive" : 
-            isUrgent ? "text-orange-500" : ""
-          )}>
-            {isExpired ? "Delivery imminent" : 
-             isVeryUrgent ? "Critical countdown" : 
-             isUrgent ? "Urgent countdown" : "Delivery countdown"}
-          </AlertTitle>
+        <div className={cn("flex items-center gap-2 mb-2")}>
+          <StatusBadge 
+            status={status}
+            pulseAnimation={isVeryUrgent}
+            className="font-medium"
+          >
+            {title}
+          </StatusBadge>
         </div>
         <AlertDescription className="pt-1">
           <MessageTimer deadline={deadline} isArmed={isArmed} />

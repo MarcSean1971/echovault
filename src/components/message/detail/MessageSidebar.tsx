@@ -1,6 +1,6 @@
-
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { CalendarDays, Info, Users, Edit, Trash2 } from "lucide-react";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { useNavigate } from "react-router-dom";
@@ -43,9 +43,9 @@ export function MessageSidebar({
         <CardContent className="p-4 space-y-4">
           <div className="flex items-start justify-between">
             <h3 className="text-lg font-medium">Status</h3>
-            <div className={`px-2 py-1 rounded-full text-xs font-medium ${isArmed ? 'bg-destructive/10 text-destructive' : 'bg-muted text-muted-foreground'}`}>
-              {isArmed ? 'Armed' : 'Disarmed'}
-            </div>
+            <StatusBadge status={isArmed ? "armed" : "disarmed"}>
+              {isArmed ? "Armed" : "Disarmed"}
+            </StatusBadge>
           </div>
           
           <div className="space-y-2">
