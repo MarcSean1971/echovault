@@ -47,8 +47,10 @@ export function MessageSidebar({
   // Get the condition type for checking if reminders are supported
   const conditionType = condition?.condition_type;
   
-  // Check if condition supports reminders (explicitly exclude panic_trigger type)
-  const supportsReminders = conditionType && conditionType !== 'panic_trigger';
+  // Check if condition supports reminders - explicitly exclude panic_trigger and any other immediate trigger types
+  const supportsReminders = conditionType && 
+                           conditionType !== 'panic_trigger' && 
+                           (condition?.reminder_hours?.length > 0);
   
   // Handle sending a test message
   const handleSendTest = async () => {
@@ -90,7 +92,7 @@ export function MessageSidebar({
         setShowDeleteConfirm={setShowDeleteConfirm}
         handleDelete={handleDelete}
         onSendTestMessage={handleSendTest}
-        onViewReminderHistory={() => setReminderHistoryOpen(true)}
+        onViewReminderHistory={supportsReminders ? () => setReminderHistoryOpen(true) : undefined}
         conditionType={conditionType}
         supportsReminders={supportsReminders}
       />

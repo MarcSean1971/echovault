@@ -86,6 +86,7 @@ export function DeliveryMethodContent({
               triggerDate={triggerDate}
               setTriggerDate={setTriggerDate}
             />
+            {/* Only show reminder settings for non-panic trigger types */}
             <ReminderSettings
               reminderHours={reminderHours}
               setReminderHours={setReminderHours}

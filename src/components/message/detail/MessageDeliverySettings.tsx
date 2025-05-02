@@ -43,7 +43,10 @@ export function MessageDeliverySettings({
                 </div>
               )}
               
-              {condition.reminder_hours && condition.reminder_hours.length > 0 && (
+              {/* Only show reminders if the condition type is NOT 'panic_trigger' */}
+              {condition.reminder_hours && 
+               condition.reminder_hours.length > 0 && 
+               condition.condition_type !== 'panic_trigger' && (
                 <div className="grid grid-cols-3 gap-2">
                   <span className="font-medium">Reminders:</span>
                   <span className="col-span-2">
