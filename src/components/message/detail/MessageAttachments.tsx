@@ -18,10 +18,7 @@ export function MessageAttachments({ message }: MessageAttachmentsProps) {
         {message.attachments.map((attachment, index) => (
           <AttachmentItem
             key={index}
-            name={attachment.name}
-            size={attachment.size}
-            type={attachment.type}
-            path={attachment.path}
+            attachment={attachment}
           />
         ))}
       </div>

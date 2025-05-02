@@ -63,8 +63,7 @@ export function MessageDetailContent({
   // Check if this is a WhatsApp-enabled panic trigger
   const isPanicTrigger = condition?.condition_type === 'panic_trigger';
   const isWhatsAppPanicTrigger = isPanicTrigger && 
-                               (condition?.panic_trigger_config?.methods?.includes('whatsapp') || 
-                                condition?.panic_config?.methods?.includes('whatsapp'));
+                               (condition?.panic_config?.methods?.includes('whatsapp'));
 
   const handleSendTestWhatsApp = async () => {
     if (!message?.id) return;
@@ -108,7 +107,6 @@ export function MessageDetailContent({
                 isActionLoading={isActionLoading}
                 handleDisarmMessage={handleDisarmMessage}
                 handleArmMessage={handleArmMessage}
-                formatDate={formatDate}
               />
               <MessageContent 
                 message={message} 
@@ -116,9 +114,7 @@ export function MessageDetailContent({
               />
               
               {message.attachments && message.attachments.length > 0 && (
-                <MessageAttachments 
-                  message={message} 
-                />
+                <MessageAttachments message={message} />
               )}
               
               <MessageActionFooter 
@@ -159,10 +155,10 @@ export function MessageDetailContent({
                     </Button>
                   </div>
                   
-                  {(condition?.panic_trigger_config?.trigger_keyword || condition?.panic_config?.trigger_keyword) && (
+                  {(condition?.panic_config?.trigger_keyword) && (
                     <div className="mt-2 text-xs text-gray-600">
                       <span className="font-medium">Trigger keyword:</span> "
-                      {condition?.panic_trigger_config?.trigger_keyword || condition?.panic_config?.trigger_keyword}"
+                      {condition?.panic_config?.trigger_keyword}"
                     </div>
                   )}
                 </div>

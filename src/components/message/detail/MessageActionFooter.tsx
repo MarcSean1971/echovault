@@ -7,19 +7,27 @@ import { useNavigate } from "react-router-dom";
 interface MessageActionFooterProps {
   messageId: string;
   isArmed: boolean;
+  conditionId: string | null;
+  isActionLoading: boolean;
+  handleArmMessage: () => Promise<void>;
+  handleDisarmMessage: () => Promise<void>;
   showDeleteConfirm: boolean;
   setShowDeleteConfirm: (show: boolean) => void;
-  setShowDetailsSheet: (show: boolean) => void;
   handleDelete: () => Promise<void>;
+  onSendTestMessage?: () => void;
 }
 
 export function MessageActionFooter({
   messageId,
   isArmed,
+  conditionId,
+  isActionLoading,
+  handleArmMessage,
+  handleDisarmMessage,
   showDeleteConfirm,
   setShowDeleteConfirm,
-  setShowDetailsSheet,
-  handleDelete
+  handleDelete,
+  onSendTestMessage
 }: MessageActionFooterProps) {
   const navigate = useNavigate();
   
@@ -29,20 +37,23 @@ export function MessageActionFooter({
         <div className="flex gap-2 w-full max-w-md">
           <Button
             variant="outline"
-            onClick={() => setShowDetailsSheet(true)}
-            className="flex-1"
-          >
-            <Info className="h-4 w-4 mr-1" /> Details
-          </Button>
-          
-          <Button
-            variant="outline"
             onClick={() => navigate(`/message/${messageId}/edit`)}
             disabled={isArmed}
             className="flex-1"
           >
             <Edit className="h-4 w-4 mr-1" /> Edit
           </Button>
+          
+          {onSendTestMessage && (
+            <Button
+              variant="outline"
+              onClick={onSendTestMessage}
+              disabled={isActionLoading}
+              className="flex-1"
+            >
+              <Info className="h-4 w-4 mr-1" /> Test
+            </Button>
+          )}
           
           <Button
             variant="outline"

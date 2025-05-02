@@ -52,7 +52,7 @@ export async function sendTestNotification(messageId: string) {
       return;
     }
     
-    if (!condition.recipients || condition.recipients.length === 0) {
+    if (!condition.recipients || !Array.isArray(condition.recipients) || condition.recipients.length === 0) {
       toast({
         title: "No recipients",
         description: "Please add recipients to this message first",
@@ -110,7 +110,7 @@ export async function sendTestWhatsAppMessage(messageId: string) {
     // Get recipient details from the message condition
     const { data: condition, error: conditionError } = await supabase
       .from("message_conditions")
-      .select("recipients, panic_config, panic_trigger_config")
+      .select("recipients, panic_config")
       .eq("message_id", messageId)
       .single();
     
@@ -123,7 +123,7 @@ export async function sendTestWhatsAppMessage(messageId: string) {
       return;
     }
     
-    if (!condition.recipients || condition.recipients.length === 0) {
+    if (!condition.recipients || !Array.isArray(condition.recipients) || condition.recipients.length === 0) {
       toast({
         title: "No recipients",
         description: "Please add recipients to this message first",
@@ -156,7 +156,7 @@ export async function sendTestWhatsAppMessage(messageId: string) {
     if (messageError) throw messageError;
 
     // Extract the panic config to get keyword
-    const panicConfig = condition.panic_trigger_config || condition.panic_config;
+    const panicConfig = condition.panic_config;
     const triggerKeyword = panicConfig?.trigger_keyword || "SOS";
     
     // Send test WhatsApp message
