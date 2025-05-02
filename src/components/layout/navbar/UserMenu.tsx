@@ -24,8 +24,8 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button 
-          className="relative h-10 w-10 rounded-full hover:bg-transparent focus:bg-transparent"
-          variant="outline"
+          className="relative h-10 w-10 rounded-full border border-border hover:border-muted-foreground focus:ring-1 focus:ring-ring transition-all duration-200 focus:bg-transparent hover:bg-transparent"
+          variant="ghost"
         >
           <Avatar className="h-9 w-9 rounded-full">
             {userImage ? (
