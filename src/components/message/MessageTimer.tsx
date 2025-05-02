@@ -1,7 +1,8 @@
 
 import { useState, useEffect } from 'react';
-import { Clock, AlertCircle } from 'lucide-react';
+import { Clock, AlertCircle, TimerOff } from 'lucide-react';
 import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 
 interface MessageTimerProps {
   deadline: Date | null;
@@ -12,12 +13,14 @@ export function MessageTimer({ deadline, isArmed }: MessageTimerProps) {
   const [timeLeft, setTimeLeft] = useState<string>("--:--:--");
   const [timePercentage, setTimePercentage] = useState(100);
   const [isUrgent, setIsUrgent] = useState(false);
+  const [isVeryUrgent, setIsVeryUrgent] = useState(false);
   const isMobile = useIsMobile();
   
   useEffect(() => {
     if (!deadline || !isArmed) {
       setTimeLeft("--:--:--");
       setIsUrgent(false);
+      setIsVeryUrgent(false);
       return;
     }
     
@@ -28,6 +31,7 @@ export function MessageTimer({ deadline, isArmed }: MessageTimerProps) {
       if (difference <= 0) {
         // Time's up
         setIsUrgent(true);
+        setIsVeryUrgent(true);
         return "00:00:00";
       }
       
@@ -38,6 +42,8 @@ export function MessageTimer({ deadline, isArmed }: MessageTimerProps) {
       
       // Check if urgent (less than 1 hour)
       setIsUrgent(hours === 0);
+      // Check if very urgent (less than 10 minutes)
+      setIsVeryUrgent(hours === 0 && minutes < 10);
       
       // Format the time
       return [
@@ -75,37 +81,61 @@ export function MessageTimer({ deadline, isArmed }: MessageTimerProps) {
     return null;
   }
   
-  // Get timer color based on percentage
+  // Get timer color based on percentage and urgency
   const getTimerColor = () => {
-    if (timePercentage < 20) return 'bg-destructive';
-    if (timePercentage < 50) return 'bg-orange-500';
+    if (timePercentage < 10 || isVeryUrgent) return 'bg-destructive';
+    if (timePercentage < 30 || isUrgent) return 'bg-orange-500';
+    if (timePercentage < 60) return 'bg-amber-400';
     return 'bg-green-500';
+  };
+  
+  // Get pulse animation class based on urgency
+  const getPulseClass = () => {
+    if (isVeryUrgent) return 'animate-[pulse_1s_cubic-bezier(0.4,0,0.6,1)_infinite]';
+    if (isUrgent) return 'animate-[pulse_2s_cubic-bezier(0.4,0,0.6,1)_infinite]';
+    return '';
   };
   
   return (
     <div className={`space-y-2 ${isMobile ? 'px-1' : ''}`}>
-      <div className={`flex items-center justify-between ${isUrgent ? 'text-destructive animate-pulse' : 'text-destructive/80'}`}>
+      <div className={cn(
+        "flex items-center justify-between transition-colors duration-300",
+        isVeryUrgent ? 'text-destructive' : isUrgent ? 'text-orange-500' : 'text-destructive/80',
+        isVeryUrgent ? getPulseClass() : ''
+      )}>
         <div className="flex items-center">
-          {isUrgent ? (
+          {isVeryUrgent ? (
             <AlertCircle className="h-5 w-5 mr-1.5" />
+          ) : isUrgent ? (
+            <Clock className="h-5 w-5 mr-1.5" />
           ) : (
             <Clock className="h-5 w-5 mr-1.5" />
           )}
-          <span className={`font-mono text-lg ${isUrgent ? 'font-bold' : 'font-semibold'}`}>
+          <span className={cn(
+            "font-mono text-lg transition-all duration-300",
+            isVeryUrgent ? 'font-bold' : isUrgent ? 'font-semibold' : 'font-medium'
+          )}>
             {timeLeft}
           </span>
         </div>
         
         {!isMobile && (
-          <div className="text-xs text-muted-foreground">
-            {isUrgent ? 'Urgent' : 'Countdown'}
+          <div className={cn(
+            "text-xs transition-colors duration-300",
+            isVeryUrgent ? 'text-destructive font-medium' : 'text-muted-foreground'
+          )}>
+            {isVeryUrgent ? 'Critical' : isUrgent ? 'Urgent' : 'Countdown'}
           </div>
         )}
       </div>
       
-      <div className="w-full bg-muted rounded-full h-2">
+      <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden">
         <div 
-          className={`h-2 rounded-full transition-all duration-500 ${getTimerColor()}`} 
+          className={cn(
+            "h-2.5 rounded-full transition-all duration-500",
+            getTimerColor(),
+            isVeryUrgent ? 'animate-pulse' : ''
+          )}
           style={{ width: `${timePercentage}%` }}
         ></div>
       </div>
