@@ -47,6 +47,15 @@ export function PanicTrigger({ config, setConfig }: PanicTriggerProps) {
           />
         </div>
         
+        <div className="flex items-center justify-between">
+          <Label htmlFor="keep-armed">Keep message armed after triggering</Label>
+          <Switch
+            id="keep-armed"
+            checked={config.keep_armed}
+            onCheckedChange={(checked) => setConfig({...config, keep_armed: checked})}
+          />
+        </div>
+        
         <div className="space-y-2">
           <Label htmlFor="cancel-window">Cancellation window</Label>
           <select

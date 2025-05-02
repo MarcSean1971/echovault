@@ -1,4 +1,3 @@
-
 export type Message = {
   id: string;
   title: string;
@@ -49,6 +48,7 @@ export type PanicTriggerConfig = {
   methods: string[];
   cancel_window_seconds: number;
   bypass_logging: boolean;
+  keep_armed: boolean; // Add this field to control whether message stays armed after triggering
 };
 
 export type MessageDeliveryStatus = 'armed' | 'triggered' | 'delivered' | 'viewed' | 'cancelled' | 'expired';

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -57,10 +56,12 @@ export function PanicButtonCard({ userId, panicMessage, isChecking, isLoading }:
       setPanicMode(true);
       
       try {
+        // Try triggering the panic message
         const result = await triggerPanicMessage(userId, panicMessage.message_id);
+        
         if (result.success) {
           toast({
-            title: "PANIC MODE ACTIVATED",
+            title: "EMERGENCY ALERT TRIGGERED",
             description: "Your emergency messages are being sent immediately.",
             variant: "destructive"
           });
@@ -78,7 +79,14 @@ export function PanicButtonCard({ userId, panicMessage, isChecking, isLoading }:
               setPanicMode(false);
               setIsConfirming(false);
               setTriggerInProgress(false);
-              navigate('/messages'); // Redirect to messages page
+              
+              // If the message is still armed (keepArmed=true), we should refresh to show it's still active
+              // Otherwise navigate to messages
+              if (result.keepArmed) {
+                window.location.reload(); // Refresh to update the UI state
+              } else {
+                navigate('/messages'); // Redirect to messages page
+              }
             }
           }, 1000);
         }
@@ -86,7 +94,7 @@ export function PanicButtonCard({ userId, panicMessage, isChecking, isLoading }:
         console.error("Error triggering panic message:", error);
         toast({
           title: "Error",
-          description: error.message || "Failed to trigger panic message",
+          description: error.message || "Failed to trigger panic message. Please try again.",
           variant: "destructive"
         });
         setPanicMode(false);

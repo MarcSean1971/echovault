@@ -113,11 +113,12 @@ async function getMessagesToNotify(specificMessageId?: string): Promise<Array<{m
     .eq('active', true); // Only get active conditions
   
   if (specificMessageId) {
-    // If a specific message ID is provided, only get that one
+    // If a specific message ID is provided, only get that one - this is important for panic triggers
     query = query.eq('message_id', specificMessageId);
   } else {
-    // Otherwise, get messages due for delivery
-    query = query.or('trigger_date.lte.now(),condition_type.eq.inactivity_to_date,condition_type.eq.no_check_in');
+    // Otherwise, get messages due for delivery based on trigger conditions
+    // Include panic_trigger in the list of conditions to check
+    query = query.or('trigger_date.lte.now(),condition_type.eq.inactivity_to_date,condition_type.eq.no_check_in,condition_type.eq.panic_trigger');
   }
   
   const { data: conditions, error } = await query;
@@ -156,6 +157,9 @@ async function sendMessageNotification(data: {message: Message, condition: Condi
   }
   
   try {
+    // Check if this is an emergency/panic message for special handling
+    const isEmergencyMessage = condition.condition_type === 'panic_trigger';
+    
     // Determine security settings
     const hasPinCode = !!condition.pin_code;
     const hasDelayedAccess = (condition.unlock_delay_hours || 0) > 0;
@@ -171,13 +175,20 @@ async function sendMessageNotification(data: {message: Message, condition: Condi
       : null;
     
     // Create access link based on security settings
-    const baseUrl = "https://your-app-url.com/secure-message"; // Update with your actual front-end URL
+    const baseUrl = "https://onwthrpgcnfydxzzmyot.supabase.co/functions/v1";
     
     // Track the notifications in the database
     await trackMessageNotification(message.id, condition.id);
     
-    // Send a notification to each recipient
+    // For emergency messages, attempt multiple deliveries with retry
+    const maxRetries = isEmergencyMessage ? 3 : 1;
+    const retryDelay = 5000; // 5 seconds between retries for emergency messages
+    
+    // Send a notification to each recipient with retry for emergencies
     await Promise.all(condition.recipients.map(async (recipient) => {
+      let attempt = 0;
+      let success = false;
+      
       // Create a unique delivery ID for this recipient
       const deliveryId = crypto.randomUUID();
       
@@ -196,21 +207,59 @@ async function sendMessageNotification(data: {message: Message, condition: Condi
         unlockDate: hasDelayedAccess ? new Date(unlockDate).toISOString() : null,
         expiryDate: hasExpiry ? new Date(expiryDate!).toISOString() : null,
         accessUrl: secureAccessUrl,
+        isEmergency: isEmergencyMessage
       };
       
       // Record the message delivery
       await recordMessageDelivery(message.id, condition.id, recipient.id, deliveryId);
       
-      // Send email notification
-      await sendEmailToRecipient(recipient.email, emailData);
+      // Try sending with retry for emergency messages
+      while (!success && attempt < maxRetries) {
+        try {
+          // Send email notification
+          await sendEmailToRecipient(recipient.email, emailData);
+          success = true;
+        } catch (error) {
+          attempt++;
+          console.error(`Error sending email to ${recipient.email} (attempt ${attempt}):`, error);
+          if (attempt < maxRetries) {
+            // Only wait and retry if we have attempts remaining
+            console.log(`Retrying in ${retryDelay/1000} seconds...`);
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+          }
+        }
+      }
       
-      return true;
+      return success;
     }));
     
-    // Mark the condition as delivered
+    // Only mark the condition as inactive if it's not a panic trigger with keep_armed=true
+    // For panic triggers, we need to check the panic_config to see if keep_armed is true
     if (condition.condition_type !== 'recurring_check_in') {
-      // For non-recurring conditions, mark as inactive after delivery
-      await updateConditionStatus(condition.id, false);
+      // Fetch the full condition to check panic_config if needed
+      if (condition.condition_type === 'panic_trigger') {
+        const supabase = supabaseClient();
+        const { data, error } = await supabase
+          .from('message_conditions')
+          .select('panic_config')
+          .eq('id', condition.id)
+          .single();
+          
+        if (error) {
+          console.error("Error checking panic_config:", error);
+        } else {
+          // Only deactivate if keep_armed is false or not specified
+          const keepArmed = data?.panic_config?.keep_armed || false;
+          
+          if (!keepArmed) {
+            // For non-recurring conditions that don't have keep_armed=true, mark as inactive after delivery
+            await updateConditionStatus(condition.id, false);
+          }
+        }
+      } else {
+        // For all other non-recurring conditions, mark as inactive after delivery
+        await updateConditionStatus(condition.id, false);
+      }
     }
     
     return { success: true };
@@ -290,17 +339,28 @@ async function sendEmailToRecipient(
     unlockDate: string | null;
     expiryDate: string | null;
     accessUrl: string;
+    isEmergency?: boolean;
   }
 ) {
-  // Generate the appropriate email template based on security settings
+  // Generate the appropriate email template based on security settings and message type
   const template = generateEmailTemplate(data);
+  
+  // For emergency messages, add urgent flags in the subject
+  const subject = data.isEmergency
+    ? `⚠️ URGENT EMERGENCY MESSAGE: "${data.messageTitle}"`
+    : `Secure Message: "${data.messageTitle}" is now available`;
   
   // Send the email using Resend
   const emailResponse = await resend.emails.send({
     from: `EchoVault <noreply@resend.dev>`,
     to: [recipientEmail],
-    subject: `Secure Message: "${data.messageTitle}" is now available`,
+    subject: subject,
     html: template,
+    // For emergency messages, set high priority
+    headers: data.isEmergency ? {
+      'X-Priority': '1',
+      'Importance': 'high'
+    } : undefined
   });
   
   if (emailResponse.error) {
@@ -322,6 +382,7 @@ function generateEmailTemplate(data: {
   unlockDate: string | null;
   expiryDate: string | null;
   accessUrl: string;
+  isEmergency?: boolean;
 }): string {
   // Format dates for display
   const formatDate = (dateString: string | null) => {
@@ -371,6 +432,25 @@ function generateEmailTemplate(data: {
     contentTypeDescription = 'video message';
   }
   
+  // Emergency styling
+  const headerStyle = data.isEmergency 
+    ? `background-color: #e11d48; color: white;` 
+    : `background-color: #2563eb; color: white;`;
+  
+  const buttonStyle = data.isEmergency
+    ? `background-color: #e11d48; color: white;`
+    : `background-color: #2563eb; color: white;`;
+  
+  // Emergency warning content
+  const emergencyWarning = data.isEmergency
+    ? `
+      <div style="background-color: #fee2e2; border-left: 4px solid #e11d48; padding: 16px; margin: 16px 0; border-radius: 4px;">
+        <h3 style="color: #e11d48; margin-top: 0;">⚠️ EMERGENCY NOTICE</h3>
+        <p>This message was triggered as an <strong>emergency alert</strong> and requires your immediate attention.</p>
+      </div>
+    `
+    : '';
+  
   // Main email template
   return `
     <!DOCTYPE html>
@@ -378,7 +458,7 @@ function generateEmailTemplate(data: {
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1">
-      <title>Secure Message Notification</title>
+      <title>${data.isEmergency ? 'EMERGENCY MESSAGE' : 'Secure Message Notification'}</title>
       <style>
         body {
           font-family: sans-serif;
@@ -389,8 +469,7 @@ function generateEmailTemplate(data: {
           padding: 20px;
         }
         .header {
-          background-color: #2563eb;
-          color: white;
+          ${headerStyle}
           padding: 20px;
           border-radius: 8px 8px 0 0;
           margin-bottom: 0;
@@ -407,8 +486,7 @@ function generateEmailTemplate(data: {
           font-weight: bold;
         }
         .button {
-          background-color: #2563eb;
-          color: white;
+          ${buttonStyle}
           padding: 12px 20px;
           border-radius: 6px;
           text-decoration: none;
@@ -435,11 +513,13 @@ function generateEmailTemplate(data: {
     <body>
       <div class="header">
         <div class="logo">EchoVault</div>
-        <p>Secure Message Notification</p>
+        <p>${data.isEmergency ? 'EMERGENCY MESSAGE' : 'Secure Message Notification'}</p>
       </div>
       
       <div class="content">
         <h2>Hello ${data.recipientName},</h2>
+        
+        ${emergencyWarning}
         
         <p>A secure ${contentTypeDescription} titled "<strong>${data.messageTitle}</strong>" from ${data.senderName} is now available for you to access.</p>
         

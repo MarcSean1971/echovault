@@ -1,7 +1,7 @@
-
 import { getAuthClient } from "@/lib/supabaseClient";
 import { PanicTriggerResult } from "./types";
 import { toast } from "@/components/ui/use-toast";
+import { triggerMessageNotification } from "@/services/messages/notificationService";
 
 export async function triggerPanicMessage(userId: string, messageId: string): Promise<PanicTriggerResult> {
   const client = await getAuthClient();
@@ -28,21 +28,33 @@ export async function triggerPanicMessage(userId: string, messageId: string): Pr
     
     console.log("Found panic message to trigger:", data);
     
-    // Mark the message as triggered
-    const { error: updateError } = await client
-      .from("message_conditions")
-      .update({ 
-        active: false // Mark as inactive which means triggered
-      })
-      .eq("id", data.id);
-      
-    if (updateError) {
-      console.error("Error updating panic message:", updateError);
-      throw new Error("Failed to trigger panic message");
+    // Check if we should keep the message armed after triggering
+    const keepArmed = data.panic_config?.keep_armed || false;
+    
+    if (!keepArmed) {
+      // Mark the message as triggered only if we're not keeping it armed
+      const { error: updateError } = await client
+        .from("message_conditions")
+        .update({ 
+          active: false // Mark as inactive which means triggered
+        })
+        .eq("id", data.id);
+        
+      if (updateError) {
+        console.error("Error updating panic message:", updateError);
+        throw new Error("Failed to trigger panic message");
+      }
     }
     
-    // Process actual message sending here (this would typically be handled by a backend function)
-    // In a real implementation, this would connect to an edge function that sends the actual messages
+    // Now trigger the notification service to send the emails
+    try {
+      console.log("Triggering emergency notifications for message ID:", messageId);
+      await triggerMessageNotification(messageId);
+    } catch (notifError) {
+      console.error("Error sending emergency notifications:", notifError);
+      // We don't throw here as we still want to return success for the trigger itself
+      // The notification service will show its own toast errors
+    }
     
     console.log("Successfully triggered panic message");
     
@@ -50,7 +62,8 @@ export async function triggerPanicMessage(userId: string, messageId: string): Pr
     return {
       success: true,
       message: "Panic message triggered successfully",
-      triggered_at: new Date().toISOString()
+      triggered_at: new Date().toISOString(),
+      keepArmed: keepArmed
     };
   } catch (error: any) {
     console.error("Error triggering panic message:", error);

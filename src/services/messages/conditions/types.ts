@@ -46,6 +46,7 @@ export interface PanicTriggerResult {
   success: boolean;
   message: string;
   triggered_at: string;
+  keepArmed?: boolean;
 }
 
 export interface MessageStatusResult {
