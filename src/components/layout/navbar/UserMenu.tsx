@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LogOut, User } from "lucide-react";
+import { LogOut, User, Settings } from "lucide-react";
 
 interface UserMenuProps {
   userImage: string | null;
@@ -11,13 +11,16 @@ interface UserMenuProps {
 }
 
 export function UserMenu({ userImage, initials }: UserMenuProps) {
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
 
   const handleSignOut = async (e: React.MouseEvent) => {
     e.preventDefault();
     console.log("Sign out clicked");
     await signOut();
   };
+
+  // Check if user has admin access
+  const isAdmin = user?.email === "marc.s@seelenbinderconsulting.com";
 
   return (
     <DropdownMenu>
@@ -53,6 +56,14 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
               <span>Profile</span>
             </Link>
           </DropdownMenuItem>
+          {isAdmin && (
+            <DropdownMenuItem asChild>
+              <Link to="/admin" className="w-full cursor-pointer">
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Admin Dashboard</span>
+              </Link>
+            </DropdownMenuItem>
+          )}
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">

@@ -1,4 +1,3 @@
-
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -9,6 +8,7 @@ import { useEffect } from "react";
 
 import AppLayout from "./components/layout/AppLayout";
 import ProtectedLayout from "./components/layout/ProtectedLayout";
+import AdminGuard from "./components/guards/AdminGuard";
 
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -24,6 +24,7 @@ import Recipients from "./pages/Recipients";
 import CheckIn from "./pages/CheckIn";
 import CheckIns from "./pages/CheckIns";
 import Profile from "./pages/Profile";
+import Admin from "./pages/Admin";
 
 // Create a new query client with error handling
 const queryClient = new QueryClient({
@@ -81,6 +82,11 @@ const App = () => {
                 <Route path="check-in" element={<CheckIn />} />
                 <Route path="check-ins" element={<CheckIns />} />
                 <Route path="profile" element={<Profile />} />
+                
+                {/* Admin routes - protected by AdminGuard */}
+                <Route element={<AdminGuard />}>
+                  <Route path="admin" element={<Admin />} />
+                </Route>
               </Route>
               
               {/* Catch-all route */}
