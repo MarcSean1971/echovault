@@ -1,3 +1,4 @@
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
 @tailwind base;
@@ -104,7 +105,7 @@
   }
 
   .glass-card {
-    @apply bg-white/60 backdrop-blur-md border border-white/20;
+    @apply bg-white/60 backdrop-blur-md border border-white/20 shadow-sm;
   }
 
   .gradient-text {
@@ -113,6 +114,14 @@
 
   .hero-gradient {
     @apply bg-gradient-to-br from-secondary via-background to-background;
+  }
+  
+  .nav-link {
+    @apply relative inline-block transition-all duration-200 after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-0 after:bg-gradient-to-r after:from-primary after:to-accent after:transition-all after:duration-300 hover:after:w-full;
+  }
+  
+  .btn-hover-effect {
+    @apply shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5;
   }
 }
 
@@ -148,3 +157,20 @@
 .stagger-2 { animation-delay: 0.2s; }
 .stagger-3 { animation-delay: 0.3s; }
 .stagger-4 { animation-delay: 0.4s; }
+
+/* Header specific animations */
+.nav-item-hover {
+  @apply transition-all duration-200;
+}
+
+.nav-item-hover:hover {
+  @apply transform scale-105;
+}
+
+.menu-item-transition {
+  @apply transition-all duration-150 ease-in-out;
+}
+
+.menu-item-transition:hover {
+  @apply bg-accent/10;
+}

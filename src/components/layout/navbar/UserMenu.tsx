@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
 import { LogOut, MessageSquare, Users2, Clock, User } from "lucide-react";
@@ -43,7 +44,7 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
       <div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Avatar className="h-10 w-10 transition-transform hover:scale-105 cursor-pointer border-2 border-transparent hover:border-primary/20">
+            <Avatar className="h-10 w-10 transition-transform hover:scale-105 cursor-pointer border-2 border-transparent hover:border-primary/20 ring-2 ring-transparent hover:ring-primary/10">
               {userImage ? (
                 <AvatarImage src={userImage} alt="User profile" />
               ) : (
@@ -51,26 +52,26 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
               )}
             </Avatar>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuContent align="end" className="w-56 animate-in fade-in-80 slide-in-from-top-5">
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem asChild>
-              <Link to="/profile" className="flex gap-2 items-center cursor-pointer">
+            <DropdownMenuItem asChild className="cursor-pointer">
+              <Link to="/profile" className="flex gap-2 items-center w-full">
                 <User className="h-4 w-4" /> Profile
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link to="/create-message" className="flex gap-2 items-center cursor-pointer">
+            <DropdownMenuItem asChild className="cursor-pointer">
+              <Link to="/create-message" className="flex gap-2 items-center w-full">
                 <MessageSquare className="h-4 w-4" /> Messages
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link to="/recipients" className="flex gap-2 items-center cursor-pointer">
+            <DropdownMenuItem asChild className="cursor-pointer">
+              <Link to="/recipients" className="flex gap-2 items-center w-full">
                 <Users2 className="h-4 w-4" /> Recipients
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link to="/check-ins" className="flex gap-2 items-center cursor-pointer">
+            <DropdownMenuItem asChild className="cursor-pointer">
+              <Link to="/check-ins" className="flex gap-2 items-center w-full">
                 <Clock className="h-4 w-4" /> Check-ins
               </Link>
             </DropdownMenuItem>
@@ -86,7 +87,7 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
       {/* Mobile sheet menu */}
       <Sheet>
         <SheetTrigger asChild className="md:hidden">
-          <Avatar className="h-9 w-9 transition-transform hover:scale-105 cursor-pointer border-2 border-transparent hover:border-primary/20">
+          <Avatar className="h-9 w-9 transition-transform hover:scale-105 cursor-pointer border-2 border-transparent hover:border-primary/20 ring-2 ring-transparent hover:ring-primary/10">
             {userImage ? (
               <AvatarImage src={userImage} alt="User profile" />
             ) : (
@@ -94,10 +95,10 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
             )}
           </Avatar>
         </SheetTrigger>
-        <SheetContent side="right" className="backdrop-blur-md bg-background/90 border-l">
+        <SheetContent side="right" className="backdrop-blur-xl bg-background/90 border-l">
           <nav className="flex flex-col h-full py-6">
             <div className="flex items-center justify-center mb-8">
-              <Avatar className="h-16 w-16">
+              <Avatar className="h-16 w-16 ring-2 ring-primary/10">
                 {userImage ? (
                   <AvatarImage src={userImage} alt="User profile" />
                 ) : (
@@ -107,22 +108,22 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
             </div>
             
             <div className="space-y-1">
-              <Button variant="ghost" asChild className="justify-start w-full">
+              <Button variant="ghost" asChild className="justify-start w-full hover:bg-accent/10">
                 <Link to="/profile" className="flex items-center gap-2">
                   <User className="h-5 w-5" /> Profile
                 </Link>
               </Button>
-              <Button variant="ghost" asChild className="justify-start w-full">
+              <Button variant="ghost" asChild className="justify-start w-full hover:bg-accent/10">
                 <Link to="/create-message" className="flex items-center gap-2">
                   <MessageSquare className="h-5 w-5" /> Messages
                 </Link>
               </Button>
-              <Button variant="ghost" asChild className="justify-start w-full">
+              <Button variant="ghost" asChild className="justify-start w-full hover:bg-accent/10">
                 <Link to="/recipients" className="flex items-center gap-2">
                   <Users2 className="h-5 w-5" /> Recipients
                 </Link>
               </Button>
-              <Button variant="ghost" asChild className="justify-start w-full">
+              <Button variant="ghost" asChild className="justify-start w-full hover:bg-accent/10">
                 <Link to="/check-ins" className="flex items-center gap-2">
                   <Clock className="h-5 w-5" /> Check-ins
                 </Link>
@@ -130,11 +131,11 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
             </div>
             
             <div className="mt-auto">
-              <Button className="w-full mb-3 bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity">
+              <Button className="w-full mb-3 bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity shadow-md">
                 <Link to="/check-in">Check In Now</Link>
               </Button>
               
-              <Button variant="outline" onClick={handleSignOut} className="w-full">
+              <Button variant="outline" onClick={handleSignOut} className="w-full hover:bg-destructive/10 hover:text-destructive">
                 <LogOut className="h-4 w-4 mr-2" /> Sign out
               </Button>
             </div>

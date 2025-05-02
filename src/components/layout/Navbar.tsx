@@ -1,3 +1,4 @@
+
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
 import { Logo } from "./navbar/Logo";
@@ -29,7 +30,7 @@ export default function Navbar({ isLoggedIn = false }: NavbarProps) {
   const authenticated = isLoaded ? isSignedIn : isLoggedIn;
 
   return (
-    <header className="sticky top-0 z-30 w-full border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-30 w-full border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60 shadow-sm">
       <div className="container mx-auto px-4 py-3 flex items-center">
         <Logo />
         

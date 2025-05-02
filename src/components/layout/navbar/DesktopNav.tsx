@@ -20,14 +20,20 @@ export function DesktopNav({ userImage, initials }: DesktopNavProps) {
     <div className="flex items-center justify-between w-full">
       {/* Left section - Navigation menu */}
       <NavigationMenu>
-        <NavigationMenuList>
+        <NavigationMenuList className="space-x-1">
           <NavigationMenuItem>
-            <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
+            <NavigationMenuLink 
+              asChild 
+              className={navigationMenuTriggerStyle() + " transition-all hover:text-primary"}
+            >
               <Link to="/messages">Messages</Link>
             </NavigationMenuLink>
           </NavigationMenuItem>
           <NavigationMenuItem>
-            <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
+            <NavigationMenuLink 
+              asChild 
+              className={navigationMenuTriggerStyle() + " transition-all hover:text-primary"}
+            >
               <Link to="/recipients">Recipients</Link>
             </NavigationMenuLink>
           </NavigationMenuItem>
@@ -38,7 +44,7 @@ export function DesktopNav({ userImage, initials }: DesktopNavProps) {
       <div className="flex-1 flex justify-center">
         <Button 
           asChild 
-          className="bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity"
+          className="bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-[1px]"
           size="sm"
         >
           <Link to="/check-in">Check In</Link>

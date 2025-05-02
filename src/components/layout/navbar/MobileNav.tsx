@@ -15,11 +15,11 @@ export function MobileNav({ userImage, initials }: MobileNavProps) {
     <div className="flex md:hidden items-center space-x-2">
       <Sheet>
         <SheetTrigger asChild>
-          <Button variant="ghost" size="icon" className="rounded-full">
+          <Button variant="ghost" size="icon" className="rounded-full hover:bg-accent/10">
             <Menu className="h-5 w-5" />
           </Button>
         </SheetTrigger>
-        <SheetContent side="right" className="backdrop-blur-md bg-background/90 border-l">
+        <SheetContent side="right" className="backdrop-blur-xl bg-background/90 border-l">
           <nav className="flex flex-col h-full py-6">
             <div className="flex items-center justify-center mb-8">
               <span className="text-xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
@@ -28,16 +28,16 @@ export function MobileNav({ userImage, initials }: MobileNavProps) {
             </div>
             
             <div className="space-y-1">
-              <Button variant="ghost" asChild className="justify-start w-full">
+              <Button variant="ghost" asChild className="justify-start w-full hover:bg-accent/10 transition-colors">
                 <Link to="/messages">Messages</Link>
               </Button>
-              <Button variant="ghost" asChild className="justify-start w-full">
+              <Button variant="ghost" asChild className="justify-start w-full hover:bg-accent/10 transition-colors">
                 <Link to="/recipients">Recipients</Link>
               </Button>
             </div>
             
             <div className="mt-auto space-y-3">
-              <Button className="w-full" asChild>
+              <Button className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity shadow-md" asChild>
                 <Link to="/check-in">Check In</Link>
               </Button>
               <div className="flex items-center justify-between pt-4">

@@ -5,7 +5,7 @@ export function Logo() {
   return (
     <Link 
       to="/" 
-      className="font-serif font-bold text-2xl mr-6 relative group"
+      className="font-serif font-bold text-2xl mr-6 relative group flex items-center"
     >
       <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
         EchoVault
