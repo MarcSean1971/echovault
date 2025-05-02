@@ -42,6 +42,7 @@ export function MessageTabs({
           condition={condition} 
           renderConditionType={renderConditionType}
           formatDate={formatDate}
+          showInTabs={true}
         />
       </TabsContent>
     </Tabs>

@@ -15,6 +15,7 @@ import { SendTestMessageDialog } from "./SendTestMessageDialog";
 import { sendTestWhatsAppMessage } from "@/services/messages/notificationService";
 import { Smartphone } from "lucide-react";
 import { Message } from "@/types/message";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface MessageDetailContentProps {
   message: Message;
@@ -108,14 +109,32 @@ export function MessageDetailContent({
                 handleDisarmMessage={handleDisarmMessage}
                 handleArmMessage={handleArmMessage}
               />
-              <MessageContent 
-                message={message} 
-                isArmed={isArmed} 
-              />
               
-              {message.attachments && message.attachments.length > 0 && (
-                <MessageAttachments message={message} />
-              )}
+              <Tabs defaultValue="content" className="w-full">
+                <TabsList className="mb-4 grid w-full grid-cols-2">
+                  <TabsTrigger value="content">Message</TabsTrigger>
+                  <TabsTrigger value="settings">Delivery</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="content">
+                  <MessageContent 
+                    message={message} 
+                    isArmed={isArmed} 
+                  />
+                  
+                  {message.attachments && message.attachments.length > 0 && (
+                    <MessageAttachments message={message} />
+                  )}
+                </TabsContent>
+                
+                <TabsContent value="settings">
+                  <MessageDeliverySettings 
+                    condition={condition}
+                    formatDate={formatDate}
+                    renderConditionType={renderConditionType} 
+                  />
+                </TabsContent>
+              </Tabs>
               
               <MessageActionFooter 
                 messageId={message.id}
@@ -185,14 +204,6 @@ export function MessageDetailContent({
           condition={condition}
         />
       </div>
-      
-      {condition && (
-        <MessageDeliverySettings 
-          condition={condition}
-          formatDate={formatDate}
-          renderConditionType={renderConditionType} 
-        />
-      )}
       
       <SendTestMessageDialog 
         open={showSendTestDialog}
