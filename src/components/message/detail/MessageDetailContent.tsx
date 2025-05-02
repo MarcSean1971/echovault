@@ -3,7 +3,6 @@ import React, { useState } from "react";
 import { MessageHeader } from "./MessageHeader";
 import { MessageContent } from "./MessageContent";
 import { MessageAttachments } from "./MessageAttachments";
-import { MessageActionFooter } from "./MessageActionFooter";
 import { MessageDeliverySettings } from "./MessageDeliverySettings";
 import { MessageLoading } from "./MessageLoading";
 import { MessageNotFound } from "./MessageNotFound";
@@ -171,19 +170,6 @@ export function MessageDetailContent({
               )}
             </div>
           </div>
-          
-          <MessageActionFooter 
-            messageId={message.id}
-            isArmed={isArmed}
-            conditionId={conditionId}
-            isActionLoading={isActionLoading}
-            handleArmMessage={handleArmMessage}
-            handleDisarmMessage={handleDisarmMessage}
-            showDeleteConfirm={showDeleteConfirm}
-            setShowDeleteConfirm={setShowDeleteConfirm}
-            handleDelete={handleDelete}
-            onSendTestMessage={onSendTestMessage}
-          />
         </div>
         
         <MessageSidebar 
