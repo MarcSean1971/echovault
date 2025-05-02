@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -5,24 +6,26 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState, useEffect } from "react";
 import { toast } from "@/components/ui/use-toast";
-import { useNavigate } from "react-router-dom";
-import { Plus, Trash, User } from "lucide-react";
+import { Plus, Trash, User, Edit } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { fetchRecipients, createRecipient, deleteRecipient } from "@/services/messages/recipientService";
+import { fetchRecipients, createRecipient, deleteRecipient, updateRecipient } from "@/services/messages/recipientService";
 import { Recipient } from "@/types/message";
-import { setSupabaseToken } from "@/lib/supabaseClient";
 
 export default function Recipients() {
-  const navigate = useNavigate();
   const { userId, isSignedIn } = useAuth();
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   
+  // Add/Edit form states
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+  
+  // Edit specific states
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editRecipient, setEditRecipient] = useState<Recipient | null>(null);
 
   // Update authentication status when auth state changes
   useEffect(() => {
@@ -102,6 +105,60 @@ export default function Recipients() {
     }
   };
 
+  const handleEditRecipient = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editRecipient || !userId) return;
+    
+    setIsLoading(true);
+
+    try {
+      const updatedRecipient = await updateRecipient(editRecipient.id, {
+        name: newName,
+        email: newEmail,
+        phone: newPhone || undefined
+      });
+      
+      setRecipients(prevRecipients => 
+        prevRecipients.map(recipient => 
+          recipient.id === updatedRecipient.id ? updatedRecipient : recipient
+        )
+      );
+      
+      toast({
+        title: "Recipient updated",
+        description: `${newName} has been updated successfully`
+      });
+      
+      setIsEditDialogOpen(false);
+      setEditRecipient(null);
+    } catch (error: any) {
+      console.error("Error updating recipient:", error);
+      toast({
+        title: "Error",
+        description: error.message || "There was a problem updating the recipient",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleOpenEditDialog = (recipient: Recipient) => {
+    setEditRecipient(recipient);
+    setNewName(recipient.name);
+    setNewEmail(recipient.email);
+    setNewPhone(recipient.phone || "");
+    setIsEditDialogOpen(true);
+  };
+
+  const handleCloseEditDialog = () => {
+    setIsEditDialogOpen(false);
+    setEditRecipient(null);
+    setNewName("");
+    setNewEmail("");
+    setNewPhone("");
+  };
+
   const handleRemoveRecipient = async (id: string) => {
     try {
       await deleteRecipient(id);
@@ -126,9 +183,6 @@ export default function Recipients() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-3xl font-bold">Trusted Recipients</h1>
         <div className="space-x-2">
-          <Button variant="outline" onClick={() => navigate("/dashboard")}>
-            Back to Dashboard
-          </Button>
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -186,6 +240,57 @@ export default function Recipients() {
         </div>
       </div>
 
+      {/* Edit Recipient Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <form onSubmit={handleEditRecipient}>
+            <DialogHeader>
+              <DialogTitle>Edit Recipient</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 my-6">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Full Name</Label>
+                <Input
+                  id="edit-name"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder="John Doe"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-email">Email</Label>
+                <Input
+                  id="edit-email"
+                  type="email"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  placeholder="john@example.com"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-phone">Phone Number (Optional)</Label>
+                <Input
+                  id="edit-phone"
+                  value={newPhone}
+                  onChange={(e) => setNewPhone(e.target.value)}
+                  placeholder="555-1234"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" type="button" onClick={handleCloseEditDialog}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? "Updating..." : "Update Recipient"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       <Card>
         <CardHeader>
           <CardTitle>Your Trusted Contacts</CardTitle>
@@ -215,13 +320,22 @@ export default function Recipients() {
                       )}
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleRemoveRecipient(recipient.id)}
-                  >
-                    <Trash className="h-4 w-4" />
-                  </Button>
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleOpenEditDialog(recipient)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleRemoveRecipient(recipient.id)}
+                    >
+                      <Trash className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
