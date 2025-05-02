@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { Clock, AlertCircle } from 'lucide-react';
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface MessageTimerProps {
   deadline: Date | null;
@@ -10,10 +11,13 @@ interface MessageTimerProps {
 export function MessageTimer({ deadline, isArmed }: MessageTimerProps) {
   const [timeLeft, setTimeLeft] = useState<string>("--:--:--");
   const [timePercentage, setTimePercentage] = useState(100);
+  const [isUrgent, setIsUrgent] = useState(false);
+  const isMobile = useIsMobile();
   
   useEffect(() => {
     if (!deadline || !isArmed) {
       setTimeLeft("--:--:--");
+      setIsUrgent(false);
       return;
     }
     
@@ -23,6 +27,7 @@ export function MessageTimer({ deadline, isArmed }: MessageTimerProps) {
       
       if (difference <= 0) {
         // Time's up
+        setIsUrgent(true);
         return "00:00:00";
       }
       
@@ -30,6 +35,9 @@ export function MessageTimer({ deadline, isArmed }: MessageTimerProps) {
       const hours = Math.floor(difference / (1000 * 60 * 60));
       const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
       const seconds = Math.floor((difference % (1000 * 60)) / 1000);
+      
+      // Check if urgent (less than 1 hour)
+      setIsUrgent(hours === 0);
       
       // Format the time
       return [
@@ -67,27 +75,37 @@ export function MessageTimer({ deadline, isArmed }: MessageTimerProps) {
     return null;
   }
   
-  // Determine urgency based on time left
-  const isUrgent = timeLeft.startsWith("00:") || timePercentage < 20;
+  // Get timer color based on percentage
+  const getTimerColor = () => {
+    if (timePercentage < 20) return 'bg-destructive';
+    if (timePercentage < 50) return 'bg-orange-500';
+    return 'bg-green-500';
+  };
   
   return (
-    <div className="space-y-2">
-      <div className={`flex items-center font-mono text-lg ${isUrgent ? 'text-destructive animate-pulse' : 'text-destructive/80'}`}>
-        {isUrgent ? (
-          <AlertCircle className="h-4 w-4 mr-1" />
-        ) : (
-          <Clock className="h-4 w-4 mr-1" />
+    <div className={`space-y-2 ${isMobile ? 'px-1' : ''}`}>
+      <div className={`flex items-center justify-between ${isUrgent ? 'text-destructive animate-pulse' : 'text-destructive/80'}`}>
+        <div className="flex items-center">
+          {isUrgent ? (
+            <AlertCircle className="h-5 w-5 mr-1.5" />
+          ) : (
+            <Clock className="h-5 w-5 mr-1.5" />
+          )}
+          <span className={`font-mono text-lg ${isUrgent ? 'font-bold' : 'font-semibold'}`}>
+            {timeLeft}
+          </span>
+        </div>
+        
+        {!isMobile && (
+          <div className="text-xs text-muted-foreground">
+            {isUrgent ? 'Urgent' : 'Countdown'}
+          </div>
         )}
-        <span className="font-bold">{timeLeft}</span>
       </div>
       
-      <div className="w-full bg-muted rounded-full h-1.5">
+      <div className="w-full bg-muted rounded-full h-2">
         <div 
-          className={`h-1.5 rounded-full ${
-            timePercentage < 20 ? 'bg-destructive' : 
-            timePercentage < 50 ? 'bg-orange-500' : 
-            'bg-green-500'
-          }`} 
+          className={`h-2 rounded-full transition-all duration-500 ${getTimerColor()}`} 
           style={{ width: `${timePercentage}%` }}
         ></div>
       </div>
