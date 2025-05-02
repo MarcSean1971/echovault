@@ -1,4 +1,3 @@
-
 import { createContext, useContext, ReactNode, useState } from "react";
 import { FileAttachment } from "@/components/FileUploader";
 import { RecurringPattern, TriggerType, DeliveryOption, PanicTriggerConfig } from "@/types/message";
@@ -69,8 +68,8 @@ export function MessageFormProvider({ children }: MessageFormProviderProps) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
 
-  // Dead Man's Switch properties
-  const [enableDeadManSwitch, setEnableDeadManSwitch] = useState(false);
+  // Dead Man's Switch properties - now enabled by default
+  const [enableDeadManSwitch, setEnableDeadManSwitch] = useState(true);
   const [conditionType, setConditionType] = useState<TriggerType>("no_check_in");
   const [hoursThreshold, setHoursThreshold] = useState(24);
   const [minutesThreshold, setMinutesThreshold] = useState(0);

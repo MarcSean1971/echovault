@@ -21,7 +21,6 @@ export function useFormSubmission() {
     setIsLoading,
     setShowUploadDialog,
     setUploadProgress,
-    enableDeadManSwitch,
     conditionType,
     hoursThreshold,
     minutesThreshold,
@@ -69,8 +68,8 @@ export function useFormSubmission() {
       // Create the basic message
       const message = await createMessage(userId, title, content, messageType, files);
       
-      // Create a condition if Dead Man's Switch is enabled
-      if (enableDeadManSwitch && message) {
+      // Create a condition (always required now)
+      if (message) {
         try {
           // Mock recipients for now - in a real implementation, these would come from the form
           const mockRecipients = [
@@ -98,13 +97,13 @@ export function useFormSubmission() {
           
           toast({
             title: "Trigger configured",
-            description: "Dead Man's Switch has been set up successfully"
+            description: "Message trigger has been set up successfully"
           });
         } catch (error: any) {
           console.error("Error creating trigger condition:", error);
           toast({
             title: "Trigger setup failed",
-            description: error.message || "Failed to set up the Dead Man's Switch",
+            description: error.message || "Failed to set up the message trigger",
             variant: "destructive"
           });
         }
@@ -112,9 +111,7 @@ export function useFormSubmission() {
       
       toast({
         title: "Message saved",
-        description: enableDeadManSwitch ? 
-          "Your message and trigger settings have been saved" : 
-          "Your message has been saved"
+        description: "Your message and trigger settings have been saved"
       });
       
       // Navigate back to messages list

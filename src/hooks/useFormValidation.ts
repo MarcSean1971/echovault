@@ -6,7 +6,6 @@ export function useFormValidation() {
     title,
     content,
     messageType,
-    enableDeadManSwitch,
     conditionType,
     hoursThreshold,
     minutesThreshold,
@@ -20,17 +19,15 @@ export function useFormValidation() {
     if (title.trim() === "") return false;
     if (messageType === "text" && content.trim() === "") return false;
     
-    // Dead Man's Switch validation
-    if (enableDeadManSwitch) {
-      // Make sure there's at least some threshold
-      if (hoursThreshold <= 0 && minutesThreshold <= 0) return false;
-      
-      // For recurring delivery, make sure there's a pattern
-      if (conditionType === 'no_check_in' && deliveryOption === 'recurring' && !recurringPattern) return false;
-      
-      // In a real implementation, we'd also validate recipients
-      // if (selectedRecipients.length === 0) return false;
-    }
+    // Trigger validation (always required now)
+    // Make sure there's at least some threshold
+    if (hoursThreshold <= 0 && minutesThreshold <= 0) return false;
+    
+    // For recurring delivery, make sure there's a pattern
+    if (conditionType === 'no_check_in' && deliveryOption === 'recurring' && !recurringPattern) return false;
+    
+    // In a real implementation, we'd also validate recipients
+    // if (selectedRecipients.length === 0) return false;
     
     return true;
   };
