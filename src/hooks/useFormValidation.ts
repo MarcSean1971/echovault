@@ -11,7 +11,7 @@ export function useFormValidation() {
     hoursThreshold,
     minutesThreshold,
     selectedRecipients,
-    triggerDate,
+    recurringPattern,
     deliveryOption
   } = useMessageForm();
 
@@ -25,8 +25,8 @@ export function useFormValidation() {
       // Make sure there's at least some threshold
       if (hoursThreshold <= 0 && minutesThreshold <= 0) return false;
       
-      // For specific date delivery, make sure there's a date
-      if (conditionType === 'no_check_in' && deliveryOption === 'specific_date' && !triggerDate) return false;
+      // For recurring delivery, make sure there's a pattern
+      if (conditionType === 'no_check_in' && deliveryOption === 'recurring' && !recurringPattern) return false;
       
       // In a real implementation, we'd also validate recipients
       // if (selectedRecipients.length === 0) return false;

@@ -33,7 +33,7 @@ export type TriggerType =
   | 'inactivity_to_date';
 
 // Make this compatible with NoCheckInDeliveryOptions.tsx
-export type DeliveryOption = 'immediately' | 'scheduled' | 'recurring' | 'once' | 'specific_date';
+export type DeliveryOption = 'immediately' | 'scheduled' | 'recurring' | 'once';
 
 // Align with RecurringPatternSelector.RecurringPattern
 export type RecurringPattern = {

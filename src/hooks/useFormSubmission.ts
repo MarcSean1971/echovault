@@ -86,7 +86,7 @@ export function useFormSubmission() {
             conditionType,
             {
               hoursThreshold,
-              triggerDate: triggerDate ? triggerDate.toISOString() : undefined,
+              // Using recurring pattern for all time-based scheduling now
               recurringPattern,
               recipients: mockRecipients,
               pinCode: pinCode || undefined,

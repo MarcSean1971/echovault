@@ -1,11 +1,10 @@
 
 import { RadioGroup } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Calendar, Clock, Repeat } from "lucide-react";
+import { Clock, Repeat } from "lucide-react";
 import { DeliveryOption, RecurringPattern } from "@/types/message";
 import { RadioCardOption } from "./RadioCardOption";
 import { RecurringPatternSelector } from "./RecurringPatternSelector";
-import { DatePicker } from "./DatePicker";
 import { Separator } from "@/components/ui/separator";
 
 interface NoCheckInDeliveryOptionsProps {
@@ -52,15 +51,6 @@ export function NoCheckInDeliveryOptions({
             icon={<Repeat className="h-4 w-4" />}
             isSelected={deliveryOption === "recurring"}
           />
-          
-          <RadioCardOption
-            value="specific_date"
-            id="delivery-date"
-            label="Specific date and time"
-            description="Send the message on a specific date and time if you don't check in"
-            icon={<Calendar className="h-4 w-4" />}
-            isSelected={deliveryOption === "specific_date"}
-          />
         </RadioGroup>
       </div>
 
@@ -71,17 +61,6 @@ export function NoCheckInDeliveryOptions({
             pattern={recurringPattern}
             setPattern={setRecurringPattern}
             forceEnabled={true}
-          />
-        </div>
-      )}
-      
-      {deliveryOption === "specific_date" && (
-        <div className="mt-6 border-t pt-4">
-          <Label className="font-medium mb-3 block">Specific Date Selection</Label>
-          <DatePicker
-            selectedDate={triggerDate}
-            setSelectedDate={setTriggerDate}
-            label="Select delivery date and time"
           />
         </div>
       )}
