@@ -3,24 +3,21 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Check } from "lucide-react";
+import { Check, ShieldAlert } from "lucide-react";
 import { Logo } from "./navbar/Logo";
 import { DesktopNav } from "./navbar/DesktopNav";
 import { MobileNav } from "./navbar/MobileNav";
 import { GuestNav } from "./navbar/GuestNav";
-import { isAdminEmail } from "@/utils/adminUtils";
 
 interface NavbarProps {
   isLoggedIn?: boolean;
+  isAdmin?: boolean;
 }
 
-export default function Navbar({ isLoggedIn = false }: NavbarProps) {
-  const { isSignedIn, isLoaded, profile, getInitials, user } = useAuth();
+export default function Navbar({ isLoggedIn = false, isAdmin = false }: NavbarProps) {
+  const { isSignedIn, isLoaded, profile, getInitials } = useAuth();
   const [userImage, setUserImage] = useState<string | null>(null);
   const [initials, setInitials] = useState("U");
-  
-  // Determine if user is an admin
-  const isAdmin = user ? isAdminEmail(user.email) : false;
 
   // Determine user initials and image when user data is loaded
   useEffect(() => {
@@ -48,7 +45,7 @@ export default function Navbar({ isLoggedIn = false }: NavbarProps) {
           </div>
         )}
         
-        {/* Centered "Check In" button for larger screens only - shown for non-admin users */}
+        {/* Centered "Check In" button for larger screens only */}
         {authenticated && !isAdmin && (
           <div className="hidden md:block absolute left-1/2 transform -translate-x-1/2 z-20">
             <Button 
@@ -59,6 +56,23 @@ export default function Navbar({ isLoggedIn = false }: NavbarProps) {
               <Link to="/check-in" className="flex items-center gap-2 font-medium">
                 <Check className="h-5 w-5" />
                 Check In
+              </Link>
+            </Button>
+          </div>
+        )}
+        
+        {/* Admin Button */}
+        {authenticated && isAdmin && (
+          <div className="hidden md:block absolute left-1/2 transform -translate-x-1/2 z-20">
+            <Button
+              asChild
+              variant="destructive"
+              className="px-6 py-2 hover:shadow-xl transform hover:-translate-y-1"
+              size="lg"
+            >
+              <Link to="/admin" className="flex items-center gap-2 font-medium">
+                <ShieldAlert className="h-5 w-5" />
+                Admin Dashboard
               </Link>
             </Button>
           </div>

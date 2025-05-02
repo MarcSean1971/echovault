@@ -60,7 +60,7 @@ export default function AdminLayout() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <Navbar isLoggedIn={true} />
+      <Navbar isLoggedIn={true} isAdmin={true} />
       <Toaster />
       <main className="flex-1">
         <Outlet />
