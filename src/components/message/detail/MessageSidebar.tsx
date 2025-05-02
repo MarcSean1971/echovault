@@ -1,9 +1,9 @@
 
+import { useState } from "react";
 import { StatusCard } from "./sidebar/StatusCard";
 import { RecipientsCard } from "./sidebar/RecipientsCard";
 import { ActionsCard } from "./sidebar/ActionsCard";
 import { ReminderHistoryDialog } from "./ReminderHistoryDialog";
-import { useState } from "react";
 import { Message } from "@/types/message";
 import { sendTestNotification } from "@/services/messages/notificationService";
 
