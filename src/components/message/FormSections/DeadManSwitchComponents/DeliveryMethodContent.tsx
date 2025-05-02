@@ -56,7 +56,8 @@ export function DeliveryMethodContent({
     enabled: true,
     methods: ['app'],
     cancel_window_seconds: 10,
-    bypass_logging: false
+    bypass_logging: false,
+    keep_armed: false
   };
 
   // Ensure we have a valid config object

@@ -1,3 +1,4 @@
+
 import { createContext, useContext, ReactNode, useState } from "react";
 import { FileAttachment } from "@/components/FileUploader";
 import { RecurringPattern, TriggerType, DeliveryOption, PanicTriggerConfig } from "@/types/message";
@@ -80,7 +81,8 @@ export function MessageFormProvider({ children }: MessageFormProviderProps) {
     enabled: true,
     methods: ['app'],
     cancel_window_seconds: 10,
-    bypass_logging: false
+    bypass_logging: false,
+    keep_armed: false
   });
   const [pinCode, setPinCode] = useState("");
   const [unlockDelay, setUnlockDelay] = useState(0);
