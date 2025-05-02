@@ -7,8 +7,8 @@ interface RecordingIndicatorProps {
 
 export function RecordingIndicator({ isPaused }: RecordingIndicatorProps) {
   return (
-    <div className="w-2 h-2 rounded-full bg-red-500 mr-1 flex-shrink-0 flex-grow-0" 
-      style={{ animation: isPaused ? 'none' : 'pulse 1s infinite' }}
-    />
+    <div className="absolute top-2 right-2 flex items-center px-2 py-1 bg-black/50 rounded-full">
+      <div className={`w-2 h-2 rounded-full bg-red-500 mr-1 ${isPaused ? '' : 'animate-pulse'}`} />
+    </div>
   );
 }
