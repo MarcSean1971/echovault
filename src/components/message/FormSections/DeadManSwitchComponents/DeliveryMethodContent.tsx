@@ -150,15 +150,6 @@ export function DeliveryMethodContent({
       />
       
       {renderConditionOptions()}
-      
-      <div className="pt-4 flex justify-end">
-        <Button 
-          type="button"
-          onClick={() => setActiveTab("recipients")}
-        >
-          Next: Set Recipients
-        </Button>
-      </div>
     </div>
   );
 }

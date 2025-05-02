@@ -139,18 +139,6 @@ export function SecurityOptions({
             </div>
           )}
         </div>
-        
-        {setActiveTab && (
-          <div className="pt-4 border-t mt-4">
-            <button
-              type="button"
-              onClick={() => setActiveTab("recipients")}
-              className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
-            >
-              Next: Configure Recipients
-            </button>
-          </div>
-        )}
       </CollapsibleContent>
     </Collapsible>
   );
