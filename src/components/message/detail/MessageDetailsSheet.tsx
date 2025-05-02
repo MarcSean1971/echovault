@@ -1,6 +1,6 @@
+
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { StatusBadge } from "@/components/ui/status-badge";
 import { CalendarDays, Info, Users } from "lucide-react";
 
 interface MessageDetailsSheetProps {
@@ -42,9 +42,12 @@ export function MessageDetailsSheet({
           <div className="space-y-4">
             <div className="flex items-start justify-between">
               <h3 className="text-md font-medium">Status</h3>
-              <StatusBadge status={isArmed ? "armed" : "disarmed"}>
-                {isArmed ? "Armed" : "Disarmed"}
-              </StatusBadge>
+              <div className="flex items-center space-x-2">
+                <div className={`w-2 h-2 rounded-full ${isArmed ? 'bg-destructive' : 'bg-green-500'}`}></div>
+                <span className={`text-xs ${isArmed ? 'text-destructive' : 'text-green-600'}`}>
+                  {isArmed ? 'Armed' : 'Disarmed'}
+                </span>
+              </div>
             </div>
             
             <div className="space-y-2">

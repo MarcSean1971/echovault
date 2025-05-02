@@ -1,8 +1,8 @@
+
 import React from "react";
 import { MessageTypeIcon } from "@/components/message/detail/MessageTypeIcon";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { StatusBadge } from "@/components/ui/status-badge";
 import { MessageContent } from "@/components/message/detail/MessageContent";
 import { MessageDeliverySettings } from "@/components/message/detail/MessageDeliverySettings";
 import { MessageMetadata } from "@/components/message/detail/MessageMetadata";
@@ -40,7 +40,6 @@ export function MessageMainCard({
         <div className="p-4 md:p-6 flex flex-col gap-4">
           <MessageCardHeader 
             message={message} 
-            isArmed={isArmed} 
             formatDate={formatDate} 
           />
           
@@ -74,11 +73,10 @@ export function MessageMainCard({
 
 interface MessageCardHeaderProps {
   message: Message;
-  isArmed: boolean;
   formatDate: (dateString: string) => string;
 }
 
-function MessageCardHeader({ message, isArmed, formatDate }: MessageCardHeaderProps) {
+function MessageCardHeader({ message, formatDate }: MessageCardHeaderProps) {
   return (
     <div className="flex items-start justify-between">
       <div className="space-y-1">
@@ -93,13 +91,6 @@ function MessageCardHeader({ message, isArmed, formatDate }: MessageCardHeaderPr
             `Last updated: ${formatDate(message.updated_at)}` : 
             `Created: ${formatDate(message.created_at)}`}
         </p>
-      </div>
-      
-      {/* Desktop status badge */}
-      <div className="hidden md:block">
-        <StatusBadge status={isArmed ? "armed" : "disarmed"}>
-          {isArmed ? 'Armed' : 'Disarmed'}
-        </StatusBadge>
       </div>
     </div>
   );
