@@ -28,16 +28,16 @@ function MessageForm({ onCancel }: CreateMessageFormProps) {
           </CardHeader>
           <CardContent className="space-y-6">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid grid-cols-3 mb-6">
-                <TabsTrigger value="message" className="flex items-center">
+              <TabsList className="flex w-full mb-6 gap-2">
+                <TabsTrigger value="message" className="flex-1 flex items-center justify-center">
                   <FileText className="mr-2 h-4 w-4" />
                   Message Content
                 </TabsTrigger>
-                <TabsTrigger value="trigger" className="flex items-center">
+                <TabsTrigger value="trigger" className="flex-1 flex items-center justify-center">
                   <Clock className="mr-2 h-4 w-4" />
                   Trigger Settings
                 </TabsTrigger>
-                <TabsTrigger value="recipients" className="flex items-center">
+                <TabsTrigger value="recipients" className="flex-1 flex items-center justify-center">
                   <Users className="mr-2 h-4 w-4" />
                   Recipients
                 </TabsTrigger>
