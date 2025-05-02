@@ -33,7 +33,18 @@ export async function fetchProfile(userId: string): Promise<ProfileData | null> 
       return null;
     }
     
-    return data as ProfileData;
+    // Add default values for potentially missing fields
+    const profileData: ProfileData = {
+      id: data.id,
+      first_name: data.first_name,
+      last_name: data.last_name,
+      avatar_url: data.avatar_url,
+      backup_email: data.backup_email || null,
+      whatsapp_number: data.whatsapp_number || null,
+      backup_contact: data.backup_contact || null
+    };
+    
+    return profileData;
   } catch (error) {
     console.error('Error in fetchProfile:', error);
     return null;
@@ -58,7 +69,18 @@ export async function updateProfile(
       return null;
     }
 
-    return data as ProfileData;
+    // Add default values for potentially missing fields
+    const updatedProfile: ProfileData = {
+      id: data.id,
+      first_name: data.first_name,
+      last_name: data.last_name,
+      avatar_url: data.avatar_url,
+      backup_email: data.backup_email || null,
+      whatsapp_number: data.whatsapp_number || null,
+      backup_contact: data.backup_contact || null
+    };
+
+    return updatedProfile;
   } catch (error) {
     console.error('Error in updateProfile:', error);
     return null;
