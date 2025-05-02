@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
-import { Settings, LogOut, MessageSquare, Users2 } from "lucide-react";
+import { Settings, LogOut, MessageSquare, Users2, Clock, User } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
@@ -56,6 +56,11 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
+              <Link to="/profile" className="flex gap-2 items-center cursor-pointer">
+                <User className="h-4 w-4" /> Profile
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
               <Link to="/create-message" className="flex gap-2 items-center cursor-pointer">
                 <MessageSquare className="h-4 w-4" /> Messages
               </Link>
@@ -63,6 +68,11 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
             <DropdownMenuItem asChild>
               <Link to="/recipients" className="flex gap-2 items-center cursor-pointer">
                 <Users2 className="h-4 w-4" /> Recipients
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to="/check-ins" className="flex gap-2 items-center cursor-pointer">
+                <Clock className="h-4 w-4" /> Check-ins
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
@@ -104,6 +114,11 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
             
             <div className="space-y-1">
               <Button variant="ghost" asChild className="justify-start w-full">
+                <Link to="/profile" className="flex items-center gap-2">
+                  <User className="h-5 w-5" /> Profile
+                </Link>
+              </Button>
+              <Button variant="ghost" asChild className="justify-start w-full">
                 <Link to="/create-message" className="flex items-center gap-2">
                   <MessageSquare className="h-5 w-5" /> Messages
                 </Link>
@@ -111,6 +126,11 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
               <Button variant="ghost" asChild className="justify-start w-full">
                 <Link to="/recipients" className="flex items-center gap-2">
                   <Users2 className="h-5 w-5" /> Recipients
+                </Link>
+              </Button>
+              <Button variant="ghost" asChild className="justify-start w-full">
+                <Link to="/check-ins" className="flex items-center gap-2">
+                  <Clock className="h-5 w-5" /> Check-ins
                 </Link>
               </Button>
               <Button variant="ghost" asChild className="justify-start w-full">

@@ -30,11 +30,6 @@ export function DesktopNav({ userImage, initials }: DesktopNavProps) {
               <Link to="/recipients">Recipients</Link>
             </NavigationMenuLink>
           </NavigationMenuItem>
-          <NavigationMenuItem>
-            <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-              <Link to="/check-ins">Check-ins</Link>
-            </NavigationMenuLink>
-          </NavigationMenuItem>
         </NavigationMenuList>
       </NavigationMenu>
       
