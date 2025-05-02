@@ -24,17 +24,23 @@ export function DesktopNav({ userImage, initials }: DesktopNavProps) {
           <NavigationMenuItem>
             <NavigationMenuLink 
               asChild 
-              className={navigationMenuTriggerStyle() + " transition-all hover:text-primary"}
+              className={navigationMenuTriggerStyle() + " nav-link relative transition-all group"}
             >
-              <Link to="/messages">Messages</Link>
+              <Link to="/messages" className="relative">
+                Messages
+                <span className="absolute bottom-0 left-0 w-full h-0.5 bg-gray-800 dark:bg-gray-200 scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left"></span>
+              </Link>
             </NavigationMenuLink>
           </NavigationMenuItem>
           <NavigationMenuItem>
             <NavigationMenuLink 
               asChild 
-              className={navigationMenuTriggerStyle() + " transition-all hover:text-primary"}
+              className={navigationMenuTriggerStyle() + " nav-link relative transition-all group"}
             >
-              <Link to="/recipients">Recipients</Link>
+              <Link to="/recipients" className="relative">
+                Recipients
+                <span className="absolute bottom-0 left-0 w-full h-0.5 bg-gray-800 dark:bg-gray-200 scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left"></span>
+              </Link>
             </NavigationMenuLink>
           </NavigationMenuItem>
         </NavigationMenuList>
