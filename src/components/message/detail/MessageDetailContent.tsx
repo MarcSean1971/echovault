@@ -97,8 +97,10 @@ export function MessageDetailContent({
 
   return (
     <div className="max-w-5xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 order-2 lg:order-1">
+      {/* Switch from grid to flex layout with adjusted percentages */}
+      <div className="flex flex-col lg:flex-row gap-6">
+        {/* Main content area - reduced from 66.66% to 51.66% (15% decrease) */}
+        <div className="w-full lg:w-[51.66%] order-2 lg:order-1">
           <div className="bg-white rounded-lg shadow overflow-hidden">
             <div className="p-6">
               <MessageHeader 
@@ -172,23 +174,26 @@ export function MessageDetailContent({
           </div>
         </div>
         
-        <MessageSidebar 
-          message={message}
-          isArmed={isArmed}
-          conditionId={conditionId}
-          isActionLoading={isActionLoading}
-          formatDate={formatDate}
-          renderConditionType={renderConditionType}
-          renderRecipients={renderRecipients}
-          handleDisarmMessage={handleDisarmMessage}
-          handleArmMessage={handleArmMessage}
-          showDeleteConfirm={showDeleteConfirm}
-          setShowDeleteConfirm={setShowDeleteConfirm}
-          handleDelete={handleDelete}
-          recipients={recipients}
-          onSendTestMessage={onSendTestMessage}
-          condition={condition}
-        />
+        {/* Sidebar - increased from 33.33% to 48.33% (15% increase) */}
+        <div className="w-full lg:w-[48.33%] order-1 lg:order-2">
+          <MessageSidebar 
+            message={message}
+            isArmed={isArmed}
+            conditionId={conditionId}
+            isActionLoading={isActionLoading}
+            formatDate={formatDate}
+            renderConditionType={renderConditionType}
+            renderRecipients={renderRecipients}
+            handleDisarmMessage={handleDisarmMessage}
+            handleArmMessage={handleArmMessage}
+            showDeleteConfirm={showDeleteConfirm}
+            setShowDeleteConfirm={setShowDeleteConfirm}
+            handleDelete={handleDelete}
+            recipients={recipients}
+            onSendTestMessage={onSendTestMessage}
+            condition={condition}
+          />
+        </div>
       </div>
       
       <SendTestMessageDialog 
