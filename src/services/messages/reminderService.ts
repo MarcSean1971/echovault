@@ -53,12 +53,16 @@ export async function getReminderHistory(messageId: string): Promise<Reminder[]>
     const response = await supabase.auth.getSession();
     const authToken = response.data.session?.access_token;
     
-    // Build URL for direct query
-    const url = `${supabase.supabaseUrl as string}/rest/v1/sent_reminders?message_id=eq.${messageId}&order=sent_at.desc`;
+    // Get the URL from the Supabase instance without accessing protected properties
+    const projectRef = 'onwthrpgcnfydxzzmyot'; // Using the project id from supabase/config.toml
+    const url = `https://${projectRef}.supabase.co/rest/v1/sent_reminders?message_id=eq.${messageId}&order=sent_at.desc`;
+    
+    // The anon key is in supabase/config.toml
+    const apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ud3RocnBnY25meWR4enpteW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYxMDQzOTUsImV4cCI6MjA2MTY4MDM5NX0.v4tYEDukTlMERZ6GHqvnoDbyH-g9KQd8s3-UlIOPkDs';
     
     const fetchResponse = await fetch(url, {
       headers: {
-        'apikey': supabase.supabaseKey as string,
+        'apikey': apiKey,
         'Authorization': `Bearer ${authToken}`,
         'Content-Type': 'application/json'
       }
