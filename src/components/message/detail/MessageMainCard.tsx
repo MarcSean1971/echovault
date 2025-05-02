@@ -8,6 +8,10 @@ import { MessageDeliverySettings } from "@/components/message/detail/MessageDeli
 import { MessageMetadata } from "@/components/message/detail/MessageMetadata";
 import { DesktopTimerAlert } from "@/components/message/detail/DesktopTimerAlert";
 import { Message } from "@/types/message";
+import { FileIcon, PaperclipIcon } from "lucide-react";
+import { getFileUrl } from "@/services/messages/fileService";
+import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface MessageMainCardProps {
   message: Message;
@@ -122,12 +126,81 @@ function MessageTabs({
         <TabsTrigger value="settings">Delivery</TabsTrigger>
       </TabsList>
       
-      <MessageContent message={message} isArmed={isArmed} />
-      <MessageDeliverySettings 
-        condition={condition} 
-        renderConditionType={renderConditionType}
-        formatDate={formatDate}
-      />
+      <TabsContent value="content">
+        <MessageContent message={message} isArmed={isArmed} />
+        
+        {/* Attachments Section */}
+        {message.attachments && message.attachments.length > 0 && (
+          <div className="mt-6 space-y-3">
+            <h3 className="text-sm font-medium flex items-center gap-2">
+              <PaperclipIcon className="h-4 w-4" />
+              Attachments ({message.attachments.length})
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {message.attachments.map((attachment, index) => (
+                <AttachmentItem key={index} attachment={attachment} />
+              ))}
+            </div>
+          </div>
+        )}
+      </TabsContent>
+      
+      <TabsContent value="settings">
+        <MessageDeliverySettings 
+          condition={condition} 
+          renderConditionType={renderConditionType}
+          formatDate={formatDate}
+        />
+      </TabsContent>
     </Tabs>
+  );
+}
+
+interface AttachmentItemProps {
+  attachment: {
+    name: string;
+    size: number;
+    type: string;
+    path: string;
+  };
+}
+
+function AttachmentItem({ attachment }: AttachmentItemProps) {
+  const downloadFile = async () => {
+    try {
+      const url = await getFileUrl(attachment.path);
+      window.open(url, '_blank');
+    } catch (error) {
+      console.error("Error opening attachment:", error);
+    }
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + " B";
+    else if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + " KB";
+    else return (bytes / (1024 * 1024)).toFixed(2) + " MB";
+  };
+  
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button 
+            variant="outline" 
+            className="flex items-center justify-start w-full text-left p-2 h-auto" 
+            onClick={downloadFile}
+          >
+            <FileIcon className="h-4 w-4 mr-2 flex-shrink-0" />
+            <div className="truncate">
+              <span className="block truncate">{attachment.name}</span>
+              <span className="text-xs text-muted-foreground">{formatFileSize(attachment.size)}</span>
+            </div>
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>Click to download</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }

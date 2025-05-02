@@ -29,7 +29,7 @@ export function MessageHeader({
           variant="ghost"
           size="icon"
           onClick={() => navigate("/messages")}
-          className="rounded-full"
+          className="rounded-full hover:bg-accent hover:text-accent-foreground"
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
@@ -48,7 +48,7 @@ export function MessageHeader({
               size="sm"
               onClick={handleDisarmMessage}
               disabled={isActionLoading}
-              className="text-green-600 hover:bg-green-50 hover:text-green-700"
+              className="text-green-600 border-green-600 hover:bg-green-50 hover:text-green-700 hover:border-green-700"
             >
               Disarm
             </Button>
@@ -58,7 +58,7 @@ export function MessageHeader({
               size="sm"
               onClick={handleArmMessage}
               disabled={isActionLoading}
-              className="text-destructive hover:bg-destructive/10"
+              className="text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive hover:border-destructive/80"
             >
               Arm
             </Button>
