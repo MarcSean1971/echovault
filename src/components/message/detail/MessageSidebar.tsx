@@ -4,8 +4,6 @@ import { RecipientsCard } from "./sidebar/RecipientsCard";
 import { ActionsCard } from "./sidebar/ActionsCard";
 import { ReminderHistoryDialog } from "./ReminderHistoryDialog";
 import { useState } from "react";
-import { MessageTypeIcon } from "./MessageTypeIcon";
-import { Clock } from "lucide-react";
 import { Message } from "@/types/message";
 import { sendTestNotification } from "@/services/messages/notificationService";
 
@@ -61,8 +59,6 @@ export function MessageSidebar({
         createdAt={formatDate(message.created_at)}
         isActionLoading={isActionLoading}
         message={message}
-        onDisarm={handleDisarmMessage}
-        onArm={handleArmMessage}
       />
       
       {recipients && recipients.length > 0 && (

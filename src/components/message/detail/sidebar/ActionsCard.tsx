@@ -7,10 +7,9 @@ import {
   ShieldOff,
   Trash2,
   Bell,
-  CornerUpRight,
+  Pencil,
   Clock,
   Mail,
-  Pencil,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -143,31 +142,31 @@ export function ActionsCard({
         )}
 
         {/* Delete Button / Confirm */}
-        {showDeleteConfirm ? (
-          <div className="flex space-x-2">
-            <Button
-              variant="default"
-              size="sm"
-              className="flex-1"
-              onClick={() => setShowDeleteConfirm(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              className="flex-1"
-              onClick={handleDelete}
-              disabled={isActionLoading}
-            >
-              Delete
-            </Button>
-          </div>
-        ) : (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div>
+                {showDeleteConfirm ? (
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => setShowDeleteConfirm(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      className="flex-1"
+                      onClick={handleDelete}
+                      disabled={isActionLoading}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                ) : (
                   <Button
                     variant="outline"
                     className="w-full border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
@@ -177,16 +176,16 @@ export function ActionsCard({
                     <Trash2 className="h-4 w-4 mr-2" />
                     Delete Message
                   </Button>
-                </div>
-              </TooltipTrigger>
-              {isArmed && (
-                <TooltipContent>
-                  <p>Disarm the message first to delete it</p>
-                </TooltipContent>
-              )}
-            </Tooltip>
-          </TooltipProvider>
-        )}
+                )}
+              </div>
+            </TooltipTrigger>
+            {isArmed && !showDeleteConfirm && (
+              <TooltipContent>
+                <p>Disarm the message first to delete it</p>
+              </TooltipContent>
+            )}
+          </Tooltip>
+        </TooltipProvider>
       </CardContent>
     </Card>
   );
