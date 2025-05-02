@@ -1,8 +1,6 @@
 
 import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { UserMenu } from "./UserMenu";
-import { Check } from "lucide-react";
 import {
   NavigationMenu,
   NavigationMenuItem,
@@ -18,7 +16,7 @@ interface DesktopNavProps {
 
 export function DesktopNav({ userImage, initials }: DesktopNavProps) {
   return (
-    <div className="flex items-center w-full relative">
+    <div className="flex items-center w-full">
       {/* Left section - Navigation menu */}
       <div className="flex-1">
         <NavigationMenu>
@@ -47,22 +45,8 @@ export function DesktopNav({ userImage, initials }: DesktopNavProps) {
         </NavigationMenu>
       </div>
       
-      {/* Center section - Check In button - positioned absolutely for true centering */}
-      <div className="absolute left-1/2 transform -translate-x-1/2">
-        <Button 
-          asChild 
-          className="bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-1 pulse-subtle px-6 py-2 animate-pulse-light"
-          size="lg"
-        >
-          <Link to="/check-in" className="flex items-center gap-2 font-medium">
-            <Check className="h-5 w-5" />
-            Check In
-          </Link>
-        </Button>
-      </div>
-      
       {/* Right section - User avatar/menu */}
-      <div className="flex-1 flex justify-end">
+      <div className="flex justify-end">
         <UserMenu userImage={userImage} initials={initials} />
       </div>
     </div>
