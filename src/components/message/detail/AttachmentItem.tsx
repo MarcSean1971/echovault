@@ -4,6 +4,7 @@ import { FileIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getFileUrl } from "@/services/messages/fileService";
+import { toast } from "@/components/ui/use-toast";
 
 interface AttachmentItemProps {
   attachment: {
@@ -18,9 +19,22 @@ export function AttachmentItem({ attachment }: AttachmentItemProps) {
   const downloadFile = async () => {
     try {
       const url = await getFileUrl(attachment.path);
-      window.open(url, '_blank');
+      if (url) {
+        window.open(url, '_blank');
+      } else {
+        toast({
+          title: "Error",
+          description: "Could not access the file. It may have been deleted or you don't have permission to view it.",
+          variant: "destructive"
+        });
+      }
     } catch (error) {
       console.error("Error opening attachment:", error);
+      toast({
+        title: "Error",
+        description: "An error occurred while trying to access the attachment",
+        variant: "destructive"
+      });
     }
   };
 

@@ -1,6 +1,7 @@
 
 import { getAuthClient } from "@/lib/supabaseClient";
 import { FileAttachment } from "@/components/FileUploader";
+import { toast } from "@/components/ui/use-toast";
 
 // Use a consistent bucket name
 const BUCKET_NAME = 'message-attachments';
@@ -124,18 +125,52 @@ export async function uploadAttachments(userId: string, files: FileAttachment[])
 }
 
 /**
- * Gets a public URL for a file in storage
+ * Gets a signed URL for a file in storage to ensure access
  * 
  * @param path The file path in storage
- * @returns The public URL for the file
+ * @returns The signed URL for the file or null if there's an error
  */
 export async function getFileUrl(path: string) {
-  const client = await getAuthClient();
-  const bucket = await getAvailableBucketName();
-  
-  const { data } = client.storage
-    .from(bucket)
-    .getPublicUrl(path);
+  if (!path) {
+    console.error("No file path provided");
+    return null;
+  }
+
+  try {
+    const client = await getAuthClient();
+    // Try both message-attachments and message_attachments buckets
+    let mediaData;
     
-  return data.publicUrl;
+    try {
+      // Try with hyphen first
+      mediaData = await client.storage
+        .from('message-attachments')
+        .createSignedUrl(path, 3600);
+    } catch (error) {
+      console.log("Error with message-attachments bucket, trying message_attachments:", error);
+      
+      // Try with underscore
+      mediaData = await client.storage
+        .from('message_attachments')
+        .createSignedUrl(path, 3600);
+    }
+    
+    if (mediaData.error) {
+      throw mediaData.error;
+    }
+
+    if (!mediaData.data?.signedUrl) {
+      throw new Error("No signed URL returned");
+    }
+    
+    return mediaData.data.signedUrl;
+  } catch (error) {
+    console.error("Error getting file URL:", error);
+    toast({
+      title: "File Access Error",
+      description: "Could not access the file. It may have been deleted or you don't have permission to view it.",
+      variant: "destructive"
+    });
+    return null;
+  }
 }
