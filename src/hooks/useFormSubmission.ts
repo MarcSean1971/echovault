@@ -1,4 +1,3 @@
-
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/components/ui/use-toast";
@@ -144,9 +143,9 @@ export function useFormSubmission() {
         description: "Your message and trigger settings have been saved"
       });
       
-      // Navigate back to messages list
+      // Navigate back to messages list instead of dashboard
       setTimeout(() => {
-        navigate("/dashboard");
+        navigate("/messages");
       }, 1500);
       
     } catch (error: any) {

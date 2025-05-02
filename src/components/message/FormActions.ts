@@ -138,9 +138,9 @@ export function useFormActions() {
         description: "Your message and trigger settings have been saved"
       });
       
-      // Navigate back to messages list
+      // Navigate back to messages list instead of dashboard
       setTimeout(() => {
-        navigate("/dashboard");
+        navigate("/messages");
       }, 1500);
       
     } catch (error: any) {
