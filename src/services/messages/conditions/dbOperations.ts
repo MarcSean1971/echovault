@@ -22,6 +22,7 @@ export async function createConditionInDb(
 ): Promise<any> {
   const {
     hoursThreshold = 72,
+    minutesThreshold = 0,
     confirmationRequired = 0,
     triggerDate,
     recurringPattern,
@@ -44,6 +45,7 @@ export async function createConditionInDb(
       message_id: messageId,
       condition_type: conditionType,
       hours_threshold: hoursThreshold,
+      minutes_threshold: minutesThreshold,
       trigger_date: triggerDate || null,
       recurring_pattern: recurringPattern || null,
       confirmation_required: confirmationRequired,

@@ -4,6 +4,7 @@ import { MessageCondition, TriggerType, RecurringPattern, PanicTriggerConfig } f
 export interface CreateConditionOptions {
   // Basic options
   hoursThreshold?: number;
+  minutesThreshold?: number;
   confirmationRequired?: number;
   triggerDate?: string;
   recurringPattern?: RecurringPattern | null;
