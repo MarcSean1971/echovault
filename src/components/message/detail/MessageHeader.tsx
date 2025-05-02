@@ -34,32 +34,6 @@ export function MessageHeader({
         </Button>
         <h1 className="text-xl font-medium md:text-2xl">Message Details</h1>
       </div>
-      
-      <div className="flex items-center gap-3">
-        <div className="hidden md:block">
-          {isArmed ? (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleDisarmMessage}
-              disabled={isActionLoading}
-              className="text-green-600 border-green-600 hover:bg-green-50 hover:text-green-700 hover:border-green-700"
-            >
-              Disarm
-            </Button>
-          ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleArmMessage}
-              disabled={isActionLoading}
-              className="text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive hover:border-destructive/80"
-            >
-              Arm
-            </Button>
-          )}
-        </div>
-      </div>
     </div>
   );
 }
