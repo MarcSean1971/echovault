@@ -1,3 +1,4 @@
+
 import { createContext, useContext, ReactNode, useState } from "react";
 import { FileAttachment } from "@/components/FileUploader";
 import { RecurringPattern, TriggerType, DeliveryOption, PanicTriggerConfig } from "@/types/message";
@@ -21,7 +22,7 @@ interface MessageFormContextType {
   showUploadDialog: boolean;
   setShowUploadDialog: (value: boolean) => void;
 
-  // Dead Man's Switch properties (temporarily keeping these to avoid type errors)
+  // Dead Man's Switch properties
   enableDeadManSwitch: boolean;
   setEnableDeadManSwitch: (value: boolean) => void;
   conditionType: TriggerType;
@@ -68,7 +69,7 @@ export function MessageFormProvider({ children }: MessageFormProviderProps) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
 
-  // Dead Man's Switch properties (temporarily keeping these to avoid type errors)
+  // Dead Man's Switch properties
   const [enableDeadManSwitch, setEnableDeadManSwitch] = useState(false);
   const [conditionType, setConditionType] = useState<TriggerType>("no_check_in");
   const [hoursThreshold, setHoursThreshold] = useState(24);
@@ -85,7 +86,7 @@ export function MessageFormProvider({ children }: MessageFormProviderProps) {
   const [pinCode, setPinCode] = useState("");
   const [unlockDelay, setUnlockDelay] = useState(0);
   const [expiryHours, setExpiryHours] = useState(24);
-  const [deliveryOption, setDeliveryOption] = useState<DeliveryOption>("immediately");
+  const [deliveryOption, setDeliveryOption] = useState<DeliveryOption>("once");
   const [reminderHours, setReminderHours] = useState<number[]>([12, 6, 1]);
   
   const value = {
