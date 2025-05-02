@@ -1,0 +1,52 @@
+
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/components/ui/use-toast";
+
+/**
+ * Manually trigger a reminder check for a specific message
+ * This is useful for testing the reminder system
+ */
+export async function triggerReminderCheck(messageId: string) {
+  try {
+    const { data, error } = await supabase.functions.invoke("send-reminder-emails", {
+      body: { messageId }
+    });
+    
+    if (error) throw error;
+    
+    toast({
+      title: "Reminder check triggered",
+      description: "The system will check if a reminder needs to be sent",
+    });
+    
+    return data;
+  } catch (error: any) {
+    console.error("Error triggering reminder check:", error);
+    toast({
+      title: "Error",
+      description: "Failed to trigger reminder check",
+      variant: "destructive"
+    });
+    throw error;
+  }
+}
+
+/**
+ * Get reminder history for a specific message
+ */
+export async function getReminderHistory(messageId: string) {
+  try {
+    const { data, error } = await supabase
+      .from("sent_reminders")
+      .select("*")
+      .eq("message_id", messageId)
+      .order("sent_at", { ascending: false });
+      
+    if (error) throw error;
+    
+    return data;
+  } catch (error: any) {
+    console.error("Error fetching reminder history:", error);
+    throw error;
+  }
+}

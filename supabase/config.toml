@@ -25,6 +25,9 @@ enabled = true
 [functions.send-test-email]
 verify_jwt = true
 
+[functions.send-reminder-emails]
+verify_jwt = true
+
 [functions.transcribe-audio]
 verify_jwt = true
 
