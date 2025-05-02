@@ -70,7 +70,7 @@ export function RegistrationForm() {
           title: "Registration successful",
           description: "Welcome to EchoVault"
         });
-        navigate("/dashboard");
+        navigate("/messages");
       }
     } catch (error) {
       console.error("Registration error:", error);

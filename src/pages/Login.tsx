@@ -21,11 +21,11 @@ export default function Login() {
   const { isSignedIn, isLoaded } = useAuth();
   const navigate = useNavigate();
 
-  // If already signed in, redirect to dashboard
+  // If already signed in, redirect to messages
   useEffect(() => {
     if (isLoaded && isSignedIn) {
       setIsRedirecting(true);
-      navigate("/dashboard");
+      navigate("/messages");
     }
   }, [isLoaded, isSignedIn, navigate]);
 
@@ -54,7 +54,7 @@ export default function Login() {
         title: "Login successful",
         description: "Welcome back to EchoVault"
       });
-      navigate("/dashboard");
+      navigate("/messages");
     } catch (error) {
       console.error("Login error:", error);
       const authError = error as AuthError;

@@ -11,11 +11,11 @@ export default function Register() {
   const navigate = useNavigate();
   const [isRedirecting, setIsRedirecting] = useState(false);
 
-  // If already signed in, redirect to dashboard
+  // If already signed in, redirect to messages
   useEffect(() => {
     if (isLoaded && isSignedIn) {
       setIsRedirecting(true);
-      navigate("/dashboard");
+      navigate("/messages");
     }
   }, [isLoaded, isSignedIn, navigate]);
 
