@@ -27,12 +27,12 @@ export function VideoPreview({
       />
       
       {isRecording && (
-        <>
-          <RecordingIndicator isPaused={isPaused} />
-          <span className="absolute top-2 right-10 text-xs text-white bg-black/50 px-2 py-1 rounded-full">
+        <div className="absolute top-2 right-2 flex items-center gap-2">
+          <span className="text-xs text-white bg-black/50 px-2 py-1 rounded-full">
             {formatDuration(recordingDuration)}
           </span>
-        </>
+          <RecordingIndicator isPaused={isPaused} />
+        </div>
       )}
     </div>
   );
