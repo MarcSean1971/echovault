@@ -1,3 +1,4 @@
+
 import {
   trackMessageNotification,
   recordMessageDelivery,
@@ -74,6 +75,19 @@ export async function sendMessageNotification(
     const maxRetries = isEmergencyMessage ? 3 : 1;
     const retryDelay = 5000; // 5 seconds between retries for emergency messages
     
+    // Check if this is a WhatsApp-enabled panic trigger
+    let isWhatsAppEnabled = false;
+    let triggerKeyword = "";
+    
+    if (condition.condition_type === 'panic_trigger') {
+      const panicConfig = condition.panic_config || {};
+      if (panicConfig.methods && panicConfig.methods.includes('whatsapp')) {
+        isWhatsAppEnabled = true;
+        triggerKeyword = panicConfig.trigger_keyword || "SOS";
+        if (debug) console.log(`WhatsApp triggers enabled with keyword: ${triggerKeyword}`);
+      }
+    }
+    
     // Send a notification to each recipient with retry for emergencies
     const recipientResults = await Promise.all(condition.recipients.map(async (recipient) => {
       let attempt = 0;
@@ -112,7 +126,7 @@ export async function sendMessageNotification(
         // Continue despite record error - don't block email sending
       }
       
-      // Try sending with retry for emergency messages
+      // Try sending email with retry for emergency messages
       while (!success && attempt < maxRetries) {
         try {
           if (debug) console.log(`Sending email to ${recipient.email} (attempt ${attempt + 1}/${maxRetries})`);
@@ -122,6 +136,43 @@ export async function sendMessageNotification(
           
           if (debug) console.log(`Email sending result:`, emailResult);
           success = true;
+          
+          // For emergency messages and WhatsApp enabled recipients, also send a WhatsApp message
+          if (isEmergencyMessage && recipient.phone && (isWhatsAppEnabled || isEmergency)) {
+            try {
+              if (debug) console.log(`Sending WhatsApp message to ${recipient.phone}`);
+              
+              // Basic emergency message content
+              const whatsAppMessage = `⚠️ EMERGENCY ALERT: ${message.title}\n\n${message.content || "An emergency alert has been triggered for you."}\n\nCheck your email for more information.`;
+              
+              // Call the WhatsApp notification function
+              const response = await fetch(`${baseUrl}/send-whatsapp-notification`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': req.headers.get('Authorization') || ''
+                },
+                body: JSON.stringify({
+                  to: recipient.phone,
+                  message: whatsAppMessage,
+                  messageId: message.id,
+                  recipientName: recipient.name,
+                  isEmergency: true
+                })
+              });
+              
+              if (!response.ok) {
+                const errorData = await response.json();
+                if (debug) console.error(`WhatsApp sending error:`, errorData);
+              } else {
+                if (debug) console.log(`WhatsApp message sent successfully to ${recipient.phone}`);
+              }
+            } catch (whatsAppError) {
+              console.error(`Error sending WhatsApp message:`, whatsAppError);
+              // Continue despite WhatsApp error - we already sent the email
+            }
+          }
+          
         } catch (emailError: any) {
           attempt++;
           error = emailError;

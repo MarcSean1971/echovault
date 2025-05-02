@@ -4,7 +4,8 @@ import { Switch } from "@/components/ui/switch";
 import { PanicTriggerConfig } from "@/types/message";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useEffect } from "react";
-import { Smartphone } from "lucide-react";
+import { Smartphone, MessageSquare } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 interface PanicTriggerProps {
   config: PanicTriggerConfig;
@@ -21,6 +22,7 @@ export function PanicTrigger({ config, setConfig }: PanicTriggerProps) {
       cancel_window_seconds: config.cancel_window_seconds ?? 10,
       bypass_logging: config.bypass_logging ?? false,
       keep_armed: config.keep_armed ?? true, // Default to keeping armed for safety
+      trigger_keyword: config.trigger_keyword ?? "SOS", // Default keyword
     };
     
     // Only update if the values are actually different to prevent loops
@@ -53,10 +55,35 @@ export function PanicTrigger({ config, setConfig }: PanicTriggerProps) {
             
             <div className="flex items-center space-x-2 p-2 rounded border">
               <RadioGroupItem value="whatsapp" id="method-whatsapp" />
-              <Label htmlFor="method-whatsapp" className="cursor-pointer">WhatsApp keyword (send a special word to trigger)</Label>
+              <Label htmlFor="method-whatsapp" className="cursor-pointer flex items-center">
+                <Smartphone className="h-4 w-4 mr-2" />
+                WhatsApp keyword (send a special word to trigger)
+              </Label>
             </div>
           </RadioGroup>
         </div>
+        
+        {/* WhatsApp keyword input - only show when WhatsApp method is selected */}
+        {config.methods?.includes('whatsapp') && (
+          <div className="space-y-2 p-3 bg-blue-50 rounded-md">
+            <Label htmlFor="trigger-keyword">
+              Trigger keyword for WhatsApp
+            </Label>
+            <div className="flex items-center space-x-2">
+              <MessageSquare className="h-4 w-4 text-blue-500" />
+              <Input 
+                id="trigger-keyword"
+                value={config.trigger_keyword || "SOS"}
+                onChange={(e) => setConfig({...config, trigger_keyword: e.target.value})}
+                placeholder="SOS" 
+                className="flex-1"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Send this keyword to your registered WhatsApp number to trigger the emergency message.
+            </p>
+          </div>
+        )}
         
         <div className="flex items-center justify-between">
           <Label htmlFor="bypass-logging">Enhanced privacy (bypass logging)</Label>

@@ -16,6 +16,7 @@ interface WhatsAppMessageRequest {
   messageId?: string;
   recipientName?: string;
   isEmergency?: boolean;
+  triggerKeyword?: string; // Add trigger keyword for template messages
 }
 
 serve(async (req) => {
@@ -30,7 +31,7 @@ serve(async (req) => {
     }
 
     const requestData: WhatsAppMessageRequest = await req.json();
-    const { to, message, messageId, recipientName, isEmergency } = requestData;
+    const { to, message, messageId, recipientName, isEmergency, triggerKeyword } = requestData;
     
     if (!to || !message) {
       throw new Error("Missing required parameters: 'to' phone number and 'message' are required.");
@@ -44,7 +45,7 @@ serve(async (req) => {
       twilioWhatsappNumber : `whatsapp:${twilioWhatsappNumber}`;
       
     // Determine the message text based on whether it's an emergency
-    const messageText = isEmergency
+    let messageText = isEmergency
       ? `⚠️ EMERGENCY ALERT: ${message}`
       : message;
     
@@ -52,6 +53,11 @@ serve(async (req) => {
     const finalMessage = recipientName 
       ? `Hello ${recipientName}, ${messageText}`
       : messageText;
+      
+    // Add trigger keyword information if provided
+    const completeMessage = triggerKeyword 
+      ? `${finalMessage}\n\nTo trigger this alert in an emergency, send "${triggerKeyword}" to this number.`
+      : finalMessage;
     
     // Construct the request URL for Twilio API
     const twilioApiUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
@@ -69,7 +75,7 @@ serve(async (req) => {
       body: new URLSearchParams({
         To: formattedTo,
         From: formattedFrom,
-        Body: finalMessage,
+        Body: completeMessage,
       }).toString(),
     });
     

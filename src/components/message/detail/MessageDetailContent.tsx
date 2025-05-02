@@ -1,160 +1,122 @@
 
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Message } from "@/types/message";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { MessageHeader } from "@/components/message/detail/MessageHeader";
-import { MessageMainCard } from "@/components/message/detail/MessageMainCard";
-import { MessageActionFooter } from "@/components/message/detail/MessageActionFooter";
-import { MessageSidebar } from "@/components/message/detail/MessageSidebar";
-import { MobileTimerAlert } from "@/components/message/detail/MobileTimerAlert";
-import { MessageDetailsSheet } from "@/components/message/detail/MessageDetailsSheet";
-import { SendTestMessageDialog } from "@/components/message/detail/SendTestMessageDialog";
+// I'll create this component with a Test WhatsApp button
+import React, { useState } from "react";
+import { useMessageDetail } from "@/hooks/useMessageDetail";
+import { MessageHeader } from "./MessageHeader";
+import { MessageContent } from "./MessageContent";
+import { MessageAttachments } from "./MessageAttachments";
+import { MessageActionFooter } from "./MessageActionFooter";
+import { MessageDeliverySettings } from "./MessageDeliverySettings";
+import { MessageLoading } from "./MessageLoading";
+import { MessageNotFound } from "./MessageNotFound";
+import { Button } from "@/components/ui/button";
+import { MessageSidebar } from "./MessageSidebar";
+import { MessageMainCard } from "./MessageMainCard";
+import { toast } from "@/components/ui/use-toast";
+import { SendTestMessageDialog } from "./SendTestMessageDialog";
+import { sendTestWhatsAppMessage } from "@/services/messages/notificationService";
+import { Smartphone } from "lucide-react";
 
-interface MessageDetailContentProps {
-  message: Message;
-  isLoading: boolean;
-  isArmed: boolean;
-  isActionLoading: boolean;
-  deadline: Date | null;
-  conditionId: string | null;
-  condition: any | null;
-  handleDisarmMessage: () => Promise<void>;
-  handleArmMessage: () => Promise<void>;
-  handleDelete: () => Promise<void>;
-  formatDate: (dateString: string) => string;
-  renderConditionType: () => string;
-  renderRecipients: () => React.ReactNode;
-  recipients?: any[];
-  onSendTestMessage?: () => void;
-  showSendTestDialog?: boolean;
-  setShowSendTestDialog?: (show: boolean) => void;
-  handleSendTestMessages?: (recipients: any[]) => Promise<void>;
-}
+export function MessageDetailContent() {
+  const { message, condition, isLoading, error, isConditionActive, isPanicTrigger } = useMessageDetail();
+  const [isTestModalOpen, setIsTestModalOpen] = useState(false);
+  const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
 
-export function MessageDetailContent({
-  message,
-  isLoading,
-  isArmed,
-  isActionLoading,
-  deadline,
-  conditionId,
-  condition,
-  handleDisarmMessage,
-  handleArmMessage,
-  handleDelete,
-  formatDate,
-  renderConditionType,
-  renderRecipients,
-  recipients = [],
-  onSendTestMessage,
-  showSendTestDialog = false,
-  setShowSendTestDialog = () => {},
-  handleSendTestMessages = async () => {}
-}: MessageDetailContentProps) {
-  const navigate = useNavigate();
-  const isMobile = useIsMobile();
-  const [activeTab, setActiveTab] = useState("content");
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showDetailsSheet, setShowDetailsSheet] = useState(false);
+  const handleSendTestWhatsApp = async () => {
+    if (!message?.id) return;
+    
+    try {
+      setIsSendingWhatsApp(true);
+      await sendTestWhatsAppMessage(message.id);
+    } catch (error) {
+      console.error("Error sending test WhatsApp:", error);
+    } finally {
+      setIsSendingWhatsApp(false);
+    }
+  };
+  
+  // Check if this is a WhatsApp-enabled panic trigger
+  const isWhatsAppPanicTrigger = isPanicTrigger && condition?.panic_trigger_config?.methods?.includes('whatsapp');
+
+  if (isLoading) {
+    return <MessageLoading />;
+  }
+
+  if (error || !message) {
+    return <MessageNotFound />;
+  }
 
   return (
-    <div className="container max-w-5xl mx-auto px-4 py-4 md:py-8 space-y-4">
-      {/* Header with back button and status */}
-      <MessageHeader 
-        message={message} 
-        isArmed={isArmed} 
-        isActionLoading={isActionLoading}
-        handleDisarmMessage={handleDisarmMessage}
-        handleArmMessage={handleArmMessage}
-      />
-      
-      {/* Main content with responsive layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-6">
+    <div className="max-w-5xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <MessageMainCard>
+            <MessageHeader message={message} />
+            <MessageContent message={message} />
+            {message.attachments && message.attachments.length > 0 && (
+              <MessageAttachments attachments={message.attachments} />
+            )}
+            <MessageActionFooter 
+              messageId={message.id}
+              showTestButton={!!condition}
+              onTestClick={() => setIsTestModalOpen(true)}
+            />
+            
+            {/* Add WhatsApp Test Button for WhatsApp panic triggers */}
+            {isWhatsAppPanicTrigger && (
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-medium flex items-center">
+                      <Smartphone className="h-4 w-4 mr-2" />
+                      WhatsApp Integration
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      Test the WhatsApp notification for this message
+                    </p>
+                  </div>
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    disabled={isSendingWhatsApp}
+                    onClick={handleSendTestWhatsApp}
+                    className="flex items-center"
+                  >
+                    <Smartphone className="h-3 w-3 mr-1" />
+                    {isSendingWhatsApp ? "Sending..." : "Test WhatsApp"}
+                  </Button>
+                </div>
+                
+                {condition?.panic_trigger_config?.trigger_keyword && (
+                  <div className="mt-2 text-xs text-gray-600">
+                    <span className="font-medium">Trigger keyword:</span> "{condition.panic_trigger_config.trigger_keyword}"
+                  </div>
+                )}
+              </div>
+            )}
+          </MessageMainCard>
+        </div>
         
-        {/* Mobile countdown timer - only shown when armed */}
-        {isMobile && (
-          <MobileTimerAlert deadline={deadline} isArmed={isArmed} />
-        )}
-        
-        {/* Sidebar - Desktop only - Now on the left */}
         <MessageSidebar 
-          message={message}
-          isArmed={isArmed}
-          conditionId={conditionId}
-          isActionLoading={isActionLoading}
-          formatDate={formatDate}
-          renderConditionType={renderConditionType}
-          renderRecipients={renderRecipients}
-          handleDisarmMessage={handleDisarmMessage}
-          handleArmMessage={handleArmMessage}
-          showDeleteConfirm={showDeleteConfirm}
-          setShowDeleteConfirm={setShowDeleteConfirm}
-          handleDelete={handleDelete}
-          recipients={recipients}
-          onSendTestMessage={onSendTestMessage}
-          condition={condition}
-        />
-        
-        {/* Main message card - Now on the right */}
-        <MessageMainCard
-          message={message}
-          isArmed={isArmed}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          deadline={deadline}
-          isMobile={isMobile}
-          formatDate={formatDate}
-          renderRecipients={renderRecipients}
-          condition={condition}
-          renderConditionType={renderConditionType}
+          message={message} 
+          condition={condition} 
+          isActive={isConditionActive} 
         />
       </div>
       
-      {/* Mobile bottom action sheet and delete confirmation */}
-      {isMobile && (
-        <MessageActionFooter 
+      {condition && (
+        <MessageDeliverySettings 
           messageId={message.id}
-          isArmed={isArmed}
-          showDeleteConfirm={showDeleteConfirm}
-          setShowDeleteConfirm={setShowDeleteConfirm}
-          setShowDetailsSheet={setShowDetailsSheet}
-          handleDelete={handleDelete}
+          condition={condition}
+          isActive={isConditionActive}
         />
       )}
       
-      {/* Mobile details sheet */}
-      {isMobile && (
-        <MessageDetailsSheet 
-          showDetailsSheet={showDetailsSheet}
-          setShowDetailsSheet={setShowDetailsSheet}
-          formatDate={formatDate}
-          message={message}
-          renderRecipients={renderRecipients}
-          renderConditionType={renderConditionType}
-          isArmed={isArmed}
-          conditionId={conditionId}
-          isActionLoading={isActionLoading}
-          handleDisarmMessage={handleDisarmMessage}
-          handleArmMessage={handleArmMessage}
-          recipients={recipients}
-          onSendTestMessage={onSendTestMessage}
-          conditionType={condition?.condition_type}
-        />
-      )}
-
-      {/* Test Message Dialog */}
-      {message && recipients && (
-        <SendTestMessageDialog
-          open={showSendTestDialog}
-          onOpenChange={setShowSendTestDialog}
-          messageTitle={message.title}
-          recipients={recipients}
-        />
-      )}
-      
-      {/* Add spacing at bottom on mobile to account for fixed action bar */}
-      {isMobile && <div className="h-16"></div>}
+      <SendTestMessageDialog 
+        messageId={message.id} 
+        open={isTestModalOpen}
+        onOpenChange={setIsTestModalOpen}
+      />
     </div>
   );
 }

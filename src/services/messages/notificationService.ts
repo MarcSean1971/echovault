@@ -104,3 +104,92 @@ export async function sendTestNotification(messageId: string) {
     throw error;
   }
 }
+
+/**
+ * Send a test WhatsApp message to recipient
+ * This is used for testing WhatsApp integration
+ */
+export async function sendTestWhatsAppMessage(messageId: string) {
+  try {
+    // Get recipient details from the message condition
+    const { data: condition, error: conditionError } = await supabase
+      .from("message_conditions")
+      .select("recipients, panic_trigger_config, panic_config")
+      .eq("message_id", messageId)
+      .single();
+    
+    if (conditionError) throw conditionError;
+    
+    if (!condition || !condition.recipients) {
+      toast({
+        title: "No recipients",
+        description: "Please add recipients to this message first",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const recipients = condition.recipients as any[];
+    
+    if (recipients.length === 0) {
+      toast({
+        title: "No recipients",
+        description: "Please add recipients to this message first",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Get the first recipient with a phone number
+    const recipient = recipients.find(r => r.phone);
+    
+    if (!recipient || !recipient.phone) {
+      toast({
+        title: "No WhatsApp number",
+        description: "The selected recipient doesn't have a phone number",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Get the message details
+    const { data: message, error: messageError } = await supabase
+      .from("messages")
+      .select("title, content")
+      .eq("id", messageId)
+      .single();
+    
+    if (messageError) throw messageError;
+
+    // Extract the panic config to get keyword
+    const panicConfig = condition.panic_trigger_config || condition.panic_config;
+    const triggerKeyword = panicConfig?.trigger_keyword || "SOS";
+    
+    // Send test WhatsApp message
+    const { data, error } = await supabase.functions.invoke("send-whatsapp-notification", {
+      body: {
+        to: recipient.phone,
+        message: `[TEST] "${message?.title}": This is a test WhatsApp message. In an emergency, send "${triggerKeyword}" to trigger this alert.`,
+        recipientName: recipient.name,
+        messageId: messageId
+      }
+    });
+    
+    if (error) throw error;
+    
+    toast({
+      title: "Test WhatsApp message sent",
+      description: `Sent to ${recipient.phone}`,
+    });
+    
+    return data;
+  } catch (error: any) {
+    console.error("Error sending test WhatsApp message:", error);
+    toast({
+      title: "Error",
+      description: error.message || "Failed to send test WhatsApp message",
+      variant: "destructive"
+    });
+    throw error;
+  }
+}
