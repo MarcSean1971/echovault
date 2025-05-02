@@ -1,7 +1,7 @@
 
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserMenu } from "./UserMenu";
 import {
   NavigationMenu,
   NavigationMenuItem,
@@ -42,13 +42,7 @@ export function DesktopNav({ userImage, initials }: DesktopNavProps) {
           <Link to="/check-in">Check In</Link>
         </Button>
         
-        <Avatar className="h-9 w-9 transition-transform hover:scale-105 cursor-pointer border-2 border-transparent hover:border-primary/20">
-          {userImage ? (
-            <AvatarImage src={userImage} alt="User profile" />
-          ) : (
-            <AvatarFallback className="bg-primary/10 text-primary">{initials}</AvatarFallback>
-          )}
-        </Avatar>
+        <UserMenu userImage={userImage} initials={initials} />
       </div>
     </>
   );
