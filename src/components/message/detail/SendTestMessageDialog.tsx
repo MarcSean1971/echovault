@@ -20,7 +20,7 @@ interface SendTestMessageDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   messageTitle: string;
-  recipients: { id: string; name: string; email: string }[];
+  recipients: { id: string; name: string; email: string; phone?: string }[];
 }
 
 export function SendTestMessageDialog({

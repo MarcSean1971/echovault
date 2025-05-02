@@ -1,6 +1,4 @@
 
-import React from "react";
-import { PaperclipIcon } from "lucide-react";
 import { AttachmentItem } from "./AttachmentItem";
 import { Message } from "@/types/message";
 
@@ -12,16 +10,19 @@ export function MessageAttachments({ message }: MessageAttachmentsProps) {
   if (!message.attachments || message.attachments.length === 0) {
     return null;
   }
-
+  
   return (
-    <div className="mt-6 space-y-3">
-      <h3 className="text-sm font-medium flex items-center gap-2">
-        <PaperclipIcon className="h-4 w-4" />
-        Attachments ({message.attachments.length})
-      </h3>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+    <div className="mt-6">
+      <h3 className="text-sm font-medium text-gray-900 mb-3">Attachments</h3>
+      <div className="space-y-2">
         {message.attachments.map((attachment, index) => (
-          <AttachmentItem key={index} attachment={attachment} />
+          <AttachmentItem
+            key={index}
+            name={attachment.name}
+            size={attachment.size}
+            type={attachment.type}
+            path={attachment.path}
+          />
         ))}
       </div>
     </div>

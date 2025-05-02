@@ -33,8 +33,6 @@ export async function triggerMessageNotification(messageId: string) {
 
 /**
  * Send a test notification to recipients
- * This will continue to use the existing function but should be updated
- * in the future to support multiple selected recipients
  */
 export async function sendTestNotification(messageId: string) {
   try {
@@ -45,9 +43,16 @@ export async function sendTestNotification(messageId: string) {
       .eq("message_id", messageId)
       .single();
     
-    if (conditionError) throw conditionError;
+    if (conditionError || !condition) {
+      toast({
+        title: "No condition found",
+        description: "Could not find condition for this message",
+        variant: "destructive"
+      });
+      return;
+    }
     
-    if (!condition || !condition.recipients) {
+    if (!condition.recipients || condition.recipients.length === 0) {
       toast({
         title: "No recipients",
         description: "Please add recipients to this message first",
@@ -57,15 +62,6 @@ export async function sendTestNotification(messageId: string) {
     }
     
     const recipients = condition.recipients as any[];
-    
-    if (recipients.length === 0) {
-      toast({
-        title: "No recipients",
-        description: "Please add recipients to this message first",
-        variant: "destructive"
-      });
-      return;
-    }
     
     // Get the message details
     const { data: message, error: messageError } = await supabase
@@ -114,13 +110,20 @@ export async function sendTestWhatsAppMessage(messageId: string) {
     // Get recipient details from the message condition
     const { data: condition, error: conditionError } = await supabase
       .from("message_conditions")
-      .select("recipients, panic_trigger_config, panic_config")
+      .select("recipients, panic_config, panic_trigger_config")
       .eq("message_id", messageId)
       .single();
     
-    if (conditionError) throw conditionError;
+    if (conditionError || !condition) {
+      toast({
+        title: "No condition found",
+        description: "Could not find condition for this message",
+        variant: "destructive"
+      });
+      return;
+    }
     
-    if (!condition || !condition.recipients) {
+    if (!condition.recipients || condition.recipients.length === 0) {
       toast({
         title: "No recipients",
         description: "Please add recipients to this message first",
@@ -131,17 +134,8 @@ export async function sendTestWhatsAppMessage(messageId: string) {
     
     const recipients = condition.recipients as any[];
     
-    if (recipients.length === 0) {
-      toast({
-        title: "No recipients",
-        description: "Please add recipients to this message first",
-        variant: "destructive"
-      });
-      return;
-    }
-
     // Get the first recipient with a phone number
-    const recipient = recipients.find(r => r.phone);
+    const recipient = recipients.find((r: any) => r.phone);
     
     if (!recipient || !recipient.phone) {
       toast({
