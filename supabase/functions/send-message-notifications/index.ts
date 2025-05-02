@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getMessagesToNotify } from "./db-service.ts";
 import { sendMessageNotification } from "./notification-service.ts";
@@ -18,13 +17,16 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     // Get the message ID if provided in the request body
     const requestData: MessageNotificationRequest = await req.json().catch(() => ({}));
-    const { messageId, isEmergency = false, debug = false } = requestData;
+    const { messageId, isEmergency = false, debug = false, keepArmed = undefined } = requestData;
     
     console.log(`===== SEND MESSAGE NOTIFICATIONS =====`);
     console.log(`Starting notification process at ${new Date().toISOString()}`);
     console.log(`DEBUG MODE: ${debug ? 'Enabled' : 'Disabled'}`);
     console.log(`Processing message notifications${messageId ? ` for message ID: ${messageId}` : ''}`);
     console.log(`Is emergency notification: ${isEmergency ? 'YES' : 'No'}`);
+    if (keepArmed !== undefined) {
+      console.log(`Keep armed flag explicitly set to: ${keepArmed}`);
+    }
     
     // Get messages that need notification
     const messagesToNotify = await getMessagesToNotify(messageId);
@@ -50,6 +52,18 @@ const handler = async (req: Request): Promise<Response> => {
           },
         }
       );
+    }
+
+    // Enhance conditions with the explicit keepArmed flag if provided
+    if (keepArmed !== undefined && messagesToNotify.length > 0) {
+      messagesToNotify.forEach(message => {
+        if (message.condition.condition_type === 'panic_trigger' && 
+            message.condition.panic_config) {
+          // Update the panic_config with the explicit keepArmed value
+          message.condition.panic_config.keep_armed = keepArmed;
+          console.log(`Updated panic_config.keep_armed to ${keepArmed} for message ${message.message.id}`);
+        }
+      });
     }
 
     // Send notifications for each message

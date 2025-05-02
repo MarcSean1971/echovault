@@ -1,4 +1,3 @@
-
 import {
   trackMessageNotification,
   recordMessageDelivery,
@@ -159,13 +158,21 @@ export async function sendMessageNotification(
       // For panic triggers, we need to check if keep_armed is true
       if (condition.condition_type === 'panic_trigger') {
         try {
-          // Check the panic_config for keep_armed setting
-          const panicConfig = await getPanicConfig(condition.id);
+          // Get the keep_armed setting directly from the panic_config
+          let keepArmed = true; // Default to true for safety
           
-          // Only deactivate if keep_armed is false or not specified
-          const keepArmed = panicConfig?.keep_armed || false;
-          
-          if (debug) console.log(`Panic trigger - keep_armed setting is: ${keepArmed}`);
+          if (condition.panic_config) {
+            // If keep_armed is explicitly set to false, we'll deactivate the condition
+            if (condition.panic_config.keep_armed === false) {
+              keepArmed = false;
+            }
+            if (debug) console.log(`Panic trigger - keep_armed setting from condition is: ${keepArmed}`);
+          } else {
+            // If no panic_config, try to get it from the database
+            const panicConfig = await getPanicConfig(condition.id);
+            keepArmed = panicConfig?.keep_armed ?? true;
+            if (debug) console.log(`Panic trigger - keep_armed setting from database is: ${keepArmed}`);
+          }
           
           if (!keepArmed) {
             // Deactivate the condition

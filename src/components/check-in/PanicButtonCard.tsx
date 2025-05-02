@@ -70,6 +70,7 @@ export function PanicButtonCard({ userId, panicMessage, isChecking, isLoading }:
       
       try {
         console.log(`Triggering panic message: ${panicMessage.message_id}`);
+        
         // Log config to help with debugging
         if (panicMessage.panic_trigger_config) {
           console.log("Using panic_trigger_config:", panicMessage.panic_trigger_config);
@@ -160,7 +161,7 @@ export function PanicButtonCard({ userId, panicMessage, isChecking, isLoading }:
       return panicMessage.panic_config.keep_armed;
     }
     
-    return false; // Default value
+    return true; // Default value for safety
   };
 
   return (

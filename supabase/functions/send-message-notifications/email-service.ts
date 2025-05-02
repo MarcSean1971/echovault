@@ -160,6 +160,8 @@ This message was sent securely through EchoVault.
   console.log(`Sending email to ${recipientEmail}`);
 
   try {
+    // For emergency messages, try multiple email sending services
+    // If one fails, try another (in this case we're just using resend but showing the pattern)
     const response = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -167,7 +169,7 @@ This message was sent securely through EchoVault.
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        from: "EchoVault <notification@echovault.app>",
+        from: "EchoVault <notification@onwthrpgcnfydxzzmyot.resend.dev>", // Use verified sender domain
         to: [recipientEmail],
         subject: subject,
         html: htmlContent,

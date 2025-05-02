@@ -56,14 +56,17 @@ export async function triggerPanicMessage(userId: string, messageId: string): Pr
     console.log("Retrieved condition:", JSON.stringify(data, null, 2));
 
     // Extract the keepArmed setting from panic_config
-    let keepArmed = false;
+    let keepArmed = true; // Default to true for safety
     
     // Check panic_config and extract keep_armed value if it exists
     if (data.panic_config && typeof data.panic_config === 'object') {
-      keepArmed = Boolean((data.panic_config as Record<string, unknown>)?.keep_armed);
+      // Explicitly check if keep_armed exists and is false
+      if (data.panic_config.keep_armed === false) {
+        keepArmed = false;
+      }
       console.log(`Keep armed setting from panic_config: ${keepArmed}`);
     } else {
-      console.warn("No panic_config found or invalid format");
+      console.warn("No panic_config found or invalid format, defaulting keepArmed to true");
     }
 
     console.log("Invoking edge function to send notifications");
@@ -73,7 +76,8 @@ export async function triggerPanicMessage(userId: string, messageId: string): Pr
       body: { 
         messageId,
         isEmergency: true,
-        debug: true // Enable debug mode for emergency messages
+        debug: true, // Enable debug mode for emergency messages
+        keepArmed // Pass keepArmed flag explicitly to edge function
       }
     });
     
