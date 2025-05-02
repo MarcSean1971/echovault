@@ -18,37 +18,39 @@ interface DesktopNavProps {
 
 export function DesktopNav({ userImage, initials }: DesktopNavProps) {
   return (
-    <div className="grid grid-cols-3 items-center w-full">
+    <div className="flex items-center w-full relative">
       {/* Left section - Navigation menu */}
-      <NavigationMenu className="col-start-1">
-        <NavigationMenuList className="space-x-1">
-          <NavigationMenuItem>
-            <NavigationMenuLink 
-              asChild 
-              className={navigationMenuTriggerStyle() + " nav-link relative transition-all group"}
-            >
-              <Link to="/messages" className="relative">
-                Messages
-                <span className="absolute bottom-0 left-0 w-full h-0.5 bg-gray-800 dark:bg-gray-200 scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left"></span>
-              </Link>
-            </NavigationMenuLink>
-          </NavigationMenuItem>
-          <NavigationMenuItem>
-            <NavigationMenuLink 
-              asChild 
-              className={navigationMenuTriggerStyle() + " nav-link relative transition-all group"}
-            >
-              <Link to="/recipients" className="relative">
-                Recipients
-                <span className="absolute bottom-0 left-0 w-full h-0.5 bg-gray-800 dark:bg-gray-200 scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left"></span>
-              </Link>
-            </NavigationMenuLink>
-          </NavigationMenuItem>
-        </NavigationMenuList>
-      </NavigationMenu>
+      <div className="flex-1">
+        <NavigationMenu>
+          <NavigationMenuList className="space-x-1">
+            <NavigationMenuItem>
+              <NavigationMenuLink 
+                asChild 
+                className={navigationMenuTriggerStyle() + " nav-link relative transition-all group"}
+              >
+                <Link to="/messages" className="relative">
+                  Messages
+                  <span className="absolute bottom-0 left-0 w-full h-0.5 bg-gray-800 dark:bg-gray-200 scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left"></span>
+                </Link>
+              </NavigationMenuLink>
+            </NavigationMenuItem>
+            <NavigationMenuItem>
+              <NavigationMenuLink 
+                asChild 
+                className={navigationMenuTriggerStyle() + " nav-link relative transition-all group"}
+              >
+                <Link to="/recipients" className="relative">
+                  Recipients
+                  <span className="absolute bottom-0 left-0 w-full h-0.5 bg-gray-800 dark:bg-gray-200 scale-x-0 group-hover:scale-x-100 transition-transform duration-200 origin-left"></span>
+                </Link>
+              </NavigationMenuLink>
+            </NavigationMenuItem>
+          </NavigationMenuList>
+        </NavigationMenu>
+      </div>
       
-      {/* Center section - Check In button */}
-      <div className="flex justify-center col-start-2 mx-auto">
+      {/* Center section - Check In button - positioned absolutely for true centering */}
+      <div className="absolute left-1/2 transform -translate-x-1/2">
         <Button 
           asChild 
           className="bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-1 pulse-subtle px-6 py-2 animate-pulse-light"
@@ -62,7 +64,7 @@ export function DesktopNav({ userImage, initials }: DesktopNavProps) {
       </div>
       
       {/* Right section - User avatar/menu */}
-      <div className="flex justify-end col-start-3">
+      <div className="flex-1 flex justify-end">
         <UserMenu userImage={userImage} initials={initials} />
       </div>
     </div>
