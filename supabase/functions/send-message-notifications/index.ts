@@ -18,20 +18,56 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     // Get the message ID if provided in the request body
     const requestData: MessageNotificationRequest = await req.json().catch(() => ({}));
-    const { messageId } = requestData;
+    const { messageId, isEmergency = false, debug = false } = requestData;
     
-    console.log(`Processing message notifications${messageId ? ` for message ID: ${messageId}` : ''}`);
+    if (debug) {
+      console.log(`DEBUG MODE: Processing message notifications${messageId ? ` for message ID: ${messageId}` : ''}${isEmergency ? ' (EMERGENCY NOTIFICATION)' : ''}`);
+    } else {
+      console.log(`Processing message notifications${messageId ? ` for message ID: ${messageId}` : ''}${isEmergency ? ' (EMERGENCY NOTIFICATION)' : ''}`);
+    }
 
     // Get messages that need notification
     const messagesToNotify = await getMessagesToNotify(messageId);
     console.log(`Found ${messagesToNotify.length} messages to notify`);
+    
+    if (messagesToNotify.length === 0) {
+      console.error("No messages found to notify!");
+      if (messageId) {
+        console.error(`Requested message ID ${messageId} not found or not eligible for notification`);
+      }
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "No messages found to notify" 
+        }),
+        {
+          status: 404,
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders,
+          },
+        }
+      );
+    }
 
     // Send notifications for each message
-    const results = await Promise.all(messagesToNotify.map(sendMessageNotification));
+    const results = await Promise.all(
+      messagesToNotify.map(message => 
+        sendMessageNotification(message, {
+          isEmergency,
+          debug
+        })
+      )
+    );
     
     // Count successes and failures
     const successful = results.filter(r => r.success).length;
     const failed = results.filter(r => !r.success).length;
+    
+    // Log detailed results if debug mode
+    if (debug || isEmergency) {
+      console.log("Notification results:", JSON.stringify(results, null, 2));
+    }
 
     return new Response(
       JSON.stringify({ 

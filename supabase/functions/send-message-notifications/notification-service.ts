@@ -7,18 +7,39 @@ import {
 import { sendEmailToRecipient } from "./email-service.ts";
 import { Message, Condition } from "./types.ts";
 
-export async function sendMessageNotification(data: {message: Message, condition: Condition}) {
+interface NotificationOptions {
+  isEmergency?: boolean;
+  debug?: boolean;
+}
+
+export async function sendMessageNotification(
+  data: {message: Message, condition: Condition}, 
+  options: NotificationOptions = {}
+): Promise<{ success: boolean; error?: string; details?: any }> {
   const { message, condition } = data;
+  const { isEmergency = false, debug = false } = options;
   
   // Skip if no recipients
   if (!condition.recipients || condition.recipients.length === 0) {
-    console.log(`No recipients for message ${message.id}, skipping notification`);
+    if (debug) console.log(`No recipients for message ${message.id}, skipping notification`);
     return { success: true, message: "No recipients to notify" };
   }
   
   try {
+    if (debug) {
+      console.log(`Processing message notification for message ${message.id}`);
+      console.log(`Message condition type: ${condition.condition_type}`);
+      console.log(`Is emergency flag: ${isEmergency}`);
+      console.log(`Condition data:`, JSON.stringify(condition, null, 2));
+    }
+    
     // Check if this is an emergency/panic message for special handling
-    const isEmergencyMessage = condition.condition_type === 'panic_trigger';
+    // Either from condition type or from the isEmergency flag
+    const isEmergencyMessage = condition.condition_type === 'panic_trigger' || isEmergency;
+    
+    if (isEmergencyMessage && debug) {
+      console.log("THIS IS AN EMERGENCY MESSAGE - Special handling activated");
+    }
     
     // Determine security settings
     const hasPinCode = !!condition.pin_code;
@@ -45,9 +66,10 @@ export async function sendMessageNotification(data: {message: Message, condition
     const retryDelay = 5000; // 5 seconds between retries for emergency messages
     
     // Send a notification to each recipient with retry for emergencies
-    await Promise.all(condition.recipients.map(async (recipient) => {
+    const recipientResults = await Promise.all(condition.recipients.map(async (recipient) => {
       let attempt = 0;
       let success = false;
+      let error = null;
       
       // Create a unique delivery ID for this recipient
       const deliveryId = crypto.randomUUID();
@@ -71,40 +93,68 @@ export async function sendMessageNotification(data: {message: Message, condition
       };
       
       // Record the message delivery
-      await recordMessageDelivery(message.id, condition.id, recipient.id, deliveryId);
+      try {
+        await recordMessageDelivery(message.id, condition.id, recipient.id, deliveryId);
+        if (debug) console.log(`Successfully recorded delivery for message ${message.id} to recipient ${recipient.id}`);
+      } catch (recordError) {
+        console.error(`Error recording message delivery: ${recordError}`);
+        // Continue despite record error - don't block email sending
+      }
       
       // Try sending with retry for emergency messages
       while (!success && attempt < maxRetries) {
         try {
+          if (debug) console.log(`Sending email to ${recipient.email} (attempt ${attempt + 1}/${maxRetries})`);
+          
           // Send email notification
-          await sendEmailToRecipient(recipient.email, emailData);
+          const emailResult = await sendEmailToRecipient(recipient.email, emailData);
+          
+          if (debug) console.log(`Email sending result:`, emailResult);
           success = true;
-        } catch (error) {
+        } catch (emailError: any) {
           attempt++;
-          console.error(`Error sending email to ${recipient.email} (attempt ${attempt}):`, error);
+          error = emailError;
+          console.error(`Error sending email to ${recipient.email} (attempt ${attempt}):`, emailError);
+          
           if (attempt < maxRetries) {
             // Only wait and retry if we have attempts remaining
-            console.log(`Retrying in ${retryDelay/1000} seconds...`);
+            if (debug) console.log(`Retrying in ${retryDelay/1000} seconds...`);
             await new Promise(resolve => setTimeout(resolve, retryDelay));
           }
         }
       }
       
-      return success;
+      return { 
+        recipient: recipient.email,
+        success, 
+        attempts: attempt + 1,
+        error: error ? error.message || "Unknown error" : null
+      };
     }));
     
     // Only mark the condition as inactive if it's not a recurring trigger or special case
     if (condition.condition_type !== 'recurring_check_in') {
       // For panic triggers, we need to check if keep_armed is true
       if (condition.condition_type === 'panic_trigger') {
-        const panicConfig = await getPanicConfig(condition.id);
-        
-        // Only deactivate if keep_armed is false or not specified
-        const keepArmed = panicConfig?.keep_armed || false;
-        
-        if (!keepArmed) {
-          // Deactivate the condition
-          await updateConditionStatus(condition.id, false);
+        try {
+          // Check the panic_config for keep_armed setting
+          const panicConfig = await getPanicConfig(condition.id);
+          
+          // Only deactivate if keep_armed is false or not specified
+          const keepArmed = panicConfig?.keep_armed || false;
+          
+          if (debug) console.log(`Panic trigger - keep_armed setting is: ${keepArmed}`);
+          
+          if (!keepArmed) {
+            // Deactivate the condition
+            if (debug) console.log(`Deactivating condition ${condition.id}`);
+            await updateConditionStatus(condition.id, false);
+          } else {
+            if (debug) console.log(`Keeping condition ${condition.id} active as keep_armed is true`);
+          }
+        } catch (configError) {
+          console.error("Error checking panic_config:", configError);
+          // Default to not deactivating in case of error
         }
       } else {
         // For all other non-recurring conditions, mark as inactive after delivery
@@ -112,7 +162,10 @@ export async function sendMessageNotification(data: {message: Message, condition
       }
     }
     
-    return { success: true };
+    return { 
+      success: recipientResults.some(r => r.success), 
+      details: recipientResults 
+    };
   } catch (error: any) {
     console.error(`Error notifying recipients for message ${message.id}:`, error);
     return { success: false, error: error.message };

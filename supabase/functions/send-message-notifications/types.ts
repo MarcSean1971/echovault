@@ -1,6 +1,8 @@
 
 export interface MessageNotificationRequest {
   messageId?: string; // Optional - if provided, only check this specific message
+  isEmergency?: boolean; // Flag to indicate this is an emergency notification
+  debug?: boolean; // Flag to enable debug mode
 }
 
 export interface Message {
@@ -34,6 +36,10 @@ export interface Condition {
   trigger_date?: string;
   panic_config?: {
     keep_armed?: boolean;
+    methods?: string[];
+    cancel_window_seconds?: number;
+    bypass_logging?: boolean;
+    enabled?: boolean;
   };
 }
 

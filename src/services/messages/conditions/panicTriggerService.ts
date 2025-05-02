@@ -32,6 +32,8 @@ export async function hasActivePanicMessages(userId: string): Promise<boolean> {
  */
 export async function triggerPanicMessage(userId: string, messageId: string): Promise<PanicTriggerResult> {
   try {
+    console.log(`Triggering panic message for message ID: ${messageId}`);
+    
     // First, get the message condition to check its configuration
     const { data: condition, error: conditionError } = await supabase
       .from("message_conditions")
@@ -41,33 +43,60 @@ export async function triggerPanicMessage(userId: string, messageId: string): Pr
       .eq("active", true)
       .single();
 
-    if (conditionError) throw conditionError;
+    if (conditionError) {
+      console.error("Error fetching panic condition:", conditionError);
+      throw conditionError;
+    }
 
     if (!condition) {
+      console.error("No active panic message found");
       throw new Error("No active panic message found");
     }
+
+    console.log("Retrieved condition:", JSON.stringify(condition, null, 2));
 
     // Extract the keepArmed setting from panic_config
     // Fix the type issue by proper type checking
     let keepArmed = false;
     if (condition.panic_config && typeof condition.panic_config === 'object') {
       keepArmed = Boolean((condition.panic_config as Record<string, unknown>)?.keep_armed);
+      console.log(`Keep armed setting: ${keepArmed}`);
+    } else {
+      console.warn("No panic_config found or invalid format");
     }
 
+    console.log("Invoking edge function to send notifications");
+    
     // Trigger the notification via the edge function
     const { data, error } = await supabase.functions.invoke("send-message-notifications", {
-      body: { messageId }
+      body: { 
+        messageId,
+        isEmergency: true,
+        debug: true // Enable debug mode for emergency messages
+      }
     });
     
-    if (error) throw error;
+    if (error) {
+      console.error("Edge function error:", error);
+      throw error;
+    }
+
+    console.log("Edge function response:", data);
 
     // Update the message condition as triggered
     // But only deactivate if keepArmed is false
     if (!keepArmed) {
-      await supabase
+      console.log("Deactivating panic trigger as keepArmed=false");
+      const { error: updateError } = await supabase
         .from("message_conditions")
         .update({ active: false })
         .eq("id", condition.id);
+      
+      if (updateError) {
+        console.error("Error deactivating condition:", updateError);
+      }
+    } else {
+      console.log("Keeping panic trigger armed as requested by user (keepArmed=true)");
     }
 
     // Return success with the keepArmed flag

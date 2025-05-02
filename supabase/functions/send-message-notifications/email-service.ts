@@ -2,7 +2,14 @@
 import { Resend } from "npm:resend@2.0.0";
 import { EmailTemplateData } from "./types.ts";
 
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+const resendApiKey = Deno.env.get("RESEND_API_KEY");
+
+// Check if the RESEND_API_KEY is set
+if (!resendApiKey) {
+  console.error("WARNING: RESEND_API_KEY environment variable is not set");
+}
+
+const resend = new Resend(resendApiKey);
 
 export async function sendEmailToRecipient(
   recipientEmail: string, 
@@ -16,25 +23,36 @@ export async function sendEmailToRecipient(
     ? `⚠️ URGENT EMERGENCY MESSAGE: "${data.messageTitle}"`
     : `Secure Message: "${data.messageTitle}" is now available`;
   
-  // Send the email using Resend
-  const emailResponse = await resend.emails.send({
-    from: `EchoVault <noreply@resend.dev>`,
-    to: [recipientEmail],
-    subject: subject,
-    html: template,
-    // For emergency messages, set high priority
-    headers: data.isEmergency ? {
-      'X-Priority': '1',
-      'Importance': 'high'
-    } : undefined
-  });
+  console.log(`Sending email to ${recipientEmail} with subject "${subject}"`);
+  console.log(`Is emergency: ${data.isEmergency ? 'yes' : 'no'}`);
   
-  if (emailResponse.error) {
-    console.error("Error sending email:", emailResponse.error);
-    throw new Error(`Failed to send email: ${emailResponse.error.message}`);
+  try {
+    // Send the email using Resend
+    const emailResponse = await resend.emails.send({
+      from: `EchoVault <noreply@resend.dev>`,
+      to: [recipientEmail],
+      subject: subject,
+      html: template,
+      // For emergency messages, set high priority
+      headers: data.isEmergency ? {
+        'X-Priority': '1',
+        'Importance': 'high',
+        'X-Emergency': 'true' // Custom header to track emergency messages
+      } : undefined
+    });
+    
+    if (emailResponse.error) {
+      console.error("Error sending email:", emailResponse.error);
+      throw new Error(`Failed to send email: ${emailResponse.error.message}`);
+    }
+    
+    console.log(`Email sent successfully to ${recipientEmail}, ID: ${emailResponse.data?.id}`);
+    
+    return emailResponse;
+  } catch (error) {
+    console.error(`Failed to send email to ${recipientEmail}:`, error);
+    throw error;
   }
-  
-  return emailResponse;
 }
 
 function generateEmailTemplate(data: EmailTemplateData): string {

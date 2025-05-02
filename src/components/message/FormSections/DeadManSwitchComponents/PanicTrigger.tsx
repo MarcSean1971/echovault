@@ -3,6 +3,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { PanicTriggerConfig } from "@/types/message";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { useEffect } from "react";
 
 interface PanicTriggerProps {
   config: PanicTriggerConfig;
@@ -10,6 +11,24 @@ interface PanicTriggerProps {
 }
 
 export function PanicTrigger({ config, setConfig }: PanicTriggerProps) {
+  // Ensure panic config has all required fields with defaults
+  useEffect(() => {
+    // Make sure all required fields are set
+    const updatedConfig = {
+      enabled: config.enabled ?? true,
+      methods: config.methods ?? ['app'],
+      cancel_window_seconds: config.cancel_window_seconds ?? 10,
+      bypass_logging: config.bypass_logging ?? false,
+      keep_armed: config.keep_armed ?? true, // Default to keeping armed for safety
+    };
+    
+    // Only update if the values are actually different to prevent loops
+    if (JSON.stringify(updatedConfig) !== JSON.stringify(config)) {
+      console.log("Initializing panic config with defaults:", updatedConfig);
+      setConfig(updatedConfig);
+    }
+  }, []);
+
   return (
     <div className="space-y-4">
       <div className="space-y-4">
@@ -48,11 +67,14 @@ export function PanicTrigger({ config, setConfig }: PanicTriggerProps) {
         </div>
         
         <div className="flex items-center justify-between">
-          <Label htmlFor="keep-armed">Keep message armed after triggering</Label>
+          <Label htmlFor="keep-armed" className="font-medium text-orange-600">Keep message armed after triggering</Label>
           <Switch
             id="keep-armed"
-            checked={config.keep_armed}
-            onCheckedChange={(checked) => setConfig({...config, keep_armed: checked})}
+            checked={config.keep_armed ?? true}
+            onCheckedChange={(checked) => {
+              console.log(`Setting keep_armed to ${checked}`);
+              setConfig({...config, keep_armed: checked});
+            }}
           />
         </div>
         
@@ -81,6 +103,16 @@ export function PanicTrigger({ config, setConfig }: PanicTriggerProps) {
           </p>
         </div>
       </div>
+      
+      {/* Debug info */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="mt-4 p-2 bg-gray-100 rounded text-xs">
+          <details>
+            <summary>Debug: Current Panic Config</summary>
+            <pre>{JSON.stringify(config, null, 2)}</pre>
+          </details>
+        </div>
+      )}
     </div>
   );
 }

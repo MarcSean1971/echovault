@@ -1,3 +1,4 @@
+
 import { supabaseClient } from "./supabase-client.ts";
 import { Message, Condition } from "./types.ts";
 
@@ -31,6 +32,24 @@ export async function getMessagesToNotify(specificMessageId?: string): Promise<A
     throw error;
   }
   
+  if (!conditions || conditions.length === 0) {
+    console.log(`No messages found to notify${specificMessageId ? ` for message ID ${specificMessageId}` : ''}`);
+    if (specificMessageId) {
+      // Double check if the message exists but is not active
+      const { data: inactiveCheck } = await supabase
+        .from('message_conditions')
+        .select('id, active')
+        .eq('message_id', specificMessageId)
+        .maybeSingle();
+        
+      if (inactiveCheck) {
+        console.log(`Found message ${specificMessageId} but it's not active (active=${inactiveCheck.active})`);
+      } else {
+        console.log(`Message with ID ${specificMessageId} does not exist`);
+      }
+    }
+  }
+  
   // Filter and map the conditions to return both message and condition information
   return (conditions || [])
     .filter(condition => condition.messages) // Ensure the message exists
@@ -54,18 +73,23 @@ export async function getMessagesToNotify(specificMessageId?: string): Promise<A
 export async function trackMessageNotification(messageId: string, conditionId: string) {
   const supabase = supabaseClient();
   
-  const { error } = await supabase
-    .from('sent_reminders')
-    .insert({
-      message_id: messageId,
-      condition_id: conditionId,
-      sent_at: new Date().toISOString(),
-      deadline: new Date(new Date().getTime() + 24 * 60 * 60 * 1000).toISOString() // 24 hours from now as default
-    });
-  
-  if (error) {
-    console.error("Error tracking message notification:", error);
-    throw error;
+  try {
+    const { error } = await supabase
+      .from('sent_reminders')
+      .insert({
+        message_id: messageId,
+        condition_id: conditionId,
+        sent_at: new Date().toISOString(),
+        deadline: new Date(new Date().getTime() + 24 * 60 * 60 * 1000).toISOString() // 24 hours from now as default
+      });
+    
+    if (error) {
+      console.error("Error tracking message notification:", error);
+      throw error;
+    }
+  } catch (error) {
+    console.error("Error in trackMessageNotification:", error);
+    // Don't let tracking failures stop the notification process
   }
 }
 
@@ -86,7 +110,7 @@ export async function recordMessageDelivery(messageId: string, conditionId: stri
     
     if (error) {
       // If the table doesn't exist, just log and continue - this isn't critical
-      console.warn("Could not record message delivery (table may not exist):", error);
+      console.warn("Could not record message delivery:", error);
     }
   } catch (error) {
     // Don't let delivery recording failure stop the process
@@ -97,13 +121,20 @@ export async function recordMessageDelivery(messageId: string, conditionId: stri
 export async function updateConditionStatus(conditionId: string, active: boolean) {
   const supabase = supabaseClient();
   
-  const { error } = await supabase
-    .from('message_conditions')
-    .update({ active })
-    .eq('id', conditionId);
-  
-  if (error) {
-    console.error("Error updating condition status:", error);
+  try {
+    const { error } = await supabase
+      .from('message_conditions')
+      .update({ active })
+      .eq('id', conditionId);
+    
+    if (error) {
+      console.error("Error updating condition status:", error);
+      throw error;
+    }
+    
+    console.log(`Successfully ${active ? 'activated' : 'deactivated'} condition ${conditionId}`);
+  } catch (error) {
+    console.error(`Failed to ${active ? 'activate' : 'deactivate'} condition ${conditionId}:`, error);
     throw error;
   }
 }
@@ -111,16 +142,23 @@ export async function updateConditionStatus(conditionId: string, active: boolean
 export async function getPanicConfig(conditionId: string) {
   const supabase = supabaseClient();
   
-  const { data, error } = await supabase
-    .from('message_conditions')
-    .select('panic_config')
-    .eq('id', conditionId)
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from('message_conditions')
+      .select('panic_config')
+      .eq('id', conditionId)
+      .single();
+      
+    if (error) {
+      console.error("Error checking panic_config:", error);
+      throw error;
+    }
     
-  if (error) {
-    console.error("Error checking panic_config:", error);
-    throw error;
+    console.log(`Panic config for condition ${conditionId}:`, data?.panic_config);
+    
+    return data?.panic_config;
+  } catch (error) {
+    console.error("Error in getPanicConfig:", error);
+    return null;
   }
-  
-  return data?.panic_config;
 }

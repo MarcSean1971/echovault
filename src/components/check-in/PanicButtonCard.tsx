@@ -22,6 +22,14 @@ export function PanicButtonCard({ userId, panicMessage, isChecking, isLoading }:
   const [countDown, setCountDown] = useState(0);
   const [hasPanicMessages, setHasPanicMessages] = useState(false);
 
+  // Debug info
+  useEffect(() => {
+    if (panicMessage) {
+      console.log("Panic message loaded:", panicMessage);
+      console.log("Panic config:", panicMessage.panic_trigger_config);
+    }
+  }, [panicMessage]);
+
   // Check if user has any panic messages on mount
   useEffect(() => {
     const checkPanicMessages = async () => {
@@ -56,8 +64,13 @@ export function PanicButtonCard({ userId, panicMessage, isChecking, isLoading }:
       setPanicMode(true);
       
       try {
+        console.log(`Triggering panic message: ${panicMessage.message_id}`);
+        console.log(`Panic config:`, panicMessage.panic_trigger_config || panicMessage.panic_config);
+        
         // Try triggering the panic message
         const result = await triggerPanicMessage(userId, panicMessage.message_id);
+        
+        console.log("Panic trigger result:", result);
         
         if (result.success) {
           toast({
@@ -83,8 +96,14 @@ export function PanicButtonCard({ userId, panicMessage, isChecking, isLoading }:
               // If the message is still armed (keepArmed=true), we should refresh to show it's still active
               // Otherwise navigate to messages
               if (result.keepArmed) {
+                console.log("Message stays armed (keepArmed=true). Refreshing page.");
+                toast({
+                  title: "Emergency message still armed",
+                  description: "Your emergency message remains active and can be triggered again if needed."
+                });
                 window.location.reload(); // Refresh to update the UI state
               } else {
+                console.log("Message is now disarmed (keepArmed=false). Navigating to messages.");
                 navigate('/messages'); // Redirect to messages page
               }
             }
@@ -116,6 +135,19 @@ export function PanicButtonCard({ userId, panicMessage, isChecking, isLoading }:
   // Create new panic message
   const handleCreatePanicMessage = () => {
     navigate('/create-message');
+  };
+
+  // Get keep_armed value from config
+  const getKeepArmedValue = () => {
+    if (panicMessage?.panic_trigger_config) {
+      return panicMessage.panic_trigger_config.keep_armed;
+    }
+    
+    if (panicMessage?.panic_config && typeof panicMessage.panic_config === 'object') {
+      return Boolean((panicMessage.panic_config as Record<string, unknown>)?.keep_armed);
+    }
+    
+    return false; // Default value
   };
 
   return (
@@ -174,6 +206,12 @@ export function PanicButtonCard({ userId, panicMessage, isChecking, isLoading }:
         {!panicMessage && hasPanicMessages && !isLoading && (
           <p className="text-amber-500 text-sm">
             You have panic messages, but they're not appearing here. Try checking your message settings.
+          </p>
+        )}
+        
+        {panicMessage && getKeepArmedValue() && (
+          <p className="text-green-600 text-sm">
+            This panic button will remain active after triggering.
           </p>
         )}
       </CardContent>
