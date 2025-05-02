@@ -65,7 +65,7 @@ export function PanicButtonCard({ userId, panicMessage, isChecking, isLoading }:
       
       try {
         console.log(`Triggering panic message: ${panicMessage.message_id}`);
-        console.log(`Panic config:`, panicMessage.panic_trigger_config || panicMessage.panic_config);
+        console.log(`Panic config:`, panicMessage.panic_trigger_config);
         
         // Try triggering the panic message
         const result = await triggerPanicMessage(userId, panicMessage.message_id);
@@ -141,10 +141,6 @@ export function PanicButtonCard({ userId, panicMessage, isChecking, isLoading }:
   const getKeepArmedValue = () => {
     if (panicMessage?.panic_trigger_config) {
       return panicMessage.panic_trigger_config.keep_armed;
-    }
-    
-    if (panicMessage?.panic_config && typeof panicMessage.panic_config === 'object') {
-      return Boolean((panicMessage.panic_config as Record<string, unknown>)?.keep_armed);
     }
     
     return false; // Default value
