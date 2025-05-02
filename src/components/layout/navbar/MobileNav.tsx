@@ -2,16 +2,15 @@
 import { UserMenu } from "./UserMenu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Menu, ShieldAlert } from "lucide-react";
+import { Menu } from "lucide-react";
 import { Link } from "react-router-dom";
 
 interface MobileNavProps {
   userImage: string | null;
   initials: string;
-  isAdmin?: boolean;
 }
 
-export function MobileNav({ userImage, initials, isAdmin = false }: MobileNavProps) {
+export function MobileNav({ userImage, initials }: MobileNavProps) {
   return (
     <div className="flex md:hidden items-center space-x-2">
       <Sheet>
@@ -29,45 +28,20 @@ export function MobileNav({ userImage, initials, isAdmin = false }: MobileNavPro
             </div>
             
             <div className="space-y-1">
-              {isAdmin ? (
-                <>
-                  <Button 
-                    variant="ghost" 
-                    asChild 
-                    className="justify-start w-full text-destructive hover:bg-accent/10 transition-colors"
-                  >
-                    <Link to="/admin" className="flex items-center gap-2">
-                      <ShieldAlert className="h-4 w-4" />
-                      Admin Dashboard
-                    </Link>
-                  </Button>
-                  <Button variant="ghost" asChild className="justify-start w-full hover:bg-accent/10 transition-colors">
-                    <Link to="/admin/users">Users</Link>
-                  </Button>
-                  <Button variant="ghost" asChild className="justify-start w-full hover:bg-accent/10 transition-colors">
-                    <Link to="/admin/messages">Messages</Link>
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button variant="ghost" asChild className="justify-start w-full hover:bg-accent/10 transition-colors">
-                    <Link to="/messages">Messages</Link>
-                  </Button>
-                  <Button variant="ghost" asChild className="justify-start w-full hover:bg-accent/10 transition-colors">
-                    <Link to="/recipients">Recipients</Link>
-                  </Button>
-                </>
-              )}
+              <Button variant="ghost" asChild className="justify-start w-full hover:bg-accent/10 transition-colors">
+                <Link to="/messages">Messages</Link>
+              </Button>
+              <Button variant="ghost" asChild className="justify-start w-full hover:bg-accent/10 transition-colors">
+                <Link to="/recipients">Recipients</Link>
+              </Button>
             </div>
             
             <div className="mt-auto space-y-3">
-              {!isAdmin && (
-                <Button className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity shadow-md" asChild>
-                  <Link to="/check-in">Check In</Link>
-                </Button>
-              )}
+              <Button className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity shadow-md" asChild>
+                <Link to="/check-in">Check In</Link>
+              </Button>
               <div className="flex items-center justify-between pt-4">
-                <UserMenu userImage={userImage} initials={initials} isAdmin={isAdmin} />
+                <UserMenu userImage={userImage} initials={initials} />
               </div>
             </div>
           </nav>

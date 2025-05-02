@@ -9,7 +9,6 @@ import { useEffect } from "react";
 
 import AppLayout from "./components/layout/AppLayout";
 import ProtectedLayout from "./components/layout/ProtectedLayout";
-import AdminLayout from "./components/layout/AdminLayout";
 
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -25,11 +24,6 @@ import Recipients from "./pages/Recipients";
 import CheckIn from "./pages/CheckIn";
 import CheckIns from "./pages/CheckIns";
 import Profile from "./pages/Profile";
-
-// Admin pages
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import AdminUsers from "./pages/admin/AdminUsers";
-import AdminMessages from "./pages/admin/AdminMessages";
 
 // Create a new query client with error handling
 const queryClient = new QueryClient({
@@ -87,13 +81,6 @@ const App = () => {
                 <Route path="check-in" element={<CheckIn />} />
                 <Route path="check-ins" element={<CheckIns />} />
                 <Route path="profile" element={<Profile />} />
-              </Route>
-              
-              {/* Admin routes - only accessible by marc.s@seelenbinderconsulting.com */}
-              <Route path="/admin" element={<AdminLayout />}>
-                <Route index element={<AdminDashboard />} />
-                <Route path="users" element={<AdminUsers />} />
-                <Route path="messages" element={<AdminMessages />} />
               </Route>
               
               {/* Catch-all route */}

@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Check, ShieldAlert } from "lucide-react";
+import { Check } from "lucide-react";
 import { Logo } from "./navbar/Logo";
 import { DesktopNav } from "./navbar/DesktopNav";
 import { MobileNav } from "./navbar/MobileNav";
@@ -11,10 +11,9 @@ import { GuestNav } from "./navbar/GuestNav";
 
 interface NavbarProps {
   isLoggedIn?: boolean;
-  isAdmin?: boolean;
 }
 
-export default function Navbar({ isLoggedIn = false, isAdmin = false }: NavbarProps) {
+export default function Navbar({ isLoggedIn = false }: NavbarProps) {
   const { isSignedIn, isLoaded, profile, getInitials } = useAuth();
   const [userImage, setUserImage] = useState<string | null>(null);
   const [initials, setInitials] = useState("U");
@@ -41,12 +40,12 @@ export default function Navbar({ isLoggedIn = false, isAdmin = false }: NavbarPr
         {/* Desktop navigation */}
         {authenticated && (
           <div className="hidden md:block flex-1">
-            <DesktopNav userImage={userImage} initials={initials} isAdmin={isAdmin} />
+            <DesktopNav userImage={userImage} initials={initials} />
           </div>
         )}
         
         {/* Centered "Check In" button for larger screens only */}
-        {authenticated && !isAdmin && (
+        {authenticated && (
           <div className="hidden md:block absolute left-1/2 transform -translate-x-1/2 z-20">
             <Button 
               asChild 
@@ -60,28 +59,11 @@ export default function Navbar({ isLoggedIn = false, isAdmin = false }: NavbarPr
             </Button>
           </div>
         )}
-        
-        {/* Admin Button */}
-        {authenticated && isAdmin && (
-          <div className="hidden md:block absolute left-1/2 transform -translate-x-1/2 z-20">
-            <Button
-              asChild
-              variant="destructive"
-              className="px-6 py-2 hover:shadow-xl transform hover:-translate-y-1"
-              size="lg"
-            >
-              <Link to="/admin" className="flex items-center gap-2 font-medium">
-                <ShieldAlert className="h-5 w-5" />
-                Admin Dashboard
-              </Link>
-            </Button>
-          </div>
-        )}
 
         {/* Mobile navigation */}
         <div className="md:hidden flex flex-1 justify-end">
           {authenticated ? (
-            <MobileNav userImage={userImage} initials={initials} isAdmin={isAdmin} />
+            <MobileNav userImage={userImage} initials={initials} />
           ) : (
             <GuestNav />
           )}
