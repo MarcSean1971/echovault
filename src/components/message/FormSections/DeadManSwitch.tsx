@@ -1,18 +1,14 @@
-import { useState } from "react";
+
 import { useMessageForm } from "../MessageFormContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { DeliveryMethodContent } from "./DeadManSwitchComponents/DeliveryMethodContent";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Shield, AlertCircle } from "lucide-react";
+import { Shield, AlertCircle, Clock } from "lucide-react";
 import { SwitchToggle } from "./DeadManSwitchComponents/SwitchToggle";
 import { SecurityOptions } from "./DeadManSwitchComponents/SecurityOptions";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
 
-interface DeadManSwitchProps {
-  setActiveTab: (tab: string) => void;
-}
-
-export function DeadManSwitch({ setActiveTab }: DeadManSwitchProps) {
+export function DeadManSwitch() {
   const { 
     enableDeadManSwitch,
     setEnableDeadManSwitch,
@@ -40,7 +36,6 @@ export function DeadManSwitch({ setActiveTab }: DeadManSwitchProps) {
     setReminderHours
   } = useMessageForm();
   const { userId } = useAuth();
-  const [securityTab, setSecurityTab] = useState<string>("delivery");
 
   if (!userId) {
     return (
@@ -58,6 +53,11 @@ export function DeadManSwitch({ setActiveTab }: DeadManSwitchProps) {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center mb-4">
+        <Clock className="h-5 w-5 mr-2" />
+        <h2 className="text-xl font-medium">Trigger Settings</h2>
+      </div>
+      
       <SwitchToggle 
         enableDeadManSwitch={enableDeadManSwitch}
         setEnableDeadManSwitch={setEnableDeadManSwitch}
@@ -76,13 +76,9 @@ export function DeadManSwitch({ setActiveTab }: DeadManSwitchProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs value={securityTab} onValueChange={setSecurityTab}>
-              <TabsList className="mb-6">
-                <TabsTrigger value="delivery">Delivery Method</TabsTrigger>
-                <TabsTrigger value="security">Security Options</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="delivery">
+            <div className="space-y-8">
+              <div>
+                <h3 className="font-medium mb-4">Delivery Method</h3>
                 <DeliveryMethodContent
                   conditionType={conditionType}
                   setConditionType={setConditionType}
@@ -100,11 +96,14 @@ export function DeadManSwitch({ setActiveTab }: DeadManSwitchProps) {
                   setPanicTriggerConfig={setPanicTriggerConfig}
                   reminderHours={reminderHours}
                   setReminderHours={setReminderHours}
-                  setActiveTab={setActiveTab}
+                  setActiveTab={() => {}}
                 />
-              </TabsContent>
+              </div>
               
-              <TabsContent value="security">
+              <Separator />
+              
+              <div>
+                <h3 className="font-medium mb-4">Security Options</h3>
                 <SecurityOptions
                   pinCode={pinCode}
                   setPinCode={setPinCode}
@@ -112,10 +111,10 @@ export function DeadManSwitch({ setActiveTab }: DeadManSwitchProps) {
                   setUnlockDelay={setUnlockDelay}
                   expiryHours={expiryHours}
                   setExpiryHours={setExpiryHours}
-                  setActiveTab={setActiveTab}
+                  setActiveTab={() => {}}
                 />
-              </TabsContent>
-            </Tabs>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}
