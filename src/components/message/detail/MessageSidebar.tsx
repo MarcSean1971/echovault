@@ -62,7 +62,7 @@ export function MessageSidebar({
   };
   
   return (
-    <div className="lg:col-span-4 lg:order-0 hidden lg:block">
+    <div className="lg:col-span-1 order-1 lg:order-2">
       <StatusCard 
         isArmed={isArmed}
         conditionType={renderConditionType()}

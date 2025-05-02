@@ -99,7 +99,7 @@ export function MessageDetailContent({
   return (
     <div className="max-w-5xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 order-2 lg:order-1">
           <div className="bg-white rounded-lg shadow overflow-hidden">
             <div className="p-6">
               <MessageHeader 
@@ -136,19 +136,6 @@ export function MessageDetailContent({
                 />
               </div>
               
-              <MessageActionFooter 
-                messageId={message.id}
-                isArmed={isArmed}
-                conditionId={conditionId}
-                isActionLoading={isActionLoading}
-                handleArmMessage={handleArmMessage}
-                handleDisarmMessage={handleDisarmMessage}
-                showDeleteConfirm={showDeleteConfirm}
-                setShowDeleteConfirm={setShowDeleteConfirm}
-                handleDelete={handleDelete}
-                onSendTestMessage={onSendTestMessage}
-              />
-              
               {/* Add WhatsApp Test Button for WhatsApp panic triggers */}
               {isWhatsAppPanicTrigger && (
                 <div className="mt-4 p-3 bg-blue-50 rounded-lg">
@@ -184,6 +171,19 @@ export function MessageDetailContent({
               )}
             </div>
           </div>
+          
+          <MessageActionFooter 
+            messageId={message.id}
+            isArmed={isArmed}
+            conditionId={conditionId}
+            isActionLoading={isActionLoading}
+            handleArmMessage={handleArmMessage}
+            handleDisarmMessage={handleDisarmMessage}
+            showDeleteConfirm={showDeleteConfirm}
+            setShowDeleteConfirm={setShowDeleteConfirm}
+            handleDelete={handleDelete}
+            onSendTestMessage={onSendTestMessage}
+          />
         </div>
         
         <MessageSidebar 
