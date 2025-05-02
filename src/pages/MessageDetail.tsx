@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -26,6 +27,7 @@ export default function MessageDetail() {
   const [deadline, setDeadline] = useState<Date | null>(null);
   const [conditionId, setConditionId] = useState<string | null>(null);
   const [condition, setCondition] = useState<any | null>(null);
+  const [recipients, setRecipients] = useState<any[]>([]);
 
   useEffect(() => {
     if (!userId || !id) return;
@@ -54,6 +56,11 @@ export default function MessageDetail() {
           if (conditionData.active) {
             const deadlineDate = await getMessageDeadline(conditionData.id);
             setDeadline(deadlineDate);
+          }
+          
+          // Set recipients from condition data if available
+          if (conditionData.recipients && Array.isArray(conditionData.recipients)) {
+            setRecipients(conditionData.recipients);
           }
         }
       } catch (error: any) {
@@ -154,9 +161,7 @@ export default function MessageDetail() {
 
   // Custom function to render recipients list with React components
   const renderRecipients = () => {
-    const recipients = renderRecipientsList(condition);
-    
-    if (!recipients) {
+    if (!recipients || recipients.length === 0) {
       return <p className="text-muted-foreground text-sm">No recipients</p>;
     }
     
@@ -195,6 +200,7 @@ export default function MessageDetail() {
       formatDate={formatDate}
       renderConditionType={() => getConditionType(condition)}
       renderRecipients={renderRecipients}
+      recipients={recipients}
     />
   );
 }

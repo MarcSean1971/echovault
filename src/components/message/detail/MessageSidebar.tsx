@@ -1,10 +1,12 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CalendarDays, Info, Users, Edit, Trash2 } from "lucide-react";
+import { CalendarDays, Info, Users, Edit, Trash2, Mail } from "lucide-react";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger, SheetClose } from "@/components/ui/sheet";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Message } from "@/types/message";
+import { SendTestMessageDialog } from "./SendTestMessageDialog";
 
 interface MessageSidebarProps {
   message: Message;
@@ -19,6 +21,7 @@ interface MessageSidebarProps {
   showDeleteConfirm: boolean;
   setShowDeleteConfirm: (show: boolean) => void;
   handleDelete: () => Promise<void>;
+  recipients?: { id: string; name: string; email: string }[];
 }
 
 export function MessageSidebar({
@@ -33,9 +36,11 @@ export function MessageSidebar({
   handleArmMessage,
   showDeleteConfirm,
   setShowDeleteConfirm,
-  handleDelete
+  handleDelete,
+  recipients = []
 }: MessageSidebarProps) {
   const navigate = useNavigate();
+  const [showTestMessageDialog, setShowTestMessageDialog] = useState(false);
 
   return (
     <div className="col-span-full lg:col-span-4 lg:order-2 space-y-4">
@@ -104,6 +109,20 @@ export function MessageSidebar({
             <Users className="h-5 w-5 text-muted-foreground" />
           </div>
           {renderRecipients()}
+          
+          {/* Add Test Message Button */}
+          {recipients && recipients.length > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full mt-2"
+              onClick={() => setShowTestMessageDialog(true)}
+              disabled={isArmed || isActionLoading}
+            >
+              <Mail className="h-4 w-4 mr-2" />
+              Send Test Message
+            </Button>
+          )}
         </CardContent>
       </Card>
       
@@ -113,7 +132,9 @@ export function MessageSidebar({
           <Button
             variant="outline"
             className="w-full justify-start hover:bg-accent hover:text-accent-foreground"
-            onClick={() => navigate(`/messages/${message.id}/edit`)}
+            onClick={() => navigate(`/message/${message.id}/edit`)}
+            disabled={isArmed}
+            title={isArmed ? "Disarm message to edit" : "Edit Message"}
           >
             <Edit className="mr-2 h-4 w-4" />
             Edit Message
@@ -124,6 +145,8 @@ export function MessageSidebar({
               <Button
                 variant="outline"
                 className="w-full justify-start text-destructive hover:bg-destructive/10 hover:text-destructive hover:border-destructive/80"
+                disabled={isArmed}
+                title={isArmed ? "Disarm message to delete" : "Delete Message"}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete Message
@@ -152,6 +175,14 @@ export function MessageSidebar({
           </Sheet>
         </CardContent>
       </Card>
+      
+      {/* Test Message Dialog */}
+      <SendTestMessageDialog
+        open={showTestMessageDialog}
+        onOpenChange={setShowTestMessageDialog}
+        messageTitle={message.title}
+        recipients={recipients}
+      />
     </div>
   );
 }

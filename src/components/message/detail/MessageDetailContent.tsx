@@ -24,6 +24,7 @@ interface MessageDetailContentProps {
   formatDate: (dateString: string) => string;
   renderConditionType: () => string;
   renderRecipients: () => React.ReactNode;
+  recipients?: any[];
 }
 
 export function MessageDetailContent({
@@ -39,7 +40,8 @@ export function MessageDetailContent({
   handleDelete,
   formatDate,
   renderConditionType,
-  renderRecipients
+  renderRecipients,
+  recipients = []
 }: MessageDetailContentProps) {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -94,6 +96,7 @@ export function MessageDetailContent({
           showDeleteConfirm={showDeleteConfirm}
           setShowDeleteConfirm={setShowDeleteConfirm}
           handleDelete={handleDelete}
+          recipients={recipients}
         />
       </div>
       
@@ -123,6 +126,7 @@ export function MessageDetailContent({
           isActionLoading={isActionLoading}
           handleDisarmMessage={handleDisarmMessage}
           handleArmMessage={handleArmMessage}
+          recipients={recipients}
         />
       )}
       
