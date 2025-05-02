@@ -158,9 +158,15 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
     >
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start">
-          <div className="flex items-center gap-2">
-            {getMessageIcon(message.message_type)}
-            <CardTitle className="text-lg">{message.title}</CardTitle>
+          <div className="flex items-start gap-2">
+            <div className="mt-1">
+              {getMessageIcon(message.message_type)}
+            </div>
+            <div className="min-h-[3rem] flex flex-col justify-center">
+              <CardTitle className="text-lg line-clamp-2 leading-tight">
+                {message.title}
+              </CardTitle>
+            </div>
           </div>
           
           {isArmed && (
@@ -169,7 +175,7 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
             </StatusBadge>
           )}
         </div>
-        <CardDescription className="pt-2">
+        <CardDescription className="pt-2 ml-7">
           {formatDate(message.created_at)}
         </CardDescription>
       </CardHeader>

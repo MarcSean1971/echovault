@@ -12,13 +12,19 @@ export function MessageCardHeader({ message, formatDate }: MessageCardHeaderProp
   return (
     <div className="flex items-start justify-between">
       <div className="space-y-1">
-        <div className="flex items-center gap-2">
-          <MessageTypeIcon messageType={message.message_type} />
-          <h1 className="text-xl md:text-2xl font-semibold">{message.title}</h1>
+        <div className="flex items-start gap-2">
+          <div className="mt-1">
+            <MessageTypeIcon messageType={message.message_type} />
+          </div>
+          <div className="min-h-[3rem] flex flex-col justify-center">
+            <h1 className="text-xl md:text-2xl font-semibold line-clamp-2 leading-tight">
+              {message.title}
+            </h1>
+          </div>
         </div>
         
         {/* Desktop - Last updated */}
-        <p className="text-xs text-muted-foreground hidden md:block">
+        <p className="text-xs text-muted-foreground hidden md:block ml-7">
           {message.updated_at !== message.created_at ? 
             `Last updated: ${formatDate(message.updated_at)}` : 
             `Created: ${formatDate(message.created_at)}`}
