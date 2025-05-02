@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -7,7 +8,7 @@ import {
   CardContent,
   CardFooter,
 } from "@/components/ui/card";
-import { MessageSquare, File, Video, Trash2, Edit, ArrowRight, Paperclip, Clock, BellOff, Bell } from "lucide-react";
+import { MessageSquare, File, Video, ArrowRight, Paperclip, Clock, BellOff, Bell } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Message, MessageCondition } from "@/types/message";
 import { useState, useEffect } from "react";
@@ -184,69 +185,28 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
       </CardContent>
       <CardFooter className="flex justify-between border-t pt-4">
         <div className="flex gap-2">
-          {condition ? (
-            <>
+          {condition && (
+            isArmed ? (
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => navigate(`/message/${message.id}/edit`)}
-                disabled={isArmed}
-                title={isArmed ? "Disarm message to edit" : "Edit message"}
+                onClick={handleDisarmMessage}
+                disabled={isLoading}
+                className="text-green-600 hover:bg-green-50 hover:text-green-700"
               >
-                <Edit className="h-4 w-4 mr-1" /> Edit
+                <BellOff className="h-4 w-4 mr-1" /> Disarm
               </Button>
-              
-              {isArmed ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleDisarmMessage}
-                  disabled={isLoading}
-                  className="text-green-600 hover:bg-green-50 hover:text-green-700"
-                >
-                  <BellOff className="h-4 w-4 mr-1" /> Disarm
-                </Button>
-              ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleArmMessage}
-                  disabled={isLoading}
-                  className="text-destructive hover:bg-destructive/10"
-                >
-                  <Bell className="h-4 w-4 mr-1" /> Arm
-                </Button>
-              )}
-              
+            ) : (
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => onDelete(message.id)}
-                className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                disabled={isArmed}
-                title={isArmed ? "Disarm message to delete" : "Delete message"}
+                onClick={handleArmMessage}
+                disabled={isLoading}
+                className="text-destructive hover:bg-destructive/10"
               >
-                <Trash2 className="h-4 w-4 mr-1" /> Delete
+                <Bell className="h-4 w-4 mr-1" /> Arm
               </Button>
-            </>
-          ) : (
-            <>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate(`/message/${message.id}/edit`)}
-              >
-                <Edit className="h-4 w-4 mr-1" /> Edit
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onDelete(message.id)}
-                className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
-              >
-                <Trash2 className="h-4 w-4 mr-1" /> Delete
-              </Button>
-            </>
+            )
           )}
         </div>
         <Button
