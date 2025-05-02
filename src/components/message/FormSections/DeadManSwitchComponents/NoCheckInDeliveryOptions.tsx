@@ -70,6 +70,7 @@ export function NoCheckInDeliveryOptions({
           <RecurringPatternSelector
             pattern={recurringPattern}
             setPattern={setRecurringPattern}
+            forceEnabled={true}
           />
         </div>
       )}
