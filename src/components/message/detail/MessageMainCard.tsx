@@ -129,7 +129,7 @@ function MessageTabs({
       <TabsContent value="content">
         <MessageContent message={message} isArmed={isArmed} />
         
-        {/* Attachments Section */}
+        {/* Attachments Section - This is the single place where attachments are displayed */}
         {message.attachments && message.attachments.length > 0 && (
           <div className="mt-6 space-y-3">
             <h3 className="text-sm font-medium flex items-center gap-2">

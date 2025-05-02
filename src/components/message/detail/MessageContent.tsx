@@ -178,26 +178,7 @@ export function MessageContent({ message, isArmed }: MessageContentProps) {
         </div>
       )}
       
-      {/* Show attachments if any */}
-      {message.attachments && message.attachments.length > 1 && (
-        <div className="mt-6">
-          <Separator className="mb-4" />
-          <h3 className="text-sm font-medium mb-2">Attachments</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {message.attachments.slice(message.message_type !== 'text' ? 1 : 0).map((attachment, index) => (
-              <Card key={index} className="p-3 flex items-center space-x-2">
-                <FileText className="h-5 w-5 text-muted-foreground" />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium truncate">{attachment.name}</p>
-                  <CardDescription className="text-xs">
-                    {(attachment.size / 1024).toFixed(1)} KB
-                  </CardDescription>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Removed the duplicate attachments section that was here previously */}
     </TabsContent>
   );
 }
