@@ -22,7 +22,7 @@ export function MessageDeliverySettings({
     );
   }
 
-  const deliverySettingsContent = (
+  return (
     <div className="space-y-6">
       <div>
         <h3 className="text-md font-medium mb-2">Delivery Method</h3>
@@ -112,6 +112,4 @@ export function MessageDeliverySettings({
       </div>
     </div>
   );
-
-  return deliverySettingsContent;
 }

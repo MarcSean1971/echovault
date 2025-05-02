@@ -15,7 +15,7 @@ import { SendTestMessageDialog } from "./SendTestMessageDialog";
 import { sendTestWhatsAppMessage } from "@/services/messages/notificationService";
 import { Smartphone } from "lucide-react";
 import { Message } from "@/types/message";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
 
 interface MessageDetailContentProps {
   message: Message;
@@ -110,31 +110,31 @@ export function MessageDetailContent({
                 handleArmMessage={handleArmMessage}
               />
               
-              <Tabs defaultValue="content" className="w-full">
-                <TabsList className="mb-4 grid w-full grid-cols-2">
-                  <TabsTrigger value="content">Message</TabsTrigger>
-                  <TabsTrigger value="settings">Delivery</TabsTrigger>
-                </TabsList>
+              {/* Message Content Section */}
+              <div className="mt-6">
+                <h2 className="text-lg font-medium mb-4">Message</h2>
+                <MessageContent 
+                  message={message} 
+                  isArmed={isArmed} 
+                />
                 
-                <TabsContent value="content">
-                  <MessageContent 
-                    message={message} 
-                    isArmed={isArmed} 
-                  />
-                  
-                  {message.attachments && message.attachments.length > 0 && (
-                    <MessageAttachments message={message} />
-                  )}
-                </TabsContent>
-                
-                <TabsContent value="settings">
-                  <MessageDeliverySettings 
-                    condition={condition}
-                    formatDate={formatDate}
-                    renderConditionType={renderConditionType} 
-                  />
-                </TabsContent>
-              </Tabs>
+                {message.attachments && message.attachments.length > 0 && (
+                  <MessageAttachments message={message} />
+                )}
+              </div>
+              
+              {/* Separator between content and delivery settings */}
+              <Separator className="my-6" />
+              
+              {/* Delivery Settings Section */}
+              <div className="mt-6">
+                <h2 className="text-lg font-medium mb-4">Delivery</h2>
+                <MessageDeliverySettings 
+                  condition={condition}
+                  formatDate={formatDate}
+                  renderConditionType={renderConditionType} 
+                />
+              </div>
               
               <MessageActionFooter 
                 messageId={message.id}

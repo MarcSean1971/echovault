@@ -1,6 +1,5 @@
 
 import { useState, useEffect } from "react";
-import { TabsContent } from "@/components/ui/tabs";
 import { Message } from "@/types/message";
 import { toast } from "@/components/ui/use-toast";
 import { TextMessageContent } from "./content/TextMessageContent";
@@ -52,7 +51,7 @@ export function MessageContent({ message, isArmed }: MessageContentProps) {
   }, [message]);
 
   return (
-    <TabsContent value="content" className="space-y-4 pt-2">
+    <div className="space-y-4 pt-2">
       {message.message_type === 'text' ? (
         <TextMessageContent content={message.content} />
       ) : message.message_type === 'voice' ? (
@@ -70,6 +69,6 @@ export function MessageContent({ message, isArmed }: MessageContentProps) {
       ) : (
         <UnknownMessageContent />
       )}
-    </TabsContent>
+    </div>
   );
 }
