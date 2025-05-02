@@ -2,8 +2,7 @@
 import { TimeThresholdSelector } from "./TimeThresholdSelector";
 import { RecurringPatternSelector } from "./RecurringPatternSelector";
 import { ReminderSettings } from "./ReminderSettings";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Clock, Bell } from "lucide-react";
+import { Bell } from "lucide-react";
 import { RecurringPattern, TriggerType } from "@/types/message";
 
 interface RegularCheckInWithRecurringProps {
@@ -28,17 +27,7 @@ export function RegularCheckInWithRecurring({
   setReminderHours
 }: RegularCheckInWithRecurringProps) {
   return (
-    <div className="space-y-6">
-      <Alert className="bg-blue-50 border-blue-200">
-        <Clock className="h-4 w-4 text-blue-800" />
-        <AlertTitle className="text-blue-800">Regular Check-in Required</AlertTitle>
-        <AlertDescription className="text-blue-700">
-          This message will be sent if you don't check in within the specified time period.
-          After the initial message, subsequent reminders will be sent on the recurring schedule
-          until you check in again.
-        </AlertDescription>
-      </Alert>
-      
+    <div className="space-y-6">      
       <TimeThresholdSelector 
         conditionType={'regular_check_in_recurring' as TriggerType}
         hoursThreshold={hoursThreshold}
