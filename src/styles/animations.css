@@ -108,9 +108,14 @@
   backdrop-filter: none !important;
 }
 
-/* Disable hover effects for avatar button */
-.rounded-full[variant="ghost"]:hover {
+/* Remove any hover effects from avatar dropdown trigger */
+[data-radix-dropdown-menu-trigger][role="button"] {
   background-color: transparent !important;
+}
+
+[data-radix-dropdown-menu-trigger][role="button"]:hover {
+  background-color: transparent !important;
+  transform: none !important;
   border-color: hsl(var(--border)) !important;
 }
 

@@ -4,7 +4,6 @@ import { Link } from "react-router-dom";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LogOut, User } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 interface UserMenuProps {
   userImage: string | null;
@@ -23,11 +22,12 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button 
-          className="relative h-10 w-10 rounded-full border border-border !hover:bg-transparent !hover:border-border focus:ring-1 focus:ring-ring"
-          variant="ghost"
+        <div 
+          className="relative h-10 w-10 rounded-full border border-border cursor-pointer focus:outline-none"
+          role="button"
+          tabIndex={0}
         >
-          <Avatar className="h-9 w-9 rounded-full pointer-events-none">
+          <Avatar className="h-9 w-9 rounded-full">
             {userImage ? (
               <AvatarImage src={userImage} alt="Profile picture" />
             ) : null}
@@ -35,7 +35,7 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
               {initials}
             </AvatarFallback>
           </Avatar>
-        </Button>
+        </div>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56 bg-popover shadow-md" align="end" forceMount sideOffset={8} side="bottom">
         <DropdownMenuLabel>
