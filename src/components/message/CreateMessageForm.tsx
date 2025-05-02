@@ -27,15 +27,15 @@ function MessageForm({ onCancel }: CreateMessageFormProps) {
   
   const { handleSubmit, isFormValid } = useFormActions();
 
-  // Create a toggle function for recipients
+  // Create a toggle function for recipients that directly sets the array rather than using a function
   const handleToggleRecipient = (recipientId: string) => {
-    setSelectedRecipients(prev => {
-      if (prev.includes(recipientId)) {
-        return prev.filter(id => id !== recipientId);
-      } else {
-        return [...prev, recipientId];
-      }
-    });
+    if (selectedRecipients.includes(recipientId)) {
+      // Filter out the recipientId by creating a new array
+      setSelectedRecipients(selectedRecipients.filter(id => id !== recipientId));
+    } else {
+      // Add the recipientId by creating a new array
+      setSelectedRecipients([...selectedRecipients, recipientId]);
+    }
   };
 
   return (
