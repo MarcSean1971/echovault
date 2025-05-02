@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
 import { LogOut, MessageSquare, Users2, Clock, User } from "lucide-react";
@@ -41,7 +40,7 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
   return (
     <>
       {/* Desktop dropdown menu */}
-      <div className="flex justify-center">
+      <div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Avatar className="h-10 w-10 transition-transform hover:scale-105 cursor-pointer border-2 border-transparent hover:border-primary/20">
@@ -52,7 +51,7 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
               )}
             </Avatar>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="center" className="w-56">
+          <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>

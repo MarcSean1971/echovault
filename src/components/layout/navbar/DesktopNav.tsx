@@ -18,6 +18,7 @@ interface DesktopNavProps {
 export function DesktopNav({ userImage, initials }: DesktopNavProps) {
   return (
     <div className="flex items-center justify-between w-full">
+      {/* Left section - Navigation menu */}
       <NavigationMenu>
         <NavigationMenuList>
           <NavigationMenuItem>
@@ -33,17 +34,19 @@ export function DesktopNav({ userImage, initials }: DesktopNavProps) {
         </NavigationMenuList>
       </NavigationMenu>
       
+      {/* Center section - Check In button */}
       <div className="flex-1 flex justify-center">
-        <UserMenu userImage={userImage} initials={initials} />
+        <Button 
+          asChild 
+          className="bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity"
+          size="sm"
+        >
+          <Link to="/check-in">Check In</Link>
+        </Button>
       </div>
       
-      <Button 
-        asChild 
-        className="bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity"
-        size="sm"
-      >
-        <Link to="/check-in">Check In</Link>
-      </Button>
+      {/* Right section - User avatar/menu */}
+      <UserMenu userImage={userImage} initials={initials} />
     </div>
   );
 }
