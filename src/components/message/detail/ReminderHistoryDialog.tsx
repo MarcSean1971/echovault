@@ -7,20 +7,14 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { supabase } from "@/integrations/supabase/client";
 import { formatDate } from "@/utils/messageHelpers";
 import { Loader2, Clock, Mail } from "lucide-react";
+import { getReminderHistory, Reminder } from "@/services/messages/reminderService";
 
 interface ReminderHistoryDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   messageId: string;
-}
-
-interface Reminder {
-  id: string;
-  sent_at: string;
-  deadline: string;
 }
 
 export function ReminderHistoryDialog({
@@ -43,13 +37,7 @@ export function ReminderHistoryDialog({
     setError(null);
 
     try {
-      const { data, error } = await supabase
-        .from("sent_reminders")
-        .select("*")
-        .eq("message_id", messageId)
-        .order("sent_at", { ascending: false });
-
-      if (error) throw error;
+      const data = await getReminderHistory(messageId);
       setReminders(data || []);
     } catch (err: any) {
       console.error("Error fetching reminders:", err);

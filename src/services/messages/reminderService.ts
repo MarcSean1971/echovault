@@ -32,19 +32,34 @@ export async function triggerReminderCheck(messageId: string) {
 }
 
 /**
+ * Reminder interface representing the sent_reminders table structure
+ */
+export interface Reminder {
+  id: string;
+  condition_id: string;
+  message_id: string;
+  user_id: string;
+  sent_at: string;
+  deadline: string;
+  created_at: string;
+}
+
+/**
  * Get reminder history for a specific message
  */
-export async function getReminderHistory(messageId: string) {
+export async function getReminderHistory(messageId: string): Promise<Reminder[]> {
   try {
+    // Use generic query to avoid type issues with the sent_reminders table
+    // that hasn't been added to the TypeScript definitions yet
     const { data, error } = await supabase
-      .from("sent_reminders")
-      .select("*")
-      .eq("message_id", messageId)
-      .order("sent_at", { ascending: false });
+      .from('sent_reminders')
+      .select('*')
+      .eq('message_id', messageId)
+      .order('sent_at', { ascending: false });
       
     if (error) throw error;
     
-    return data;
+    return data as Reminder[];
   } catch (error: any) {
     console.error("Error fetching reminder history:", error);
     throw error;
