@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Shield, Clock, AlertCircle } from "lucide-react";
@@ -66,9 +65,8 @@ export default function CheckIn() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-8">
+      <div className="mb-8">
         <h1 className="text-3xl font-bold">Dead Man's Switch Control</h1>
-        <Button variant="outline" onClick={() => navigate("/dashboard")}>Back to Dashboard</Button>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
