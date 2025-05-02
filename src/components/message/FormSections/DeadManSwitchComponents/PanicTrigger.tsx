@@ -4,6 +4,7 @@ import { Switch } from "@/components/ui/switch";
 import { PanicTriggerConfig } from "@/types/message";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useEffect } from "react";
+import { Smartphone } from "lucide-react";
 
 interface PanicTriggerProps {
   config: PanicTriggerConfig;
@@ -35,12 +36,12 @@ export function PanicTrigger({ config, setConfig }: PanicTriggerProps) {
         <div className="space-y-2">
           <Label className="mb-2 block">How do you want to trigger this message?</Label>
           <RadioGroup 
-            value={config.methods?.includes('app') ? 'app' : 'sms'} 
+            value={config.methods?.includes('app') ? 'app' : 'whatsapp'} 
             onValueChange={(value) => {
               if (value === 'app') {
                 setConfig({...config, methods: ['app']});
               } else {
-                setConfig({...config, methods: ['sms']});
+                setConfig({...config, methods: ['whatsapp']});
               }
             }}
             className="space-y-2"
@@ -51,8 +52,8 @@ export function PanicTrigger({ config, setConfig }: PanicTriggerProps) {
             </div>
             
             <div className="flex items-center space-x-2 p-2 rounded border">
-              <RadioGroupItem value="sms" id="method-sms" />
-              <Label htmlFor="method-sms" className="cursor-pointer">SMS keyword (text a special word to trigger)</Label>
+              <RadioGroupItem value="whatsapp" id="method-whatsapp" />
+              <Label htmlFor="method-whatsapp" className="cursor-pointer">WhatsApp keyword (send a special word to trigger)</Label>
             </div>
           </RadioGroup>
         </div>
