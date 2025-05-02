@@ -55,31 +55,6 @@ export function StatusCard({
             {conditionType}
           </div>
         </div>
-        
-        {(onArm || onDisarm) && (
-          <>
-            <div className="h-px bg-border w-full"></div>
-            {isArmed ? (
-              <Button
-                variant="outline"
-                onClick={onDisarm}
-                disabled={isActionLoading}
-                className="w-full text-green-600 border-green-600 hover:bg-green-50 hover:text-green-700 hover:border-green-700"
-              >
-                Disarm Message
-              </Button>
-            ) : (
-              <Button
-                variant="outline"
-                onClick={onArm}
-                disabled={isActionLoading}
-                className="w-full text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive hover:border-destructive/80"
-              >
-                Arm Message
-              </Button>
-            )}
-          </>
-        )}
       </CardContent>
     </Card>
   );

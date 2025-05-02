@@ -10,7 +10,15 @@ import {
   CornerUpRight,
   Clock,
   Mail,
+  Pencil,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface ActionsCardProps {
   messageId: string;
@@ -39,6 +47,8 @@ export function ActionsCard({
   onSendTestMessage,
   onViewReminderHistory
 }: ActionsCardProps) {
+  const navigate = useNavigate();
+
   return (
     <Card>
       <CardContent className="p-4 space-y-4">
@@ -46,6 +56,30 @@ export function ActionsCard({
           <h3 className="text-lg font-medium">Actions</h3>
           <Bell className="h-5 w-5 text-muted-foreground" />
         </div>
+
+        {/* Edit Message Button */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => navigate(`/message/${messageId}/edit`)}
+                  disabled={isArmed || isActionLoading}
+                >
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Edit Message
+                </Button>
+              </div>
+            </TooltipTrigger>
+            {isArmed && (
+              <TooltipContent>
+                <p>Disarm the message first to edit it</p>
+              </TooltipContent>
+            )}
+          </Tooltip>
+        </TooltipProvider>
 
         {/* Arm/Disarm Button */}
         {conditionId && (
@@ -84,15 +118,28 @@ export function ActionsCard({
 
         {/* Send Test Message Button */}
         {conditionId && onSendTestMessage && (
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={onSendTestMessage}
-            disabled={isArmed || isActionLoading}
-          >
-            <Mail className="h-4 w-4 mr-2" />
-            Send Test Message
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={onSendTestMessage}
+                    disabled={isArmed || isActionLoading}
+                  >
+                    <Mail className="h-4 w-4 mr-2" />
+                    Send Test Message
+                  </Button>
+                </div>
+              </TooltipTrigger>
+              {isArmed && (
+                <TooltipContent>
+                  <p>Disarm the message first to send a test</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
         )}
 
         {/* Delete Button / Confirm */}
@@ -117,15 +164,28 @@ export function ActionsCard({
             </Button>
           </div>
         ) : (
-          <Button
-            variant="outline"
-            className="w-full border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
-            onClick={() => setShowDeleteConfirm(true)}
-            disabled={isActionLoading}
-          >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Delete Message
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <Button
+                    variant="outline"
+                    className="w-full border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    disabled={isArmed || isActionLoading}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    Delete Message
+                  </Button>
+                </div>
+              </TooltipTrigger>
+              {isArmed && (
+                <TooltipContent>
+                  <p>Disarm the message first to delete it</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
         )}
       </CardContent>
     </Card>
