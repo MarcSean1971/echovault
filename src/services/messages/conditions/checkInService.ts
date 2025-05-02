@@ -95,7 +95,7 @@ export async function getNextCheckInDeadline(userId: string): Promise<CheckInDea
       return {
         id: item.id,
         message_id: item.message_id,
-        condition_type: item.condition_type as any, // Type casting
+        condition_type: item.condition_type as TriggerType, // Type casting
         hours_threshold: item.hours_threshold,
         created_at: item.created_at,
         updated_at: item.updated_at,
