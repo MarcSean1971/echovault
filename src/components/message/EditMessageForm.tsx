@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { FileText, Users } from "lucide-react";
 import { RecipientSelector } from "./FormSections/RecipientSelector";
 import { useEffect, useState } from "react";
-import { Message, MessageCondition } from "@/types/message";
+import { Message, MessageCondition, Recipient } from "@/types/message";
 import { 
   fetchMessageConditions, 
   updateMessageCondition,
@@ -70,6 +70,7 @@ function MessageEditForm({ message, onCancel }: EditMessageFormProps) {
   const navigate = useNavigate();
   const [existingCondition, setExistingCondition] = useState<MessageCondition | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [recipients, setRecipients] = useState<Recipient[]>([]);
 
   // Load message condition data
   useEffect(() => {
@@ -89,6 +90,7 @@ function MessageEditForm({ message, onCancel }: EditMessageFormProps) {
           
           // Set recipients if they exist
           if (messageCondition.recipients && messageCondition.recipients.length > 0) {
+            setRecipients(messageCondition.recipients);
             setSelectedRecipients(messageCondition.recipients.map(r => r.id));
           }
           
@@ -164,7 +166,7 @@ function MessageEditForm({ message, onCancel }: EditMessageFormProps) {
     
     try {
       // Upload any new files that haven't been uploaded
-      const newFiles = files.filter(f => !f.isUploaded);
+      const newFiles = files.filter(f => f.file && !f.isUploaded);
       let attachmentsToSave = [...(message.attachments || [])];
       
       if (newFiles.length > 0) {
@@ -207,6 +209,10 @@ function MessageEditForm({ message, onCancel }: EditMessageFormProps) {
       } else {
         // Create new condition if recipients are selected
         if (selectedRecipients.length > 0) {
+          // Convert selected recipient IDs to full recipient objects
+          const selectedRecipientObjects = recipients
+            .filter(r => selectedRecipients.includes(r.id));
+            
           await createMessageCondition(
             message.id,
             conditionType,
@@ -215,7 +221,7 @@ function MessageEditForm({ message, onCancel }: EditMessageFormProps) {
               minutesThreshold,
               recurringPattern,
               triggerDate: triggerDate ? triggerDate.toISOString() : null,
-              recipients: selectedRecipients,
+              recipients: selectedRecipientObjects,
               pinCode,
               unlockDelayHours: unlockDelay,
               expiryHours,

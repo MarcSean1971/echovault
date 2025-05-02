@@ -1,6 +1,6 @@
 
 export * from "./dbOperations";
-export * from "./messageConditionService";
+export { getConditionByMessageId } from "./messageConditionService";
 export * from "./checkInService";
 export * from "./panicTriggerService";
 export * from "./messageStatusService";
