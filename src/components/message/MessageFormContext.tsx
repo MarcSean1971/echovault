@@ -1,6 +1,6 @@
-
 import { createContext, useContext, ReactNode, useState } from "react";
 import { FileAttachment } from "@/components/FileUploader";
+import { RecurringPattern, TriggerType, DeliveryOption, PanicTriggerConfig } from "@/types/message";
 
 interface MessageFormContextType {
   // Message Details
@@ -20,6 +20,34 @@ interface MessageFormContextType {
   setUploadProgress: (value: number) => void;
   showUploadDialog: boolean;
   setShowUploadDialog: (value: boolean) => void;
+
+  // Dead Man's Switch properties (temporarily keeping these to avoid type errors)
+  enableDeadManSwitch: boolean;
+  setEnableDeadManSwitch: (value: boolean) => void;
+  conditionType: TriggerType;
+  setConditionType: (value: TriggerType) => void;
+  hoursThreshold: number;
+  setHoursThreshold: (value: number) => void;
+  minutesThreshold: number;
+  setMinutesThreshold: (value: number) => void;
+  selectedRecipients: string[];
+  setSelectedRecipients: (value: string[]) => void;
+  triggerDate: Date | null;
+  setTriggerDate: (value: Date | null) => void;
+  recurringPattern: RecurringPattern | null;
+  setRecurringPattern: (value: RecurringPattern | null) => void;
+  panicTriggerConfig: PanicTriggerConfig;
+  setPanicTriggerConfig: (value: PanicTriggerConfig) => void;
+  pinCode: string;
+  setPinCode: (value: string) => void;
+  unlockDelay: number;
+  setUnlockDelay: (value: number) => void;
+  expiryHours: number;
+  setExpiryHours: (value: number) => void;
+  deliveryOption: DeliveryOption;
+  setDeliveryOption: (value: DeliveryOption) => void;
+  reminderHours: number[];
+  setReminderHours: (value: number[]) => void;
 }
 
 export const MessageFormContext = createContext<MessageFormContextType | undefined>(undefined);
@@ -39,6 +67,26 @@ export function MessageFormProvider({ children }: MessageFormProviderProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
+
+  // Dead Man's Switch properties (temporarily keeping these to avoid type errors)
+  const [enableDeadManSwitch, setEnableDeadManSwitch] = useState(false);
+  const [conditionType, setConditionType] = useState<TriggerType>("no_check_in");
+  const [hoursThreshold, setHoursThreshold] = useState(24);
+  const [minutesThreshold, setMinutesThreshold] = useState(0);
+  const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
+  const [triggerDate, setTriggerDate] = useState<Date | null>(null);
+  const [recurringPattern, setRecurringPattern] = useState<RecurringPattern | null>(null);
+  const [panicTriggerConfig, setPanicTriggerConfig] = useState<PanicTriggerConfig>({
+    enabled: true,
+    methods: ['app'],
+    cancel_window_seconds: 10,
+    bypass_logging: false
+  });
+  const [pinCode, setPinCode] = useState("");
+  const [unlockDelay, setUnlockDelay] = useState(0);
+  const [expiryHours, setExpiryHours] = useState(24);
+  const [deliveryOption, setDeliveryOption] = useState<DeliveryOption>("immediately");
+  const [reminderHours, setReminderHours] = useState<number[]>([12, 6, 1]);
   
   const value = {
     title,
@@ -54,7 +102,33 @@ export function MessageFormProvider({ children }: MessageFormProviderProps) {
     uploadProgress,
     setUploadProgress,
     showUploadDialog,
-    setShowUploadDialog
+    setShowUploadDialog,
+    enableDeadManSwitch,
+    setEnableDeadManSwitch,
+    conditionType,
+    setConditionType,
+    hoursThreshold,
+    setHoursThreshold,
+    minutesThreshold,
+    setMinutesThreshold,
+    selectedRecipients,
+    setSelectedRecipients,
+    triggerDate,
+    setTriggerDate,
+    recurringPattern,
+    setRecurringPattern,
+    panicTriggerConfig,
+    setPanicTriggerConfig,
+    pinCode,
+    setPinCode,
+    unlockDelay,
+    setUnlockDelay,
+    expiryHours,
+    setExpiryHours,
+    deliveryOption,
+    setDeliveryOption,
+    reminderHours,
+    setReminderHours
   };
   
   return (
