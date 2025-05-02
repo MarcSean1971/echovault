@@ -2,7 +2,16 @@
 import { supabase } from "@/integrations/supabase/client";
 
 // Function to get the authenticated client
-export const getAuthClient = () => {
+export const getAuthClient = async () => {
+  // Get the current user session
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  // If there is a session, create an authenticated client
+  if (session) {
+    return supabase;
+  }
+  
+  // Return the regular client if no session exists
   return supabase;
 };
 
