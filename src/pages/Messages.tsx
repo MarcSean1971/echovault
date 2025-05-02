@@ -64,17 +64,20 @@ export default function Messages() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col mb-6">
         <h1 className="text-3xl font-bold">Your Messages</h1>
+        <p className="text-muted-foreground mt-1">Secure communications that transcend time and circumstances</p>
+      </div>
+      
+      <div className="flex items-center justify-between mb-6">
+        <MessageFilter 
+          messageType={messageType} 
+          onFilterChange={setMessageType} 
+        />
         <Button onClick={() => navigate("/create-message")}>
           Create New Message
         </Button>
       </div>
-      
-      <MessageFilter 
-        messageType={messageType} 
-        onFilterChange={setMessageType} 
-      />
 
       <MessageGrid 
         messages={messages} 
