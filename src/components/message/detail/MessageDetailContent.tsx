@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { MessageLoading } from "./MessageLoading";
 import { MessageNotFound } from "./MessageNotFound";
 import { MessageSidebar } from "./MessageSidebar";
@@ -48,6 +48,9 @@ export function MessageDetailContent({
   setShowSendTestDialog,
   handleSendTestMessages
 }: MessageDetailContentProps) {
+  // Add state for delete confirmation
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  
   if (isLoading) {
     return <MessageLoading />;
   }
