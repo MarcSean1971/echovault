@@ -1,6 +1,5 @@
 
 import { Message } from "@/types/message";
-import { Info } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { TabsContent } from "@/components/ui/tabs";
 import { MessageTypeIcon } from "./MessageTypeIcon";
@@ -13,15 +12,6 @@ interface MessageContentProps {
 export function MessageContent({ message, isArmed }: MessageContentProps) {
   return (
     <TabsContent value="content" className="space-y-4 pt-2">
-      {isArmed && (
-        <div className="mb-4 p-3 bg-amber-50 text-amber-800 border border-amber-200 rounded-md dark:bg-amber-900/30 dark:text-amber-200 dark:border-amber-800 text-sm">
-          <p className="flex items-center">
-            <Info className="h-4 w-4 mr-1.5 flex-shrink-0" />
-            <span>This message is armed and will be delivered according to your settings. Disarm it to make changes.</span>
-          </p>
-        </div>
-      )}
-      
       {message.message_type === 'text' ? (
         <div className="whitespace-pre-wrap prose dark:prose-invert max-w-none text-sm md:text-base">
           {message.content || <span className="text-muted-foreground italic">No content</span>}
