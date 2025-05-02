@@ -27,9 +27,7 @@ export async function triggerPanicMessage(userId: string, messageId: string): Pr
     
     console.log("Found panic message to trigger:", data);
     
-    // Mark the message as triggered - note that we're not updating the DB with 'triggered'
-    // and 'delivered' since they don't exist in the schema yet. In a real implementation,
-    // these fields would be added to the database.
+    // Mark the message as triggered
     const { error: updateError } = await client
       .from("message_conditions")
       .update({ 

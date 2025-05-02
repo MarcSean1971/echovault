@@ -104,9 +104,9 @@ function MessageEditForm({ message, onCancel }: EditMessageFormProps) {
             setTriggerDate(new Date(messageCondition.trigger_date));
           }
           
-          // Set panic trigger config if it exists - fixed variable name
+          // Set panic trigger config if it exists
           if (messageCondition.panic_trigger_config) {
-            console.log("Setting panic trigger config:", messageCondition.panic_trigger_config);
+            console.log("Loading panic trigger config:", messageCondition.panic_trigger_config);
             setPanicTriggerConfig(messageCondition.panic_trigger_config);
           }
           
@@ -115,12 +115,10 @@ function MessageEditForm({ message, onCancel }: EditMessageFormProps) {
             setPinCode(messageCondition.pin_code);
           }
           
-          // Set unlock delay if it exists - fixed field name
           if (messageCondition.unlock_delay_hours) {
             setUnlockDelay(messageCondition.unlock_delay_hours);
           }
           
-          // Set expiry hours if they exist - fixed field name
           if (messageCondition.expiry_hours) {
             setExpiryHours(messageCondition.expiry_hours);
           }
