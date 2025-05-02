@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Activity, Users, MessageSquare, Bell } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import UserManagement from "./UserManagement";
 
 interface StatsCardProps {
   title: string;
@@ -40,13 +41,45 @@ export default function AdminDashboard() {
   useEffect(() => {
     async function fetchDashboardStats() {
       try {
-        // This would be replaced with actual DB queries to get real stats
-        // For demo purposes, we're using dummy data
+        // Fetch real user count
+        const { count: userCount, error: userError } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true });
+          
+        if (userError) throw userError;
+        
+        // Fetch real message count
+        const { count: messageCount, error: messageError } = await supabase
+          .from('messages')
+          .select('*', { count: 'exact', head: true });
+          
+        if (messageError) throw messageError;
+        
+        // Fetch active check-ins (approximation)
+        const { count: activeCheckIns, error: checkInsError } = await supabase
+          .from('message_conditions')
+          .select('*', { count: 'exact', head: true })
+          .eq('active', true)
+          .eq('condition_type', 'no_check_in');
+          
+        if (checkInsError) throw checkInsError;
+        
+        // Fetch pending notifications (sent_reminders within last 24 hours)
+        const yesterday = new Date();
+        yesterday.setDate(yesterday.getDate() - 1);
+        
+        const { count: notificationCount, error: notificationError } = await supabase
+          .from('sent_reminders')
+          .select('*', { count: 'exact', head: true })
+          .gte('sent_at', yesterday.toISOString());
+          
+        if (notificationError) throw notificationError;
+
         setStats({
-          totalUsers: 12,
-          totalMessages: 48,
-          activeCheckIns: 5,
-          pendingNotifications: 3
+          totalUsers: userCount || 0,
+          totalMessages: messageCount || 0,
+          activeCheckIns: activeCheckIns || 0,
+          pendingNotifications: notificationCount || 0
         });
       } catch (error) {
         console.error("Error fetching dashboard stats:", error);
@@ -91,6 +124,8 @@ export default function AdminDashboard() {
           icon={<Bell className="h-4 w-4" />} 
         />
       </div>
+
+      <UserManagement />
 
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="col-span-1">
