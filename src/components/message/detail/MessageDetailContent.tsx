@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Message } from "@/types/message";
@@ -69,21 +70,7 @@ export function MessageDetailContent({
           <MobileTimerAlert deadline={deadline} isArmed={isArmed} />
         )}
         
-        {/* Main message card */}
-        <MessageMainCard
-          message={message}
-          isArmed={isArmed}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          deadline={deadline}
-          isMobile={isMobile}
-          formatDate={formatDate}
-          renderRecipients={renderRecipients}
-          condition={condition}
-          renderConditionType={renderConditionType}
-        />
-        
-        {/* Sidebar - Desktop only */}
+        {/* Sidebar - Desktop only - Now on the left */}
         <MessageSidebar 
           message={message}
           isArmed={isArmed}
@@ -99,6 +86,20 @@ export function MessageDetailContent({
           handleDelete={handleDelete}
           recipients={recipients}
           onSendTestMessage={onSendTestMessage}
+        />
+        
+        {/* Main message card - Now on the right */}
+        <MessageMainCard
+          message={message}
+          isArmed={isArmed}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          deadline={deadline}
+          isMobile={isMobile}
+          formatDate={formatDate}
+          renderRecipients={renderRecipients}
+          condition={condition}
+          renderConditionType={renderConditionType}
         />
       </div>
       
