@@ -27,19 +27,17 @@ export const getConditionType = (condition: any) => {
   }
 };
 
+// Instead of returning JSX, we'll use a function that returns a React element
+// but we need to import React in the components that use this function
 export const renderRecipientsList = (condition: any) => {
   if (!condition?.recipients || condition.recipients.length === 0) {
-    return <p className="text-muted-foreground text-sm">No recipients</p>;
+    return null; // Return null instead of JSX
   }
 
-  return (
-    <div className="space-y-2">
-      {condition.recipients.map((recipient: any, index: number) => (
-        <div key={index} className="flex items-center text-sm">
-          <span className="font-medium">{recipient.name}</span>
-          <span className="text-muted-foreground ml-2 text-xs">({recipient.email})</span>
-        </div>
-      ))}
-    </div>
-  );
+  // Return the data structure for recipients - components will render this
+  return condition.recipients.map((recipient: any, index: number) => ({
+    id: index,
+    name: recipient.name,
+    email: recipient.email
+  }));
 };

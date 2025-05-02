@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -153,6 +152,26 @@ export default function MessageDetail() {
     }
   };
 
+  // Custom function to render recipients list with React components
+  const renderRecipients = () => {
+    const recipients = renderRecipientsList(condition);
+    
+    if (!recipients) {
+      return <p className="text-muted-foreground text-sm">No recipients</p>;
+    }
+    
+    return (
+      <div className="space-y-2">
+        {recipients.map((recipient: any) => (
+          <div key={recipient.id} className="flex items-center text-sm">
+            <span className="font-medium">{recipient.name}</span>
+            <span className="text-muted-foreground ml-2 text-xs">({recipient.email})</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   if (isLoading) {
     return <MessageLoading />;
   }
@@ -175,7 +194,7 @@ export default function MessageDetail() {
       handleDelete={handleDelete}
       formatDate={formatDate}
       renderConditionType={() => getConditionType(condition)}
-      renderRecipients={() => renderRecipientsList(condition)}
+      renderRecipients={renderRecipients}
     />
   );
 }

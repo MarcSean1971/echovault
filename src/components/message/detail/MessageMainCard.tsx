@@ -1,4 +1,3 @@
-
 import React from "react";
 import { MessageTypeIcon } from "@/components/message/detail/MessageTypeIcon";
 import { Card } from "@/components/ui/card";

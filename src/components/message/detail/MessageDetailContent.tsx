@@ -4,15 +4,11 @@ import { useNavigate } from "react-router-dom";
 import { Message } from "@/types/message";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MessageHeader } from "@/components/message/detail/MessageHeader";
-import { MessageContent } from "@/components/message/detail/MessageContent";
-import { MessageDeliverySettings } from "@/components/message/detail/MessageDeliverySettings";
-import { MessageMetadata } from "@/components/message/detail/MessageMetadata";
-import { MessageDetailsSheet } from "@/components/message/detail/MessageDetailsSheet";
+import { MessageMainCard } from "@/components/message/detail/MessageMainCard";
 import { MessageActionFooter } from "@/components/message/detail/MessageActionFooter";
 import { MessageSidebar } from "@/components/message/detail/MessageSidebar";
 import { MobileTimerAlert } from "@/components/message/detail/MobileTimerAlert";
-import { DesktopTimerAlert } from "@/components/message/detail/DesktopTimerAlert";
-import { MessageMainCard } from "@/components/message/detail/MessageMainCard";
+import { MessageDetailsSheet } from "@/components/message/detail/MessageDetailsSheet";
 
 interface MessageDetailContentProps {
   message: Message;
