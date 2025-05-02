@@ -49,17 +49,38 @@ export interface Reminder {
  */
 export async function getReminderHistory(messageId: string): Promise<Reminder[]> {
   try {
-    // Use a more generic approach to query the table that's not in the TypeScript definitions
-    const response = await supabase
-      .from('sent_reminders')
-      .select('*')
-      .eq('message_id', messageId)
-      .order('sent_at', { ascending: false });
+    // Use the RPC endpoint to bypass TypeScript's table type checking
+    const { data, error } = await supabase.rpc('get_reminders_by_message_id', {
+      p_message_id: messageId
+    });
       
-    if (response.error) throw response.error;
+    if (error) {
+      console.error("RPC error:", error);
+      
+      // Fallback to direct SQL query if RPC isn't available
+      const response = await supabase.auth.getSession();
+      const authToken = response.data.session?.access_token;
+      
+      // Build URL for direct query
+      const url = `${supabase.supabaseUrl}/rest/v1/sent_reminders?message_id=eq.${messageId}&order=sent_at.desc`;
+      
+      const fetchResponse = await fetch(url, {
+        headers: {
+          'apikey': supabase.supabaseKey,
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!fetchResponse.ok) {
+        throw new Error(`HTTP error: ${fetchResponse.status}`);
+      }
+      
+      const fetchData = await fetchResponse.json();
+      return (fetchData || []) as Reminder[];
+    }
     
-    // Safely cast the response data to our defined Reminder interface
-    return (response.data || []) as unknown as Reminder[];
+    return (data || []) as Reminder[];
   } catch (error: any) {
     console.error("Error fetching reminder history:", error);
     throw error;
