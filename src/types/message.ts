@@ -42,6 +42,7 @@ export type RecurringPattern = {
   day?: number;
   month?: number;
   startTime?: string;
+  startDate?: string; // Added this field for start date
 };
 
 export type PanicTriggerConfig = {

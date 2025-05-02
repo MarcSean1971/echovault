@@ -1,9 +1,12 @@
+
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
 import { RecurringPattern } from "@/types/message";
+import { DatePicker } from "./DatePicker";
+import { format } from "date-fns";
 
 // Export this for backward compatibility
 export type RecurringPatternType = 'daily' | 'weekly' | 'monthly' | 'yearly';
@@ -23,6 +26,9 @@ export function RecurringPatternSelector({
   forceEnabled = false
 }: RecurringPatternSelectorProps) {
   const [isRecurring, setIsRecurring] = useState(!!pattern || forceEnabled);
+  const [startDate, setStartDate] = useState<Date | null>(
+    pattern?.startDate ? new Date(pattern.startDate) : null
+  );
   
   // If forceEnabled changes, update isRecurring
   useEffect(() => {
@@ -77,6 +83,16 @@ export function RecurringPatternSelector({
   const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (pattern) {
       setPattern({ ...pattern, startTime: e.target.value });
+    }
+  };
+  
+  const handleDateChange = (date: Date | null) => {
+    setStartDate(date);
+    if (pattern) {
+      setPattern({ 
+        ...pattern, 
+        startDate: date ? format(date, 'yyyy-MM-dd') : undefined 
+      });
     }
   };
   
@@ -233,13 +249,24 @@ export function RecurringPatternSelector({
           )}
           
           <div>
-            <Label htmlFor="start-time" className="mb-2 block">Start time (optional)</Label>
-            <Input
-              id="start-time"
-              type="time"
-              value={pattern?.startTime || ""}
-              onChange={handleTimeChange}
-            />
+            <Label className="mb-2 block">Start date and time (optional)</Label>
+            <div className="space-y-2">
+              <DatePicker
+                selectedDate={startDate}
+                setSelectedDate={handleDateChange}
+                label=""
+              />
+              
+              <div className="mt-2">
+                <Label htmlFor="start-time" className="mb-2 block">Start time</Label>
+                <Input
+                  id="start-time"
+                  type="time"
+                  value={pattern?.startTime || ""}
+                  onChange={handleTimeChange}
+                />
+              </div>
+            </div>
           </div>
         </div>
       )}
