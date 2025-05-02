@@ -47,7 +47,7 @@ export function MessageDetailsSheet({
         <SheetContent className="pt-10">
           <div className="space-y-6">
             <div className="flex items-center space-x-2">
-              <MessageTypeIcon type={message.message_type} />
+              <MessageTypeIcon messageType={message.message_type} />
               <div>
                 <h2 className="text-lg font-medium">{message.title}</h2>
                 <p className="text-sm text-muted-foreground">

@@ -3,30 +3,28 @@ import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CalendarDays, Info } from "lucide-react";
+import { Message } from "@/types/message";
 
 interface StatusCardProps {
   isArmed: boolean;
-  message: {
-    created_at: string;
-    updated_at: string;
-  };
-  conditionId: string | null;
+  messageType?: string;
+  conditionType: string;
+  createdAt: string;
   isActionLoading: boolean;
-  formatDate: (dateString: string) => string;
-  renderConditionType: () => string;
-  handleDisarmMessage: () => Promise<void>;
-  handleArmMessage: () => Promise<void>;
+  onDisarm?: () => Promise<void>;
+  onArm?: () => Promise<void>;
+  message?: Message;
 }
 
 export function StatusCard({
   isArmed,
-  message,
-  conditionId,
+  messageType,
+  conditionType,
+  createdAt,
   isActionLoading,
-  formatDate,
-  renderConditionType,
-  handleDisarmMessage,
-  handleArmMessage
+  onDisarm,
+  onArm,
+  message
 }: StatusCardProps) {
   return (
     <Card>
@@ -40,31 +38,31 @@ export function StatusCard({
           <div className="flex items-center text-sm">
             <CalendarDays className="h-4 w-4 mr-2 text-muted-foreground" />
             <span className="font-medium mr-1">Created:</span> 
-            {formatDate(message.created_at)}
+            {createdAt}
           </div>
           
-          {message.updated_at !== message.created_at && (
+          {message && message.updated_at !== message.created_at && (
             <div className="flex items-center text-sm">
               <CalendarDays className="h-4 w-4 mr-2 text-muted-foreground" />
               <span className="font-medium mr-1">Updated:</span> 
-              {formatDate(message.updated_at)}
+              {message.updated_at}
             </div>
           )}
           
           <div className="flex items-center text-sm">
             <Info className="h-4 w-4 mr-2 text-muted-foreground" />
             <span className="font-medium mr-1">Type:</span> 
-            {renderConditionType()}
+            {conditionType}
           </div>
         </div>
         
-        {conditionId && (
+        {(onArm || onDisarm) && (
           <>
             <div className="h-px bg-border w-full"></div>
             {isArmed ? (
               <Button
                 variant="outline"
-                onClick={handleDisarmMessage}
+                onClick={onDisarm}
                 disabled={isActionLoading}
                 className="w-full text-green-600 border-green-600 hover:bg-green-50 hover:text-green-700 hover:border-green-700"
               >
@@ -73,7 +71,7 @@ export function StatusCard({
             ) : (
               <Button
                 variant="outline"
-                onClick={handleArmMessage}
+                onClick={onArm}
                 disabled={isActionLoading}
                 className="w-full text-destructive border-destructive hover:bg-destructive/10 hover:text-destructive hover:border-destructive/80"
               >

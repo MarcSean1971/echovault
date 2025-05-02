@@ -45,7 +45,18 @@ export async function sendTestNotification(messageId: string) {
     
     if (conditionError) throw conditionError;
     
-    if (!condition || !condition.recipients || condition.recipients.length === 0) {
+    if (!condition || !condition.recipients) {
+      toast({
+        title: "No recipients",
+        description: "Please add recipients to this message first",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const recipients = condition.recipients as any[];
+    
+    if (recipients.length === 0) {
       toast({
         title: "No recipients",
         description: "Please add recipients to this message first",
@@ -66,8 +77,8 @@ export async function sendTestNotification(messageId: string) {
     // Send test email to each recipient
     const { error } = await supabase.functions.invoke("send-test-email", {
       body: {
-        recipientName: condition.recipients[0].name,
-        recipientEmail: condition.recipients[0].email,
+        recipientName: recipients[0].name,
+        recipientEmail: recipients[0].email,
         senderName: "You",
         messageTitle: message?.title || "Your message",
         appName: "EchoVault"
@@ -78,7 +89,7 @@ export async function sendTestNotification(messageId: string) {
     
     toast({
       title: "Test notification sent",
-      description: `Sent to ${condition.recipients[0].email}`,
+      description: `Sent to ${recipients[0].email}`,
     });
     
   } catch (error: any) {

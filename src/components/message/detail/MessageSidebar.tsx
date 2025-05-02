@@ -57,10 +57,12 @@ export function MessageSidebar({
     <div className="lg:col-span-4 lg:space-y-4 hidden lg:block">
       <StatusCard 
         isArmed={isArmed}
-        messageType={message.message_type}
         conditionType={renderConditionType()}
         createdAt={formatDate(message.created_at)}
         isActionLoading={isActionLoading}
+        message={message}
+        onDisarm={handleDisarmMessage}
+        onArm={handleArmMessage}
       />
       
       {recipients && recipients.length > 0 && (
