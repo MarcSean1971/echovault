@@ -26,7 +26,6 @@ export type Recipient = {
 export type TriggerType = 
   | 'no_check_in' 
   | 'regular_check_in' 
-  | 'regular_check_in_recurring' 
   | 'group_confirmation'
   | 'panic_trigger' 
   | 'inactivity_to_recurring'

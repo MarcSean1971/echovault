@@ -38,15 +38,6 @@ export async function createConditionInDb(
 
   const client = await getAuthClient();
   
-  // For regular_check_in_recurring, set up next_message_scheduled
-  let nextMessageScheduled = null;
-  if (conditionType === 'regular_check_in_recurring' && recurringPattern) {
-    const now = new Date();
-    const deadline = new Date(now);
-    deadline.setHours(deadline.getHours() + hoursThreshold);
-    nextMessageScheduled = deadline.toISOString();
-  }
-  
   const { data, error } = await client
     .from("message_conditions")
     .insert({
@@ -66,7 +57,6 @@ export async function createConditionInDb(
       secondary_recurring_pattern: secondaryRecurringPattern || null,
       reminder_hours: reminderHours || null,
       panic_config: panicTriggerConfig || null,
-      next_message_scheduled: nextMessageScheduled,
       active: true
     })
     .select()
@@ -159,10 +149,7 @@ export async function updateConditionsLastChecked(conditionIds: string[], timest
   const { error } = await client
     .from("message_conditions")
     .update({ 
-      last_checked: timestamp,
-      // If this is a recurring_check_in_recurring condition that has already sent messages,
-      // reset next_message_scheduled to be based off the new check-in time
-      next_message_scheduled: null
+      last_checked: timestamp
     })
     .in("id", conditionIds);
     
