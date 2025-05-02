@@ -14,8 +14,9 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { MessageDeliverySettings } from "./MessageDeliverySettings";
 import { MessageRecipientsList } from "./MessageRecipientsList";
 import { Button } from "@/components/ui/button";
-import { Mail } from "lucide-react";
-import { MessageActionFooter } from "./MessageActionFooter";
+import { Edit, Mail, Trash2 } from "lucide-react";
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useNavigate } from "react-router-dom";
 
 interface MessageDetailContentProps {
   message: Message;
@@ -60,6 +61,7 @@ export function MessageDetailContent({
 }: MessageDetailContentProps) {
   // Add state for delete confirmation
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const navigate = useNavigate();
   const transcription = message && message.message_type !== 'text' ? 
     extractTranscription(message.message_type, message.content) : null;
   
@@ -182,20 +184,47 @@ export function MessageDetailContent({
           </Card>
         )}
         
-        {/* Action Footer - Fixed at bottom */}
-        <MessageActionFooter
-          messageId={message.id}
-          isArmed={isArmed}
-          conditionId={conditionId}
-          isActionLoading={isActionLoading}
-          handleArmMessage={handleArmMessage}
-          handleDisarmMessage={handleDisarmMessage}
-          showDeleteConfirm={showDeleteConfirm}
-          setShowDeleteConfirm={setShowDeleteConfirm}
-          handleDelete={handleDelete}
-          onSendTestMessage={onSendTestMessage}
-        />
+        {/* Action Footer - Only essential actions, no duplicates */}
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-sm border-t z-10">
+          <div className="flex gap-2 w-full max-w-3xl mx-auto">
+            <Button
+              variant="outline"
+              onClick={() => navigate(`/message/${message.id}/edit`)}
+              disabled={isArmed || isActionLoading}
+              className="sm:ml-auto"
+            >
+              <Edit className="h-4 w-4 mr-1 sm:mr-2" /> <span className="hidden sm:inline">Edit</span>
+            </Button>
+            
+            <Button
+              variant="outline"
+              onClick={() => setShowDeleteConfirm(true)}
+              disabled={isArmed || isActionLoading}
+              className="text-destructive border-destructive hover:bg-destructive/10"
+            >
+              <Trash2 className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Delete</span>
+            </Button>
+          </div>
+        </div>
       </div>
+      
+      {/* Delete confirmation sheet */}
+      <Sheet open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>Are you sure?</SheetTitle>
+            <SheetDescription>
+              This action cannot be undone. This will permanently delete your message.
+            </SheetDescription>
+          </SheetHeader>
+          <SheetFooter className="flex-row justify-end gap-2 mt-6">
+            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDelete}>Delete</Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
       
       <SendTestMessageDialog 
         open={showSendTestDialog}

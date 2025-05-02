@@ -44,7 +44,7 @@ export default function MessageDetail() {
     if (!conditionId) return;
     
     setIsActionLoading(true);
-    const newDeadline = await handleArmMessage(conditionId, setIsArmed);
+    await handleArmMessage(conditionId, setIsArmed);
     setIsActionLoading(false);
   };
   
@@ -61,7 +61,7 @@ export default function MessageDetail() {
     return <MessageRecipientsList recipients={recipients} />;
   };
 
-  // Modified to open the test message dialog instead of sending directly
+  // Open the test message dialog
   const onSendTestMessage = () => {
     if (!message) return;
     setShowSendTestDialog(true);

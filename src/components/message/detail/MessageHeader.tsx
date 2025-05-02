@@ -37,7 +37,7 @@ export function MessageHeader({
           <h1 className="text-xl font-medium md:text-2xl">Message Details</h1>
         </div>
         
-        {/* Arm/Disarm Button */}
+        {/* Arm/Disarm Button - ONLY SHOWN HERE */}
         <div>
           {isArmed ? (
             <Button
