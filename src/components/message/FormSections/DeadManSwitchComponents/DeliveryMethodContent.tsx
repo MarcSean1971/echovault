@@ -83,6 +83,7 @@ export function DeliveryMethodContent({
       case 'regular_check_in':
         return (
           <TimeThresholdSelector
+            conditionType={conditionType}
             hoursThreshold={hoursThreshold}
             setHoursThreshold={setHoursThreshold}
           />
@@ -142,6 +143,8 @@ export function DeliveryMethodContent({
             setTriggerDate={setTriggerDate}
             recurringPattern={recurringPattern}
             setRecurringPattern={setRecurringPattern}
+            reminderHours={reminderHours}
+            setReminderHours={setReminderHours}
           />
         );
         

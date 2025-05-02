@@ -32,6 +32,9 @@ export function InactivityToDate({
   reminderHours,
   setReminderHours
 }: InactivityToDateProps) {
+  // Calculate total hours for max reminder setting
+  const totalHoursThreshold = hoursThreshold + (minutesThreshold / 60);
+  
   return (
     <div className="space-y-6">
       <div className="space-y-4">
@@ -47,7 +50,7 @@ export function InactivityToDate({
         <ReminderSettings
           reminderHours={reminderHours}
           setReminderHours={setReminderHours}
-          maxHours={hoursThreshold + (minutesThreshold / 60)}
+          maxHours={totalHoursThreshold}
         />
       </div>
       
