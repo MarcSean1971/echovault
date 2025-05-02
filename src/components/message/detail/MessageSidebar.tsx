@@ -22,6 +22,7 @@ interface MessageSidebarProps {
   handleDelete: () => Promise<void>;
   recipients?: any[];
   onSendTestMessage?: () => void;
+  condition?: any;
 }
 
 export function MessageSidebar({
@@ -38,9 +39,16 @@ export function MessageSidebar({
   setShowDeleteConfirm,
   handleDelete,
   recipients = [],
-  onSendTestMessage
+  onSendTestMessage,
+  condition
 }: MessageSidebarProps) {
   const [reminderHistoryOpen, setReminderHistoryOpen] = useState(false);
+  
+  // Get the condition type for checking if reminders are supported
+  const conditionType = condition?.condition_type;
+  
+  // Check if condition supports reminders (not panic_trigger)
+  const supportsReminders = conditionType && conditionType !== 'panic_trigger';
   
   // Handle sending a test message
   const handleSendTest = async () => {
@@ -83,10 +91,11 @@ export function MessageSidebar({
         handleDelete={handleDelete}
         onSendTestMessage={handleSendTest}
         onViewReminderHistory={() => setReminderHistoryOpen(true)}
+        conditionType={conditionType}
       />
       
-      {/* Reminder History Dialog */}
-      {conditionId && (
+      {/* Only render the reminder dialog if condition supports reminders */}
+      {conditionId && supportsReminders && (
         <ReminderHistoryDialog 
           open={reminderHistoryOpen} 
           onOpenChange={setReminderHistoryOpen} 

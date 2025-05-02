@@ -23,6 +23,7 @@ interface MessageDetailsSheetProps {
   handleArmMessage: () => Promise<void>;
   recipients?: any[];
   onSendTestMessage?: () => void;
+  conditionType?: string;
 }
  
 export function MessageDetailsSheet({
@@ -38,10 +39,14 @@ export function MessageDetailsSheet({
   handleDisarmMessage,
   handleArmMessage,
   recipients = [],
-  onSendTestMessage
+  onSendTestMessage,
+  conditionType
 }: MessageDetailsSheetProps) {
   const [reminderHistoryOpen, setReminderHistoryOpen] = useState(false);
   const navigate = useNavigate();
+  
+  // Check if the condition type supports reminders (not panic_trigger)
+  const supportsReminders = conditionType && conditionType !== 'panic_trigger';
   
   return (
     <>
@@ -100,8 +105,8 @@ export function MessageDetailsSheet({
                 </Button>
               )}
               
-              {/* Reminders Button - SECOND */}
-              {conditionId && (
+              {/* Reminders Button - SECOND - Only show for non-panic trigger types */}
+              {conditionId && supportsReminders && (
                 <Button 
                   variant="outline" 
                   className="w-full"
@@ -151,7 +156,8 @@ export function MessageDetailsSheet({
         </SheetContent>
       </Sheet>
       
-      {conditionId && (
+      {/* Only show the dialog if condition supports reminders */}
+      {conditionId && supportsReminders && (
         <ReminderHistoryDialog
           open={reminderHistoryOpen}
           onOpenChange={setReminderHistoryOpen}

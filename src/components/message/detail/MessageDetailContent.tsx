@@ -86,6 +86,7 @@ export function MessageDetailContent({
           handleDelete={handleDelete}
           recipients={recipients}
           onSendTestMessage={onSendTestMessage}
+          condition={condition}
         />
         
         {/* Main message card - Now on the right */}
@@ -131,6 +132,7 @@ export function MessageDetailContent({
           handleArmMessage={handleArmMessage}
           recipients={recipients}
           onSendTestMessage={onSendTestMessage}
+          conditionType={condition?.condition_type}
         />
       )}
       

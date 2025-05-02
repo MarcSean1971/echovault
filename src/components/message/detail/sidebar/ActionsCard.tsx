@@ -31,6 +31,7 @@ interface ActionsCardProps {
   handleDelete: () => Promise<void>;
   onSendTestMessage?: () => void;
   onViewReminderHistory?: () => void;
+  conditionType?: string;
 }
 
 export function ActionsCard({
@@ -44,9 +45,13 @@ export function ActionsCard({
   setShowDeleteConfirm,
   handleDelete,
   onSendTestMessage,
-  onViewReminderHistory
+  onViewReminderHistory,
+  conditionType
 }: ActionsCardProps) {
   const navigate = useNavigate();
+  
+  // Check if the condition type supports reminders (not panic_trigger)
+  const supportsReminders = conditionType && conditionType !== 'panic_trigger';
 
   return (
     <Card>
@@ -78,8 +83,8 @@ export function ActionsCard({
           </Button>
         )}
 
-        {/* Reminders Button - SECOND */}
-        {conditionId && onViewReminderHistory && (
+        {/* Reminders Button - SECOND - Only show for non-panic trigger types */}
+        {conditionId && supportsReminders && onViewReminderHistory && (
           <Button
             variant="outline"
             className="w-full"
