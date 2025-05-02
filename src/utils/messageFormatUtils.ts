@@ -1,4 +1,5 @@
 
+import React from 'react';
 import { MessageSquare, File, Video, Mic } from "lucide-react";
 
 /**
