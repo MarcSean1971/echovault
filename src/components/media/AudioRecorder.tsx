@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
-import { Mic, MicOff, Play, Pause, Stop, Trash2, Check } from "lucide-react";
+import { Mic, MicOff, Play, Pause, Square, Trash2, Check } from "lucide-react";
 
 interface AudioRecorderProps {
   onAudioReady: (audioBlob: Blob, audioBase64: string) => void;
@@ -253,7 +253,7 @@ export function AudioRecorder({ onAudioReady, onCancel }: AudioRecorderProps) {
                     variant="destructive" 
                     onClick={stopRecording}
                   >
-                    <Stop className="w-4 h-4 mr-1" /> Stop
+                    <Square className="w-4 h-4 mr-1" /> Stop
                   </Button>
                 </>
               ) : (
