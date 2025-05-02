@@ -12,10 +12,7 @@ import { MessageActionFooter } from "@/components/message/detail/MessageActionFo
 import { MessageSidebar } from "@/components/message/detail/MessageSidebar";
 import { MobileTimerAlert } from "@/components/message/detail/MobileTimerAlert";
 import { DesktopTimerAlert } from "@/components/message/detail/DesktopTimerAlert";
-import { MessageTypeIcon } from "./MessageTypeIcon";
-import { Card } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { StatusBadge } from "@/components/ui/status-badge";
+import { MessageMainCard } from "@/components/message/detail/MessageMainCard";
 
 interface MessageDetailContentProps {
   message: Message;
@@ -74,61 +71,18 @@ export function MessageDetailContent({
         )}
         
         {/* Main message card */}
-        <div className="col-span-full lg:col-span-8 lg:order-1">
-          <Card className={`${isArmed ? 'border-destructive/30 shadow-md' : ''}`}>
-            <div className="p-4 md:p-6 flex flex-col gap-4">
-              <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <MessageTypeIcon messageType={message.message_type} />
-                    <h1 className="text-xl md:text-2xl font-semibold">{message.title}</h1>
-                  </div>
-                  
-                  {/* Desktop - Last updated */}
-                  <p className="text-xs text-muted-foreground hidden md:block">
-                    {message.updated_at !== message.created_at ? 
-                      `Last updated: ${formatDate(message.updated_at)}` : 
-                      `Created: ${formatDate(message.created_at)}`}
-                  </p>
-                </div>
-                
-                {/* Desktop status badge */}
-                <div className="hidden md:block">
-                  <StatusBadge status={isArmed ? "armed" : "disarmed"}>
-                    {isArmed ? 'Armed' : 'Disarmed'}
-                  </StatusBadge>
-                </div>
-              </div>
-              
-              {/* Desktop - Timer */}
-              {!isMobile && (
-                <DesktopTimerAlert deadline={deadline} isArmed={isArmed} />
-              )}
-              
-              {/* Message tabs */}
-              <Tabs defaultValue="content" className="w-full" onValueChange={setActiveTab}>
-                <TabsList className="mb-4 grid w-full grid-cols-2">
-                  <TabsTrigger value="content">Message</TabsTrigger>
-                  <TabsTrigger value="settings">Delivery</TabsTrigger>
-                </TabsList>
-                
-                <MessageContent message={message} isArmed={isArmed} />
-                <MessageDeliverySettings 
-                  condition={condition} 
-                  renderConditionType={renderConditionType}
-                  formatDate={formatDate}
-                />
-              </Tabs>
-              
-              {/* Mobile - Show metadata toggle */}
-              <MessageMetadata 
-                message={message} 
-                formatDate={formatDate} 
-                renderRecipients={renderRecipients} 
-              />
-            </div>
-          </Card>
-        </div>
+        <MessageMainCard
+          message={message}
+          isArmed={isArmed}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          deadline={deadline}
+          isMobile={isMobile}
+          formatDate={formatDate}
+          renderRecipients={renderRecipients}
+          condition={condition}
+          renderConditionType={renderConditionType}
+        />
         
         {/* Sidebar - Desktop only */}
         <MessageSidebar 
