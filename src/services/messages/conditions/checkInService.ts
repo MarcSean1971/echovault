@@ -2,7 +2,7 @@
 import { getAuthClient } from "@/lib/supabaseClient";
 import { CheckInResult, CheckInDeadlineResult } from "./types";
 import { updateConditionsLastChecked } from "./dbOperations";
-import { MessageCondition } from "@/types/message";
+import { MessageCondition, Recipient } from "@/types/message";
 
 export async function performCheckIn(userId: string, method: string): Promise<CheckInResult> {
   const client = await getAuthClient();
@@ -65,10 +65,6 @@ export async function getNextCheckInDeadline(userId: string): Promise<CheckInDea
         // Convert last_checked to a Date
         const lastChecked = new Date(condition.last_checked);
         
-        // For recurring message types, we need to handle differently
-        // But since we don't have recurring_pattern or last_message_sent fields in the DB schema
-        // We'll stick with the basic calculation for now
-        
         // Add hours_threshold to get the deadline
         const deadline = new Date(lastChecked);
         deadline.setHours(deadline.getHours() + condition.hours_threshold);
@@ -86,21 +82,30 @@ export async function getNextCheckInDeadline(userId: string): Promise<CheckInDea
       earliestDeadline.setHours(earliestDeadline.getHours() + 24);
     }
     
-    // Convert raw data to MessageCondition[] type
-    const conditions: MessageCondition[] = data ? data.map(item => ({
-      id: item.id,
-      message_id: item.message_id,
-      condition_type: item.condition_type as any, // Type casting to avoid strict type checking
-      hours_threshold: item.hours_threshold,
-      created_at: item.created_at,
-      updated_at: item.updated_at,
-      last_checked: item.last_checked,
-      recipients: item.recipients || [],
-      active: item.active,
-      // Add other required fields with defaults
-      triggered: false,
-      delivered: false
-    })) : [];
+    // Convert raw data to MessageCondition[] type with proper handling of recipients
+    const conditions: MessageCondition[] = data ? data.map(item => {
+      // Ensure recipients is properly cast to Recipient[]
+      let recipientsArray: Recipient[] = [];
+      if (Array.isArray(item.recipients)) {
+        recipientsArray = item.recipients as Recipient[];
+      } else if (item.recipients && typeof item.recipients === 'object') {
+        recipientsArray = [item.recipients as unknown as Recipient];
+      }
+      
+      return {
+        id: item.id,
+        message_id: item.message_id,
+        condition_type: item.condition_type as any, // Type casting
+        hours_threshold: item.hours_threshold,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        last_checked: item.last_checked,
+        recipients: recipientsArray,
+        active: item.active,
+        triggered: false,
+        delivered: false
+      };
+    }) : [];
     
     return {
       deadline: earliestDeadline,

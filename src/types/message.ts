@@ -85,7 +85,7 @@ export type MessageCondition = {
 export type CheckIn = {
   id: string;
   user_id: string;
-  timestamp: string;  // Changed from checked_in_at to timestamp based on usage in CheckIns.tsx
+  timestamp: string;
   method: string;
-  device_info?: string; // Add this field as it's used in CheckIns.tsx
+  device_info?: string;
 };
