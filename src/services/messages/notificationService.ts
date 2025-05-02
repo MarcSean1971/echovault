@@ -33,6 +33,8 @@ export async function triggerMessageNotification(messageId: string) {
 
 /**
  * Send a test notification to recipients
+ * This will continue to use the existing function but should be updated
+ * in the future to support multiple selected recipients
  */
 export async function sendTestNotification(messageId: string) {
   try {

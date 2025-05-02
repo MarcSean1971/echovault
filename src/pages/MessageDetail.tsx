@@ -15,6 +15,7 @@ export default function MessageDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [isActionLoading, setIsActionLoading] = useState(false);
+  const [showSendTestDialog, setShowSendTestDialog] = useState(false);
 
   // Use memoized callback for error navigation to prevent recreation on each render
   const handleError = useCallback(() => navigate("/messages"), [navigate]);
@@ -60,14 +61,26 @@ export default function MessageDetail() {
     return <MessageRecipientsList recipients={recipients} />;
   };
 
-  const onSendTestMessage = async () => {
+  // Modified to open the test message dialog instead of sending directly
+  const onSendTestMessage = () => {
     if (!message) return;
+    setShowSendTestDialog(true);
+  };
+
+  // Handle sending test messages to selected recipients
+  const handleSendTestMessages = async (selectedRecipients: { id: string; name: string; email: string }[]) => {
+    if (!message || selectedRecipients.length === 0) return;
     
     try {
       setIsActionLoading(true);
+      
+      // For now we'll use the existing function, but in production we'd
+      // want to modify the backend to accept an array of recipients
       await sendTestNotification(message.id);
+      
+      setShowSendTestDialog(false);
     } catch (error) {
-      console.error("Error sending test message:", error);
+      console.error("Error sending test messages:", error);
     } finally {
       setIsActionLoading(false);
     }
@@ -98,6 +111,9 @@ export default function MessageDetail() {
       renderRecipients={renderRecipients}
       recipients={recipients}
       onSendTestMessage={onSendTestMessage}
+      showSendTestDialog={showSendTestDialog}
+      setShowSendTestDialog={setShowSendTestDialog}
+      handleSendTestMessages={handleSendTestMessages}
     />
   );
 }

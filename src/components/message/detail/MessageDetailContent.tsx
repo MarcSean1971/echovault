@@ -9,6 +9,7 @@ import { MessageActionFooter } from "@/components/message/detail/MessageActionFo
 import { MessageSidebar } from "@/components/message/detail/MessageSidebar";
 import { MobileTimerAlert } from "@/components/message/detail/MobileTimerAlert";
 import { MessageDetailsSheet } from "@/components/message/detail/MessageDetailsSheet";
+import { SendTestMessageDialog } from "@/components/message/detail/SendTestMessageDialog";
 
 interface MessageDetailContentProps {
   message: Message;
@@ -26,6 +27,9 @@ interface MessageDetailContentProps {
   renderRecipients: () => React.ReactNode;
   recipients?: any[];
   onSendTestMessage?: () => void;
+  showSendTestDialog?: boolean;
+  setShowSendTestDialog?: (show: boolean) => void;
+  handleSendTestMessages?: (recipients: any[]) => Promise<void>;
 }
 
 export function MessageDetailContent({
@@ -43,7 +47,10 @@ export function MessageDetailContent({
   renderConditionType,
   renderRecipients,
   recipients = [],
-  onSendTestMessage
+  onSendTestMessage,
+  showSendTestDialog = false,
+  setShowSendTestDialog = () => {},
+  handleSendTestMessages = async () => {}
 }: MessageDetailContentProps) {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -133,6 +140,16 @@ export function MessageDetailContent({
           recipients={recipients}
           onSendTestMessage={onSendTestMessage}
           conditionType={condition?.condition_type}
+        />
+      )}
+
+      {/* Test Message Dialog */}
+      {message && recipients && (
+        <SendTestMessageDialog
+          open={showSendTestDialog}
+          onOpenChange={setShowSendTestDialog}
+          messageTitle={message.title}
+          recipients={recipients}
         />
       )}
       
