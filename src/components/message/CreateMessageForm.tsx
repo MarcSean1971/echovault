@@ -8,14 +8,35 @@ import { UploadProgressDialog } from "./FormSections/UploadProgressDialog";
 import { DeadManSwitch } from "./FormSections/DeadManSwitch";
 import { Separator } from "@/components/ui/separator";
 import { FileText, Users } from "lucide-react";
+import { RecipientSelector } from "./FormSections/RecipientSelector";
 
 interface CreateMessageFormProps {
   onCancel: () => void;
 }
 
 function MessageForm({ onCancel }: CreateMessageFormProps) {
-  const { isLoading, files, showUploadDialog, setShowUploadDialog, uploadProgress } = useMessageForm();
+  const { 
+    isLoading, 
+    files, 
+    showUploadDialog, 
+    setShowUploadDialog, 
+    uploadProgress,
+    selectedRecipients,
+    setSelectedRecipients
+  } = useMessageForm();
+  
   const { handleSubmit, isFormValid } = useFormActions();
+
+  // Create a toggle function for recipients
+  const handleToggleRecipient = (recipientId: string) => {
+    setSelectedRecipients(prev => {
+      if (prev.includes(recipientId)) {
+        return prev.filter(id => id !== recipientId);
+      } else {
+        return [...prev, recipientId];
+      }
+    });
+  };
 
   return (
     <>
@@ -49,11 +70,10 @@ function MessageForm({ onCancel }: CreateMessageFormProps) {
               <div className="space-y-4">
                 <p className="text-muted-foreground">Select who will receive this message if triggered.</p>
                 
-                {/* Placeholder for recipients selection */}
-                <div className="rounded-md border border-dashed p-8 text-center">
-                  <Users className="mx-auto h-8 w-8 text-muted-foreground" />
-                  <p className="mt-2 text-sm text-muted-foreground">Recipients selection coming soon</p>
-                </div>
+                <RecipientSelector 
+                  selectedRecipients={selectedRecipients}
+                  onSelectRecipient={handleToggleRecipient}
+                />
               </div>
             </div>
           </CardContent>

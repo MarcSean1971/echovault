@@ -1,6 +1,6 @@
 
-import { RecipientsSelector } from "../RecipientsSelector";
 import { Recipient } from "@/types/message";
+import { RecipientSelector } from "../RecipientSelector";
 
 interface RecipientsContentProps {
   recipients: Recipient[];
@@ -19,11 +19,9 @@ export function RecipientsContent({
 }: RecipientsContentProps) {
   return (
     <div className="space-y-6">
-      <RecipientsSelector
-        recipients={recipients}
+      <RecipientSelector
         selectedRecipients={selectedRecipients}
         onSelectRecipient={onSelectRecipient}
-        isLoading={isLoading}
       />
       
       <div className="pt-4 flex justify-between">
