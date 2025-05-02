@@ -29,7 +29,16 @@ export function MobileNav({ userImage, initials, isAdmin = false }: MobileNavPro
             </div>
             
             <div className="space-y-1">
-              {isAdmin ? (
+              {/* Always show these navigation links */}
+              <Button variant="ghost" asChild className="justify-start w-full hover:bg-accent/10 transition-colors">
+                <Link to="/messages">Messages</Link>
+              </Button>
+              <Button variant="ghost" asChild className="justify-start w-full hover:bg-accent/10 transition-colors">
+                <Link to="/recipients">Recipients</Link>
+              </Button>
+
+              {/* Admin-specific navigation items */}
+              {isAdmin && (
                 <>
                   <Button 
                     variant="ghost" 
@@ -45,16 +54,7 @@ export function MobileNav({ userImage, initials, isAdmin = false }: MobileNavPro
                     <Link to="/admin/users">Users</Link>
                   </Button>
                   <Button variant="ghost" asChild className="justify-start w-full hover:bg-accent/10 transition-colors">
-                    <Link to="/admin/messages">Messages</Link>
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button variant="ghost" asChild className="justify-start w-full hover:bg-accent/10 transition-colors">
-                    <Link to="/messages">Messages</Link>
-                  </Button>
-                  <Button variant="ghost" asChild className="justify-start w-full hover:bg-accent/10 transition-colors">
-                    <Link to="/recipients">Recipients</Link>
+                    <Link to="/admin/messages">Admin Messages</Link>
                   </Button>
                 </>
               )}

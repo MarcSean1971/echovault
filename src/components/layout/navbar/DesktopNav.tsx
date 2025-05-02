@@ -23,7 +23,30 @@ export function DesktopNav({ userImage, initials, isAdmin = false }: DesktopNavP
       <div className="flex-1">
         <NavigationMenu>
           <NavigationMenuList className="space-x-1">
-            {isAdmin ? (
+            {/* Show consistent navigation items regardless of admin status */}
+            <NavigationMenuItem>
+              <NavigationMenuLink 
+                asChild 
+                className={navigationMenuTriggerStyle() + " nav-link relative transition-all"}
+              >
+                <Link to="/messages">
+                  Messages
+                </Link>
+              </NavigationMenuLink>
+            </NavigationMenuItem>
+            <NavigationMenuItem>
+              <NavigationMenuLink 
+                asChild 
+                className={navigationMenuTriggerStyle() + " nav-link relative transition-all"}
+              >
+                <Link to="/recipients">
+                  Recipients
+                </Link>
+              </NavigationMenuLink>
+            </NavigationMenuItem>
+            
+            {/* Show admin-specific items only for admins */}
+            {isAdmin && (
               <>
                 <NavigationMenuItem>
                   <NavigationMenuLink 
@@ -52,30 +75,7 @@ export function DesktopNav({ userImage, initials, isAdmin = false }: DesktopNavP
                     className={navigationMenuTriggerStyle() + " nav-link relative transition-all"}
                   >
                     <Link to="/admin/messages">
-                      Messages
-                    </Link>
-                  </NavigationMenuLink>
-                </NavigationMenuItem>
-              </>
-            ) : (
-              <>
-                <NavigationMenuItem>
-                  <NavigationMenuLink 
-                    asChild 
-                    className={navigationMenuTriggerStyle() + " nav-link relative transition-all"}
-                  >
-                    <Link to="/messages">
-                      Messages
-                    </Link>
-                  </NavigationMenuLink>
-                </NavigationMenuItem>
-                <NavigationMenuItem>
-                  <NavigationMenuLink 
-                    asChild 
-                    className={navigationMenuTriggerStyle() + " nav-link relative transition-all"}
-                  >
-                    <Link to="/recipients">
-                      Recipients
+                      Admin Messages
                     </Link>
                   </NavigationMenuLink>
                 </NavigationMenuItem>

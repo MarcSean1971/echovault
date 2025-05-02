@@ -48,7 +48,7 @@ export default function Navbar({ isLoggedIn = false }: NavbarProps) {
           </div>
         )}
         
-        {/* Centered "Check In" button for larger screens only */}
+        {/* Centered "Check In" button for larger screens only - shown for all users */}
         {authenticated && !isAdmin && (
           <div className="hidden md:block absolute left-1/2 transform -translate-x-1/2 z-20">
             <Button 
@@ -64,7 +64,7 @@ export default function Navbar({ isLoggedIn = false }: NavbarProps) {
           </div>
         )}
         
-        {/* Admin Button */}
+        {/* Admin Button - shown only for admin users */}
         {authenticated && isAdmin && (
           <div className="hidden md:block absolute left-1/2 transform -translate-x-1/2 z-20">
             <Button
