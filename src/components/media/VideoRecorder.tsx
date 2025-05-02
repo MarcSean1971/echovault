@@ -14,6 +14,7 @@ interface VideoRecorderProps {
 
 export function VideoRecorder({ onVideoReady, onCancel }: VideoRecorderProps) {
   const {
+    // State
     isRecording,
     isPaused,
     isPlaying,
@@ -21,8 +22,12 @@ export function VideoRecorder({ onVideoReady, onCancel }: VideoRecorderProps) {
     videoURL,
     videoBlob,
     isBrowserSupported,
+    
+    // Refs
     videoPreviewRef,
     recordedVideoRef,
+    
+    // Methods
     startRecording,
     pauseRecording,
     resumeRecording,
@@ -34,8 +39,6 @@ export function VideoRecorder({ onVideoReady, onCancel }: VideoRecorderProps) {
   } = useVideoRecorder();
   
   const handleAcceptVideo = async () => {
-    if (!videoBlob) return;
-    
     const result = await handleAccept();
     if (result) {
       onVideoReady(result.videoBlob, result.base64Video);
@@ -43,18 +46,13 @@ export function VideoRecorder({ onVideoReady, onCancel }: VideoRecorderProps) {
   };
   
   if (!isBrowserSupported) {
-    return (
-      <div className="p-4 text-center">
-        <p className="text-destructive mb-4">Your browser doesn't support video recording.</p>
-        <Button onClick={onCancel} variant="outline">Cancel</Button>
-      </div>
-    );
+    return <UnsupportedBrowser onCancel={onCancel} />;
   }
   
   return (
     <div className="p-4 bg-background rounded-lg border">
       <div className="flex flex-col items-center justify-center gap-4">
-        {/* Video preview or playback area */}
+        {/* Video display area */}
         {!videoURL ? (
           <VideoPreview
             videoPreviewRef={videoPreviewRef}
@@ -96,6 +94,20 @@ export function VideoRecorder({ onVideoReady, onCancel }: VideoRecorderProps) {
           Cancel
         </Button>
       </div>
+    </div>
+  );
+}
+
+// Small focused component for unsupported browsers
+function UnsupportedBrowser({ onCancel }: { onCancel: () => void }) {
+  return (
+    <div className="p-4 text-center">
+      <p className="text-destructive mb-4">
+        Your browser doesn't support video recording.
+      </p>
+      <Button onClick={onCancel} variant="outline">
+        Cancel
+      </Button>
     </div>
   );
 }
