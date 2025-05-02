@@ -9,9 +9,6 @@ interface UserProfile {
   first_name: string | null;
   last_name: string | null;
   avatar_url: string | null;
-  backup_email: string | null;
-  whatsapp_number: string | null;
-  backup_contact: string | null;
 }
 
 interface AuthContextType {
