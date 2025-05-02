@@ -9,14 +9,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/use-toast";
 import { Mail } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { RecipientSelector } from "./test-notification/RecipientSelector";
+import { SendingProgress } from "./test-notification/SendingProgress";
 
 interface SendTestMessageDialogProps {
   open: boolean;
@@ -40,24 +38,6 @@ export function SendTestMessageDialog({
   
   // App name constant
   const APP_NAME = "EchoVault";
-
-  // Function to select/deselect all recipients
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedRecipients(recipients.map(r => r.id));
-    } else {
-      setSelectedRecipients([]);
-    }
-  };
-
-  // Function to toggle selection of a single recipient
-  const handleToggleRecipient = (recipientId: string) => {
-    if (selectedRecipients.includes(recipientId)) {
-      setSelectedRecipients(selectedRecipients.filter(id => id !== recipientId));
-    } else {
-      setSelectedRecipients([...selectedRecipients, recipientId]);
-    }
-  };
 
   // Function to send test emails
   const handleSend = async () => {
@@ -165,66 +145,19 @@ export function SendTestMessageDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="select-all" 
-                checked={selectedRecipients.length === recipients.length} 
-                onCheckedChange={handleSelectAll}
-              />
-              <Label htmlFor="select-all" className="font-medium">
-                Select all recipients
-              </Label>
-            </div>
-            
-            <div className="border rounded-md p-3 max-h-48 overflow-y-auto space-y-2">
-              {recipients.map(recipient => (
-                <div key={recipient.id} className="flex items-center space-x-2">
-                  <Checkbox 
-                    id={`recipient-${recipient.id}`} 
-                    checked={selectedRecipients.includes(recipient.id)}
-                    onCheckedChange={() => handleToggleRecipient(recipient.id)}
-                  />
-                  <Label htmlFor={`recipient-${recipient.id}`} className="flex-1">
-                    <span className="font-medium">{recipient.name}</span>
-                    <span className="text-sm text-muted-foreground ml-2">
-                      {recipient.email}
-                    </span>
-                  </Label>
-                </div>
-              ))}
-              {recipients.length === 0 && (
-                <p className="text-sm text-muted-foreground py-2">
-                  No recipients available.
-                </p>
-              )}
-            </div>
-          </div>
+          <RecipientSelector
+            recipients={recipients}
+            selectedRecipients={selectedRecipients}
+            setSelectedRecipients={setSelectedRecipients}
+          />
 
-          {error && (
-            <Alert variant="destructive" className="text-sm">
-              <AlertDescription>
-                {error}
-                {error.includes("domain verification") && (
-                  <p className="mt-1">
-                    During testing, you can only send to your own verified email address. 
-                    To send to other addresses, verify your domain in Resend.
-                  </p>
-                )}
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {hasSendingStarted && (
-            <div className="rounded-md bg-muted p-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">
-                  Progress: {sentCount} of {selectedRecipients.length}
-                </span>
-                {isSending && <Spinner size="sm" />}
-              </div>
-            </div>
-          )}
+          <SendingProgress
+            hasSendingStarted={hasSendingStarted}
+            isSending={isSending}
+            sentCount={sentCount}
+            totalCount={selectedRecipients.length}
+            error={error}
+          />
         </div>
 
         <DialogFooter className="sm:justify-between">
