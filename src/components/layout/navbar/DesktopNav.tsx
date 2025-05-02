@@ -22,11 +22,6 @@ export function DesktopNav({ userImage, initials }: DesktopNavProps) {
         <NavigationMenuList>
           <NavigationMenuItem>
             <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-              <Link to="/dashboard">Dashboard</Link>
-            </NavigationMenuLink>
-          </NavigationMenuItem>
-          <NavigationMenuItem>
-            <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
               <Link to="/messages">Messages</Link>
             </NavigationMenuLink>
           </NavigationMenuItem>

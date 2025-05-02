@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
-import { Settings, LogOut, User, MessageSquare, Users2 } from "lucide-react";
+import { Settings, LogOut, MessageSquare, Users2 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
@@ -56,11 +56,6 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link to="/dashboard" className="flex gap-2 items-center cursor-pointer">
-                <User className="h-4 w-4" /> Profile
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
               <Link to="/create-message" className="flex gap-2 items-center cursor-pointer">
                 <MessageSquare className="h-4 w-4" /> Messages
               </Link>
@@ -108,11 +103,6 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
             </div>
             
             <div className="space-y-1">
-              <Button variant="ghost" asChild className="justify-start w-full">
-                <Link to="/dashboard" className="flex items-center gap-2">
-                  <User className="h-5 w-5" /> Dashboard
-                </Link>
-              </Button>
               <Button variant="ghost" asChild className="justify-start w-full">
                 <Link to="/create-message" className="flex items-center gap-2">
                   <MessageSquare className="h-5 w-5" /> Messages

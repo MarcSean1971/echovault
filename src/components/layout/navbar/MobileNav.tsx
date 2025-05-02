@@ -29,9 +29,6 @@ export function MobileNav({ userImage, initials }: MobileNavProps) {
             
             <div className="space-y-1">
               <Button variant="ghost" asChild className="justify-start w-full">
-                <Link to="/dashboard">Dashboard</Link>
-              </Button>
-              <Button variant="ghost" asChild className="justify-start w-full">
                 <Link to="/create-message">Messages</Link>
               </Button>
               <Button variant="ghost" asChild className="justify-start w-full">
