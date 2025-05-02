@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Shield, Clock, AlertCircle } from "lucide-react";
@@ -106,7 +105,7 @@ export default function CheckIn() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Dead Man's Switch Control</h1>
+        <h1 className="text-3xl font-bold">Trigger Switch Control</h1>
       </div>
 
       {/* Display summary cards from DashboardSummaryCards component */}
