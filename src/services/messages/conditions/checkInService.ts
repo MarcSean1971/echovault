@@ -1,8 +1,7 @@
-
 import { getAuthClient } from "@/lib/supabaseClient";
 import { CheckInResult, CheckInDeadlineResult } from "./types";
 import { updateConditionsLastChecked } from "./dbOperations";
-import { MessageCondition, Recipient } from "@/types/message";
+import { MessageCondition, Recipient, TriggerType } from "@/types/message";
 
 export async function performCheckIn(userId: string, method: string): Promise<CheckInResult> {
   const client = await getAuthClient();

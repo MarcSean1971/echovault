@@ -2,10 +2,8 @@
 import { RadioGroup } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Calendar, Clock, Repeat } from "lucide-react";
-import { RecurringPattern } from "@/types/message";
+import { DeliveryOption, RecurringPattern } from "@/types/message";
 import { RadioCardOption } from "./RadioCardOption";
-
-type DeliveryOption = "once" | "recurring" | "specific_date";
 
 interface NoCheckInDeliveryOptionsProps {
   deliveryOption: DeliveryOption;
