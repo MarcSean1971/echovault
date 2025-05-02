@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { Info, Edit, Trash2 } from "lucide-react";
+import { Info, Edit, Trash2, Bell, BellOff } from "lucide-react";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useNavigate } from "react-router-dom";
 
@@ -33,35 +33,54 @@ export function MessageActionFooter({
   
   return (
     <>
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-card border-t z-10 flex justify-center">
-        <div className="flex gap-2 w-full max-w-md">
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-sm border-t z-10">
+        <div className="flex gap-2 w-full max-w-3xl mx-auto">
+          {isArmed ? (
+            <Button
+              variant="outline"
+              onClick={handleDisarmMessage}
+              disabled={isActionLoading}
+              className="text-green-600 hover:bg-green-50 hover:text-green-700 flex-1 sm:flex-none"
+            >
+              <BellOff className="h-4 w-4 mr-2" /> Disarm
+            </Button>
+          ) : (
+            <Button
+              variant="default"
+              onClick={handleArmMessage}
+              disabled={isActionLoading}
+              className="flex-1 sm:flex-none"
+            >
+              <Bell className="h-4 w-4 mr-2" /> Arm
+            </Button>
+          )}
+          
           <Button
             variant="outline"
             onClick={() => navigate(`/message/${messageId}/edit`)}
-            disabled={isArmed}
-            className="flex-1"
+            disabled={isArmed || isActionLoading}
+            className="sm:ml-auto"
           >
-            <Edit className="h-4 w-4 mr-1" /> Edit
+            <Edit className="h-4 w-4 mr-1 sm:mr-2" /> <span className="hidden sm:inline">Edit</span>
           </Button>
           
           {onSendTestMessage && (
             <Button
               variant="outline"
               onClick={onSendTestMessage}
-              disabled={isActionLoading}
-              className="flex-1"
+              disabled={isArmed || isActionLoading}
             >
-              <Info className="h-4 w-4 mr-1" /> Test
+              <Info className="h-4 w-4 mr-1 sm:mr-2" /> <span className="hidden sm:inline">Test</span>
             </Button>
           )}
           
           <Button
             variant="outline"
             onClick={() => setShowDeleteConfirm(true)}
-            disabled={isArmed}
-            className="text-destructive border-destructive"
+            disabled={isArmed || isActionLoading}
+            className="text-destructive border-destructive hover:bg-destructive/10"
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Delete</span>
           </Button>
         </div>
       </div>

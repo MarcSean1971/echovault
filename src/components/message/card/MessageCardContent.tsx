@@ -21,6 +21,9 @@ export function MessageCardContent({
   transcription
 }: MessageCardContentProps) {
   const hasAttachments = message.attachments && message.attachments.length > 0;
+  // If transcription wasn't passed, try to extract it
+  const messageTranscription = transcription || 
+    (message.message_type !== 'text' ? extractTranscription(message.message_type, message.content) : null);
 
   return (
     <div>
@@ -31,16 +34,16 @@ export function MessageCardContent({
       ) : message.message_type === 'voice' ? (
         <div className="border-l-4 pl-2 border-primary/30">
           <p className="text-muted-foreground italic text-sm">
-            {transcription ? 
-              `"${transcription.slice(0, 120)}${transcription.length > 120 ? '...' : ''}"` : 
+            {messageTranscription ? 
+              `"${messageTranscription.slice(0, 120)}${messageTranscription.length > 120 ? '...' : ''}"` : 
               'Voice message (no transcription available)'}
           </p>
         </div>
       ) : message.message_type === 'video' ? (
         <div className="border-l-4 pl-2 border-primary/30">
           <p className="text-muted-foreground italic text-sm">
-            {transcription ? 
-              `"${transcription.slice(0, 120)}${transcription.length > 120 ? '...' : ''}"` : 
+            {messageTranscription ? 
+              `"${messageTranscription.slice(0, 120)}${messageTranscription.length > 120 ? '...' : ''}"` : 
               'Video message (no transcription available)'}
           </p>
         </div>

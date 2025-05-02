@@ -6,6 +6,7 @@ import { MessageDeliverySettings } from "../MessageDeliverySettings";
 import { Separator } from "@/components/ui/separator";
 import { WhatsAppIntegration } from "./WhatsAppIntegration";
 import { Message } from "@/types/message";
+import { Card } from "@/components/ui/card";
 
 interface MainContentSectionProps {
   message: Message;
@@ -34,7 +35,7 @@ export function MainContentSection({
                                (condition?.panic_config?.methods?.includes('whatsapp'));
 
   return (
-    <div className="bg-white rounded-lg shadow overflow-hidden">
+    <Card className="overflow-hidden">
       <div className="p-6">
         <MessageHeader 
           message={message} 
@@ -78,6 +79,6 @@ export function MainContentSection({
           />
         )}
       </div>
-    </div>
+    </Card>
   );
 }

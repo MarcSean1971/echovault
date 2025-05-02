@@ -19,11 +19,16 @@ export function MessageRecipientsList({ recipients }: MessageRecipientsListProps
   return (
     <div className="space-y-2">
       {recipients.map((recipient) => (
-        <div key={recipient.id} className="flex items-center text-sm">
-          <span className="font-medium">{recipient.name}</span>
-          <span className="text-muted-foreground ml-2 text-xs">
-            ({recipient.email})
-          </span>
+        <div key={recipient.id} className="flex items-center py-2 border-b last:border-0">
+          <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center mr-3">
+            {recipient.name.charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <span className="font-medium block">{recipient.name}</span>
+            <span className="text-muted-foreground text-xs">
+              {recipient.email}
+            </span>
+          </div>
         </div>
       ))}
     </div>
