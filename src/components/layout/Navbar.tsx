@@ -8,16 +8,19 @@ import { Logo } from "./navbar/Logo";
 import { DesktopNav } from "./navbar/DesktopNav";
 import { MobileNav } from "./navbar/MobileNav";
 import { GuestNav } from "./navbar/GuestNav";
+import { isAdminEmail } from "@/utils/adminUtils";
 
 interface NavbarProps {
   isLoggedIn?: boolean;
-  isAdmin?: boolean;
 }
 
-export default function Navbar({ isLoggedIn = false, isAdmin = false }: NavbarProps) {
-  const { isSignedIn, isLoaded, profile, getInitials } = useAuth();
+export default function Navbar({ isLoggedIn = false }: NavbarProps) {
+  const { isSignedIn, isLoaded, profile, getInitials, user } = useAuth();
   const [userImage, setUserImage] = useState<string | null>(null);
   const [initials, setInitials] = useState("U");
+  
+  // Determine if user is an admin
+  const isAdmin = user ? isAdminEmail(user.email) : false;
 
   // Determine user initials and image when user data is loaded
   useEffect(() => {
