@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageFormProvider, useMessageForm } from "./MessageFormContext";
@@ -28,16 +27,16 @@ function MessageForm({ onCancel }: CreateMessageFormProps) {
           </CardHeader>
           <CardContent className="space-y-6">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="flex w-full mb-6 gap-2">
-                <TabsTrigger value="message" className="flex-1 flex items-center justify-center">
+              <TabsList className="mb-6">
+                <TabsTrigger value="message">
                   <FileText className="mr-2 h-4 w-4" />
                   Message Content
                 </TabsTrigger>
-                <TabsTrigger value="trigger" className="flex-1 flex items-center justify-center">
+                <TabsTrigger value="trigger">
                   <Clock className="mr-2 h-4 w-4" />
                   Trigger Settings
                 </TabsTrigger>
-                <TabsTrigger value="recipients" className="flex-1 flex items-center justify-center">
+                <TabsTrigger value="recipients">
                   <Users className="mr-2 h-4 w-4" />
                   Recipients
                 </TabsTrigger>

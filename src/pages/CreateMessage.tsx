@@ -21,12 +21,12 @@ export default function CreateMessage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="flex w-full gap-2">
-          <TabsTrigger value="create" className="flex-1 flex items-center justify-center">
+        <TabsList>
+          <TabsTrigger value="create">
             <PenLine className="mr-2 h-4 w-4" />
             Create New Message
           </TabsTrigger>
-          <TabsTrigger value="dashboard" className="flex-1 flex items-center justify-center">
+          <TabsTrigger value="dashboard">
             <Clock className="mr-2 h-4 w-4" />
             Trigger Dashboard
           </TabsTrigger>

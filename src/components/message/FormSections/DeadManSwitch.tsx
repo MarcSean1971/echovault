@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useMessageForm } from "../MessageFormContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -78,9 +77,9 @@ export function DeadManSwitch({ setActiveTab }: DeadManSwitchProps) {
           </CardHeader>
           <CardContent>
             <Tabs value={securityTab} onValueChange={setSecurityTab}>
-              <TabsList className="flex w-full mb-6 gap-2">
-                <TabsTrigger value="delivery" className="flex-1 flex items-center justify-center">Delivery Method</TabsTrigger>
-                <TabsTrigger value="security" className="flex-1 flex items-center justify-center">Security Options</TabsTrigger>
+              <TabsList className="mb-6">
+                <TabsTrigger value="delivery">Delivery Method</TabsTrigger>
+                <TabsTrigger value="security">Security Options</TabsTrigger>
               </TabsList>
               
               <TabsContent value="delivery">
