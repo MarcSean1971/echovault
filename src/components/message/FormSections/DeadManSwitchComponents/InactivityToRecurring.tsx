@@ -42,15 +42,15 @@ export function InactivityToRecurring({
       <Separator />
       
       <div className="space-y-4">
-        <h3 className="font-medium">Second Phase: Recurring Schedule</h3>
+        <h3 className="font-medium">Second Phase: Recurring Delivery</h3>
         <p className="text-sm text-muted-foreground">
-          After the inactivity period, the message will be sent on this recurring schedule:
+          After the inactivity period, the message will be sent repeatedly on this schedule:
         </p>
         
         <RecurringPatternSelector
           pattern={recurringPattern}
           setPattern={setRecurringPattern}
-          forceEnabled={true}
+          required
         />
       </div>
     </div>

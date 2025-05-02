@@ -5,7 +5,6 @@ import { RecurringPatternSelector } from "./RecurringPatternSelector";
 import { ReminderSettings } from "./ReminderSettings";
 import { RecurringPattern } from "@/types/message";
 import { Separator } from "@/components/ui/separator";
-import { CustomTimeInput } from "./CustomTimeInput";
 
 interface InactivityToDateProps {
   hoursThreshold: number;

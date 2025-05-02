@@ -1,14 +1,15 @@
 
 import { useState } from "react";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Plus, X } from "lucide-react";
 
 interface ReminderSettingsProps {
   reminderHours: number[];
   setReminderHours: (hours: number[]) => void;
-  maxHours?: number; // Made this optional
+  maxHours?: number;
 }
 
 export function ReminderSettings({
@@ -29,11 +30,11 @@ export function ReminderSettings({
       setNewHour("");
     }
   };
-
+  
   const handleRemoveReminder = (hour: number) => {
     setReminderHours(reminderHours.filter(h => h !== hour));
   };
-
+  
   return (
     <div className="space-y-4">
       <div>
@@ -44,21 +45,25 @@ export function ReminderSettings({
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-2 mt-2">
-        {reminderHours.map((hour) => (
-          <div key={hour} className="bg-secondary text-secondary-foreground px-3 py-1 rounded-full flex items-center gap-1">
-            <span>{hour}h</span>
-            <button 
-              type="button" 
-              onClick={() => handleRemoveReminder(hour)}
-              className="text-secondary-foreground/70 hover:text-secondary-foreground"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </div>
-        ))}
-      </div>
-
+      {reminderHours.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {reminderHours.map(hour => (
+            <Badge key={hour} variant="secondary" className="flex items-center gap-1">
+              {hour} {hour === 1 ? 'hour' : 'hours'} before
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-5 w-5 p-0"
+                onClick={() => handleRemoveReminder(hour)}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </Badge>
+          ))}
+        </div>
+      )}
+      
       <div className="flex gap-2">
         <Input
           id="reminder-hours"
@@ -68,8 +73,9 @@ export function ReminderSettings({
           placeholder="Hours before"
           value={newHour}
           onChange={(e) => setNewHour(e.target.value)}
-          className="w-36"
+          className="w-32"
         />
+        
         <Button 
           type="button" 
           variant="outline" 
