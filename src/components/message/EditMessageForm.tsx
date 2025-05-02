@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageFormProvider, useMessageForm } from "./MessageFormContext";
@@ -20,6 +19,7 @@ import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadAttachments } from "@/services/messages/fileService";
 import { Spinner } from "@/components/ui/spinner";
+import { fetchRecipients } from "@/services/messages/recipientService";
 
 interface EditMessageFormProps {
   message: Message;
@@ -114,9 +114,21 @@ function MessageEditForm({ message, onCancel }: EditMessageFormProps) {
             setPinCode(messageCondition.pin_code);
           }
           
+          // Set unlock delay if it exists
+          if (messageCondition.unlock_delay_hours) {
+            setUnlockDelay(messageCondition.unlock_delay_hours);
+          }
+          
+          // Set expiry hours if they exist
+          if (messageCondition.expiry_hours) {
+            setExpiryHours(messageCondition.expiry_hours);
+          }
+          
           // Set delivery option based on condition
           if (messageCondition.recurring_pattern) {
             setDeliveryOption("recurring");
+          } else if (messageCondition.trigger_date) {
+            setDeliveryOption("scheduled");
           } else {
             setDeliveryOption("once");
           }
@@ -126,6 +138,10 @@ function MessageEditForm({ message, onCancel }: EditMessageFormProps) {
             setReminderHours(messageCondition.reminder_hours);
           }
         }
+        
+        // Load all recipients for selection
+        const allRecipients = await fetchRecipients();
+        setRecipients(allRecipients);
       } catch (error) {
         console.error("Error loading message condition:", error);
         toast({
@@ -167,7 +183,10 @@ function MessageEditForm({ message, onCancel }: EditMessageFormProps) {
     try {
       // Upload any new files that haven't been uploaded
       const newFiles = files.filter(f => f.file && !f.isUploaded);
-      let attachmentsToSave = [...(message.attachments || [])];
+      let attachmentsToSave = [...(message.attachments || [])].filter(
+        // Filter out any deleted attachments
+        attachment => files.some(f => f.path === attachment.path)
+      );
       
       if (newFiles.length > 0) {
         setShowUploadDialog(true);
@@ -193,6 +212,21 @@ function MessageEditForm({ message, onCancel }: EditMessageFormProps) {
         
       if (error) throw error;
       
+      // Fetch actual recipient data for the selected recipient IDs
+      let selectedRecipientObjects = [];
+      if (selectedRecipients.length > 0) {
+        const allRecipients = await fetchRecipients();
+        selectedRecipientObjects = allRecipients.filter(recipient => 
+          selectedRecipients.includes(recipient.id)
+        );
+        
+        if (selectedRecipientObjects.length === 0) {
+          throw new Error("No valid recipients found. Please check your recipient selection.");
+        }
+      } else {
+        throw new Error("Please select at least one recipient.");
+      }
+      
       // Handle trigger conditions
       if (existingCondition) {
         // Update existing condition
@@ -204,32 +238,29 @@ function MessageEditForm({ message, onCancel }: EditMessageFormProps) {
           pin_code: pinCode || null,
           trigger_date: triggerDate ? triggerDate.toISOString() : null,
           panic_trigger_config: panicTriggerConfig,
-          reminder_hours: reminderHours
+          reminder_hours: reminderHours,
+          unlock_delay_hours: unlockDelay,
+          expiry_hours: expiryHours,
+          recipients: selectedRecipientObjects
         });
       } else {
-        // Create new condition if recipients are selected
-        if (selectedRecipients.length > 0) {
-          // Convert selected recipient IDs to full recipient objects
-          const selectedRecipientObjects = recipients
-            .filter(r => selectedRecipients.includes(r.id));
-            
-          await createMessageCondition(
-            message.id,
-            conditionType,
-            {
-              hoursThreshold,
-              minutesThreshold,
-              recurringPattern,
-              triggerDate: triggerDate ? triggerDate.toISOString() : null,
-              recipients: selectedRecipientObjects,
-              pinCode,
-              unlockDelayHours: unlockDelay,
-              expiryHours,
-              panicTriggerConfig,
-              reminderHours
-            }
-          );
-        }
+        // Create new condition
+        await createMessageCondition(
+          message.id,
+          conditionType,
+          {
+            hoursThreshold,
+            minutesThreshold,
+            recurringPattern,
+            triggerDate: triggerDate ? triggerDate.toISOString() : undefined,
+            recipients: selectedRecipientObjects,
+            pinCode,
+            unlockDelayHours: unlockDelay,
+            expiryHours,
+            panicTriggerConfig,
+            reminderHours
+          }
+        );
       }
       
       toast({
@@ -262,7 +293,7 @@ function MessageEditForm({ message, onCancel }: EditMessageFormProps) {
 
   const isFormValid = title.trim() !== "" && 
     (messageType !== "text" || content.trim() !== "") &&
-    (!existingCondition || selectedRecipients.length > 0);
+    selectedRecipients.length > 0;
 
   if (initialLoading) {
     return (

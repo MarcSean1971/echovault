@@ -4,25 +4,19 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/components/ui/use-toast";
 import { createMessage } from "@/services/messages";
 import { createMessageCondition } from "@/services/messages/conditionService";
-import { useMessageForm } from "@/components/message/MessageFormContext";
-import { useFormValidation } from "./useFormValidation";
+import { useMessageForm } from "./MessageFormContext";
 import { simulateUploadProgress } from "@/utils/uploadProgress";
 import { fetchRecipients } from "@/services/messages/recipientService";
 
-export function useFormSubmission() {
+export function useFormActions() {
   const navigate = useNavigate();
   const { userId } = useAuth();
-  const { isFormValid } = useFormValidation();
   
   const {
     title,
-    setTitle,
     content,
-    setContent,
     messageType,
-    setMessageType,
     files,
-    setFiles,
     setIsLoading,
     setShowUploadDialog,
     setUploadProgress,
@@ -40,13 +34,19 @@ export function useFormSubmission() {
     reminderHours
   } = useMessageForm();
 
+  // Check if the form has valid required inputs
+  const isFormValid = 
+    title.trim() !== "" && 
+    (messageType !== "text" || content.trim() !== "") &&
+    selectedRecipients.length > 0;
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     
     if (!isFormValid) {
       toast({
         title: "Please check your inputs",
-        description: "Message title and content are required.",
+        description: "Message title, content, and at least one recipient are required.",
         variant: "destructive"
       });
       return;
@@ -83,20 +83,14 @@ export function useFormSubmission() {
             recipients = allRecipients.filter(recipient => 
               selectedRecipients.includes(recipient.id)
             );
+            
+            if (recipients.length === 0) {
+              throw new Error("No valid recipients found. Please check your recipient selection.");
+            }
+          } else {
+            throw new Error("Please select at least one recipient.");
           }
           
-          if (recipients.length === 0) {
-            toast({
-              title: "No recipients selected",
-              description: "Please select at least one recipient for your message",
-              variant: "destructive"
-            });
-            setIsLoading(false);
-            setShowUploadDialog(false);
-            return;
-          }
-          
-          // Create the message condition with all options
           await createMessageCondition(
             message.id,
             conditionType,
