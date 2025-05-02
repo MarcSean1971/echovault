@@ -8,7 +8,7 @@ import {
   CardContent,
   CardFooter,
 } from "@/components/ui/card";
-import { MessageSquare, File, Video, ArrowRight, Paperclip, Clock, BellOff, Bell } from "lucide-react";
+import { MessageSquare, File, Video, ArrowRight, Paperclip, Clock, BellOff, Bell, Mic } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Message, MessageCondition } from "@/types/message";
 import { useState, useEffect } from "react";
@@ -32,7 +32,7 @@ export const getMessageIcon = (type: string) => {
     case 'text':
       return <MessageSquare className="h-5 w-5" />;
     case 'voice':
-      return <File className="h-5 w-5" />;
+      return <Mic className="h-5 w-5" />;
     case 'video':
       return <Video className="h-5 w-5" />;
     default:
@@ -57,6 +57,7 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [deadline, setDeadline] = useState<Date | null>(null);
   const [condition, setCondition] = useState<MessageCondition | null>(null);
+  const [transcription, setTranscription] = useState<string | null>(null);
   
   // Load message condition status
   useEffect(() => {
@@ -81,6 +82,21 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
     
     loadConditionStatus();
   }, [message.id]);
+  
+  // Try to extract transcription from content for voice/video messages
+  useEffect(() => {
+    if (message.message_type !== 'text' && message.content) {
+      try {
+        const contentObj = JSON.parse(message.content);
+        if (contentObj.transcription) {
+          setTranscription(contentObj.transcription);
+        }
+      } catch (e) {
+        // Not JSON or no transcription field, use content as is
+        setTranscription(message.content);
+      }
+    }
+  }, [message]);
   
   const handleArmMessage = async () => {
     if (!condition) return;
@@ -162,9 +178,25 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
           <p className="line-clamp-3">
             {message.content || "No content"}
           </p>
+        ) : message.message_type === 'voice' ? (
+          <div className="border-l-4 pl-2 border-primary/30">
+            <p className="text-muted-foreground italic text-sm">
+              {transcription ? 
+                `"${transcription.slice(0, 120)}${transcription.length > 120 ? '...' : ''}"` : 
+                'Voice message (no transcription available)'}
+            </p>
+          </div>
+        ) : message.message_type === 'video' ? (
+          <div className="border-l-4 pl-2 border-primary/30">
+            <p className="text-muted-foreground italic text-sm">
+              {transcription ? 
+                `"${transcription.slice(0, 120)}${transcription.length > 120 ? '...' : ''}"` : 
+                'Video message (no transcription available)'}
+            </p>
+          </div>
         ) : (
           <p className="text-muted-foreground italic">
-            {message.message_type === 'voice' ? 'Voice message' : 'Video message'}
+            Unknown message type
           </p>
         )}
         

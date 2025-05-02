@@ -24,3 +24,9 @@ enabled = true
 [functions]
 [functions.send-test-email]
 verify_jwt = true
+
+[functions.transcribe-audio]
+verify_jwt = true
+
+[functions.process-video]
+verify_jwt = true

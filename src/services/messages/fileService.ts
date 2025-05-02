@@ -2,6 +2,56 @@
 import { getAuthClient } from "@/lib/supabaseClient";
 import { FileAttachment } from "@/components/FileUploader";
 
+// Use a consistent bucket name
+const BUCKET_NAME = 'message-attachments';
+
+/**
+ * Checks if a storage bucket exists
+ * 
+ * @param bucketName The name of the bucket to check
+ * @returns Boolean indicating if the bucket exists
+ */
+export async function doesBucketExist(bucketName: string) {
+  try {
+    const client = await getAuthClient();
+    const { data, error } = await client.storage.getBucket(bucketName);
+    
+    if (error) {
+      console.error(`Error checking bucket ${bucketName}:`, error);
+      return false;
+    }
+    
+    return !!data;
+  } catch (error) {
+    console.error(`Error checking bucket ${bucketName}:`, error);
+    return false;
+  }
+}
+
+/**
+ * Gets the appropriate bucket name to use
+ * This is a temporary function to handle both bucket name formats
+ * 
+ * @returns The available bucket name
+ */
+export async function getAvailableBucketName() {
+  // Check if the preferred bucket exists
+  const preferredBucketExists = await doesBucketExist(BUCKET_NAME);
+  if (preferredBucketExists) {
+    return BUCKET_NAME;
+  }
+  
+  // Check if alternative bucket name exists (with underscore)
+  const alternativeBucketName = BUCKET_NAME.replace('-', '_');
+  const alternativeBucketExists = await doesBucketExist(alternativeBucketName);
+  if (alternativeBucketExists) {
+    return alternativeBucketName;
+  }
+  
+  // If neither exists, return preferred bucket name and it will be created on demand
+  return BUCKET_NAME;
+}
+
 /**
  * Uploads files to Supabase storage
  * 
@@ -11,7 +61,21 @@ import { FileAttachment } from "@/components/FileUploader";
  */
 export async function uploadAttachments(userId: string, files: FileAttachment[]) {
   const client = await getAuthClient();
-  const bucket = "message-attachments";
+  const bucket = await getAvailableBucketName();
+  
+  // Ensure the bucket exists before trying to upload
+  try {
+    const { data, error } = await client.storage.getBucket(bucket);
+    if (error && error.message.includes('not found')) {
+      // Create the bucket if it doesn't exist
+      await client.storage.createBucket(bucket, {
+        public: false
+      });
+    }
+  } catch (error) {
+    console.warn("Error checking or creating bucket:", error);
+    // Continue anyway and let the upload handle any errors
+  }
 
   // Create an array to store attachment data
   const attachmentData = [];
@@ -67,7 +131,7 @@ export async function uploadAttachments(userId: string, files: FileAttachment[])
  */
 export async function getFileUrl(path: string) {
   const client = await getAuthClient();
-  const bucket = "message-attachments";
+  const bucket = await getAvailableBucketName();
   
   const { data } = client.storage
     .from(bucket)
