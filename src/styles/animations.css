@@ -1,0 +1,98 @@
+
+/* Base animations */
+.animate-fade-in {
+  animation: fadeIn 0.6s ease-out forwards;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.5s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Staggered animations */
+.stagger-1 { animation-delay: 0.1s; }
+.stagger-2 { animation-delay: 0.2s; }
+.stagger-3 { animation-delay: 0.3s; }
+.stagger-4 { animation-delay: 0.4s; }
+
+/* Header specific animations */
+.nav-item-hover {
+  @apply transition-all duration-200;
+}
+
+.nav-item-hover:hover {
+  @apply transform scale-105;
+}
+
+.menu-item-transition {
+  @apply transition-all duration-150 ease-in-out;
+}
+
+.menu-item-transition:hover {
+  @apply bg-accent/10;
+}
+
+/* Navigation hover styles */
+.navigation-link-underline {
+  @apply relative inline-block;
+}
+
+.navigation-link-underline::after {
+  content: '';
+  @apply absolute bottom-0 left-0 w-0 h-0.5 bg-gray-800 dark:bg-gray-200 transition-all duration-300;
+}
+
+.navigation-link-underline:hover::after {
+  @apply w-full;
+}
+
+/* Pulse animation for Check In button */
+@keyframes pulse-light {
+  0%, 100% {
+    box-shadow: 0 0 0 rgba(155, 135, 245, 0);
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(155, 135, 245, 0.6);
+  }
+}
+
+.animate-pulse-light {
+  animation: pulse-light 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  z-index: 10; /* Ensure button appears above other elements */
+}
+
+.pulse-subtle {
+  position: relative;
+  overflow: hidden;
+}
+
+.pulse-subtle::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 0 0 rgba(155, 135, 245, 0.7);
+  animation: pulse-light 2s infinite;
+}
