@@ -20,25 +20,27 @@ const handler = async (req: Request): Promise<Response> => {
     const requestData: MessageNotificationRequest = await req.json().catch(() => ({}));
     const { messageId, isEmergency = false, debug = false } = requestData;
     
-    if (debug) {
-      console.log(`DEBUG MODE: Processing message notifications${messageId ? ` for message ID: ${messageId}` : ''}${isEmergency ? ' (EMERGENCY NOTIFICATION)' : ''}`);
-    } else {
-      console.log(`Processing message notifications${messageId ? ` for message ID: ${messageId}` : ''}${isEmergency ? ' (EMERGENCY NOTIFICATION)' : ''}`);
-    }
-
+    console.log(`===== SEND MESSAGE NOTIFICATIONS =====`);
+    console.log(`Starting notification process at ${new Date().toISOString()}`);
+    console.log(`DEBUG MODE: ${debug ? 'Enabled' : 'Disabled'}`);
+    console.log(`Processing message notifications${messageId ? ` for message ID: ${messageId}` : ''}`);
+    console.log(`Is emergency notification: ${isEmergency ? 'YES' : 'No'}`);
+    
     // Get messages that need notification
     const messagesToNotify = await getMessagesToNotify(messageId);
     console.log(`Found ${messagesToNotify.length} messages to notify`);
     
     if (messagesToNotify.length === 0) {
-      console.error("No messages found to notify!");
+      console.log("No messages found to notify! Check the active status and other parameters.");
       if (messageId) {
-        console.error(`Requested message ID ${messageId} not found or not eligible for notification`);
+        console.log(`Requested message ID ${messageId} not found or not eligible for notification`);
       }
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: "No messages found to notify" 
+          error: "No messages found to notify",
+          requestedMessageId: messageId || null,
+          timestamp: new Date().toISOString()
         }),
         {
           status: 404,
@@ -55,7 +57,7 @@ const handler = async (req: Request): Promise<Response> => {
       messagesToNotify.map(message => 
         sendMessageNotification(message, {
           isEmergency,
-          debug
+          debug: debug || isEmergency // Always enable debug mode for emergency messages
         })
       )
     );
@@ -64,17 +66,20 @@ const handler = async (req: Request): Promise<Response> => {
     const successful = results.filter(r => r.success).length;
     const failed = results.filter(r => !r.success).length;
     
-    // Log detailed results if debug mode
-    if (debug || isEmergency) {
-      console.log("Notification results:", JSON.stringify(results, null, 2));
-    }
+    // Log detailed results
+    console.log(`===== NOTIFICATION RESULTS =====`);
+    console.log(`Success: ${successful}, Failed: ${failed}`);
+    console.log("Detailed results:", JSON.stringify(results, null, 2));
+    console.log(`===== END NOTIFICATION PROCESS =====`);
 
     return new Response(
       JSON.stringify({ 
-        success: true, 
+        success: successful > 0, 
         messages_processed: messagesToNotify.length,
         successful_notifications: successful,
-        failed_notifications: failed
+        failed_notifications: failed,
+        results: results,
+        timestamp: new Date().toISOString()
       }),
       {
         status: 200,
@@ -89,7 +94,9 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message || "Unknown error occurred"
+        error: error.message || "Unknown error occurred",
+        stack: error.stack || "No stack trace available",
+        timestamp: new Date().toISOString()
       }),
       {
         status: 500,

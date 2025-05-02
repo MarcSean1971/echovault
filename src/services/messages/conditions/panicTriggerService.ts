@@ -37,7 +37,7 @@ export async function triggerPanicMessage(userId: string, messageId: string): Pr
     // First, get the message condition to check its configuration
     const { data: condition, error: conditionError } = await supabase
       .from("message_conditions")
-      .select("id, panic_config")
+      .select("id, panic_config, panic_trigger_config")
       .eq("message_id", messageId)
       .eq("condition_type", "panic_trigger")
       .eq("active", true)
@@ -55,14 +55,20 @@ export async function triggerPanicMessage(userId: string, messageId: string): Pr
 
     console.log("Retrieved condition:", JSON.stringify(condition, null, 2));
 
-    // Extract the keepArmed setting from panic_config
-    // Fix the type issue by proper type checking
+    // Extract the keepArmed setting from either panic_trigger_config or panic_config
     let keepArmed = false;
-    if (condition.panic_config && typeof condition.panic_config === 'object') {
+    
+    // First check panic_trigger_config
+    if (condition.panic_trigger_config && typeof condition.panic_trigger_config === 'object') {
+      keepArmed = Boolean(condition.panic_trigger_config.keep_armed);
+      console.log(`Keep armed setting from panic_trigger_config: ${keepArmed}`);
+    } 
+    // Fall back to panic_config if panic_trigger_config is not available or doesn't have keep_armed
+    else if (condition.panic_config && typeof condition.panic_config === 'object') {
       keepArmed = Boolean((condition.panic_config as Record<string, unknown>)?.keep_armed);
-      console.log(`Keep armed setting: ${keepArmed}`);
+      console.log(`Keep armed setting from panic_config: ${keepArmed}`);
     } else {
-      console.warn("No panic_config found or invalid format");
+      console.warn("No panic_config or panic_trigger_config found or invalid format");
     }
 
     console.log("Invoking edge function to send notifications");

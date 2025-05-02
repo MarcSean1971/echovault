@@ -1,4 +1,3 @@
-
 import { Resend } from "npm:resend@2.0.0";
 import { EmailTemplateData } from "./types.ts";
 
@@ -27,9 +26,15 @@ export async function sendEmailToRecipient(
   console.log(`Is emergency: ${data.isEmergency ? 'yes' : 'no'}`);
   
   try {
+    console.log("Sending email with Resend using API key:", resendApiKey ? "API key is set" : "API key is NOT set");
+    
+    if (!resendApiKey) {
+      throw new Error("RESEND_API_KEY is not set in environment variables");
+    }
+    
     // Send the email using Resend
     const emailResponse = await resend.emails.send({
-      from: `EchoVault <noreply@resend.dev>`,
+      from: `EchoVault <notifications@echovault.org>`,
       to: [recipientEmail],
       subject: subject,
       html: template,
@@ -42,7 +47,7 @@ export async function sendEmailToRecipient(
     });
     
     if (emailResponse.error) {
-      console.error("Error sending email:", emailResponse.error);
+      console.error("Error sending email through Resend:", emailResponse.error);
       throw new Error(`Failed to send email: ${emailResponse.error.message}`);
     }
     

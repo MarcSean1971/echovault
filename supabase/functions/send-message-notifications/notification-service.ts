@@ -1,3 +1,4 @@
+
 import {
   trackMessageNotification,
   recordMessageDelivery,
@@ -30,6 +31,9 @@ export async function sendMessageNotification(
       console.log(`Processing message notification for message ${message.id}`);
       console.log(`Message condition type: ${condition.condition_type}`);
       console.log(`Is emergency flag: ${isEmergency}`);
+      console.log(`Message title: "${message.title}"`);
+      console.log(`Number of recipients: ${condition.recipients.length}`);
+      console.log(`User ID: ${message.user_id}`);
       console.log(`Condition data:`, JSON.stringify(condition, null, 2));
     }
     
@@ -59,7 +63,13 @@ export async function sendMessageNotification(
     const baseUrl = "https://onwthrpgcnfydxzzmyot.supabase.co/functions/v1";
     
     // Track the notifications in the database
-    await trackMessageNotification(message.id, condition.id);
+    try {
+      await trackMessageNotification(message.id, condition.id);
+      if (debug) console.log(`Successfully tracked notification for message ${message.id}`);
+    } catch (trackError) {
+      console.error(`Error tracking message notification: ${trackError}`);
+      // Continue despite tracking error - don't block email sending
+    }
     
     // For emergency messages, attempt multiple deliveries with retry
     const maxRetries = isEmergencyMessage ? 3 : 1;
@@ -76,6 +86,8 @@ export async function sendMessageNotification(
       
       // Create secure access URL with delivery tracking
       const secureAccessUrl = `${baseUrl}/${message.id}?recipient=${encodeURIComponent(recipient.email)}&delivery=${deliveryId}`;
+      
+      if (debug) console.log(`Access URL for ${recipient.email}: ${secureAccessUrl}`);
       
       // Prepare common email data
       const emailData = {
@@ -132,6 +144,16 @@ export async function sendMessageNotification(
       };
     }));
     
+    const anySuccessful = recipientResults.some(r => r.success);
+    const allFailed = recipientResults.every(r => !r.success);
+    
+    if (debug) {
+      console.log(`Email sending summary: ${recipientResults.filter(r => r.success).length}/${recipientResults.length} successful`);
+      if (allFailed) {
+        console.error("ALL EMAIL DELIVERIES FAILED. Check logs for details.");
+      }
+    }
+    
     // Only mark the condition as inactive if it's not a recurring trigger or special case
     if (condition.condition_type !== 'recurring_check_in') {
       // For panic triggers, we need to check if keep_armed is true
@@ -158,13 +180,15 @@ export async function sendMessageNotification(
         }
       } else {
         // For all other non-recurring conditions, mark as inactive after delivery
+        if (debug) console.log(`Deactivating non-recurring condition ${condition.id} after delivery`);
         await updateConditionStatus(condition.id, false);
       }
     }
     
     return { 
-      success: recipientResults.some(r => r.success), 
-      details: recipientResults 
+      success: anySuccessful, 
+      details: recipientResults,
+      error: allFailed ? "All email deliveries failed" : undefined
     };
   } catch (error: any) {
     console.error(`Error notifying recipients for message ${message.id}:`, error);
