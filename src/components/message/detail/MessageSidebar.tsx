@@ -69,6 +69,7 @@ export function MessageSidebar({
         createdAt={formatDate(message.created_at)}
         isActionLoading={isActionLoading}
         message={message}
+        formatDate={formatDate}
       />
       
       {recipients && recipients.length > 0 && (

@@ -13,6 +13,7 @@ interface StatusCardProps {
   onDisarm?: () => Promise<void>;
   onArm?: () => Promise<void>;
   message?: Message;
+  formatDate?: (dateString: string) => string;
 }
 
 export function StatusCard({
@@ -23,7 +24,8 @@ export function StatusCard({
   isActionLoading,
   onDisarm,
   onArm,
-  message
+  message,
+  formatDate
 }: StatusCardProps) {
   return (
     <Card>
@@ -44,7 +46,7 @@ export function StatusCard({
             <div className="flex items-center text-sm">
               <CalendarDays className="h-4 w-4 mr-2 text-muted-foreground" />
               <span className="font-medium mr-1">Updated:</span> 
-              {message.updated_at}
+              {formatDate ? formatDate(message.updated_at) : message.updated_at}
             </div>
           )}
           
