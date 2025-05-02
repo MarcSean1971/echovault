@@ -2,7 +2,7 @@
 import { UserMenu } from "./UserMenu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Menu, ShieldAlert } from "lucide-react";
+import { Menu } from "lucide-react";
 import { Link } from "react-router-dom";
 
 interface MobileNavProps {
@@ -36,28 +36,6 @@ export function MobileNav({ userImage, initials, isAdmin = false }: MobileNavPro
               <Button variant="ghost" asChild className="justify-start w-full hover:bg-accent/10 transition-colors">
                 <Link to="/recipients">Recipients</Link>
               </Button>
-
-              {/* Admin-specific navigation items */}
-              {isAdmin && (
-                <>
-                  <Button 
-                    variant="ghost" 
-                    asChild 
-                    className="justify-start w-full text-destructive hover:bg-accent/10 transition-colors"
-                  >
-                    <Link to="/admin" className="flex items-center gap-2">
-                      <ShieldAlert className="h-4 w-4" />
-                      Admin Dashboard
-                    </Link>
-                  </Button>
-                  <Button variant="ghost" asChild className="justify-start w-full hover:bg-accent/10 transition-colors">
-                    <Link to="/admin/users">Users</Link>
-                  </Button>
-                  <Button variant="ghost" asChild className="justify-start w-full hover:bg-accent/10 transition-colors">
-                    <Link to="/admin/messages">Admin Messages</Link>
-                  </Button>
-                </>
-              )}
             </div>
             
             <div className="mt-auto space-y-3">

@@ -8,7 +8,6 @@ import {
   NavigationMenuList,
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
-import { ShieldAlert } from "lucide-react";
 
 interface DesktopNavProps {
   userImage: string | null;
@@ -44,43 +43,6 @@ export function DesktopNav({ userImage, initials, isAdmin = false }: DesktopNavP
                 </Link>
               </NavigationMenuLink>
             </NavigationMenuItem>
-            
-            {/* Show admin-specific items only for admins */}
-            {isAdmin && (
-              <>
-                <NavigationMenuItem>
-                  <NavigationMenuLink 
-                    asChild 
-                    className={navigationMenuTriggerStyle() + " nav-link relative transition-all"}
-                  >
-                    <Link to="/admin" className="flex items-center gap-1">
-                      <ShieldAlert className="h-4 w-4 text-destructive" />
-                      Admin
-                    </Link>
-                  </NavigationMenuLink>
-                </NavigationMenuItem>
-                <NavigationMenuItem>
-                  <NavigationMenuLink 
-                    asChild 
-                    className={navigationMenuTriggerStyle() + " nav-link relative transition-all"}
-                  >
-                    <Link to="/admin/users">
-                      Users
-                    </Link>
-                  </NavigationMenuLink>
-                </NavigationMenuItem>
-                <NavigationMenuItem>
-                  <NavigationMenuLink 
-                    asChild 
-                    className={navigationMenuTriggerStyle() + " nav-link relative transition-all"}
-                  >
-                    <Link to="/admin/messages">
-                      Admin Messages
-                    </Link>
-                  </NavigationMenuLink>
-                </NavigationMenuItem>
-              </>
-            )}
           </NavigationMenuList>
         </NavigationMenu>
       </div>

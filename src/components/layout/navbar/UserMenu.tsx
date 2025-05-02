@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LogOut, User, ShieldAlert } from "lucide-react";
+import { LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface UserMenuProps {
@@ -23,7 +23,7 @@ export function UserMenu({ userImage, initials, isAdmin = false }: UserMenuProps
             {userImage ? (
               <AvatarImage src={userImage} alt="Profile picture" />
             ) : null}
-            <AvatarFallback className={`${isAdmin ? 'bg-destructive/10 text-destructive' : ''}`}>
+            <AvatarFallback>
               {initials}
             </AvatarFallback>
           </Avatar>
@@ -32,13 +32,8 @@ export function UserMenu({ userImage, initials, isAdmin = false }: UserMenuProps
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel>
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">
-              {isAdmin && <span className="inline-flex items-center gap-1 text-destructive">
-                <ShieldAlert className="h-3 w-3" /> Admin
-              </span>}
-            </p>
             <p className="text-xs leading-none text-muted-foreground">
-              {isAdmin ? "Administrator Account" : "User Account"}
+              User Account
             </p>
           </div>
         </DropdownMenuLabel>
@@ -50,14 +45,6 @@ export function UserMenu({ userImage, initials, isAdmin = false }: UserMenuProps
               <span>Profile</span>
             </Link>
           </DropdownMenuItem>
-          {isAdmin && (
-            <DropdownMenuItem asChild>
-              <Link to="/admin" className="w-full cursor-pointer text-destructive">
-                <ShieldAlert className="mr-2 h-4 w-4" />
-                <span>Admin Dashboard</span>
-              </Link>
-            </DropdownMenuItem>
-          )}
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={signOut} className="cursor-pointer">
