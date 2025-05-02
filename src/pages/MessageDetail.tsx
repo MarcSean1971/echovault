@@ -9,6 +9,7 @@ import { formatDate, getConditionType } from "@/utils/messageHelpers";
 import { useMessageDetail } from "@/hooks/useMessageDetail";
 import { deleteMessage, handleArmMessage, handleDisarmMessage } from "@/services/messages/messageDetailService";
 import { MessageRecipientsList } from "@/components/message/detail/MessageRecipientsList";
+import { sendTestNotification } from "@/services/messages/notificationService";
 
 export default function MessageDetail() {
   const { id } = useParams<{ id: string }>();
@@ -59,12 +60,17 @@ export default function MessageDetail() {
     return <MessageRecipientsList recipients={recipients} />;
   };
 
-  const onSendTestMessage = () => {
+  const onSendTestMessage = async () => {
     if (!message) return;
-    toast({
-      title: "Feature in development",
-      description: "The test message feature is currently being implemented."
-    });
+    
+    try {
+      setIsActionLoading(true);
+      await sendTestNotification(message.id);
+    } catch (error) {
+      console.error("Error sending test message:", error);
+    } finally {
+      setIsActionLoading(false);
+    }
   };
 
   if (isLoading) {

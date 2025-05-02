@@ -1,10 +1,13 @@
 
-import { useState } from "react";
-import { Message } from "@/types/message";
-import { SendTestMessageDialog } from "./SendTestMessageDialog";
 import { StatusCard } from "./sidebar/StatusCard";
 import { RecipientsCard } from "./sidebar/RecipientsCard";
 import { ActionsCard } from "./sidebar/ActionsCard";
+import { ReminderHistoryDialog } from "./ReminderHistoryDialog";
+import { useState } from "react";
+import { MessageTypeIcon } from "./MessageTypeIcon";
+import { Clock } from "lucide-react";
+import { Message } from "@/types/message";
+import { sendTestNotification } from "@/services/messages/notificationService";
 
 interface MessageSidebarProps {
   message: Message;
@@ -17,9 +20,9 @@ interface MessageSidebarProps {
   handleDisarmMessage: () => Promise<void>;
   handleArmMessage: () => Promise<void>;
   showDeleteConfirm: boolean;
-  setShowDeleteConfirm: (show: boolean) => void;
+  setShowDeleteConfirm: (value: boolean) => void;
   handleDelete: () => Promise<void>;
-  recipients?: { id: string; name: string; email: string }[];
+  recipients?: any[];
   onSendTestMessage?: () => void;
 }
 
@@ -37,57 +40,61 @@ export function MessageSidebar({
   setShowDeleteConfirm,
   handleDelete,
   recipients = [],
-  onSendTestMessage = () => {}
+  onSendTestMessage
 }: MessageSidebarProps) {
-  const [showTestMessageDialog, setShowTestMessageDialog] = useState(false);
-
-  const handleSendTestMessage = () => {
+  const [reminderHistoryOpen, setReminderHistoryOpen] = useState(false);
+  
+  // Handle sending a test message
+  const handleSendTest = async () => {
     if (onSendTestMessage) {
       onSendTestMessage();
     } else {
-      setShowTestMessageDialog(true);
+      await sendTestNotification(message.id);
     }
   };
-
+  
   return (
-    <div className="col-span-full lg:col-span-4 lg:order-2 space-y-4">
-      {/* Status Card */}
+    <div className="lg:col-span-4 lg:space-y-4 hidden lg:block">
       <StatusCard 
         isArmed={isArmed}
-        message={message}
-        conditionId={conditionId}
+        messageType={message.message_type}
+        conditionType={renderConditionType()}
+        createdAt={formatDate(message.created_at)}
         isActionLoading={isActionLoading}
-        formatDate={formatDate}
-        renderConditionType={renderConditionType}
-        handleDisarmMessage={handleDisarmMessage}
-        handleArmMessage={handleArmMessage}
       />
       
-      {/* Recipients Card */}
-      <RecipientsCard 
-        recipients={recipients}
-        renderRecipients={renderRecipients}
-        isArmed={isArmed}
-        isActionLoading={isActionLoading}
-        onSendTestMessage={handleSendTestMessage}
-      />
+      {recipients && recipients.length > 0 && (
+        <RecipientsCard 
+          recipients={recipients}
+          renderRecipients={renderRecipients}
+          isArmed={isArmed}
+          isActionLoading={isActionLoading}
+          onSendTestMessage={handleSendTest}
+        />
+      )}
       
-      {/* Actions Card */}
       <ActionsCard 
         messageId={message.id}
         isArmed={isArmed}
+        conditionId={conditionId}
+        isActionLoading={isActionLoading}
+        handleArmMessage={handleArmMessage}
+        handleDisarmMessage={handleDisarmMessage}
         showDeleteConfirm={showDeleteConfirm}
         setShowDeleteConfirm={setShowDeleteConfirm}
         handleDelete={handleDelete}
+        onSendTestMessage={handleSendTest}
+        onViewReminderHistory={() => setReminderHistoryOpen(true)}
       />
       
-      {/* Test Message Dialog */}
-      <SendTestMessageDialog
-        open={showTestMessageDialog}
-        onOpenChange={setShowTestMessageDialog}
-        messageTitle={message.title}
-        recipients={recipients}
-      />
+      {/* Reminder History Dialog */}
+      {conditionId && (
+        <ReminderHistoryDialog 
+          open={reminderHistoryOpen} 
+          onOpenChange={setReminderHistoryOpen} 
+          messageId={message.id}
+        />
+      )}
     </div>
   );
 }

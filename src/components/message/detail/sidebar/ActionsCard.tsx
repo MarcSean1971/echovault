@@ -1,109 +1,133 @@
 
-import React, { useState } from "react";
+import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { 
-  Trash2, 
-  AlertCircle,
-  Edit,
-  ArrowRightCircle,
-  Bell
+import {
+  Shield,
+  ShieldOff,
+  Trash2,
+  Bell,
+  CornerUpRight,
+  Clock,
+  Mail,
 } from "lucide-react";
-import { Link } from "react-router-dom";
-import { ReminderHistoryDialog } from "../ReminderHistoryDialog";
 
 interface ActionsCardProps {
   messageId: string;
   isArmed: boolean;
+  conditionId: string | null;
+  isActionLoading: boolean;
+  handleArmMessage: () => Promise<void>;
+  handleDisarmMessage: () => Promise<void>;
   showDeleteConfirm: boolean;
-  setShowDeleteConfirm: (show: boolean) => void;
+  setShowDeleteConfirm: (value: boolean) => void;
   handleDelete: () => Promise<void>;
+  onSendTestMessage?: () => void;
+  onViewReminderHistory?: () => void;
 }
 
 export function ActionsCard({
   messageId,
   isArmed,
+  conditionId,
+  isActionLoading,
+  handleArmMessage,
+  handleDisarmMessage,
   showDeleteConfirm,
   setShowDeleteConfirm,
-  handleDelete
+  handleDelete,
+  onSendTestMessage,
+  onViewReminderHistory
 }: ActionsCardProps) {
-  const [showReminderHistory, setShowReminderHistory] = useState(false);
-
   return (
-    <>
-      <Card>
-        <CardContent className="p-4 space-y-3">
-          <h3 className="text-lg font-medium mb-2">Actions</h3>
-          
-          <Link to={`/message/edit/${messageId}`} className="w-full">
-            <Button 
-              variant="outline" 
-              className="w-full flex items-center gap-2 justify-start"
-              disabled={isArmed}
-            >
-              <Edit className="h-4 w-4" /> 
-              Edit Message
-            </Button>
-          </Link>
-          
-          <Link to={`/messages`} className="w-full">
-            <Button 
-              variant="outline" 
-              className="w-full flex items-center gap-2 justify-start"
-            >
-              <ArrowRightCircle className="h-4 w-4" /> 
-              Back to Messages
-            </Button>
-          </Link>
-          
-          <Button 
-            variant="outline" 
-            className="w-full flex items-center gap-2 justify-start"
-            onClick={() => setShowReminderHistory(true)}
+    <Card>
+      <CardContent className="p-4 space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-medium">Actions</h3>
+          <Bell className="h-5 w-5 text-muted-foreground" />
+        </div>
+
+        {/* Arm/Disarm Button */}
+        {conditionId && (
+          <Button
+            variant={isArmed ? "destructive" : "default"}
+            className="w-full"
+            onClick={isArmed ? handleDisarmMessage : handleArmMessage}
+            disabled={isActionLoading}
           >
-            <Bell className="h-4 w-4" /> 
+            {isArmed ? (
+              <>
+                <ShieldOff className="h-4 w-4 mr-2" />
+                Disarm Message
+              </>
+            ) : (
+              <>
+                <Shield className="h-4 w-4 mr-2" />
+                Arm Message
+              </>
+            )}
+          </Button>
+        )}
+
+        {/* Reminders Button */}
+        {conditionId && onViewReminderHistory && (
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={onViewReminderHistory}
+            disabled={isActionLoading}
+          >
+            <Clock className="h-4 w-4 mr-2" />
             View Reminder History
           </Button>
-          
-          {showDeleteConfirm ? (
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Are you sure you want to delete this message?</p>
-              <div className="grid grid-cols-2 gap-2">
-                <Button 
-                  variant="destructive" 
-                  size="sm"
-                  onClick={handleDelete}
-                >
-                  Yes, Delete
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setShowDeleteConfirm(false)}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <Button 
-              variant="outline" 
-              className="w-full flex items-center gap-2 justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
-              disabled={isArmed}
-              onClick={() => setShowDeleteConfirm(true)}
+        )}
+
+        {/* Send Test Message Button */}
+        {conditionId && onSendTestMessage && (
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={onSendTestMessage}
+            disabled={isArmed || isActionLoading}
+          >
+            <Mail className="h-4 w-4 mr-2" />
+            Send Test Message
+          </Button>
+        )}
+
+        {/* Delete Button / Confirm */}
+        {showDeleteConfirm ? (
+          <div className="flex space-x-2">
+            <Button
+              variant="default"
+              size="sm"
+              className="flex-1"
+              onClick={() => setShowDeleteConfirm(false)}
             >
-              <Trash2 className="h-4 w-4" /> 
-              Delete Message
+              Cancel
             </Button>
-          )}
-        </CardContent>
-      </Card>
-      
-      <ReminderHistoryDialog
-        open={showReminderHistory}
-        onOpenChange={setShowReminderHistory}
-        messageId={messageId}
-      />
-    </>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="flex-1"
+              onClick={handleDelete}
+              disabled={isActionLoading}
+            >
+              Delete
+            </Button>
+          </div>
+        ) : (
+          <Button
+            variant="outline"
+            className="w-full border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+            onClick={() => setShowDeleteConfirm(true)}
+            disabled={isActionLoading}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Delete Message
+          </Button>
+        )}
+      </CardContent>
+    </Card>
   );
 }

@@ -6,3 +6,4 @@ export * from './recipientService';
 export * from './fileService';
 export * from './transcriptionService';
 export * from './reminderService';
+export * from './notificationService';
