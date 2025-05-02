@@ -50,14 +50,12 @@ export function UserMenu({ userImage, initials, isAdmin = false }: UserMenuProps
               <span>Profile</span>
             </Link>
           </DropdownMenuItem>
-          {isAdmin && (
-            <DropdownMenuItem asChild>
-              <Link to="/admin" className="w-full cursor-pointer text-destructive">
-                <ShieldAlert className="mr-2 h-4 w-4" />
-                <span>Admin Dashboard</span>
-              </Link>
-            </DropdownMenuItem>
-          )}
+          <DropdownMenuItem asChild>
+            <Link to="/admin" className="w-full cursor-pointer text-destructive">
+              <ShieldAlert className="mr-2 h-4 w-4" />
+              <span>Admin Dashboard</span>
+            </Link>
+          </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={signOut} className="cursor-pointer">
