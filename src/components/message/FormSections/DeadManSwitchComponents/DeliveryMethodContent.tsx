@@ -5,7 +5,6 @@ import { ConditionTypeSelector } from "./ConditionTypeSelector";
 import { TimeThresholdSelector } from "./TimeThresholdSelector";
 import { ReminderSettings } from "./ReminderSettings";
 import { NoCheckInDeliveryOptions } from "./NoCheckInDeliveryOptions";
-import { ScheduledDateSection } from "./ScheduledDateSection";
 import { GroupConfirmation } from "./GroupConfirmation";
 import { InactivityToDate } from "./InactivityToDate";
 import { InactivityToRecurring } from "./InactivityToRecurring";
@@ -86,16 +85,6 @@ export function DeliveryMethodContent({
             conditionType={conditionType}
             hoursThreshold={hoursThreshold}
             setHoursThreshold={setHoursThreshold}
-          />
-        );
-        
-      case 'scheduled_date':
-        return (
-          <ScheduledDateSection
-            triggerDate={triggerDate}
-            setTriggerDate={setTriggerDate}
-            recurringPattern={recurringPattern}
-            setRecurringPattern={setRecurringPattern}
           />
         );
         

@@ -31,9 +31,6 @@ export function useFormValidation() {
     // Validate combined trigger
     if (conditionType === 'inactivity_to_date' && !triggerDate) return false;
     
-    // Validate scheduled date
-    if (conditionType === 'scheduled_date' && !triggerDate) return false;
-    
     return true;
   };
 

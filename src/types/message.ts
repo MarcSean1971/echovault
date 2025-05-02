@@ -18,7 +18,6 @@ export type Message = {
 export type TriggerType = 
   | 'no_check_in'           // Inactivity-based (dead man's switch)
   | 'regular_check_in'      // Regular check-in required
-  | 'scheduled_date'        // Specific date delivery
   | 'group_confirmation'    // Group confirmation required
   | 'panic_trigger'         // Manual panic trigger
   | 'inactivity_to_recurring' // Inactivity → Then Recurring

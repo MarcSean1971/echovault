@@ -2,7 +2,7 @@
 import { RadioGroup } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { TriggerType } from "@/types/message";
-import { AlertCircle, Calendar, Bell } from "lucide-react";
+import { AlertCircle, Bell } from "lucide-react";
 import { RadioOptionWithTooltip } from "./RadioOptionWithTooltip";
 
 interface ConditionTypeSelectorProps {
@@ -29,15 +29,6 @@ export function ConditionTypeSelector({
           description="Classic dead man's switch - requires regular check-ins to prevent delivery"
           icon={AlertCircle}
           tooltipText="Message will be sent if you don't check in before the deadline."
-        />
-        
-        <RadioOptionWithTooltip 
-          value="scheduled_date"
-          id="scheduled-date"
-          label="Send on a specific date"
-          description="Schedule for future delivery on a specific date and time"
-          icon={Calendar}
-          tooltipText="Message will be delivered on the date & time you specify."
         />
         
         <RadioOptionWithTooltip 

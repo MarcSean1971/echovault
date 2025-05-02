@@ -117,14 +117,6 @@ export function useFormSubmission() {
           });
         }
         
-        // Add date-specific options if needed
-        else if (conditionType === 'scheduled_date' && triggerDate) {
-          Object.assign(conditionOptions, {
-            triggerDate: triggerDate.toISOString(),
-            recurringPattern
-          });
-        }
-        
         // Add panic trigger configuration
         else if (conditionType === 'panic_trigger') {
           Object.assign(conditionOptions, {
