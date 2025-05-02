@@ -1,6 +1,7 @@
 
 import { getAuthClient } from "@/lib/supabaseClient";
 import { PanicTriggerResult } from "./types";
+import { toast } from "@/components/ui/use-toast";
 
 export async function triggerPanicMessage(userId: string, messageId: string): Promise<PanicTriggerResult> {
   const client = await getAuthClient();
@@ -31,7 +32,7 @@ export async function triggerPanicMessage(userId: string, messageId: string): Pr
     const { error: updateError } = await client
       .from("message_conditions")
       .update({ 
-        active: false // We use active as a proxy for triggered for now
+        active: false // Mark as inactive which means triggered
       })
       .eq("id", data.id);
       
@@ -39,6 +40,9 @@ export async function triggerPanicMessage(userId: string, messageId: string): Pr
       console.error("Error updating panic message:", updateError);
       throw new Error("Failed to trigger panic message");
     }
+    
+    // Process actual message sending here (this would typically be handled by a backend function)
+    // In a real implementation, this would connect to an edge function that sends the actual messages
     
     console.log("Successfully triggered panic message");
     
@@ -51,5 +55,35 @@ export async function triggerPanicMessage(userId: string, messageId: string): Pr
   } catch (error: any) {
     console.error("Error triggering panic message:", error);
     throw new Error(error.message || "Failed to trigger panic message");
+  }
+}
+
+/**
+ * Check if a user has any configured panic messages
+ * @param userId The user ID to check
+ * @returns Boolean indicating if panic messages exist
+ */
+export async function hasActivePanicMessages(userId: string): Promise<boolean> {
+  if (!userId) return false;
+  
+  const client = await getAuthClient();
+  
+  try {
+    const { data, error } = await client
+      .from("message_conditions")
+      .select("id, messages!inner(user_id)")
+      .eq("messages.user_id", userId)
+      .eq("condition_type", "panic_trigger")
+      .eq("active", true);
+      
+    if (error) {
+      console.error("Error checking for panic messages:", error);
+      return false;
+    }
+    
+    return data && data.length > 0;
+  } catch (error) {
+    console.error("Error in hasActivePanicMessages:", error);
+    return false;
   }
 }

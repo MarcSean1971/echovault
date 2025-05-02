@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/components/ui/use-toast";
 import { useTriggerDashboard } from "@/hooks/useTriggerDashboard";
@@ -22,7 +22,9 @@ export default function CheckIn() {
   } = useTriggerDashboard();
 
   // Find panic trigger messages
-  const panicMessages = conditions.filter(c => c.condition_type === 'panic_trigger' && c.active);
+  const panicMessages = conditions.filter(c => 
+    c.condition_type === 'panic_trigger' && c.active === true
+  );
   
   // Get the first available panic message or null if none exist
   const panicMessage = panicMessages.length > 0 ? panicMessages[0] : null;
