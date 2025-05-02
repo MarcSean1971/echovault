@@ -100,15 +100,18 @@ export async function getMessageDeadline(conditionId: string): Promise<Date | nu
     switch(data.condition_type) {
       case "no_check_in":
       case "regular_check_in":
-        // Add hours and minutes threshold to last checked date
+        // Add hours threshold to last checked date
         const hoursInMs = data.hours_threshold * 60 * 60 * 1000;
-        const minutesInMs = (data.minutes_threshold || 0) * 60 * 1000;
+        // Check if minutes_threshold exists in the extended data
+        const minutesThreshold = (data as any).minutes_threshold || 0;
+        const minutesInMs = minutesThreshold * 60 * 1000;
         return new Date(lastChecked.getTime() + hoursInMs + minutesInMs);
         
       case "scheduled":
       case "inactivity_to_date":
-        // Return the scheduled date
-        return data.trigger_date ? new Date(data.trigger_date) : null;
+        // Return the scheduled date if it exists
+        const triggerDate = (data as any).trigger_date;
+        return triggerDate ? new Date(triggerDate) : null;
         
       default:
         return null;
