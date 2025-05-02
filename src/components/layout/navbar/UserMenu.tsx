@@ -14,6 +14,12 @@ interface UserMenuProps {
 export function UserMenu({ userImage, initials }: UserMenuProps) {
   const { signOut } = useAuth();
 
+  const handleSignOut = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    console.log("Sign out clicked");
+    await signOut();
+  };
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -49,7 +55,7 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={signOut} className="cursor-pointer">
+        <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
           <LogOut className="mr-2 h-4 w-4" />
           <span>Log out</span>
         </DropdownMenuItem>

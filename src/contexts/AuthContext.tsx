@@ -3,6 +3,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 interface UserProfile {
   id: string;
@@ -55,6 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
+        console.log("Auth state changed:", event, currentSession?.user?.id);
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
@@ -74,6 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Then check for existing session
     supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      console.log("Initial session check:", currentSession?.user?.id);
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       
@@ -94,13 +97,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Sign out function
   const signOut = async () => {
     try {
-      await supabase.auth.signOut();
+      console.log("Signing out...");
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error('Error signing out:', error);
+        toast({
+          title: "Sign out failed",
+          description: "There was an issue signing you out: " + error.message,
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Clear local state
+      setUser(null);
+      setSession(null);
+      setProfile(null);
+      
       toast({
         title: "Signed out successfully",
         description: "You have been signed out of your account"
       });
-    } catch (error) {
-      console.error('Error signing out:', error);
+      
+      // Force a page reload to reset all app state
+      window.location.href = "/";
+    } catch (error: any) {
+      console.error('Error in signOut function:', error);
       toast({
         title: "Sign out failed",
         description: "There was an issue signing you out",
