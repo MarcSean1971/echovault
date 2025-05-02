@@ -1,6 +1,5 @@
 
 import { Button } from "@/components/ui/button";
-import { StatusBadge } from "@/components/ui/status-badge";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Message } from "@/types/message";
@@ -37,10 +36,6 @@ export function MessageHeader({
       </div>
       
       <div className="flex items-center gap-3">
-        <StatusBadge status={isArmed ? "armed" : "disarmed"}>
-          {isArmed ? "Armed" : "Disarmed"}
-        </StatusBadge>
-        
         <div className="hidden md:block">
           {isArmed ? (
             <Button
