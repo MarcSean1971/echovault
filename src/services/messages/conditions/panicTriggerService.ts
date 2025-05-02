@@ -58,10 +58,13 @@ export async function triggerPanicMessage(userId: string, messageId: string): Pr
     // Extract the keepArmed setting from panic_config
     let keepArmed = true; // Default to true for safety
     
-    // Check panic_config and extract keep_armed value if it exists
-    if (data.panic_config && typeof data.panic_config === 'object') {
-      // Explicitly check if keep_armed exists and is false
-      if (data.panic_config.keep_armed === false) {
+    // Properly check panic_config and extract keep_armed value if it exists
+    if (data.panic_config && typeof data.panic_config === 'object' && !Array.isArray(data.panic_config)) {
+      // Type narrowing to ensure we're dealing with an object, not an array
+      const panicConfig = data.panic_config as Record<string, any>;
+      
+      // Now safely check if keep_armed exists and is false
+      if (panicConfig.keep_armed === false) {
         keepArmed = false;
       }
       console.log(`Keep armed setting from panic_config: ${keepArmed}`);
