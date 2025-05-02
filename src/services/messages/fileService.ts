@@ -2,67 +2,76 @@
 import { getAuthClient } from "@/lib/supabaseClient";
 import { FileAttachment } from "@/components/FileUploader";
 
-// Create a storage client for files
+/**
+ * Uploads files to Supabase storage
+ * 
+ * @param userId The user ID to organize the storage path
+ * @param files The files to upload
+ * @returns Array of attachment objects with paths
+ */
 export async function uploadAttachments(userId: string, files: FileAttachment[]) {
-  try {
-    const client = await getAuthClient();
-    
-    // Process each file
-    const uploadPromises = files.map(async (file) => {
-      // Create a unique file path
-      const filePath = `${userId}/${Date.now()}-${file.name}`;
-      
-      // Upload to storage - use message_attachments bucket (fix for "bucket not found" error)
-      const { error } = await client.storage
-        .from('message_attachments')
-        .upload(filePath, file.file);
-      
-      if (error) throw error;
-      
-      // Return the file info to be stored in the message
-      return {
-        path: filePath,
-        name: file.name,
-        size: file.size,
-        type: file.type
-      };
-    });
-    
-    return await Promise.all(uploadPromises);
-  } catch (error) {
-    console.error('Error uploading attachments:', error);
-    throw error;
-  }
-}
+  const client = await getAuthClient();
+  const bucket = "message-attachments";
 
-export async function deleteAttachment(path: string) {
-  try {
-    const client = await getAuthClient();
+  // Create an array to store attachment data
+  const attachmentData = [];
+  
+  // Process each file
+  for (const attachment of files) {
+    if (!attachment.file) {
+      // If this is already an uploaded file, just include its data
+      if (attachment.isUploaded && attachment.path) {
+        attachmentData.push({
+          name: attachment.name,
+          size: attachment.size,
+          type: attachment.type,
+          path: attachment.path
+        });
+      }
+      continue;
+    }
     
-    const { error } = await client.storage
-      .from('message_attachments')
-      .remove([path]);
+    // Create a file path using the user ID, current timestamp, and original filename
+    const timestamp = new Date().getTime();
+    const filePath = `${userId}/${timestamp}_${attachment.name}`;
     
-    if (error) throw error;
-    return true;
-  } catch (error) {
-    console.error('Error deleting attachment:', error);
-    throw error;
-  }
-}
-
-export async function getAttachmentUrl(path: string) {
-  try {
-    const client = await getAuthClient();
-    
+    // Upload the file
     const { data, error } = await client.storage
-      .from('message_attachments')
-      .createSignedUrl(path, 3600); // URL expires in 1 hour
+      .from(bucket)
+      .upload(filePath, attachment.file, {
+        upsert: true,
+        contentType: attachment.type
+      });
+      
+    if (error) {
+      throw new Error(`Error uploading file: ${error.message}`);
+    }
     
-    if (error) throw error;
-    return data.signedUrl;
-  } catch (error) {
-    console.error('Error creating signed URL:', error);
-    throw error;
+    // Add the file data to our attachments array
+    attachmentData.push({
+      name: attachment.name,
+      size: attachment.size,
+      type: attachment.type,
+      path: data.path
+    });
   }
+  
+  return attachmentData;
+}
+
+/**
+ * Gets a public URL for a file in storage
+ * 
+ * @param path The file path in storage
+ * @returns The public URL for the file
+ */
+export async function getFileUrl(path: string) {
+  const client = await getAuthClient();
+  const bucket = "message-attachments";
+  
+  const { data } = client.storage
+    .from(bucket)
+    .getPublicUrl(path);
+    
+  return data.publicUrl;
 }

@@ -1,4 +1,3 @@
-
 import { MessageCondition, TriggerType } from "@/types/message";
 import { CreateConditionOptions } from "./conditions/types";
 import { 
@@ -40,6 +39,9 @@ export async function updateMessageCondition(
 export async function deleteMessageCondition(conditionId: string): Promise<void> {
   return deleteConditionFromDb(conditionId);
 }
+
+// Re-export the new messageConditionService function
+export { getConditionByMessageId } from './conditions/messageConditionService';
 
 // Re-export check-in functions
 export { performCheckIn, getNextCheckInDeadline };
