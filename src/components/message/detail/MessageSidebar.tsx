@@ -47,7 +47,7 @@ export function MessageSidebar({
   // Get the condition type for checking if reminders are supported
   const conditionType = condition?.condition_type;
   
-  // Check if condition supports reminders (not panic_trigger)
+  // Check if condition supports reminders (explicitly exclude panic_trigger type)
   const supportsReminders = conditionType && conditionType !== 'panic_trigger';
   
   // Handle sending a test message
@@ -92,6 +92,7 @@ export function MessageSidebar({
         onSendTestMessage={handleSendTest}
         onViewReminderHistory={() => setReminderHistoryOpen(true)}
         conditionType={conditionType}
+        supportsReminders={supportsReminders}
       />
       
       {/* Only render the reminder dialog if condition supports reminders */}
