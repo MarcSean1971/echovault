@@ -1,58 +1,31 @@
 
-import { Button } from "@/components/ui/button";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardHeader,
-  CardTitle,
-  CardDescription,
   CardContent,
   CardFooter,
+  CardDescription,
 } from "@/components/ui/card";
-import { MessageSquare, File, Video, ArrowRight, Paperclip, Clock, BellOff, Bell, Mic } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { Message, MessageCondition } from "@/types/message";
-import { useState, useEffect } from "react";
-import { MessageTimer } from "./MessageTimer";
-import { StatusBadge } from "@/components/ui/status-badge";
+import { toast } from "@/components/ui/use-toast";
 import { 
   getConditionByMessageId, 
   getMessageDeadline, 
   armMessage, 
   disarmMessage 
 } from "@/services/messages/conditionService";
-import { toast } from "@/components/ui/use-toast";
+import { formatDate } from "@/utils/messageFormatUtils";
+import { MessageCardHeader } from "./card/MessageCardHeader";
+import { MessageCardContent } from "./card/MessageCardContent";
+import { MessageCardActions } from "./card/MessageCardActions";
 
 interface MessageCardProps {
   message: Message;
   onDelete: (id: string) => void;
 }
 
-export const getMessageIcon = (type: string) => {
-  switch (type) {
-    case 'text':
-      return <MessageSquare className="h-5 w-5" />;
-    case 'voice':
-      return <Mic className="h-5 w-5" />;
-    case 'video':
-      return <Video className="h-5 w-5" />;
-    default:
-      return <MessageSquare className="h-5 w-5" />;
-  }
-};
-
-export const formatDate = (dateString: string) => {
-  const date = new Date(dateString);
-  return new Intl.DateTimeFormat('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  }).format(date);
-};
-
 export function MessageCard({ message, onDelete }: MessageCardProps) {
-  const navigate = useNavigate();
-  const hasAttachments = message.attachments && message.attachments.length > 0;
-  
   const [isArmed, setIsArmed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [deadline, setDeadline] = useState<Date | null>(null);
@@ -157,103 +130,33 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
       className={`overflow-hidden ${isArmed ? 'border-destructive border-2' : ''}`}
     >
       <CardHeader className="pb-3">
-        <div className="flex justify-between items-start">
-          <div className="flex items-start gap-2">
-            <div className="mt-1">
-              {getMessageIcon(message.message_type)}
-            </div>
-            <div className="min-h-[3rem] flex flex-col justify-center">
-              <CardTitle className="text-lg line-clamp-2 leading-tight">
-                {message.title}
-              </CardTitle>
-            </div>
-          </div>
-          
-          {isArmed && (
-            <StatusBadge status="armed" size="sm">
-              Armed
-            </StatusBadge>
-          )}
-        </div>
+        <MessageCardHeader 
+          message={message} 
+          isArmed={isArmed} 
+          formatDate={formatDate} 
+        />
         <CardDescription className="pt-2 ml-7">
           {formatDate(message.created_at)}
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {message.message_type === 'text' ? (
-          <p className="line-clamp-3">
-            {message.content || "No content"}
-          </p>
-        ) : message.message_type === 'voice' ? (
-          <div className="border-l-4 pl-2 border-primary/30">
-            <p className="text-muted-foreground italic text-sm">
-              {transcription ? 
-                `"${transcription.slice(0, 120)}${transcription.length > 120 ? '...' : ''}"` : 
-                'Voice message (no transcription available)'}
-            </p>
-          </div>
-        ) : message.message_type === 'video' ? (
-          <div className="border-l-4 pl-2 border-primary/30">
-            <p className="text-muted-foreground italic text-sm">
-              {transcription ? 
-                `"${transcription.slice(0, 120)}${transcription.length > 120 ? '...' : ''}"` : 
-                'Video message (no transcription available)'}
-            </p>
-          </div>
-        ) : (
-          <p className="text-muted-foreground italic">
-            Unknown message type
-          </p>
-        )}
-        
-        {hasAttachments && (
-          <div className="mt-3 pt-3 border-t">
-            <div className="flex items-center text-sm text-muted-foreground">
-              <Paperclip className="h-4 w-4 mr-1" />
-              <span>{message.attachments!.length} attachment{message.attachments!.length !== 1 ? 's' : ''}</span>
-            </div>
-          </div>
-        )}
-        
-        {condition && (
-          <div className="mt-3 pt-3 border-t">
-            <MessageTimer deadline={deadline} isArmed={isArmed} />
-          </div>
-        )}
+        <MessageCardContent 
+          message={message} 
+          isArmed={isArmed} 
+          deadline={deadline} 
+          condition={condition}
+          transcription={transcription}
+        />
       </CardContent>
       <CardFooter className="flex justify-between border-t pt-4">
-        <div className="flex gap-2">
-          {condition && (
-            isArmed ? (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDisarmMessage}
-                disabled={isLoading}
-                className="text-green-600 hover:bg-green-50 hover:text-green-700"
-              >
-                <BellOff className="h-4 w-4 mr-1" /> Disarm
-              </Button>
-            ) : (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleArmMessage}
-                disabled={isLoading}
-                className="text-destructive hover:bg-destructive/10"
-              >
-                <Bell className="h-4 w-4 mr-1" /> Arm
-              </Button>
-            )
-          )}
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate(`/message/${message.id}`)}
-        >
-          View <ArrowRight className="h-4 w-4 ml-1" />
-        </Button>
+        <MessageCardActions
+          messageId={message.id}
+          condition={condition}
+          isArmed={isArmed}
+          isLoading={isLoading}
+          onArmMessage={handleArmMessage}
+          onDisarmMessage={handleDisarmMessage}
+        />
       </CardFooter>
     </Card>
   );
