@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
-import { Settings, LogOut, MessageSquare, Users2, Clock, User } from "lucide-react";
+import { LogOut, MessageSquare, Users2, Clock, User } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
@@ -75,11 +75,6 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
                 <Clock className="h-4 w-4" /> Check-ins
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <Link to="/settings" className="flex gap-2 items-center cursor-pointer">
-                <Settings className="h-4 w-4" /> Settings
-              </Link>
-            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="flex gap-2 items-center text-destructive focus:text-destructive cursor-pointer"
               onClick={handleSignOut}>
@@ -131,11 +126,6 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
               <Button variant="ghost" asChild className="justify-start w-full">
                 <Link to="/check-ins" className="flex items-center gap-2">
                   <Clock className="h-5 w-5" /> Check-ins
-                </Link>
-              </Button>
-              <Button variant="ghost" asChild className="justify-start w-full">
-                <Link to="/settings" className="flex items-center gap-2">
-                  <Settings className="h-5 w-5" /> Settings
                 </Link>
               </Button>
             </div>
