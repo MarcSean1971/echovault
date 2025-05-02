@@ -2,6 +2,7 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { UserMenu } from "./UserMenu";
+import { Check } from "lucide-react";
 import {
   NavigationMenu,
   NavigationMenuItem,
@@ -17,9 +18,9 @@ interface DesktopNavProps {
 
 export function DesktopNav({ userImage, initials }: DesktopNavProps) {
   return (
-    <div className="flex items-center justify-between w-full">
+    <div className="grid grid-cols-3 items-center w-full">
       {/* Left section - Navigation menu */}
-      <NavigationMenu>
+      <NavigationMenu className="col-start-1">
         <NavigationMenuList className="space-x-1">
           <NavigationMenuItem>
             <NavigationMenuLink 
@@ -47,18 +48,23 @@ export function DesktopNav({ userImage, initials }: DesktopNavProps) {
       </NavigationMenu>
       
       {/* Center section - Check In button */}
-      <div className="flex-1 flex justify-center">
+      <div className="flex justify-center col-start-2 mx-auto">
         <Button 
           asChild 
-          className="bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-[1px]"
-          size="sm"
+          className="bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-1 pulse-subtle px-6 py-2 animate-pulse-light"
+          size="lg"
         >
-          <Link to="/check-in">Check In</Link>
+          <Link to="/check-in" className="flex items-center gap-2 font-medium">
+            <Check className="h-5 w-5" />
+            Check In
+          </Link>
         </Button>
       </div>
       
       {/* Right section - User avatar/menu */}
-      <UserMenu userImage={userImage} initials={initials} />
+      <div className="flex justify-end col-start-3">
+        <UserMenu userImage={userImage} initials={initials} />
+      </div>
     </div>
   );
 }
