@@ -4,7 +4,6 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { MessageFormProvider, useMessageForm } from "./MessageFormContext";
 import { useFormActions } from "./FormActions";
 import { MessageDetails } from "./FormSections/MessageDetails";
-import { DeadManSwitch } from "./FormSections/DeadManSwitch";
 import { UploadProgressDialog } from "./FormSections/UploadProgressDialog";
 
 interface CreateMessageFormProps {
@@ -24,7 +23,6 @@ function MessageForm({ onCancel }: CreateMessageFormProps) {
           </CardHeader>
           <CardContent className="space-y-6">
             <MessageDetails />
-            <DeadManSwitch />
           </CardContent>
           <CardFooter className="flex justify-between">
             <Button variant="outline" type="button" onClick={onCancel}>
