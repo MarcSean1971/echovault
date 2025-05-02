@@ -99,12 +99,19 @@ export async function updateConditionInDb(
 ): Promise<any> {
   const client = await getAuthClient();
   
-  // Filter out properties that don't exist in the database
-  const { triggered, delivered, ...validUpdates } = updates;
+  // Filter out properties that don't exist in the database and map field names
+  const { triggered, delivered, panic_trigger_config, ...validUpdates } = updates;
+  
+  // Map panic_trigger_config to panic_config for database updates
+  const dbUpdates = {
+    ...validUpdates,
+    // If panic_trigger_config exists in the updates, map it to panic_config
+    ...(panic_trigger_config !== undefined && { panic_config: panic_trigger_config })
+  };
   
   const { data, error } = await client
     .from("message_conditions")
-    .update(validUpdates)
+    .update(dbUpdates)
     .eq("id", conditionId)
     .select()
     .single();
