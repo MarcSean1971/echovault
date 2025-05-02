@@ -1,4 +1,3 @@
-
 export type Message = {
   id: string;
   title: string;
@@ -72,6 +71,7 @@ export type MessageCondition = {
   trigger_date?: string;
   recurring_pattern?: RecurringPattern;
   panic_trigger_config?: PanicTriggerConfig;
+  panic_config?: PanicTriggerConfig;  // Add this field to match the database structure
   pin_code?: string;
   unlock_delay_hours?: number;
   expiry_hours?: number;

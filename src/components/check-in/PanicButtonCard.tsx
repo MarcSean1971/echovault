@@ -27,7 +27,9 @@ export function PanicButtonCard({ userId, panicMessage, isChecking, isLoading }:
     if (panicMessage) {
       console.log("Panic message loaded:", panicMessage);
       console.log("Panic config (panic_trigger_config):", panicMessage.panic_trigger_config);
-      console.log("Panic config (panic_config):", panicMessage.panic_config);
+      if (panicMessage.panic_config) {
+        console.log("Panic config (panic_config):", panicMessage.panic_config);
+      }
     }
   }, [panicMessage]);
 
@@ -150,8 +152,8 @@ export function PanicButtonCard({ userId, panicMessage, isChecking, isLoading }:
     }
     
     // Fall back to panic_config if panic_trigger_config is not available
-    if (panicMessage?.panic_config && typeof panicMessage.panic_config === 'object') {
-      return Boolean((panicMessage.panic_config as Record<string, unknown>)?.keep_armed);
+    if (panicMessage?.panic_config) {
+      return panicMessage.panic_config.keep_armed;
     }
     
     return false; // Default value
