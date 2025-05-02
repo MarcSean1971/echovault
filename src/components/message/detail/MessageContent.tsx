@@ -1,8 +1,9 @@
 
 import { Message } from "@/types/message";
-import { Info, MessageSquare, Video, File } from "lucide-react";
+import { Info } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { TabsContent } from "@/components/ui/tabs";
+import { MessageTypeIcon } from "./MessageTypeIcon";
 
 interface MessageContentProps {
   message: Message;
@@ -10,21 +11,6 @@ interface MessageContentProps {
 }
 
 export function MessageContent({ message, isArmed }: MessageContentProps) {
-  const getMessageTypeIcon = () => {
-    if (!message) return null;
-    
-    switch (message.message_type) {
-      case 'text':
-        return <MessageSquare className="h-5 w-5" />;
-      case 'voice':
-        return <File className="h-5 w-5" />;
-      case 'video':
-        return <Video className="h-5 w-5" />;
-      default:
-        return <MessageSquare className="h-5 w-5" />;
-    }
-  };
-
   return (
     <TabsContent value="content" className="space-y-4 pt-2">
       {isArmed && (
