@@ -22,7 +22,7 @@ export type Recipient = {
   phone?: string;
 };
 
-// Re-adding these types to fix type errors
+// Align this with RecurringPatternSelector.tsx RecurringPatternType
 export type TriggerType = 
   | 'no_check_in' 
   | 'regular_check_in' 
@@ -32,12 +32,16 @@ export type TriggerType =
   | 'inactivity_to_recurring'
   | 'inactivity_to_date';
 
-export type DeliveryOption = 'immediately' | 'scheduled' | 'recurring';
+// Make this compatible with NoCheckInDeliveryOptions.tsx
+export type DeliveryOption = 'immediately' | 'scheduled' | 'recurring' | 'once' | 'specific_date';
 
+// Align with RecurringPatternSelector.RecurringPattern
 export type RecurringPattern = {
-  type: 'day' | 'week' | 'month';
+  type: 'daily' | 'weekly' | 'monthly' | 'yearly';
   interval: number;
-  days?: number[];
+  day?: number;
+  month?: number;
+  startTime?: string;
 };
 
 export type PanicTriggerConfig = {
@@ -77,9 +81,11 @@ export type MessageCondition = {
   reminder_hours?: number[];
 };
 
+// Update CheckIn type to include timestamp and device_info
 export type CheckIn = {
   id: string;
   user_id: string;
-  checked_in_at: string;
+  timestamp: string;  // Changed from checked_in_at to timestamp based on usage in CheckIns.tsx
   method: string;
+  device_info?: string; // Add this field as it's used in CheckIns.tsx
 };

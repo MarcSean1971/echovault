@@ -23,7 +23,7 @@ function MessageForm({ onCancel }: CreateMessageFormProps) {
           </CardHeader>
           <CardContent className="space-y-6">
             <MessageDetails />
-            {/* Removed DeadManSwitch component */}
+            {/* DeadManSwitch component has been removed */}
           </CardContent>
           <CardFooter className="flex justify-between">
             <Button variant="outline" type="button" onClick={onCancel}>

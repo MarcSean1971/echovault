@@ -1,19 +1,15 @@
-
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
+import { RecurringPattern } from "@/types/message";
 
+// Export this for backward compatibility
 export type RecurringPatternType = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
-export interface RecurringPattern {
-  type: RecurringPatternType;
-  interval: number;
-  day?: number;
-  month?: number;
-  startTime?: string;
-}
+// Re-export RecurringPattern to maintain compatibility
+export type { RecurringPattern };
 
 interface RecurringPatternSelectorProps {
   pattern: RecurringPattern | null;

@@ -42,7 +42,8 @@ export default function CheckIns() {
             id: "3",
             user_id: userId,
             timestamp: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(), // 2 days ago
-            method: "email"
+            method: "email",
+            device_info: "Desktop Chrome"
           }
         ];
         

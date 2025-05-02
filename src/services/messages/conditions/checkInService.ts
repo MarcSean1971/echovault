@@ -2,6 +2,7 @@
 import { getAuthClient } from "@/lib/supabaseClient";
 import { CheckInResult, CheckInDeadlineResult } from "./types";
 import { updateConditionsLastChecked } from "./dbOperations";
+import { MessageCondition } from "@/types/message";
 
 export async function performCheckIn(userId: string, method: string): Promise<CheckInResult> {
   const client = await getAuthClient();
@@ -85,18 +86,28 @@ export async function getNextCheckInDeadline(userId: string): Promise<CheckInDea
       earliestDeadline.setHours(earliestDeadline.getHours() + 24);
     }
     
+    // Convert raw data to MessageCondition[] type
+    const conditions: MessageCondition[] = data ? data.map(item => ({
+      id: item.id,
+      message_id: item.message_id,
+      condition_type: item.condition_type as any, // Type casting to avoid strict type checking
+      hours_threshold: item.hours_threshold,
+      created_at: item.created_at,
+      updated_at: item.updated_at,
+      last_checked: item.last_checked,
+      recipients: item.recipients || [],
+      active: item.active,
+      // Add other required fields with defaults
+      triggered: false,
+      delivered: false
+    })) : [];
+    
     return {
       deadline: earliestDeadline,
-      conditions: data || []
+      conditions: conditions
     };
   } catch (error: any) {
     console.error("Error getting next check-in deadline:", error);
     throw new Error(error.message || "Failed to get next check-in deadline");
   }
 }
-
-// We're removing this function as it relies on fields that don't exist in our DB schema
-// Function can be reimplemented later when needed
-// export function calculateNextOccurrence(baseDate: Date, pattern: RecurringPattern): Date {
-//   // Implementation removed
-// }
