@@ -9,6 +9,7 @@ import { GroupConfirmation } from "./GroupConfirmation";
 import { InactivityToDate } from "./InactivityToDate";
 import { InactivityToRecurring } from "./InactivityToRecurring";
 import { PanicTrigger } from "./PanicTrigger";
+import { RegularCheckInWithRecurring } from "./RegularCheckInWithRecurring";
 import { TriggerType, DeliveryOption, RecurringPattern, PanicTriggerConfig } from "@/types/message";
 
 interface DeliveryMethodContentProps {
@@ -85,6 +86,20 @@ export function DeliveryMethodContent({
             conditionType={conditionType}
             hoursThreshold={hoursThreshold}
             setHoursThreshold={setHoursThreshold}
+          />
+        );
+        
+      case 'regular_check_in_recurring':
+        return (
+          <RegularCheckInWithRecurring
+            hoursThreshold={hoursThreshold}
+            setHoursThreshold={setHoursThreshold}
+            minutesThreshold={minutesThreshold}
+            setMinutesThreshold={setMinutesThreshold}
+            recurringPattern={recurringPattern}
+            setRecurringPattern={setRecurringPattern}
+            reminderHours={reminderHours}
+            setReminderHours={setReminderHours}
           />
         );
         

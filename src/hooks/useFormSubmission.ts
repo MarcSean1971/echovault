@@ -109,6 +109,13 @@ export function useFormSubmission() {
           }
         }
         
+        // Handle regular check-in with recurring messages
+        else if (conditionType === 'regular_check_in_recurring' && recurringPattern) {
+          Object.assign(conditionOptions, {
+            recurringPattern,
+          });
+        }
+        
         // Handle combined inactivity_to_date condition
         else if (conditionType === 'inactivity_to_date' && triggerDate) {
           Object.assign(conditionOptions, {

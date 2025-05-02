@@ -15,7 +15,8 @@ import {
   Users, 
   Bell, 
   Shield, 
-  Hourglass 
+  Hourglass,
+  Repeat 
 } from "lucide-react";
 import { triggerPanicMessage } from "@/services/messages/conditionService";
 
@@ -48,6 +49,8 @@ export function MessageConditionRow({
         return <Clock className="h-4 w-4" />;
       case 'regular_check_in':
         return <Bell className="h-4 w-4" />;
+      case 'regular_check_in_recurring':
+        return <Repeat className="h-4 w-4" />;
       case 'group_confirmation':
         return <Users className="h-4 w-4" />;
       case 'panic_trigger':
@@ -87,6 +90,12 @@ export function MessageConditionRow({
         return `Sends if no check-in within ${condition.hours_threshold} hours`;
       case 'regular_check_in':
         return `Sent on regular schedule every ${condition.hours_threshold} hours`;
+      case 'regular_check_in_recurring':
+        const recurPattern = condition.recurring_pattern;
+        const intervalText = recurPattern ? 
+          `${recurPattern.interval} ${recurPattern.type}${recurPattern.interval > 1 ? 's' : ''}` : 
+          '24 hours';
+        return `Initial send after ${condition.hours_threshold} hours, repeats every ${intervalText} until check-in`;
       case 'group_confirmation':
         return `Sends after ${condition.confirmation_required} confirmations`;
       case 'panic_trigger':

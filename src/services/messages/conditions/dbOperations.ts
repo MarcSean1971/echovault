@@ -1,6 +1,6 @@
 
 import { getAuthClient } from "@/lib/supabaseClient";
-import { MessageCondition } from "@/types/message";
+import { MessageCondition, RecurringPattern } from "@/types/message";
 import { CreateConditionOptions } from "./types";
 
 // Helper function to map database condition to application condition
@@ -10,6 +10,8 @@ export function mapDbConditionToMessageCondition(condition: any): MessageConditi
     // Add the fields that don't exist in the database but are used in the application
     triggered: !condition.active, // If not active, we consider it triggered for now
     delivered: !condition.active, // If not active, we consider it delivered for now
+    // For recurring patterns, preserve the structure
+    recurring_pattern: condition.recurring_pattern as RecurringPattern | null
   } as MessageCondition;
 }
 
@@ -36,6 +38,15 @@ export async function createConditionInDb(
 
   const client = await getAuthClient();
   
+  // For regular_check_in_recurring, set up next_message_scheduled
+  let nextMessageScheduled = null;
+  if (conditionType === 'regular_check_in_recurring' && recurringPattern) {
+    const now = new Date();
+    const deadline = new Date(now);
+    deadline.setHours(deadline.getHours() + hoursThreshold);
+    nextMessageScheduled = deadline.toISOString();
+  }
+  
   const { data, error } = await client
     .from("message_conditions")
     .insert({
@@ -55,6 +66,7 @@ export async function createConditionInDb(
       secondary_recurring_pattern: secondaryRecurringPattern || null,
       reminder_hours: reminderHours || null,
       panic_config: panicTriggerConfig || null,
+      next_message_scheduled: nextMessageScheduled,
       active: true
     })
     .select()
@@ -146,7 +158,12 @@ export async function updateConditionsLastChecked(conditionIds: string[], timest
   
   const { error } = await client
     .from("message_conditions")
-    .update({ last_checked: timestamp })
+    .update({ 
+      last_checked: timestamp,
+      // If this is a recurring_check_in_recurring condition that has already sent messages,
+      // reset next_message_scheduled to be based off the new check-in time
+      next_message_scheduled: null
+    })
     .in("id", conditionIds);
     
   if (error) {

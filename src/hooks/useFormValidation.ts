@@ -28,6 +28,9 @@ export function useFormValidation() {
       if (deliveryOption === 'recurring' && !recurringPattern) return false;
     }
     
+    // Validate recurring pattern for regular_check_in_recurring
+    if (conditionType === 'regular_check_in_recurring' && !recurringPattern) return false;
+    
     // Validate combined trigger
     if (conditionType === 'inactivity_to_date' && !triggerDate) return false;
     

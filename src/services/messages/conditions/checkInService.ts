@@ -3,6 +3,7 @@ import { getAuthClient } from "@/lib/supabaseClient";
 import { CheckInResult, CheckInDeadlineResult } from "./types";
 import { updateConditionsLastChecked } from "./dbOperations";
 import { mapDbConditionToMessageCondition } from "./dbOperations";
+import { RecurringPattern } from "@/types/message";
 
 export async function performCheckIn(userId: string, method: string): Promise<CheckInResult> {
   const client = await getAuthClient();
@@ -49,7 +50,13 @@ export async function getNextCheckInDeadline(userId: string): Promise<CheckInDea
       .from("message_conditions")
       .select("*, messages!inner(*)")
       .eq("messages.user_id", userId)
-      .in("condition_type", ["no_check_in", "regular_check_in", "inactivity_to_recurring", "inactivity_to_date"])
+      .in("condition_type", [
+        "no_check_in", 
+        "regular_check_in", 
+        "regular_check_in_recurring", 
+        "inactivity_to_recurring", 
+        "inactivity_to_date"
+      ])
       .eq("active", true)
       .order("hours_threshold", { ascending: true });
       
@@ -65,6 +72,18 @@ export async function getNextCheckInDeadline(userId: string): Promise<CheckInDea
       data.forEach(condition => {
         // Convert last_checked to a Date
         const lastChecked = new Date(condition.last_checked);
+        
+        // For regular_check_in_recurring, we need to check if we're in a recurring phase
+        if (condition.condition_type === 'regular_check_in_recurring' && condition.recurring_pattern && condition.last_message_sent) {
+          const lastMessageSent = new Date(condition.last_message_sent);
+          const recurringPattern = condition.recurring_pattern as RecurringPattern;
+          const nextMessageDate = calculateNextOccurrence(lastMessageSent, recurringPattern);
+          
+          if (!earliestDeadline || nextMessageDate < earliestDeadline) {
+            earliestDeadline = nextMessageDate;
+          }
+          return;
+        }
         
         // Add hours_threshold to get the deadline
         const deadline = new Date(lastChecked);
@@ -91,4 +110,66 @@ export async function getNextCheckInDeadline(userId: string): Promise<CheckInDea
     console.error("Error getting next check-in deadline:", error);
     throw new Error(error.message || "Failed to get next check-in deadline");
   }
+}
+
+// Helper function to calculate the next occurrence based on a recurring pattern
+export function calculateNextOccurrence(baseDate: Date, pattern: RecurringPattern): Date {
+  const result = new Date(baseDate);
+  
+  switch (pattern.type) {
+    case 'daily':
+      result.setDate(result.getDate() + pattern.interval);
+      break;
+      
+    case 'weekly':
+      result.setDate(result.getDate() + (pattern.interval * 7));
+      
+      // If day of week is specified, adjust to that day
+      if (pattern.day !== undefined) {
+        // Adjust to the specified day (0 = Sunday, 6 = Saturday)
+        const currentDayOfWeek = result.getDay();
+        const daysToAdd = (pattern.day - currentDayOfWeek + 7) % 7;
+        result.setDate(result.getDate() + daysToAdd);
+      }
+      break;
+      
+    case 'monthly':
+      result.setMonth(result.getMonth() + pattern.interval);
+      
+      // If day is specified, set to that day of month
+      if (pattern.day !== undefined) {
+        result.setDate(Math.min(pattern.day, getDaysInMonth(result.getFullYear(), result.getMonth())));
+      }
+      break;
+      
+    case 'yearly':
+      result.setFullYear(result.getFullYear() + pattern.interval);
+      
+      // If month is specified, set to that month
+      if (pattern.month !== undefined) {
+        result.setMonth(pattern.month);
+      }
+      
+      // If day is specified, set to that day
+      if (pattern.day !== undefined) {
+        result.setDate(Math.min(pattern.day, getDaysInMonth(result.getFullYear(), result.getMonth())));
+      }
+      break;
+  }
+  
+  // If startTime is specified, parse and set the time
+  if (pattern.startTime) {
+    const [hours, minutes] = pattern.startTime.split(':').map(Number);
+    result.setHours(hours || 0);
+    result.setMinutes(minutes || 0);
+    result.setSeconds(0);
+    result.setMilliseconds(0);
+  }
+  
+  return result;
+}
+
+// Helper function to get the number of days in a month
+function getDaysInMonth(year: number, month: number): number {
+  return new Date(year, month + 1, 0).getDate();
 }

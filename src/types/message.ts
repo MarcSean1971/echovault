@@ -18,6 +18,7 @@ export type Message = {
 export type TriggerType = 
   | 'no_check_in'           // Inactivity-based (dead man's switch)
   | 'regular_check_in'      // Regular check-in required
+  | 'regular_check_in_recurring' // Regular check-in with recurring reminders
   | 'group_confirmation'    // Group confirmation required
   | 'panic_trigger'         // Manual panic trigger
   | 'inactivity_to_recurring' // Inactivity → Then Recurring
@@ -67,6 +68,10 @@ export type MessageCondition = {
   
   // Delivery option for no_check_in
   delivery_option?: DeliveryOption;
+  
+  // Last message sent (for recurring patterns)
+  last_message_sent?: string;
+  next_message_scheduled?: string;
   
   // Recipients
   recipients: Array<{

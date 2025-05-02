@@ -2,7 +2,7 @@
 import { RadioGroup } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { TriggerType } from "@/types/message";
-import { AlertCircle, Bell } from "lucide-react";
+import { AlertCircle, Bell, Repeat } from "lucide-react";
 import { RadioOptionWithTooltip } from "./RadioOptionWithTooltip";
 
 interface ConditionTypeSelectorProps {
@@ -29,6 +29,15 @@ export function ConditionTypeSelector({
           description="Classic dead man's switch - requires regular check-ins to prevent delivery"
           icon={AlertCircle}
           tooltipText="Message will be sent if you don't check in before the deadline."
+        />
+        
+        <RadioOptionWithTooltip 
+          value="regular_check_in_recurring"
+          id="regular-check-in-recurring"
+          label="Regular schedule until check-in"
+          description="Send repeatedly at set intervals until you check in"
+          icon={Repeat}
+          tooltipText="Message will be sent on a regular schedule until you check in again."
         />
         
         <RadioOptionWithTooltip 
