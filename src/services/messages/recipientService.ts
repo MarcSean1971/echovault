@@ -1,10 +1,10 @@
 
-import { supabaseClient } from "@/lib/supabaseClient";
+import { supabase } from "@/integrations/supabase/client";
 import { Recipient } from "@/types/message";
 
 // Fetch all recipients for the current user
 export async function fetchRecipients(): Promise<Recipient[]> {
-  const { data, error } = await supabaseClient
+  const { data, error } = await supabase
     .from('recipients')
     .select('*')
     .order('created_at', { ascending: false });
@@ -31,7 +31,7 @@ export async function createRecipient(
     phone
   };
 
-  const { data, error } = await supabaseClient
+  const { data, error } = await supabase
     .from('recipients')
     .insert(newRecipient)
     .select('*')
@@ -50,7 +50,7 @@ export async function updateRecipient(
   id: string,
   updates: { name?: string; email?: string; phone?: string }
 ): Promise<Recipient> {
-  const { data, error } = await supabaseClient
+  const { data, error } = await supabase
     .from('recipients')
     .update(updates)
     .eq('id', id)
@@ -67,7 +67,7 @@ export async function updateRecipient(
 
 // Delete a recipient
 export async function deleteRecipient(id: string): Promise<void> {
-  const { error } = await supabaseClient
+  const { error } = await supabase
     .from('recipients')
     .delete()
     .eq('id', id);
