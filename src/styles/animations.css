@@ -96,3 +96,27 @@
   box-shadow: 0 0 0 0 rgba(155, 135, 245, 0.7);
   animation: pulse-light 2s infinite;
 }
+
+/* Ensure dropdown menus always appear above other content */
+[data-radix-popper-content-wrapper] {
+  z-index: 100 !important; 
+}
+
+/* Ensure popups have solid backgrounds */
+.radix-dropdown-content {
+  background-color: hsl(var(--popover)) !important;
+  backdrop-filter: none !important;
+}
+
+/* Fix for avatar button hover issues */
+.radix-dropdown-trigger:hover + [data-radix-popper-content-wrapper] {
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Enhance dropdown visibility */
+[data-state="open"] > [data-radix-popper-content-wrapper] {
+  visibility: visible !important;
+  opacity: 1 !important;
+  z-index: 100 !important;
+}

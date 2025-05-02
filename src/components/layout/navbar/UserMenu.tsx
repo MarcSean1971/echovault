@@ -37,7 +37,7 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56" align="end" forceMount>
+      <DropdownMenuContent className="w-56 bg-popover shadow-md" align="end" forceMount sideOffset={8} side="bottom">
         <DropdownMenuLabel>
           <div className="flex flex-col space-y-1">
             <p className="text-xs leading-none text-muted-foreground">
