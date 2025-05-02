@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageFormProvider, useMessageForm } from "./MessageFormContext";
@@ -105,8 +104,9 @@ function MessageEditForm({ message, onCancel }: EditMessageFormProps) {
             setTriggerDate(new Date(messageCondition.trigger_date));
           }
           
-          // Set panic trigger config if it exists
+          // Set panic trigger config if it exists - fixed variable name
           if (messageCondition.panic_trigger_config) {
+            console.log("Setting panic trigger config:", messageCondition.panic_trigger_config);
             setPanicTriggerConfig(messageCondition.panic_trigger_config);
           }
           
@@ -230,6 +230,7 @@ function MessageEditForm({ message, onCancel }: EditMessageFormProps) {
       
       // Handle trigger conditions
       if (existingCondition) {
+        console.log("Updating existing condition with panic config:", panicTriggerConfig);
         // Update existing condition
         await updateMessageCondition(existingCondition.id, {
           condition_type: conditionType,
@@ -245,6 +246,7 @@ function MessageEditForm({ message, onCancel }: EditMessageFormProps) {
           recipients: selectedRecipientObjects
         });
       } else {
+        console.log("Creating new condition with panic config:", panicTriggerConfig);
         // Create new condition
         await createMessageCondition(
           message.id,

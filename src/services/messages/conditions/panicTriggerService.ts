@@ -17,8 +17,15 @@ export async function triggerPanicMessage(userId: string, messageId: string): Pr
       .single();
       
     if (error) {
+      console.error("Error finding panic message:", error);
       throw new Error("Message not found or you don't have permission to trigger it");
     }
+    
+    if (!data) {
+      throw new Error("No active panic message found with that ID");
+    }
+    
+    console.log("Found panic message to trigger:", data);
     
     // Mark the message as triggered - note that we're not updating the DB with 'triggered'
     // and 'delivered' since they don't exist in the schema yet. In a real implementation,
@@ -31,8 +38,11 @@ export async function triggerPanicMessage(userId: string, messageId: string): Pr
       .eq("id", data.id);
       
     if (updateError) {
+      console.error("Error updating panic message:", updateError);
       throw new Error("Failed to trigger panic message");
     }
+    
+    console.log("Successfully triggered panic message");
     
     // Return success
     return {

@@ -16,7 +16,7 @@ export function PanicTrigger({ config, setConfig }: PanicTriggerProps) {
         <div className="space-y-2">
           <Label className="mb-2 block">How do you want to trigger this message?</Label>
           <RadioGroup 
-            value={config.methods.includes('app') ? 'app' : 'sms'} 
+            value={config.methods?.includes('app') ? 'app' : 'sms'} 
             onValueChange={(value) => {
               if (value === 'app') {
                 setConfig({...config, methods: ['app']});

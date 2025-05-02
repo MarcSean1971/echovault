@@ -51,6 +51,20 @@ export function DeliveryMethodContent({
   setActiveTab
 }: DeliveryMethodContentProps) {
   
+  // Initialize default panicTriggerConfig if not provided
+  const defaultPanicConfig: PanicTriggerConfig = {
+    enabled: true,
+    methods: ['app'],
+    cancel_window_seconds: 10,
+    bypass_logging: false
+  };
+
+  // Ensure we have a valid config object
+  const handlePanicConfigUpdate = (config: PanicTriggerConfig) => {
+    setPanicTriggerConfig(config);
+    console.log("Updated panic trigger config:", config);
+  };
+  
   // Render different options based on selected condition type
   const renderConditionOptions = () => {
     switch (conditionType) {
@@ -99,13 +113,8 @@ export function DeliveryMethodContent({
       case 'panic_trigger':
         return (
           <PanicTrigger
-            config={panicTriggerConfig || {
-              enabled: true,
-              methods: ['app'],
-              cancel_window_seconds: 10,
-              bypass_logging: false
-            }}
-            setConfig={setPanicTriggerConfig}
+            config={panicTriggerConfig || defaultPanicConfig}
+            setConfig={handlePanicConfigUpdate}
           />
         );
         
@@ -146,7 +155,14 @@ export function DeliveryMethodContent({
     <div className="space-y-6">
       <ConditionTypeSelector
         conditionType={conditionType}
-        setConditionType={setConditionType}
+        setConditionType={(type) => {
+          setConditionType(type);
+          
+          // If switching to panic trigger, initialize the config if needed
+          if (type === 'panic_trigger' && !panicTriggerConfig) {
+            setPanicTriggerConfig(defaultPanicConfig);
+          }
+        }}
       />
       
       {renderConditionOptions()}

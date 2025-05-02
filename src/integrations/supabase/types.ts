@@ -194,6 +194,51 @@ export type Database = {
         }
         Relationships: []
       }
+      sent_reminders: {
+        Row: {
+          condition_id: string
+          created_at: string
+          deadline: string
+          id: string
+          message_id: string
+          sent_at: string
+          user_id: string
+        }
+        Insert: {
+          condition_id: string
+          created_at?: string
+          deadline: string
+          id?: string
+          message_id: string
+          sent_at?: string
+          user_id: string
+        }
+        Update: {
+          condition_id?: string
+          created_at?: string
+          deadline?: string
+          id?: string
+          message_id?: string
+          sent_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sent_reminders_condition_id_fkey"
+            columns: ["condition_id"]
+            isOneToOne: false
+            referencedRelation: "message_conditions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sent_reminders_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

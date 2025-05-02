@@ -19,6 +19,7 @@ export function PanicButtonCard({ userId, panicMessage, isChecking, isLoading }:
   const navigate = useNavigate();
   const [panicMode, setPanicMode] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
+  const [triggerInProgress, setTriggerInProgress] = useState(false);
 
   // Handle panic trigger
   const handlePanicTrigger = async () => {
@@ -32,6 +33,7 @@ export function PanicButtonCard({ userId, panicMessage, isChecking, isLoading }:
     }
 
     if (isConfirming) {
+      setTriggerInProgress(true);
       setPanicMode(true);
       try {
         const result = await triggerPanicMessage(userId, panicMessage.message_id);
@@ -46,6 +48,7 @@ export function PanicButtonCard({ userId, panicMessage, isChecking, isLoading }:
           setTimeout(() => {
             setPanicMode(false);
             setIsConfirming(false);
+            setTriggerInProgress(false);
             navigate('/messages'); // Redirect to messages page
           }, 3000);
         }
@@ -58,6 +61,7 @@ export function PanicButtonCard({ userId, panicMessage, isChecking, isLoading }:
         });
         setPanicMode(false);
         setIsConfirming(false);
+        setTriggerInProgress(false);
       }
     } else {
       setIsConfirming(true);
@@ -85,7 +89,7 @@ export function PanicButtonCard({ userId, panicMessage, isChecking, isLoading }:
         <Button 
           variant={isConfirming ? "destructive" : "outline"}
           onClick={handlePanicTrigger}
-          disabled={isChecking || panicMode || !panicMessage || isLoading}
+          disabled={isChecking || panicMode || !panicMessage || isLoading || triggerInProgress}
           className="w-full"
         >
           {panicMode ? "MESSAGES SENDING..." : isConfirming ? "CONFIRM EMERGENCY TRIGGER" : "Emergency Panic Button"}
