@@ -26,7 +26,9 @@ export function PanicButtonCard({ userId, panicMessage, isChecking, isLoading }:
   useEffect(() => {
     if (panicMessage) {
       console.log("Panic message loaded:", panicMessage);
-      console.log("Panic config (panic_trigger_config):", panicMessage.panic_trigger_config);
+      if (panicMessage.panic_trigger_config) {
+        console.log("Panic config (panic_trigger_config):", panicMessage.panic_trigger_config);
+      }
       if (panicMessage.panic_config) {
         console.log("Panic config (panic_config):", panicMessage.panic_config);
       }
@@ -68,8 +70,10 @@ export function PanicButtonCard({ userId, panicMessage, isChecking, isLoading }:
       
       try {
         console.log(`Triggering panic message: ${panicMessage.message_id}`);
-        // Log both config locations to help with debugging
-        console.log("Using panic_trigger_config:", panicMessage.panic_trigger_config);
+        // Log config to help with debugging
+        if (panicMessage.panic_trigger_config) {
+          console.log("Using panic_trigger_config:", panicMessage.panic_trigger_config);
+        }
         if (panicMessage.panic_config) {
           console.log("Found panic_config as well:", panicMessage.panic_config);
         }
