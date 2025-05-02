@@ -72,6 +72,8 @@ export type MessageCondition = {
   recurring_pattern?: RecurringPattern;
   panic_trigger_config?: PanicTriggerConfig;
   pin_code?: string;
+  unlock_delay_hours?: number; // Added this field
+  expiry_hours?: number; // Added this field
   secondary_condition?: {
     type: TriggerType;
     hours_threshold?: number;

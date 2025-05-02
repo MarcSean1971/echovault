@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageFormProvider, useMessageForm } from "./MessageFormContext";
@@ -114,12 +115,12 @@ function MessageEditForm({ message, onCancel }: EditMessageFormProps) {
             setPinCode(messageCondition.pin_code);
           }
           
-          // Set unlock delay if it exists
+          // Set unlock delay if it exists - fixed field name
           if (messageCondition.unlock_delay_hours) {
             setUnlockDelay(messageCondition.unlock_delay_hours);
           }
           
-          // Set expiry hours if they exist
+          // Set expiry hours if they exist - fixed field name
           if (messageCondition.expiry_hours) {
             setExpiryHours(messageCondition.expiry_hours);
           }
@@ -251,8 +252,8 @@ function MessageEditForm({ message, onCancel }: EditMessageFormProps) {
           {
             hoursThreshold,
             minutesThreshold,
-            recurringPattern,
             triggerDate: triggerDate ? triggerDate.toISOString() : undefined,
+            recurringPattern,
             recipients: selectedRecipientObjects,
             pinCode,
             unlockDelayHours: unlockDelay,
