@@ -1,4 +1,3 @@
-
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -80,15 +79,11 @@ export function RecurringPatternSelector({
     }
   };
   
-  const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (pattern) {
-      setPattern({ ...pattern, startTime: e.target.value });
-    }
-  };
-  
   const handleDateChange = (date: Date | null) => {
     setStartDate(date);
     if (pattern) {
+      // If date is selected, preserve any existing time in startTime
+      // Otherwise, just update the startDate
       setPattern({ 
         ...pattern, 
         startDate: date ? format(date, 'yyyy-MM-dd') : undefined 
@@ -250,23 +245,11 @@ export function RecurringPatternSelector({
           
           <div>
             <Label className="mb-2 block">Start date and time (optional)</Label>
-            <div className="space-y-2">
-              <DatePicker
-                selectedDate={startDate}
-                setSelectedDate={handleDateChange}
-                label=""
-              />
-              
-              <div className="mt-2">
-                <Label htmlFor="start-time" className="mb-2 block">Start time</Label>
-                <Input
-                  id="start-time"
-                  type="time"
-                  value={pattern?.startTime || ""}
-                  onChange={handleTimeChange}
-                />
-              </div>
-            </div>
+            <DatePicker
+              selectedDate={startDate}
+              setSelectedDate={handleDateChange}
+              label=""
+            />
           </div>
         </div>
       )}
