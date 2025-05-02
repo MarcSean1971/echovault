@@ -49,17 +49,17 @@ export interface Reminder {
  */
 export async function getReminderHistory(messageId: string): Promise<Reminder[]> {
   try {
-    // Use generic query to avoid type issues with the sent_reminders table
-    // that hasn't been added to the TypeScript definitions yet
-    const { data, error } = await supabase
+    // Use a more generic approach to query the table that's not in the TypeScript definitions
+    const response = await supabase
       .from('sent_reminders')
       .select('*')
       .eq('message_id', messageId)
       .order('sent_at', { ascending: false });
       
-    if (error) throw error;
+    if (response.error) throw response.error;
     
-    return data as Reminder[];
+    // Safely cast the response data to our defined Reminder interface
+    return (response.data || []) as unknown as Reminder[];
   } catch (error: any) {
     console.error("Error fetching reminder history:", error);
     throw error;
