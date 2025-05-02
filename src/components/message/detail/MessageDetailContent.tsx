@@ -25,6 +25,7 @@ interface MessageDetailContentProps {
   renderConditionType: () => string;
   renderRecipients: () => React.ReactNode;
   recipients?: any[];
+  onSendTestMessage?: () => void;
 }
 
 export function MessageDetailContent({
@@ -41,7 +42,8 @@ export function MessageDetailContent({
   formatDate,
   renderConditionType,
   renderRecipients,
-  recipients = []
+  recipients = [],
+  onSendTestMessage
 }: MessageDetailContentProps) {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -97,6 +99,7 @@ export function MessageDetailContent({
           setShowDeleteConfirm={setShowDeleteConfirm}
           handleDelete={handleDelete}
           recipients={recipients}
+          onSendTestMessage={onSendTestMessage}
         />
       </div>
       
@@ -127,6 +130,7 @@ export function MessageDetailContent({
           handleDisarmMessage={handleDisarmMessage}
           handleArmMessage={handleArmMessage}
           recipients={recipients}
+          onSendTestMessage={onSendTestMessage}
         />
       )}
       

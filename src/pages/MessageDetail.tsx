@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
 import { MessageLoading } from "@/components/message/detail/MessageLoading";
@@ -15,6 +15,9 @@ export default function MessageDetail() {
   const navigate = useNavigate();
   const [isActionLoading, setIsActionLoading] = useState(false);
 
+  // Use memoized callback for error navigation to prevent recreation on each render
+  const handleError = useCallback(() => navigate("/messages"), [navigate]);
+
   // Use our custom hook to fetch the message data
   const { 
     message, 
@@ -25,7 +28,7 @@ export default function MessageDetail() {
     condition, 
     recipients,
     setIsArmed
-  } = useMessageDetail(id, () => navigate("/messages"));
+  } = useMessageDetail(id, handleError);
   
   const handleMessageDelete = async () => {
     if (!message) return;
@@ -56,6 +59,14 @@ export default function MessageDetail() {
     return <MessageRecipientsList recipients={recipients} />;
   };
 
+  const onSendTestMessage = () => {
+    if (!message) return;
+    toast({
+      title: "Feature in development",
+      description: "The test message feature is currently being implemented."
+    });
+  };
+
   if (isLoading) {
     return <MessageLoading />;
   }
@@ -80,6 +91,7 @@ export default function MessageDetail() {
       renderConditionType={() => getConditionType(condition)}
       renderRecipients={renderRecipients}
       recipients={recipients}
+      onSendTestMessage={onSendTestMessage}
     />
   );
 }

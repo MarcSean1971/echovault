@@ -20,6 +20,7 @@ interface MessageSidebarProps {
   setShowDeleteConfirm: (show: boolean) => void;
   handleDelete: () => Promise<void>;
   recipients?: { id: string; name: string; email: string }[];
+  onSendTestMessage?: () => void;
 }
 
 export function MessageSidebar({
@@ -35,9 +36,18 @@ export function MessageSidebar({
   showDeleteConfirm,
   setShowDeleteConfirm,
   handleDelete,
-  recipients = []
+  recipients = [],
+  onSendTestMessage = () => {}
 }: MessageSidebarProps) {
   const [showTestMessageDialog, setShowTestMessageDialog] = useState(false);
+
+  const handleSendTestMessage = () => {
+    if (onSendTestMessage) {
+      onSendTestMessage();
+    } else {
+      setShowTestMessageDialog(true);
+    }
+  };
 
   return (
     <div className="col-span-full lg:col-span-4 lg:order-2 space-y-4">
@@ -59,7 +69,7 @@ export function MessageSidebar({
         renderRecipients={renderRecipients}
         isArmed={isArmed}
         isActionLoading={isActionLoading}
-        onSendTestMessage={() => setShowTestMessageDialog(true)}
+        onSendTestMessage={handleSendTestMessage}
       />
       
       {/* Actions Card */}
