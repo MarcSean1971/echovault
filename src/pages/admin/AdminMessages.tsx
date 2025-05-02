@@ -10,6 +10,7 @@ import { Archive, ArrowDownUp, Eye, MessageSquare, MoreHorizontal, Search } from
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 // Mock message data
 const mockMessages = [
@@ -78,12 +79,13 @@ export default function AdminMessages() {
     return matchesSearch && matchesStatus;
   });
   
-  const getStatusColor = (status: string) => {
+  // Updated getStatusColor function to return only valid Badge variants
+  const getStatusColor = (status: string): "default" | "destructive" | "outline" | "secondary" => {
     switch (status.toLowerCase()) {
-      case "pending": return "warning";
-      case "scheduled": return "purple";
-      case "delivered": return "success";
-      case "draft": return "secondary";
+      case "pending": return "outline";
+      case "scheduled": return "secondary";
+      case "delivered": return "default";
+      case "draft": return "outline";
       default: return "default";
     }
   };
@@ -154,9 +156,9 @@ export default function AdminMessages() {
                       <Checkbox id={`select-${message.id}`} />
                       <MessageSquare className="h-4 w-4 text-muted-foreground" />
                     </div>
-                    <Badge variant={getStatusColor(message.status)}>
+                    <StatusBadge status={message.status.toLowerCase() as any}>
                       {message.status}
-                    </Badge>
+                    </StatusBadge>
                   </div>
                   
                   <h3 className="font-medium mb-1">{message.title}</h3>
@@ -235,9 +237,9 @@ export default function AdminMessages() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={getStatusColor(message.status)}>
+                      <StatusBadge status={message.status.toLowerCase() as any}>
                         {message.status}
-                      </Badge>
+                      </StatusBadge>
                     </TableCell>
                     <TableCell>{message.createdAt}</TableCell>
                     <TableCell className="text-right">
