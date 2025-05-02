@@ -13,6 +13,7 @@ interface SecurityOptionsProps {
   setUnlockDelay: (value: number) => void;
   expiryHours: number;
   setExpiryHours: (value: number) => void;
+  setActiveTab?: (tab: string) => void; // Added this prop as optional
 }
 
 export function SecurityOptions({
@@ -21,7 +22,8 @@ export function SecurityOptions({
   unlockDelay,
   setUnlockDelay,
   expiryHours,
-  setExpiryHours
+  setExpiryHours,
+  setActiveTab
 }: SecurityOptionsProps) {
   const [open, setOpen] = useState(false);
   const [enablePin, setEnablePin] = useState(!!pinCode);
@@ -137,6 +139,18 @@ export function SecurityOptions({
             </div>
           )}
         </div>
+        
+        {setActiveTab && (
+          <div className="pt-4 border-t mt-4">
+            <button
+              type="button"
+              onClick={() => setActiveTab("recipients")}
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+            >
+              Next: Configure Recipients
+            </button>
+          </div>
+        )}
       </CollapsibleContent>
     </Collapsible>
   );
