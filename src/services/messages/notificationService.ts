@@ -157,7 +157,12 @@ export async function sendTestWhatsAppMessage(messageId: string) {
 
     // Extract the panic config to get keyword
     const panicConfig = condition.panic_config;
-    const triggerKeyword = panicConfig?.trigger_keyword || "SOS";
+    // Safely access trigger_keyword with type checking
+    const triggerKeyword = panicConfig && 
+                          typeof panicConfig === 'object' && 
+                          panicConfig !== null ? 
+                          (panicConfig as any).trigger_keyword || "SOS" : 
+                          "SOS";
     
     // Send test WhatsApp message
     const { data, error } = await supabase.functions.invoke("send-whatsapp-notification", {
