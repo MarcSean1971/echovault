@@ -13,34 +13,76 @@ export type Database = {
         Row: {
           active: boolean
           condition_type: string
+          confirmation_required: number | null
+          confirmations_received: number | null
           created_at: string
+          expiry_hours: number | null
           hours_threshold: number
           id: string
           last_checked: string
           message_id: string
+          minutes_threshold: number | null
+          next_check: string | null
+          panic_config: Json | null
+          pin_code: string | null
           recipients: Json
+          recurring_pattern: Json | null
+          reminder_hours: number[] | null
+          secondary_condition_type: string | null
+          secondary_recurring_pattern: Json | null
+          secondary_trigger_date: string | null
+          trigger_date: string | null
+          unlock_delay_hours: number | null
           updated_at: string
         }
         Insert: {
           active?: boolean
           condition_type: string
+          confirmation_required?: number | null
+          confirmations_received?: number | null
           created_at?: string
+          expiry_hours?: number | null
           hours_threshold: number
           id?: string
           last_checked?: string
           message_id: string
+          minutes_threshold?: number | null
+          next_check?: string | null
+          panic_config?: Json | null
+          pin_code?: string | null
           recipients: Json
+          recurring_pattern?: Json | null
+          reminder_hours?: number[] | null
+          secondary_condition_type?: string | null
+          secondary_recurring_pattern?: Json | null
+          secondary_trigger_date?: string | null
+          trigger_date?: string | null
+          unlock_delay_hours?: number | null
           updated_at?: string
         }
         Update: {
           active?: boolean
           condition_type?: string
+          confirmation_required?: number | null
+          confirmations_received?: number | null
           created_at?: string
+          expiry_hours?: number | null
           hours_threshold?: number
           id?: string
           last_checked?: string
           message_id?: string
+          minutes_threshold?: number | null
+          next_check?: string | null
+          panic_config?: Json | null
+          pin_code?: string | null
           recipients?: Json
+          recurring_pattern?: Json | null
+          reminder_hours?: number[] | null
+          secondary_condition_type?: string | null
+          secondary_recurring_pattern?: Json | null
+          secondary_trigger_date?: string | null
+          trigger_date?: string | null
+          unlock_delay_hours?: number | null
           updated_at?: string
         }
         Relationships: [

@@ -12,6 +12,8 @@ export function mapDbConditionToMessageCondition(condition: any): MessageConditi
     delivered: !condition.active, // If not active, we consider it delivered for now
     // For recurring patterns, preserve the structure
     recurring_pattern: condition.recurring_pattern as RecurringPattern | null,
+    // Map panic_config to panic_trigger_config for consistency
+    panic_trigger_config: condition.panic_config || undefined,
     // Map additional fields
     unlock_delay_hours: condition.unlock_delay_hours || 0,
     expiry_hours: condition.expiry_hours || 0
