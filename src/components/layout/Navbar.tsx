@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
 import { Logo } from "./navbar/Logo";
@@ -31,19 +30,24 @@ export default function Navbar({ isLoggedIn = false }: NavbarProps) {
 
   return (
     <header className="sticky top-0 z-30 w-full border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center">
-          <Logo />
-          
-          {/* Desktop navigation */}
-          {authenticated && <DesktopNav userImage={userImage} initials={initials} />}
-        </div>
-
-        {authenticated ? (
-          <MobileNav userImage={userImage} initials={initials} />
-        ) : (
-          <GuestNav />
+      <div className="container mx-auto px-4 py-3 flex items-center">
+        <Logo />
+        
+        {/* Desktop navigation with centered avatar */}
+        {authenticated && (
+          <div className="hidden md:flex flex-1 ml-6">
+            <DesktopNav userImage={userImage} initials={initials} />
+          </div>
         )}
+
+        {/* Mobile navigation */}
+        <div className="md:hidden flex flex-1 justify-end">
+          {authenticated ? (
+            <MobileNav userImage={userImage} initials={initials} />
+          ) : (
+            <GuestNav />
+          )}
+        </div>
       </div>
     </header>
   );

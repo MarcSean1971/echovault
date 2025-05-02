@@ -17,8 +17,8 @@ interface DesktopNavProps {
 
 export function DesktopNav({ userImage, initials }: DesktopNavProps) {
   return (
-    <>
-      <NavigationMenu className="hidden md:flex">
+    <div className="flex items-center justify-between w-full">
+      <NavigationMenu>
         <NavigationMenuList>
           <NavigationMenuItem>
             <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
@@ -33,17 +33,17 @@ export function DesktopNav({ userImage, initials }: DesktopNavProps) {
         </NavigationMenuList>
       </NavigationMenu>
       
-      <div className="hidden md:flex items-center space-x-4">
-        <Button 
-          asChild 
-          className="bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity"
-          size="sm"
-        >
-          <Link to="/check-in">Check In</Link>
-        </Button>
-        
+      <div className="flex-1 flex justify-center">
         <UserMenu userImage={userImage} initials={initials} />
       </div>
-    </>
+      
+      <Button 
+        asChild 
+        className="bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity"
+        size="sm"
+      >
+        <Link to="/check-in">Check In</Link>
+      </Button>
+    </div>
   );
 }

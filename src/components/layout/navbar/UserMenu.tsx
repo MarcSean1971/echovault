@@ -41,10 +41,10 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
   return (
     <>
       {/* Desktop dropdown menu */}
-      <div className="hidden md:block">
+      <div className="flex justify-center">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Avatar className="h-9 w-9 transition-transform hover:scale-105 cursor-pointer border-2 border-transparent hover:border-primary/20">
+            <Avatar className="h-10 w-10 transition-transform hover:scale-105 cursor-pointer border-2 border-transparent hover:border-primary/20">
               {userImage ? (
                 <AvatarImage src={userImage} alt="User profile" />
               ) : (
@@ -52,7 +52,7 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
               )}
             </Avatar>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuContent align="center" className="w-56">
             <DropdownMenuLabel>My Account</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
