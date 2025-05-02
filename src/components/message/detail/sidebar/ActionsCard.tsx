@@ -56,31 +56,7 @@ export function ActionsCard({
           <Bell className="h-5 w-5 text-muted-foreground" />
         </div>
 
-        {/* Edit Message Button */}
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div>
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => navigate(`/message/${messageId}/edit`)}
-                  disabled={isArmed || isActionLoading}
-                >
-                  <Pencil className="h-4 w-4 mr-2" />
-                  Edit Message
-                </Button>
-              </div>
-            </TooltipTrigger>
-            {isArmed && (
-              <TooltipContent>
-                <p>Disarm the message first to edit it</p>
-              </TooltipContent>
-            )}
-          </Tooltip>
-        </TooltipProvider>
-
-        {/* Arm/Disarm Button */}
+        {/* Arm/Disarm Button - FIRST */}
         {conditionId && (
           <Button
             variant={isArmed ? "destructive" : "default"}
@@ -102,7 +78,7 @@ export function ActionsCard({
           </Button>
         )}
 
-        {/* Reminders Button */}
+        {/* Reminders Button - SECOND */}
         {conditionId && onViewReminderHistory && (
           <Button
             variant="outline"
@@ -115,7 +91,7 @@ export function ActionsCard({
           </Button>
         )}
 
-        {/* Send Test Message Button */}
+        {/* Send Test Message Button - THIRD */}
         {conditionId && onSendTestMessage && (
           <TooltipProvider>
             <Tooltip>
@@ -141,7 +117,31 @@ export function ActionsCard({
           </TooltipProvider>
         )}
 
-        {/* Delete Button / Confirm */}
+        {/* Edit Message Button - FOURTH */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => navigate(`/message/${messageId}/edit`)}
+                  disabled={isArmed || isActionLoading}
+                >
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Edit Message
+                </Button>
+              </div>
+            </TooltipTrigger>
+            {isArmed && (
+              <TooltipContent>
+                <p>Disarm the message first to edit it</p>
+              </TooltipContent>
+            )}
+          </Tooltip>
+        </TooltipProvider>
+
+        {/* Delete Button / Confirm - FIFTH */}
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>

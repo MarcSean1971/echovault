@@ -2,11 +2,12 @@
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Message } from "@/types/message";
-import { ShieldOff, Shield, Clock, Bell, Mail } from "lucide-react";
+import { ShieldOff, Shield, Clock, Bell, Mail, Pencil, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { MessageTypeIcon } from "./MessageTypeIcon";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { ReminderHistoryDialog } from "./ReminderHistoryDialog";
+import { useNavigate } from "react-router-dom";
  
 interface MessageDetailsSheetProps {
   showDetailsSheet: boolean;
@@ -40,6 +41,7 @@ export function MessageDetailsSheet({
   onSendTestMessage
 }: MessageDetailsSheetProps) {
   const [reminderHistoryOpen, setReminderHistoryOpen] = useState(false);
+  const navigate = useNavigate();
   
   return (
     <>
@@ -76,6 +78,7 @@ export function MessageDetailsSheet({
             </div>
             
             <div className="space-y-3">
+              {/* Arm/Disarm Button - FIRST */}
               {conditionId && (
                 <Button 
                   variant={isArmed ? "destructive" : "default"}
@@ -85,29 +88,31 @@ export function MessageDetailsSheet({
                 >
                   {isArmed ? (
                     <>
-                      <ShieldOff className="mr-2 h-4 w-4" />
+                      <ShieldOff className="h-4 w-4 mr-2" />
                       Disarm Message
                     </>
                   ) : (
                     <>
-                      <Shield className="mr-2 h-4 w-4" />
+                      <Shield className="h-4 w-4 mr-2" />
                       Arm Message
                     </>
                   )}
                 </Button>
               )}
               
+              {/* Reminders Button - SECOND */}
               {conditionId && (
                 <Button 
                   variant="outline" 
                   className="w-full"
                   onClick={() => setReminderHistoryOpen(true)}
                 >
-                  <Clock className="mr-2 h-4 w-4" />
+                  <Clock className="h-4 w-4 mr-2" />
                   View Reminder History
                 </Button>
               )}
               
+              {/* Send Test Message Button - THIRD */}
               {conditionId && onSendTestMessage && recipients && recipients.length > 0 && (
                 <Button
                   variant="outline"
@@ -119,6 +124,28 @@ export function MessageDetailsSheet({
                   Send Test Message
                 </Button>
               )}
+              
+              {/* Edit Message Button - FOURTH */}
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => navigate(`/message/${message.id}/edit`)}
+                disabled={isArmed || isActionLoading}
+              >
+                <Pencil className="h-4 w-4 mr-2" />
+                Edit Message
+              </Button>
+              
+              {/* Delete Message Button - FIFTH */}
+              <Button
+                variant="outline"
+                className="w-full border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                onClick={() => navigate('/messages')}
+                disabled={isArmed || isActionLoading}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Message
+              </Button>
             </div>
           </div>
         </SheetContent>
