@@ -10,6 +10,7 @@ import {
 import { formatDate } from "@/utils/messageHelpers";
 import { Loader2, Clock, Mail } from "lucide-react";
 import { getReminderHistory, Reminder } from "@/services/messages/reminderService";
+import { ICON_HOVER_EFFECTS } from "@/utils/hoverEffects";
 
 interface ReminderHistoryDialogProps {
   open: boolean;
@@ -60,7 +61,7 @@ export function ReminderHistoryDialog({
         <div className="py-4">
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <Loader2 className={`h-6 w-6 animate-spin text-muted-foreground ${ICON_HOVER_EFFECTS}`} />
             </div>
           ) : error ? (
             <div className="text-center text-sm text-destructive py-6">
@@ -75,11 +76,11 @@ export function ReminderHistoryDialog({
               {reminders.map((reminder) => (
                 <div
                   key={reminder.id}
-                  className="bg-secondary/30 p-3 rounded-md"
+                  className="bg-secondary/30 p-3 rounded-md hover:bg-secondary/40 transition-colors duration-200"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex space-x-2 items-center mb-2">
-                      <Mail className="h-4 w-4 text-primary" />
+                      <Mail className={`h-4 w-4 text-primary ${ICON_HOVER_EFFECTS}`} />
                       <span className="text-sm font-medium">
                         Reminder Sent
                       </span>
@@ -89,7 +90,7 @@ export function ReminderHistoryDialog({
                     </div>
                   </div>
                   <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-                    <Clock className="h-3 w-3" />
+                    <Clock className={`h-3 w-3 ${ICON_HOVER_EFFECTS}`} />
                     <span>Deadline: {formatDate(reminder.deadline)}</span>
                   </div>
                 </div>

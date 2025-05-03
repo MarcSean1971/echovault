@@ -8,6 +8,7 @@ import { MessageFilter } from "@/components/message/MessageFilter";
 import { MessageGrid } from "@/components/message/MessageGrid";
 import { fetchMessages, deleteMessage } from "@/services/messages/messageService";
 import { Message } from "@/types/message";
+import { BUTTON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 export default function Messages() {
   const navigate = useNavigate();
@@ -74,7 +75,10 @@ export default function Messages() {
           messageType={messageType} 
           onFilterChange={setMessageType} 
         />
-        <Button onClick={() => navigate("/create-message")}>
+        <Button 
+          onClick={() => navigate("/create-message")}
+          className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
+        >
           Create New Message
         </Button>
       </div>
