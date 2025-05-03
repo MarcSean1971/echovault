@@ -3,6 +3,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { BellOff, Bell, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useHoverEffects } from "@/hooks/useHoverEffects";
 
 interface MessageCardActionsProps {
   messageId: string;
@@ -22,6 +23,7 @@ export function MessageCardActions({
   onDisarmMessage
 }: MessageCardActionsProps) {
   const navigate = useNavigate();
+  const { getButtonHoverClasses, HOVER_TRANSITION } = useHoverEffects();
 
   return (
     <div className="flex justify-between">
@@ -33,7 +35,7 @@ export function MessageCardActions({
               size="sm"
               onClick={onDisarmMessage}
               disabled={isLoading}
-              className="text-green-600 hover:bg-green-50 hover:text-green-700 transition-all hover:-translate-y-0.5"
+              className={`text-green-600 hover:bg-green-50 hover:text-green-700 ${getButtonHoverClasses('outline')}`}
             >
               <BellOff className="h-4 w-4 mr-1 transition-transform hover:scale-110" /> Disarm
             </Button>
@@ -43,7 +45,7 @@ export function MessageCardActions({
               size="sm"
               onClick={onArmMessage}
               disabled={isLoading}
-              className="text-destructive hover:bg-destructive/10 transition-all hover:-translate-y-0.5"
+              className={`text-destructive hover:bg-destructive/10 ${getButtonHoverClasses('destructive')}`}
             >
               <Bell className="h-4 w-4 mr-1 transition-transform hover:scale-110" /> Arm
             </Button>
@@ -54,7 +56,7 @@ export function MessageCardActions({
         variant="ghost"
         size="sm"
         onClick={() => navigate(`/message/${messageId}`)}
-        className="transition-all hover:-translate-y-0.5"
+        className={`${getButtonHoverClasses('ghost')}`}
       >
         View <ArrowRight className="h-4 w-4 ml-1 transition-transform hover:scale-110" />
       </Button>
