@@ -56,12 +56,12 @@ export function MessageCardContent({
         </div>
       )}
       
-      {/* Show deadline timer if armed */}
+      {/* Show deadline timer if armed - changed 'active' to 'isArmed' to match component props */}
       {isArmed && deadline && (
         <div className="mt-3">
           <MessageTimer 
             deadline={deadline} 
-            active={isArmed} 
+            isArmed={isArmed} 
             refreshTrigger={refreshTrigger}
           />
         </div>

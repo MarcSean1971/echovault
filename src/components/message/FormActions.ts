@@ -1,12 +1,13 @@
-
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/components/ui/use-toast";
 import { createMessage } from "@/services/messages";
 import { createMessageCondition } from "@/services/messages/conditionService";
-import { useMessageForm } from "./MessageFormContext";
+import { useMessageForm } from "@/components/message/MessageFormContext";
+import { useFormValidation } from "./useFormValidation";
 import { simulateUploadProgress } from "@/utils/uploadProgress";
 import { fetchRecipients } from "@/services/messages/recipientService";
+import { TriggerType } from "@/types/message"; // Added this import
 
 export function useFormActions() {
   const navigate = useNavigate();
