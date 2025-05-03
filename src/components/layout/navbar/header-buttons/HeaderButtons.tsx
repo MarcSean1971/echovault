@@ -88,9 +88,11 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
           triggerValue: Date.now() // Add unique value to ensure it's always different
         }
       }));
+      
+      return true;
     }
     
-    return success;
+    return false;
   };
 
   // Handle panic trigger
