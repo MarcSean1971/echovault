@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { MessageFilter } from "@/components/message/MessageFilter";
 import { MessageGrid } from "@/components/message/MessageGrid";
 import { fetchMessages, deleteMessage } from "@/services/messages/messageService";
-import { Message } from "@/types/message";
+import { Message, MessageCondition } from "@/types/message";
 import { BUTTON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { fetchMessageConditions } from "@/services/messages/conditionService";
 
 export default function Messages() {
   const navigate = useNavigate();
@@ -16,6 +17,9 @@ export default function Messages() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [messageType, setMessageType] = useState<string | null>(null);
+  const [conditions, setConditions] = useState<MessageCondition[]>([]);
+  const [panicMessages, setPanicMessages] = useState<Message[]>([]);
+  const [regularMessages, setRegularMessages] = useState<Message[]>([]);
 
   useEffect(() => {
     if (!userId) return;
@@ -24,8 +28,32 @@ export default function Messages() {
       setIsLoading(true);
       
       try {
-        const data = await fetchMessages(messageType);
-        setMessages(data);
+        // Fetch both messages and conditions
+        const [messageData, conditionsData] = await Promise.all([
+          fetchMessages(messageType),
+          fetchMessageConditions(userId)
+        ]);
+        
+        setMessages(messageData);
+        setConditions(conditionsData);
+        
+        // Categorize messages based on their condition types
+        const panic: Message[] = [];
+        const regular: Message[] = [];
+        
+        messageData.forEach(message => {
+          // Find the condition for this message
+          const condition = conditionsData.find(c => c.message_id === message.id);
+          
+          if (condition && condition.condition_type === 'panic_trigger') {
+            panic.push(message);
+          } else {
+            regular.push(message);
+          }
+        });
+        
+        setPanicMessages(panic);
+        setRegularMessages(regular);
       } catch (error: any) {
         console.error("Error fetching messages:", error);
         toast({
@@ -47,7 +75,10 @@ export default function Messages() {
     try {
       await deleteMessage(id);
       
+      // Remove from all appropriate state arrays
       setMessages(messages.filter(message => message.id !== id));
+      setPanicMessages(panicMessages.filter(message => message.id !== id));
+      setRegularMessages(regularMessages.filter(message => message.id !== id));
       
       toast({
         title: "Message deleted",
@@ -82,12 +113,30 @@ export default function Messages() {
           Create New Message
         </Button>
       </div>
-
-      <MessageGrid 
-        messages={messages} 
-        isLoading={isLoading} 
-        onDelete={handleDelete} 
-      />
+      
+      {/* Display panic messages first if any exist */}
+      {panicMessages.length > 0 && (
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold mb-4 text-red-500">Emergency Panic Messages</h2>
+          <MessageGrid 
+            messages={panicMessages} 
+            isLoading={isLoading} 
+            onDelete={handleDelete} 
+          />
+        </div>
+      )}
+      
+      {/* Display regular messages (deadman's switch) */}
+      <div className={panicMessages.length > 0 ? "mt-6" : ""}>
+        {panicMessages.length > 0 && (
+          <h2 className="text-xl font-semibold mb-4">Deadman's Switch Messages</h2>
+        )}
+        <MessageGrid 
+          messages={regularMessages} 
+          isLoading={isLoading} 
+          onDelete={handleDelete} 
+        />
+      </div>
     </div>
   );
 }
