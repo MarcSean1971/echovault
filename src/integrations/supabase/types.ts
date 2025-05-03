@@ -9,6 +9,42 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      delivered_messages: {
+        Row: {
+          condition_id: string
+          delivered_at: string
+          delivery_id: string
+          device_info: string | null
+          id: string
+          message_id: string
+          recipient_id: string
+          viewed_at: string | null
+          viewed_count: number | null
+        }
+        Insert: {
+          condition_id: string
+          delivered_at?: string
+          delivery_id: string
+          device_info?: string | null
+          id?: string
+          message_id: string
+          recipient_id: string
+          viewed_at?: string | null
+          viewed_count?: number | null
+        }
+        Update: {
+          condition_id?: string
+          delivered_at?: string
+          delivery_id?: string
+          device_info?: string | null
+          id?: string
+          message_id?: string
+          recipient_id?: string
+          viewed_at?: string | null
+          viewed_count?: number | null
+        }
+        Relationships: []
+      }
       message_conditions: {
         Row: {
           active: boolean

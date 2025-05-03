@@ -110,59 +110,47 @@ export async function recordMessageDelivery(
   try {
     const supabase = supabaseClient();
     
-    // Check if table exists before trying to insert
-    try {
-      const { data: deliveredMessages, error: tableError } = await supabase
-        .from("delivered_messages")
-        .select("count")
-        .limit(1);
-
-      if (tableError) {
-        console.warn("Delivered messages table may not exist, skipping delivery recording");
-        console.log("Details:", tableError);
-        return null;
-      }
+    // Check if delivery record already exists
+    const { data: existingRecord, error: checkError } = await supabase
+      .from("delivered_messages")
+      .select("id")
+      .eq("delivery_id", deliveryId)
+      .maybeSingle();
       
-      // If table exists, check if delivery record already exists
-      const { data: existingRecord, error: checkError } = await supabase
-        .from("delivered_messages")
-        .select("id")
-        .eq("delivery_id", deliveryId)
-        .maybeSingle();
-        
-      if (checkError) {
-        console.error("Error checking for existing delivery record:", checkError);
-      }
-      
-      // If record exists, don't create a duplicate
-      if (existingRecord) {
-        console.log(`Delivery record already exists for ID ${deliveryId}`);
-        return existingRecord;
-      }
-      
-      // Insert the delivery record
-      const { data, error } = await supabase
-        .from("delivered_messages")
-        .insert({
-          message_id: messageId,
-          condition_id: conditionId,
-          recipient_id: recipientId,
-          delivery_id: deliveryId,
-          delivered_at: new Date().toISOString()
-        })
-        .select();
-      
-      if (error) {
-        console.error("Error inserting message delivery:", error);
+    if (checkError && checkError.code !== "42P01") {
+      console.error("Error checking for existing delivery record:", checkError);
+    }
+    
+    // If record exists, don't create a duplicate
+    if (existingRecord) {
+      console.log(`Delivery record already exists for ID ${deliveryId}`);
+      return existingRecord;
+    }
+    
+    // Insert the delivery record
+    const { data, error } = await supabase
+      .from("delivered_messages")
+      .insert({
+        message_id: messageId,
+        condition_id: conditionId,
+        recipient_id: recipientId,
+        delivery_id: deliveryId,
+        delivered_at: new Date().toISOString()
+      })
+      .select();
+    
+    if (error) {
+      console.error("Error inserting message delivery:", error);
+      if (error.code === "42P01") {
+        console.warn("delivered_messages table may not exist yet");
+      } else {
         throw error;
       }
-      
+    } else {
       console.log(`Successfully created delivery record: ${deliveryId} for message ${messageId}`);
-      return data;
-    } catch (tableCheckError) {
-      console.warn("Error with delivered_messages table:", tableCheckError);
-      return null;
     }
+    
+    return data;
   } catch (error) {
     console.error("Error in recordMessageDelivery:", error);
     return null; // Don't throw here, just return null to continue the process
