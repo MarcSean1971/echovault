@@ -1,12 +1,12 @@
 
 import { Link } from "react-router-dom";
 import { UserMenu } from "./UserMenu";
+import { MessageSquare } from "lucide-react";
 import {
   NavigationMenu,
   NavigationMenuItem,
   NavigationMenuLink,
   NavigationMenuList,
-  navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
 
 interface DesktopNavProps {
@@ -24,9 +24,10 @@ export function DesktopNav({ userImage, initials }: DesktopNavProps) {
             <NavigationMenuItem>
               <NavigationMenuLink 
                 asChild 
-                className={navigationMenuTriggerStyle() + " nav-link relative transition-all"}
+                className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors bg-green-600 text-white px-4 py-2 shadow-sm hover:bg-green-700 hover:-translate-y-0.5 duration-200"
               >
                 <Link to="/messages">
+                  <MessageSquare className="mr-2 h-4 w-4" />
                   Messages
                 </Link>
               </NavigationMenuLink>
