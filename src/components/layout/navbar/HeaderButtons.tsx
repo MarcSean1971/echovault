@@ -1,10 +1,11 @@
+
 import { Button } from "@/components/ui/button";
 import { Check, AlertCircle, MessageSquare } from "lucide-react";
 import { MessageCondition } from "@/types/message";
 import { triggerPanicMessage } from "@/services/messages/conditions/panicTriggerService";
 import { toast } from "@/components/ui/use-toast";
 import { useNavigate, Link } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTriggerDashboard } from "@/hooks/useTriggerDashboard";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -16,7 +17,11 @@ interface HeaderButtonsProps {
 export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  const { handleCheckIn: handleDashboardCheckIn, isLoading: isChecking } = useTriggerDashboard();
+  const { handleCheckIn: handleDashboardCheckIn, isLoading: isChecking, nextDeadline } = useTriggerDashboard();
+  
+  // Urgency states for check-in button
+  const [isUrgent, setIsUrgent] = useState(false);
+  const [isVeryUrgent, setIsVeryUrgent] = useState(false);
   
   // Panic button states
   const [panicMode, setPanicMode] = useState(false);
@@ -34,6 +39,38 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
     (c.condition_type === 'no_check_in' || c.condition_type === 'regular_check_in') && 
     c.active === true
   );
+  
+  // Calculate urgency levels based on deadline
+  useEffect(() => {
+    if (!nextDeadline) return;
+    
+    const checkUrgency = () => {
+      const now = new Date();
+      const diff = nextDeadline.getTime() - now.getTime();
+      const hoursRemaining = Math.max(0, diff / (1000 * 60 * 60));
+      
+      // Set urgency based on remaining time
+      setIsVeryUrgent(hoursRemaining < 3); // Very urgent if less than 3 hours
+      setIsUrgent(hoursRemaining < 12 && hoursRemaining >= 3); // Urgent if between 3-12 hours
+    };
+    
+    // Check immediately and then set up interval
+    checkUrgency();
+    const interval = setInterval(checkUrgency, 60000); // Check every minute
+    
+    return () => clearInterval(interval);
+  }, [nextDeadline]);
+
+  // Determine check-in button color based on urgency
+  const getCheckInButtonStyle = () => {
+    if (isVeryUrgent) {
+      return "bg-red-600 text-white hover:bg-red-700";
+    } else if (isUrgent) {
+      return "bg-gradient-to-r from-orange-500 to-red-500 text-white hover:opacity-90";
+    } else {
+      return "bg-orange-500 text-white hover:bg-orange-600";
+    }
+  };
 
   // Handle panic trigger
   const handlePanicTrigger = async () => {
@@ -145,7 +182,7 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
         <Button 
           onClick={handleDashboardCheckIn}
           disabled={isChecking || panicMode}
-          className={`bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all shadow-lg ${buttonPaddingClass} text-white ${buttonSizeClass}`}
+          className={`${getCheckInButtonStyle()} transition-all shadow-lg hover:-translate-y-0.5 ${buttonPaddingClass} ${buttonSizeClass}`}
           size={isMobile ? "sm" : "lg"}
         >
           <span className="flex items-center gap-1 font-medium">
@@ -160,7 +197,7 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
         <Button 
           onClick={handlePanicTrigger}
           disabled={isChecking || panicMode || triggerInProgress}
-          className={`bg-red-600 text-white transition-all shadow-lg hover:opacity-90 ${buttonPaddingClass} ${buttonSizeClass}`}
+          className={`bg-red-600 text-white transition-all shadow-lg hover:opacity-90 hover:-translate-y-0.5 ${buttonPaddingClass} ${buttonSizeClass}`}
           size={isMobile ? "sm" : "lg"}
         >
           <span className="flex items-center gap-1 font-medium">
