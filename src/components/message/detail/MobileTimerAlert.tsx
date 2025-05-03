@@ -7,10 +7,9 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 interface MobileTimerAlertProps {
   deadline: Date | null;
   isArmed: boolean;
-  refreshTrigger?: number;
 }
 
-export function MobileTimerAlert({ deadline, isArmed, refreshTrigger }: MobileTimerAlertProps) {
+export function MobileTimerAlert({ deadline, isArmed }: MobileTimerAlertProps) {
   if (!isArmed || !deadline) return null;
   
   // Calculate time left to determine urgency for styling
@@ -48,7 +47,7 @@ export function MobileTimerAlert({ deadline, isArmed, refreshTrigger }: MobileTi
           </StatusBadge>
         </div>
         <AlertDescription className="pt-1">
-          <MessageTimer deadline={deadline} isArmed={isArmed} refreshTrigger={refreshTrigger} />
+          <MessageTimer deadline={deadline} isArmed={isArmed} />
         </AlertDescription>
       </Alert>
     </div>

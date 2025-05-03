@@ -7,10 +7,9 @@ import { cn } from "@/lib/utils";
 interface MessageTimerProps {
   deadline: Date | null;
   isArmed: boolean;
-  refreshTrigger?: number; // New prop to force refresh
 }
 
-export function MessageTimer({ deadline, isArmed, refreshTrigger = 0 }: MessageTimerProps) {
+export function MessageTimer({ deadline, isArmed }: MessageTimerProps) {
   const [timeLeft, setTimeLeft] = useState<string>("--:--:--");
   const [timePercentage, setTimePercentage] = useState(100);
   const [isUrgent, setIsUrgent] = useState(false);
@@ -22,7 +21,6 @@ export function MessageTimer({ deadline, isArmed, refreshTrigger = 0 }: MessageT
       setTimeLeft("--:--:--");
       setIsUrgent(false);
       setIsVeryUrgent(false);
-      setTimePercentage(100);
       return;
     }
     
@@ -77,7 +75,9 @@ export function MessageTimer({ deadline, isArmed, refreshTrigger = 0 }: MessageT
     }, 1000);
     
     return () => clearInterval(interval);
-  }, [deadline, isArmed, refreshTrigger]); // Added refreshTrigger to dependencies
+  }, [deadline, isArmed]);
+  
+  // Removed the conditional return - we now always render the component
   
   // Get timer color based on percentage and urgency
   const getTimerColor = () => {
