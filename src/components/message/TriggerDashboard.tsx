@@ -15,13 +15,19 @@ export function TriggerDashboard() {
     refreshConditions
   } = useTriggerDashboard();
   
+  // Create a wrapper function that ignores the boolean result
+  const handleCheckInWrapper = async () => {
+    await handleCheckIn();
+    // Don't return anything (void)
+  };
+  
   return (
     <div className="space-y-6">
       <DashboardSummaryCards
         nextDeadline={nextDeadline}
         lastCheckIn={lastCheckIn}
         conditions={conditions}
-        onCheckIn={handleCheckIn}
+        onCheckIn={handleCheckInWrapper}
       />
       
       <MessageTriggersTable

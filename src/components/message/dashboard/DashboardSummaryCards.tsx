@@ -4,6 +4,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { MessageCondition, MessageDeliveryStatus } from "@/types/message";
+import { BUTTON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface DashboardSummaryCardsProps {
   nextDeadline: Date | null;
@@ -47,7 +48,10 @@ export function DashboardSummaryCards({
           )}
         </CardContent>
         <CardFooter>
-          <Button onClick={onCheckIn} className="w-full">
+          <Button 
+            onClick={onCheckIn} 
+            className={`w-full ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
+          >
             Check In Now
           </Button>
         </CardFooter>
