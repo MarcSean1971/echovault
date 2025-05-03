@@ -1,12 +1,15 @@
-import React, { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { useVideoRecorder } from "@/hooks/video/useVideoRecorder";
+
+import React, { useState } from "react";
+import { useVideoRecorder } from "@/hooks/video";
 import { VideoPreview } from "./video/VideoPreview";
 import { VideoPlayback } from "./video/VideoPlayback";
 import { RecordingControls } from "./video/RecordingControls";
 import { PlaybackControls } from "./video/PlaybackControls";
-import { AlertCircle, RefreshCw, Camera } from "lucide-react";
-import { HOVER_TRANSITION, BUTTON_HOVER_EFFECTS } from "@/utils/hoverEffects";
+import { CameraPermissionRequest } from "./video/CameraPermissionRequest";
+import { UnsupportedBrowser } from "./video/UnsupportedBrowser";
+import { VideoRecorderFooter } from "./video/VideoRecorderFooter";
+import { PermissionRetryButton } from "./video/PermissionRetryButton";
+import { CameraNotReadyWarning } from "./video/CameraNotReadyWarning";
 
 interface VideoRecorderProps {
   onVideoReady: (videoBlob: Blob, videoBase64: string) => void;
@@ -73,48 +76,10 @@ export function VideoRecorder({ onVideoReady, onCancel }: VideoRecorderProps) {
   
   // Show camera permission request screen
   if (showCameraPermissionRequest) {
-    return (
-      <div className="p-4 bg-background rounded-lg border">
-        <div className="flex flex-col items-center justify-center gap-4 py-8">
-          <div className="bg-primary/10 p-4 rounded-full">
-            <Camera className="h-12 w-12 text-primary" />
-          </div>
-          
-          <div className="text-center space-y-2 max-w-md">
-            <h3 className="font-medium text-lg">Camera Permission Required</h3>
-            <p className="text-muted-foreground">
-              To record a video message, we need permission to access your camera and microphone.
-              Click the button below to grant access.
-            </p>
-            
-            <div className="bg-amber-50 border border-amber-200 p-3 rounded-md my-4 text-left">
-              <p className="text-sm text-amber-800">
-                <strong>Note:</strong> If you've previously denied camera access, you may need to 
-                update your browser settings to allow access.
-              </p>
-            </div>
-          </div>
-          
-          <div className="flex flex-col sm:flex-row gap-3 mt-2">
-            <Button 
-              onClick={handleRequestCameraAccess}
-              className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default} flex items-center gap-2`}
-            >
-              <Camera className="h-4 w-4" /> Grant Camera Access
-            </Button>
-            
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={onCancel}
-              className={HOVER_TRANSITION}
-            >
-              Cancel
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
+    return <CameraPermissionRequest 
+      onRequestAccess={handleRequestCameraAccess} 
+      onCancel={onCancel} 
+    />;
   }
   
   return (
@@ -140,28 +105,12 @@ export function VideoRecorder({ onVideoReady, onCancel }: VideoRecorderProps) {
         
         {/* Permission denied retry button */}
         {permissionDenied && !videoURL && (
-          <div className="flex justify-center w-full">
-            <Button 
-              onClick={handleRetryCamera} 
-              variant="outline"
-              className={`flex items-center gap-2 ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.outline}`}
-            >
-              <RefreshCw className="w-4 h-4" /> Try Again
-            </Button>
-          </div>
+          <PermissionRetryButton onRetry={handleRetryCamera} />
         )}
         
         {/* Camera not ready warning */}
         {!streamReady && !isInitializing && !permissionDenied && !videoURL && (
-          <div className="bg-amber-50 border border-amber-200 p-3 rounded-md flex items-start gap-2 w-full">
-            <AlertCircle className="text-amber-500 w-5 h-5 flex-shrink-0 mt-0.5" />
-            <div className="text-sm">
-              <p className="font-medium text-amber-800">Camera not connected</p>
-              <p className="text-amber-700">
-                Please ensure your camera is connected and permissions are granted.
-              </p>
-            </div>
-          </div>
+          <CameraNotReadyWarning />
         )}
         
         {/* Controls */}
@@ -185,38 +134,7 @@ export function VideoRecorder({ onVideoReady, onCancel }: VideoRecorderProps) {
         )}
       </div>
       
-      <div className="mt-4 flex justify-end">
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={onCancel}
-          className={HOVER_TRANSITION}
-        >
-          Cancel
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-// Small focused component for unsupported browsers
-function UnsupportedBrowser({ onCancel }: { onCancel: () => void }) {
-  return (
-    <div className="p-4 text-center">
-      <AlertCircle className="h-12 w-12 text-destructive mx-auto mb-2" />
-      <p className="text-destructive mb-4 font-medium">
-        Your browser doesn't support video recording.
-      </p>
-      <p className="text-sm text-muted-foreground mb-4">
-        Please try using Chrome, Firefox, or Edge for the best experience.
-      </p>
-      <Button 
-        onClick={onCancel} 
-        variant="outline"
-        className={HOVER_TRANSITION}
-      >
-        Cancel
-      </Button>
+      <VideoRecorderFooter onCancel={onCancel} />
     </div>
   );
 }
