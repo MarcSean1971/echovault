@@ -25,24 +25,14 @@ export function useSecureMessage({ messageId, recipient, deliveryId }: UseSecure
     setTechnicalDetails(null);
     
     try {
-      // Get Supabase URL from the supabase client
-      const supabaseUrl = supabase.supabaseUrl;
+      // Instead of directly accessing supabaseUrl, we know the structure of the URL
+      // from the SUPABASE_URL in src/integrations/supabase/client.ts
+      // We can construct it from the project reference in the same format
+      const projectId = "onwthrpgcnfydxzzmyot";
       
-      if (!supabaseUrl) {
-        throw new Error("Supabase URL not configured");
-      }
+      console.log("[SecureMessage] Using project ID:", projectId);
       
-      console.log("[SecureMessage] Using Supabase URL:", supabaseUrl);
-      
-      // Extract project ID from Supabase URL to construct the edge function URL correctly
-      const projectId = supabaseUrl.split("://")[1]?.split(".")[0];
-      if (!projectId) {
-        throw new Error("Failed to extract project ID from Supabase URL");
-      }
-      
-      console.log("[SecureMessage] Extracted project ID:", projectId);
-      
-      // Construct the edge function URL with the full, correct path
+      // Construct the edge function URL with the project ID
       const apiUrl = `https://${projectId}.supabase.co/functions/v1/access-message?id=${messageId}&recipient=${encodeURIComponent(recipient || "")}&delivery=${deliveryId || ""}`;
       
       console.log("[SecureMessage] Requesting message from:", apiUrl);
@@ -122,20 +112,10 @@ export function useSecureMessage({ messageId, recipient, deliveryId }: UseSecure
     setVerifyError(null);
     
     try {
-      // Get Supabase URL from the supabase client
-      const supabaseUrl = supabase.supabaseUrl;
+      // Use hardcoded project ID instead of accessing protected supabaseUrl
+      const projectId = "onwthrpgcnfydxzzmyot";
       
-      if (!supabaseUrl) {
-        throw new Error("Supabase URL not configured");
-      }
-      
-      // Extract project ID from Supabase URL
-      const projectId = supabaseUrl.split("://")[1]?.split(".")[0];
-      if (!projectId) {
-        throw new Error("Failed to extract project ID from Supabase URL");
-      }
-      
-      // Construct the edge function URL with the full, correct path
+      // Construct the edge function URL with the project ID
       const apiUrl = `https://${projectId}.supabase.co/functions/v1/access-message/verify-pin`;
       
       console.log("[SecureMessage] Verifying PIN at:", apiUrl);

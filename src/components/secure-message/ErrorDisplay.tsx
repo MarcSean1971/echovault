@@ -1,8 +1,8 @@
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Alert, AlertCircle, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { RefreshCw } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle, RefreshCw } from "lucide-react";
 
 interface ErrorDisplayProps {
   error: string;
@@ -32,6 +32,7 @@ export function ErrorDisplay({ error, technicalDetails, onRetry }: ErrorDisplayP
             <Button 
               variant="secondary" 
               onClick={() => window.history.back()}
+              className="hover:bg-secondary/90 transition-colors"
             >
               Go Back
             </Button>
@@ -39,8 +40,7 @@ export function ErrorDisplay({ error, technicalDetails, onRetry }: ErrorDisplayP
             <Button 
               variant="outline" 
               onClick={onRetry}
-              className="flex items-center gap-2"
-              style={{ transition: "all 0.2s ease-in-out" }}
+              className="flex items-center gap-2 hover:bg-accent/80 transition-colors"
             >
               <RefreshCw className="h-4 w-4" />
               Retry

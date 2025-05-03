@@ -110,7 +110,7 @@ export function MessageViewer({
         <Button 
           variant="secondary" 
           onClick={() => window.history.back()}
-          style={{ transition: "all 0.2s ease-in-out" }}
+          className="hover:bg-secondary/90 transition-colors"
         >
           Go Back
         </Button>
