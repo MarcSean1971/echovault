@@ -22,6 +22,7 @@ export function MessagesButton({
       className={`bg-green-600 text-white ${buttonPaddingClass} ${buttonSizeClass} ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
       size={isMobile ? "sm" : "lg"}
       asChild
+      style={{ backgroundColor: "#16a34a" }} // Keep green color on hover
     >
       <Link to="/messages">
         <span className="flex items-center gap-1 font-medium">
