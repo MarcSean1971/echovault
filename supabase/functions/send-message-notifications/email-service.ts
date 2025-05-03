@@ -1,7 +1,7 @@
 
 // Import necessary modules
 import { Resend } from "npm:resend@2.0.0";
-import { generateAccessUrl } from "./notification-service.ts";
+import { generateAccessUrl } from "./utils/url-generator.ts";
 import { EmailTemplateData } from "./types.ts";
 
 // Create Resend client with API key
@@ -35,6 +35,14 @@ export async function sendEmailNotification(
     // Generate access URL for this message and recipient
     const accessUrl = generateAccessUrl(messageId, recipientEmail, deliveryId);
     console.log(`Access URL for ${recipientEmail}: ${accessUrl}`);
+    
+    // Log environment variables (without values) to help diagnose URL issues
+    const availableEnvVars = Object.keys(Deno.env.toObject()).join(', ');
+    console.log(`Available environment variables: ${availableEnvVars}`);
+    
+    // Check if APP_DOMAIN is set
+    const appDomain = Deno.env.get("APP_DOMAIN");
+    console.log(`APP_DOMAIN environment variable is ${appDomain ? "set to: " + appDomain : "not set"}`);
 
     // Determine emergency styling and messaging
     const subjectPrefix = isEmergency ? "⚠️ EMERGENCY: " : "";
@@ -98,6 +106,13 @@ export async function sendEmailNotification(
             <a href="${accessUrl}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">
               Access Secure Message
             </a>
+          </div>
+          
+          <div style="background-color: #f8fafc; border-left: 4px solid #2563eb; padding: 15px; margin: 20px 0; border-radius: 4px;">
+            <p style="margin: 0;">
+              If you have trouble accessing the message, copy and paste this URL into your browser:<br>
+              <span style="font-family: monospace; word-break: break-all;">${accessUrl}</span>
+            </p>
           </div>
           
           <div style="background-color: #f8fafc; border-left: 4px solid #2563eb; padding: 15px; margin: 20px 0; border-radius: 4px;">

@@ -10,10 +10,12 @@ const environment = Deno.env.get("SUPABASE_ENV") || "unknown";
 const supabaseUrl = Deno.env.get("SUPABASE_URL") 
   ? `${new URL(Deno.env.get("SUPABASE_URL") || "").hostname} (set)` 
   : "not set";
+const appDomain = Deno.env.get("APP_DOMAIN") || "not set";
 
 console.log("Server configuration:", {
   environment,
   url: supabaseUrl,
+  appDomain,
   availableEnvVars: Object.keys(Deno.env.toObject()).join(', ')
 });
 

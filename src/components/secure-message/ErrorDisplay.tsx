@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, RefreshCw } from "lucide-react";
+import { HOVER_TRANSITION, ICON_HOVER_EFFECTS } from "@/utils/hoverEffects";
 
 interface ErrorDisplayProps {
   error: string;
@@ -20,7 +21,7 @@ export function ErrorDisplay({ error, technicalDetails, onRetry }: ErrorDisplayP
           
           {technicalDetails && (
             <Alert variant="destructive" className="mb-6 text-left">
-              <AlertCircle className="h-4 w-4" />
+              <AlertCircle className={`h-4 w-4 ${ICON_HOVER_EFFECTS.destructive}`} />
               <AlertTitle>Technical Details</AlertTitle>
               <AlertDescription className="text-xs overflow-auto max-h-[200px]">
                 {technicalDetails}
@@ -32,7 +33,7 @@ export function ErrorDisplay({ error, technicalDetails, onRetry }: ErrorDisplayP
             <Button 
               variant="secondary" 
               onClick={() => window.history.back()}
-              className="hover:bg-secondary/90 transition-colors"
+              className={`hover:bg-secondary/90 ${HOVER_TRANSITION}`}
             >
               Go Back
             </Button>
@@ -40,9 +41,9 @@ export function ErrorDisplay({ error, technicalDetails, onRetry }: ErrorDisplayP
             <Button 
               variant="outline" 
               onClick={onRetry}
-              className="flex items-center gap-2 hover:bg-accent/80 transition-colors"
+              className={`flex items-center gap-2 hover:bg-accent/80 ${HOVER_TRANSITION}`}
             >
-              <RefreshCw className="h-4 w-4" />
+              <RefreshCw className={`h-4 w-4 ${ICON_HOVER_EFFECTS.default}`} />
               Retry
             </Button>
           </div>

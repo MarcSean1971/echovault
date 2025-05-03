@@ -25,12 +25,22 @@ export function useSecureMessage({ messageId, recipient, deliveryId }: UseSecure
     setTechnicalDetails(null);
     
     try {
+      // Validate required parameters
+      if (!messageId || !deliveryId) {
+        throw new Error("Invalid message link. Missing required parameters.");
+      }
+      
+      // Get the current hostname to use for diagnostic logging
+      const currentHostname = window.location.hostname;
+      console.log("[SecureMessage] Current hostname:", currentHostname);
+      
       // Instead of directly accessing supabaseUrl, we know the structure of the URL
       // from the SUPABASE_URL in src/integrations/supabase/client.ts
       // We can construct it from the project reference in the same format
       const projectId = "onwthrpgcnfydxzzmyot";
       
       console.log("[SecureMessage] Using project ID:", projectId);
+      console.log("[SecureMessage] Access parameters:", { messageId, recipient, deliveryId });
       
       // Construct the edge function URL with the project ID
       const apiUrl = `https://${projectId}.supabase.co/functions/v1/access-message?id=${messageId}&recipient=${encodeURIComponent(recipient || "")}&delivery=${deliveryId || ""}`;
@@ -63,6 +73,10 @@ export function useSecureMessage({ messageId, recipient, deliveryId }: UseSecure
           } else {
             technicalInfo = errorText;
           }
+          
+          // Add diagnostics about URL and current location
+          technicalInfo += `\n\nDiagnostic Info:\n- Current host: ${window.location.host}\n- API endpoint: ${projectId}.supabase.co\n- Message ID: ${messageId}\n- Delivery ID: ${deliveryId}`;
+          
         } catch (parseError) {
           console.error("[SecureMessage] Error parsing error response:", parseError);
           technicalInfo = errorText.substring(0, 500); // Limit length
