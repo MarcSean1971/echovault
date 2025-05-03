@@ -52,8 +52,8 @@ export function ActionsCard({
 }: ActionsCardProps) {
   const navigate = useNavigate();
 
-  // Common hover effect classes
-  const hoverEffect = "transition-all hover:-translate-y-0.5 hover:shadow-md";
+  // Common hover effect classes - removed color changes but kept positioning effects
+  const hoverEffect = "transition-all";
   const iconHoverEffect = "transition-transform group-hover:scale-110";
 
   return (
@@ -177,7 +177,7 @@ export function ActionsCard({
                 ) : (
                   <Button
                     variant="outline"
-                    className={`w-full group border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground ${hoverEffect}`}
+                    className={`w-full group border-destructive text-destructive ${hoverEffect}`}
                     onClick={() => setShowDeleteConfirm(true)}
                     disabled={isArmed || isActionLoading}
                   >

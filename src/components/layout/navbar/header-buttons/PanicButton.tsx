@@ -29,7 +29,7 @@ export function PanicButton({
     <Button 
       onClick={onClick}
       disabled={isDisabled}
-      className={`bg-red-600 text-white transition-all shadow-lg hover:bg-red-700 hover:-translate-y-0.5 ${buttonPaddingClass} ${buttonSizeClass}`}
+      className={`bg-red-600 text-white ${buttonPaddingClass} ${buttonSizeClass}`}
       size={isMobile ? "sm" : "lg"}
       style={{ backgroundColor: "#dc2626" }}
     >

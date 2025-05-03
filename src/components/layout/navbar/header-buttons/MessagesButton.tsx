@@ -18,7 +18,7 @@ export function MessagesButton({
 }: MessagesButtonProps) {
   return (
     <Button 
-      className={`bg-green-600 text-white hover:bg-green-700 hover:-translate-y-0.5 transition-all shadow-lg ${buttonPaddingClass} ${buttonSizeClass}`}
+      className={`bg-green-600 text-white ${buttonPaddingClass} ${buttonSizeClass}`}
       size={isMobile ? "sm" : "lg"}
       asChild
     >

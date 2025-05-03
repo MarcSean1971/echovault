@@ -23,7 +23,9 @@ export function MessageCardActions({
   onDisarmMessage
 }: MessageCardActionsProps) {
   const navigate = useNavigate();
-  const { getButtonHoverClasses, HOVER_TRANSITION } = useHoverEffects();
+
+  // Define a no-hover class that will override the hover color changes
+  const noHoverClass = "hover:bg-transparent hover:text-inherit";
 
   return (
     <div className="flex justify-between">
@@ -35,9 +37,9 @@ export function MessageCardActions({
               size="sm"
               onClick={onDisarmMessage}
               disabled={isLoading}
-              className={`text-green-600 ${getButtonHoverClasses('outline')}`}
+              className={`text-green-600 ${noHoverClass}`}
             >
-              <BellOff className="h-4 w-4 mr-1 transition-transform hover:scale-110" /> Disarm
+              <BellOff className="h-4 w-4 mr-1" /> Disarm
             </Button>
           ) : (
             <Button
@@ -45,9 +47,9 @@ export function MessageCardActions({
               size="sm"
               onClick={onArmMessage}
               disabled={isLoading}
-              className={`text-destructive ${getButtonHoverClasses('destructive')}`}
+              className={`text-destructive ${noHoverClass}`}
             >
-              <Bell className="h-4 w-4 mr-1 transition-transform hover:scale-110" /> Arm
+              <Bell className="h-4 w-4 mr-1" /> Arm
             </Button>
           )
         )}
@@ -56,9 +58,9 @@ export function MessageCardActions({
         variant="ghost"
         size="sm"
         onClick={() => navigate(`/message/${messageId}`)}
-        className={`${getButtonHoverClasses('ghost')}`}
+        className={noHoverClass}
       >
-        View <ArrowRight className="h-4 w-4 ml-1 transition-transform hover:scale-110" />
+        View <ArrowRight className="h-4 w-4 ml-1" />
       </Button>
     </div>
   );
