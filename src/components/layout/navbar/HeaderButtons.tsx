@@ -19,7 +19,7 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
   const isMobile = useIsMobile();
   const { handleCheckIn: handleDashboardCheckIn, isLoading: isChecking, nextDeadline } = useTriggerDashboard();
   
-  // Urgency states for check-in button
+  // Urgency states for check-in button - default to false (orange button)
   const [isUrgent, setIsUrgent] = useState(false);
   const [isVeryUrgent, setIsVeryUrgent] = useState(false);
   
@@ -42,7 +42,12 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
   
   // Calculate urgency levels based on deadline
   useEffect(() => {
-    if (!nextDeadline) return;
+    if (!nextDeadline) {
+      // If no deadline is set, ensure we remain in the default orange state
+      setIsUrgent(false);
+      setIsVeryUrgent(false);
+      return;
+    }
     
     const checkUrgency = () => {
       const now = new Date();
@@ -62,6 +67,7 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
   }, [nextDeadline]);
 
   // Determine check-in button color based on urgency
+  // Default is orange (bg-orange-500), then gradient, then red
   const getCheckInButtonStyle = () => {
     if (isVeryUrgent) {
       return "bg-red-600 text-white hover:bg-red-700";
