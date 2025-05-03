@@ -1,7 +1,6 @@
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
-import { toast } from "@/components/ui/use-toast";
 import { useTriggerDashboard } from "@/hooks/useTriggerDashboard";
 import { Logo } from "./navbar/Logo";
 import { DesktopNav } from "./navbar/DesktopNav";
@@ -17,8 +16,7 @@ export default function Navbar({ isLoggedIn = false }: NavbarProps) {
   const { isSignedIn, isLoaded, profile, getInitials, userId } = useAuth();
   const [userImage, setUserImage] = useState<string | null>(null);
   const [initials, setInitials] = useState("U");
-  const [isChecking, setIsChecking] = useState(false);
-  const { handleCheckIn, conditions } = useTriggerDashboard();
+  const { conditions } = useTriggerDashboard();
 
   // Determine user initials and image when user data is loaded
   useEffect(() => {
@@ -33,28 +31,6 @@ export default function Navbar({ isLoggedIn = false }: NavbarProps) {
 
   // Use the auth check from context if available, otherwise fall back to prop
   const authenticated = isLoaded ? isSignedIn : isLoggedIn;
-
-  // Handle check-in
-  const onCheckIn = async () => {
-    if (isChecking) return;
-    setIsChecking(true);
-    try {
-      await handleCheckIn();
-      toast({
-        title: "Check-In Successful",
-        description: "Your Dead Man's Switch has been reset."
-      });
-    } catch (error: any) {
-      console.error("Check-in failed:", error);
-      toast({
-        title: "Check-In Failed",
-        description: error.message || "Unable to complete check-in",
-        variant: "destructive"
-      });
-    } finally {
-      setIsChecking(false);
-    }
-  };
 
   return (
     <header className="sticky top-0 z-30 w-full border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60 shadow-sm">
@@ -73,8 +49,6 @@ export default function Navbar({ isLoggedIn = false }: NavbarProps) {
           <HeaderButtons 
             conditions={conditions}
             userId={userId}
-            isChecking={isChecking}
-            onCheckIn={onCheckIn}
           />
         )}
         

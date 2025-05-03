@@ -5,16 +5,16 @@ import { triggerPanicMessage } from "@/services/messages/conditions/panicTrigger
 import { toast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { useCheckIn } from "@/hooks/useCheckIn";
 
 interface HeaderButtonsProps {
   conditions: MessageCondition[];
   userId: string | null;
-  isChecking: boolean;
-  onCheckIn: () => Promise<void>;
 }
 
-export function HeaderButtons({ conditions, userId, isChecking, onCheckIn }: HeaderButtonsProps) {
+export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
   const navigate = useNavigate();
+  const { isChecking, handleCheckIn } = useCheckIn();
   
   // Panic button states
   const [panicMode, setPanicMode] = useState(false);
@@ -119,7 +119,7 @@ export function HeaderButtons({ conditions, userId, isChecking, onCheckIn }: Hea
       {/* Check In Now button - only show when active check-in conditions exist */}
       {hasCheckInConditions && (
         <Button 
-          onClick={onCheckIn}
+          onClick={handleCheckIn}
           disabled={isChecking || panicMode}
           className="bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all shadow-lg px-6 py-2 text-white"
           size="lg"
@@ -136,12 +136,7 @@ export function HeaderButtons({ conditions, userId, isChecking, onCheckIn }: Hea
         <Button 
           onClick={handlePanicTrigger}
           disabled={isChecking || panicMode || triggerInProgress}
-          variant={isConfirming ? "destructive" : "outline"}
-          className={`transition-all shadow-lg hover:opacity-90 px-6 py-2 ${
-            isConfirming ? 
-              "bg-gradient-to-r from-red-600 to-red-500 text-white" : 
-              "border-red-500 text-red-500 hover:bg-red-50"
-          }`}
+          className="bg-red-600 text-white transition-all shadow-lg hover:opacity-90 px-6 py-2"
           size="lg"
         >
           <span className="flex items-center gap-2 font-medium">
