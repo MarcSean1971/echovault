@@ -135,6 +135,59 @@ async function sendReminderEmail(
   }
 }
 
+// New function to send WhatsApp reminder
+async function sendWhatsAppReminder(
+  phoneNumber: string,
+  userName: string,
+  messageTitle: string,
+  messageId: string,
+  conditionType: string,
+  deadline: Date,
+  appUrl: string = "https://app.echovault.org"
+) {
+  try {
+    if (!phoneNumber) {
+      console.log("No phone number provided for WhatsApp reminder");
+      return { success: false, error: "No phone number provided" };
+    }
+    
+    console.log(`Sending WhatsApp reminder to ${phoneNumber} for message: ${messageTitle}`);
+    
+    const checkInUrl = `${appUrl}/check-in`;
+    const deadlineFormatted = formatDate(deadline.toISOString());
+    const conditionTypeFormatted = getConditionType(conditionType);
+    
+    // Create reminder message for WhatsApp
+    const whatsAppMessage = `⚠️ REMINDER: Check-in required for "${messageTitle}"\n\n`+
+      `Hello ${userName || "there"},\n\n`+
+      `Your message "${messageTitle}" (${conditionTypeFormatted}) will be triggered if you don't check in before: ${deadlineFormatted}.\n\n`+
+      `Please visit ${checkInUrl} to check in now.`;
+    
+    // Call the WhatsApp notification function
+    const { data: whatsAppResult, error: whatsAppError } = await supabase.functions.invoke("send-whatsapp-notification", {
+      body: {
+        to: phoneNumber,
+        message: whatsAppMessage,
+        messageId: messageId,
+        recipientName: userName,
+        isEmergency: false // This is just a reminder, not an emergency
+      }
+    });
+    
+    if (whatsAppError) {
+      console.error(`WhatsApp reminder sending error:`, whatsAppError);
+      return { success: false, error: whatsAppError.message || "Unknown WhatsApp error" };
+    }
+    
+    console.log(`WhatsApp reminder sent successfully to ${phoneNumber}`);
+    return { success: true, data: whatsAppResult };
+    
+  } catch (error: any) {
+    console.error(`Error sending WhatsApp reminder:`, error);
+    return { success: false, error: error.message || "Unknown error" };
+  }
+}
+
 // Main handler function
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
@@ -143,7 +196,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
   
   try {
-    console.log("Starting reminder email check...");
+    console.log("Starting reminder check...");
     
     // Get all active conditions
     const { data: conditions, error: conditionsError } = await supabase
@@ -199,16 +252,19 @@ const handler = async (req: Request): Promise<Response> => {
           continue;
         }
         
-        // Get the user's profile for name
+        // Get the user's profile for name and WhatsApp number
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
-          .select("first_name, last_name")
+          .select("first_name, last_name, whatsapp_number")
           .eq("id", condition.messages.user_id)
           .single();
           
         const userName = profile ? 
           `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : 
           "there";
+        
+        // Get user's WhatsApp number if available
+        const whatsappNumber = profile?.whatsapp_number || null;
         
         // Check if we have the user's email
         if (user?.email) {
@@ -227,7 +283,8 @@ const handler = async (req: Request): Promise<Response> => {
             
             // If no reminder was sent in the last 12 hours, send one
             if (!sentReminders || sentReminders.length === 0) {
-              await sendReminderEmail(
+              // Send email reminder
+              const emailResult = await sendReminderEmail(
                 user.email, 
                 userName,
                 condition.messages.title,
@@ -235,6 +292,19 @@ const handler = async (req: Request): Promise<Response> => {
                 condition.condition_type,
                 deadline
               );
+              
+              // Send WhatsApp reminder if number is available
+              let whatsappResult = { success: false, error: "WhatsApp number not available" };
+              if (whatsappNumber) {
+                whatsappResult = await sendWhatsAppReminder(
+                  whatsappNumber,
+                  userName,
+                  condition.messages.title,
+                  condition.messages.id,
+                  condition.condition_type,
+                  deadline
+                );
+              }
               
               // Record that we sent a reminder
               const { error: insertError } = await supabase
@@ -253,7 +323,10 @@ const handler = async (req: Request): Promise<Response> => {
                 remindersSent.push({
                   messageId: condition.messages.id,
                   messageTitle: condition.messages.title,
-                  deadline: deadline.toISOString()
+                  deadline: deadline.toISOString(),
+                  emailSent: emailResult.success,
+                  whatsappSent: whatsappResult.success,
+                  whatsappNumber: whatsappNumber ? "Available" : "Not available"
                 });
               }
             } else {

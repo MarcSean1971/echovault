@@ -7,7 +7,8 @@ import { supabaseClient } from "../supabase-client.ts";
 export async function sendWhatsAppNotification(
   recipient: { phone?: string; name: string },
   message: { id: string; title: string; content: string | null },
-  debug: boolean = false
+  debug: boolean = false,
+  isEmergency: boolean = true
 ): Promise<{ success: boolean; error?: string }> {
   try {
     if (!recipient.phone) {
@@ -20,8 +21,13 @@ export async function sendWhatsAppNotification(
     // Initialize Supabase client
     const supabase = supabaseClient();
     
-    // Basic emergency message content
-    const whatsAppMessage = `⚠️ EMERGENCY ALERT: ${message.title}\n\n${message.content || "An emergency alert has been triggered for you."}\n\nCheck your email for more information.`;
+    // Determine message content based on whether it's an emergency or reminder
+    let whatsAppMessage = "";
+    if (isEmergency) {
+      whatsAppMessage = `⚠️ EMERGENCY ALERT: ${message.title}\n\n${message.content || "An emergency alert has been triggered for you."}\n\nCheck your email for more information.`;
+    } else {
+      whatsAppMessage = `🔔 REMINDER: ${message.title}\n\n${message.content || "A reminder has been sent regarding your message."}\n\nPlease check your email or log in to the system to take action.`;
+    }
     
     // Call the WhatsApp notification function directly using the Supabase functions API
     const { data: whatsAppResult, error: whatsAppError } = await supabase.functions.invoke("send-whatsapp-notification", {
@@ -30,7 +36,7 @@ export async function sendWhatsAppNotification(
         message: whatsAppMessage,
         messageId: message.id,
         recipientName: recipient.name,
-        isEmergency: true
+        isEmergency: isEmergency
       }
     });
     
