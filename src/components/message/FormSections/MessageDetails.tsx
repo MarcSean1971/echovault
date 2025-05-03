@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -114,14 +115,6 @@ export function MessageDetails() {
             className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
           >
             Video
-          </Button>
-          <Button
-            type="button"
-            variant={messageType === "file" ? "default" : "outline"}
-            onClick={() => setMessageType("file")}
-            className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
-          >
-            File
           </Button>
         </div>
       </div>
