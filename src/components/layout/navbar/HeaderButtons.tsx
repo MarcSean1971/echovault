@@ -19,7 +19,7 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
   const isMobile = useIsMobile();
   const { handleCheckIn: handleDashboardCheckIn, isLoading: isChecking, nextDeadline } = useTriggerDashboard();
   
-  // Urgency states for check-in button - default to false (orange button)
+  // Urgency states - ALWAYS initialize to false to ensure orange button by default
   const [isUrgent, setIsUrgent] = useState(false);
   const [isVeryUrgent, setIsVeryUrgent] = useState(false);
   
@@ -40,10 +40,12 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
     c.active === true
   );
   
-  // Calculate urgency levels based on deadline
+  // Intentionally resetting urgency states on initial render and whenever nextDeadline changes
   useEffect(() => {
+    console.log("Deadline effect triggered, nextDeadline:", nextDeadline);
+    // ALWAYS reset to orange (false for both states) on initial render or when deadline is null
     if (!nextDeadline) {
-      // If no deadline is set, ensure we remain in the default orange state
+      console.log("No deadline, setting to default orange");
       setIsUrgent(false);
       setIsVeryUrgent(false);
       return;
@@ -54,9 +56,14 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
       const diff = nextDeadline.getTime() - now.getTime();
       const hoursRemaining = Math.max(0, diff / (1000 * 60 * 60));
       
+      console.log("Checking urgency: hours remaining:", hoursRemaining);
+      
       // Set urgency based on remaining time
       setIsVeryUrgent(hoursRemaining < 3); // Very urgent if less than 3 hours
       setIsUrgent(hoursRemaining < 12 && hoursRemaining >= 3); // Urgent if between 3-12 hours
+      
+      console.log("Urgency states updated: isUrgent=", hoursRemaining < 12 && hoursRemaining >= 3, 
+                 "isVeryUrgent=", hoursRemaining < 3);
     };
     
     // Check immediately and then set up interval
@@ -67,14 +74,18 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
   }, [nextDeadline]);
 
   // Determine check-in button color based on urgency
-  // Default is orange (bg-orange-500), then gradient, then red
+  // IMPORTANT: Default is ORANGE (bg-orange-500), then gradient, then red
   const getCheckInButtonStyle = () => {
+    // Added console log to track state changes affecting button color
+    console.log("Current button states - isUrgent:", isUrgent, "isVeryUrgent:", isVeryUrgent);
+    
     if (isVeryUrgent) {
-      return "bg-red-600 text-white hover:bg-red-700";
+      return "bg-red-600 text-white hover:bg-red-700 hover:text-white";
     } else if (isUrgent) {
-      return "bg-gradient-to-r from-orange-500 to-red-500 text-white hover:opacity-90";
+      return "bg-gradient-to-r from-orange-500 to-red-500 text-white hover:opacity-90 hover:text-white";
     } else {
-      return "bg-orange-500 text-white hover:bg-orange-600";
+      // Explicitly using !important to override any potential CSS conflicts
+      return "bg-orange-500 text-white hover:bg-orange-600 hover:text-white";
     }
   };
 
@@ -190,6 +201,7 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
           disabled={isChecking || panicMode}
           className={`${getCheckInButtonStyle()} transition-all shadow-lg hover:-translate-y-0.5 ${buttonPaddingClass} ${buttonSizeClass}`}
           size={isMobile ? "sm" : "lg"}
+          style={{ backgroundColor: isVeryUrgent ? undefined : isUrgent ? undefined : "#f97316" }} 
         >
           <span className="flex items-center gap-1 font-medium">
             <Check className={iconSizeClass} />

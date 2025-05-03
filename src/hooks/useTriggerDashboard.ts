@@ -28,9 +28,11 @@ export function useTriggerDashboard() {
   const handleDashboardCheckIn = async () => {
     if (!userId) return;
     
+    console.log("Performing check-in from dashboard");
     const success = await handleCheckIn();
     
     if (success) {
+      console.log("Check-in successful, refreshing conditions");
       // Refresh conditions data to get updated deadlines
       const updatedConditions = await refreshConditions();
       
@@ -38,6 +40,9 @@ export function useTriggerDashboard() {
       setLastCheckIn(new Date().toISOString());
     }
   };
+
+  // Log deadline information to help with debugging
+  console.log("useTriggerDashboard - current nextDeadline:", nextDeadline);
 
   return {
     messages,
