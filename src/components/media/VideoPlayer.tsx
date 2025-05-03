@@ -29,7 +29,7 @@ export function VideoPlayer({ src, poster, className = "" }: VideoPlayerProps) {
       ref={videoContainerRef}
       className={`relative rounded-md overflow-hidden bg-black ${className}`}
       onMouseMove={handleMouseMove}
-      onMouseLeave={() => isPlaying && showControls && setTimeout(() => handleMouseMove(), 0)}
+      onMouseLeave={() => isPlaying && setTimeout(() => handleMouseMove(), 0)}
     >
       {/* Video element */}
       <video 

@@ -14,13 +14,13 @@ export function FullscreenButton({ isFullscreen, onClick }: FullscreenButtonProp
     <Button 
       variant="ghost" 
       size="icon" 
-      className="h-8 w-8 text-white hover:bg-white/20"
+      className={`h-8 w-8 text-white hover:bg-white/20 ${HOVER_TRANSITION}`}
       onClick={onClick}
     >
       {isFullscreen ? (
-        <Minimize2 className="h-4 w-4" />
+        <Minimize2 className={`h-4 w-4 ${HOVER_TRANSITION} hover:scale-110`} />
       ) : (
-        <Maximize2 className="h-4 w-4" />
+        <Maximize2 className={`h-4 w-4 ${HOVER_TRANSITION} hover:scale-110`} />
       )}
     </Button>
   );

@@ -14,13 +14,13 @@ export function PlaybackButton({ isPlaying, onClick }: PlaybackButtonProps) {
     <Button 
       variant="ghost" 
       size="icon" 
-      className="h-8 w-8 text-white hover:bg-white/20"
+      className={`h-8 w-8 text-white hover:bg-white/20 ${HOVER_TRANSITION}`}
       onClick={onClick}
     >
       {isPlaying ? (
-        <Pause className="h-4 w-4" />
+        <Pause className={`h-4 w-4 ${HOVER_TRANSITION} hover:scale-110`} />
       ) : (
-        <Play className="h-4 w-4" />
+        <Play className={`h-4 w-4 ${HOVER_TRANSITION} hover:scale-110`} />
       )}
     </Button>
   );

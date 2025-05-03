@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useVideoRecorder } from "@/hooks/video";
 import { VideoPreview } from "./video/VideoPreview";
 import { VideoPlayback } from "./video/VideoPlayback";
@@ -10,6 +10,7 @@ import { UnsupportedBrowser } from "./video/UnsupportedBrowser";
 import { VideoRecorderFooter } from "./video/VideoRecorderFooter";
 import { PermissionRetryButton } from "./video/PermissionRetryButton";
 import { CameraNotReadyWarning } from "./video/CameraNotReadyWarning";
+import { Spinner } from "@/components/ui/spinner";
 
 interface VideoRecorderProps {
   onVideoReady: (videoBlob: Blob, videoBase64: string) => void;
@@ -17,8 +18,9 @@ interface VideoRecorderProps {
 }
 
 export function VideoRecorder({ onVideoReady, onCancel }: VideoRecorderProps) {
-  const [retryCount, setRetryCount] = useState(0);
-  const [showCameraPermissionRequest, setShowCameraPermissionRequest] = useState(true);
+  // Hide permission request by default - we'll check permissions first
+  const [showCameraPermissionRequest, setShowCameraPermissionRequest] = useState(false);
+  const [initializing, setInitializing] = useState(true);
   
   const {
     // State
@@ -50,8 +52,39 @@ export function VideoRecorder({ onVideoReady, onCancel }: VideoRecorderProps) {
     initializeStream,
     reinitializeStream
   } = useVideoRecorder({
-    autoInitialize: false // Don't initialize automatically
+    autoInitialize: true // Initialize automatically to check permissions
   });
+  
+  // Initial check for permissions
+  useEffect(() => {
+    const checkPermissions = async () => {
+      try {
+        // Try to get permissions automatically first
+        const result = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+          .then(stream => {
+            // We got permissions, clean up this temporary stream
+            stream.getTracks().forEach(track => track.stop());
+            return true;
+          })
+          .catch(() => false);
+          
+        // If we couldn't get permissions, show the permission request screen
+        if (!result) {
+          setShowCameraPermissionRequest(true);
+        }
+      } catch (error) {
+        // On error, show permission request
+        setShowCameraPermissionRequest(true);
+      } finally {
+        setInitializing(false);
+      }
+    };
+    
+    // Only check if browser supports media devices
+    if (isBrowserSupported) {
+      checkPermissions();
+    }
+  }, [isBrowserSupported]);
   
   const handleRequestCameraAccess = () => {
     setShowCameraPermissionRequest(false);
@@ -59,7 +92,6 @@ export function VideoRecorder({ onVideoReady, onCancel }: VideoRecorderProps) {
   };
   
   const handleRetryCamera = () => {
-    setRetryCount(prev => prev + 1);
     reinitializeStream();
   };
   
@@ -74,7 +106,19 @@ export function VideoRecorder({ onVideoReady, onCancel }: VideoRecorderProps) {
     return <UnsupportedBrowser onCancel={onCancel} />;
   }
   
-  // Show camera permission request screen
+  // Show loading spinner while checking permissions
+  if (initializing) {
+    return (
+      <div className="p-4 bg-background rounded-lg border flex items-center justify-center" style={{minHeight: '300px'}}>
+        <div className="text-center">
+          <Spinner className="mx-auto mb-2" />
+          <p className="text-sm">Checking camera access...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  // Show camera permission request screen if needed
   if (showCameraPermissionRequest) {
     return <CameraPermissionRequest 
       onRequestAccess={handleRequestCameraAccess} 
