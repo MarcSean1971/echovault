@@ -1,9 +1,10 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Smartphone } from "lucide-react";
+import { Smartphone, Clock } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { sendTestWhatsAppMessage } from "@/services/messages/notificationService";
+import { HOVER_TRANSITION, ICON_HOVER_EFFECTS } from "@/utils/hoverEffects";
 
 interface WhatsAppIntegrationProps {
   messageId: string;
@@ -43,7 +44,7 @@ export function WhatsAppIntegration({ messageId, panicConfig }: WhatsAppIntegrat
       <div className="flex items-center justify-between">
         <div>
           <h3 className="font-medium flex items-center">
-            <Smartphone className="h-4 w-4 mr-2" />
+            <Smartphone className={`h-4 w-4 mr-2 ${ICON_HOVER_EFFECTS.default}`} />
             WhatsApp Integration
           </h3>
           <p className="text-sm text-gray-600">
@@ -55,9 +56,9 @@ export function WhatsAppIntegration({ messageId, panicConfig }: WhatsAppIntegrat
           size="sm"
           disabled={isSendingWhatsApp}
           onClick={handleSendTestWhatsApp}
-          className="flex items-center"
+          className={`flex items-center ${HOVER_TRANSITION}`}
         >
-          <Smartphone className="h-3 w-3 mr-1" />
+          <Smartphone className={`h-3 w-3 mr-1 ${ICON_HOVER_EFFECTS.default}`} />
           {isSendingWhatsApp ? "Sending..." : "Test WhatsApp"}
         </Button>
       </div>
@@ -67,6 +68,16 @@ export function WhatsAppIntegration({ messageId, panicConfig }: WhatsAppIntegrat
           <span className="font-medium">Trigger keyword:</span> "{panicConfig.trigger_keyword}"
         </div>
       )}
+      
+      <div className="mt-3 border-t border-blue-100 pt-2">
+        <div className="flex items-center">
+          <Clock className={`h-4 w-4 mr-2 ${ICON_HOVER_EFFECTS.default}`} />
+          <h4 className="text-sm font-medium">WhatsApp Check-In</h4>
+        </div>
+        <p className="text-xs text-gray-600 mt-1">
+          You can also check in via WhatsApp by sending "CHECKIN" or "CODE" to the WhatsApp number.
+        </p>
+      </div>
     </div>
   );
 }
