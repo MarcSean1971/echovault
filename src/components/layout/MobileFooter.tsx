@@ -2,10 +2,12 @@
 import { HeaderButtons } from "./navbar/header-buttons";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useTriggerDashboard } from "@/hooks/useTriggerDashboard";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function MobileFooter() {
   const isMobile = useIsMobile();
   const { conditions, lastRefresh } = useTriggerDashboard();
+  const { userId } = useAuth();
   
   // Only render on mobile
   if (!isMobile) return null;
@@ -15,7 +17,7 @@ export function MobileFooter() {
       <div className="container mx-auto px-4">
         <HeaderButtons 
           conditions={conditions} 
-          userId={null} 
+          userId={userId} 
         />
       </div>
     </div>

@@ -1,10 +1,10 @@
 
-import { UserMenu } from "./UserMenu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Menu, Home, MessageSquare, Users, Bell, Settings } from "lucide-react";
+import { Menu, Home, MessageSquare, Users, Bell, Settings, LogOut } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface MobileNavProps {
   userImage: string | null;
@@ -13,9 +13,17 @@ interface MobileNavProps {
 
 export function MobileNav({ userImage, initials }: MobileNavProps) {
   const location = useLocation();
+  const { signOut } = useAuth();
 
   // Check if a path is active
   const isActive = (path: string) => location.pathname === path;
+  
+  // Handle sign out
+  const handleSignOut = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    console.log("Sign out clicked");
+    await signOut();
+  };
   
   return (
     <div className="flex md:hidden items-center space-x-2">
@@ -77,9 +85,13 @@ export function MobileNav({ userImage, initials }: MobileNavProps) {
             
             <div className="mt-auto">
               <div className="border-t border-border pt-4 mt-4">
-                <div className="flex items-center justify-end p-2">
-                  <UserMenu userImage={userImage} initials={initials} />
-                </div>
+                <button
+                  onClick={handleSignOut}
+                  className="flex items-center gap-3 w-full p-3 rounded-lg font-medium transition-all duration-200 hover:bg-accent/10 text-left"
+                >
+                  <LogOut className="h-5 w-5" />
+                  <span>Sign Out</span>
+                </button>
               </div>
             </div>
           </nav>
