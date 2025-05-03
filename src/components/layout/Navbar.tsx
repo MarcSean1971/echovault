@@ -35,6 +35,12 @@ export default function Navbar({ isLoggedIn = false }: NavbarProps) {
     c.condition_type === 'panic_trigger' && c.active === true
   ) || null;
 
+  // Find check-in related conditions
+  const hasCheckInConditions = conditions.some(c => 
+    (c.condition_type === 'no_check_in' || c.condition_type === 'regular_check_in') && 
+    c.active === true
+  );
+
   // Determine user initials and image when user data is loaded
   useEffect(() => {
     if (profile) {
@@ -163,28 +169,30 @@ export default function Navbar({ isLoggedIn = false }: NavbarProps) {
         {/* Centered buttons for larger screens only */}
         {authenticated && (
           <div className="hidden md:flex absolute left-1/2 transform -translate-x-1/2 z-20 space-x-4">
-            {/* Check In Now button */}
-            <Button 
-              onClick={onCheckIn}
-              disabled={isChecking || panicMode}
-              className="bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-1 pulse-subtle px-6 py-2 animate-pulse-light"
-              size="lg"
-            >
-              <span className="flex items-center gap-2 font-medium">
-                <Check className="h-5 w-5" />
-                {isChecking ? "Checking In..." : "Check In Now"}
-              </span>
-            </Button>
+            {/* Check In Now button - only show when active check-in conditions exist */}
+            {hasCheckInConditions && (
+              <Button 
+                onClick={onCheckIn}
+                disabled={isChecking || panicMode}
+                className="bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all shadow-lg px-6 py-2 text-white"
+                size="lg"
+              >
+                <span className="flex items-center gap-2 font-medium">
+                  <Check className="h-5 w-5" />
+                  {isChecking ? "Checking In..." : "Check In Now"}
+                </span>
+              </Button>
+            )}
             
-            {/* Emergency Panic Button */}
+            {/* Emergency Panic Button - only shown when active panic message exists */}
             {panicMessage && (
               <Button 
                 onClick={handlePanicTrigger}
                 disabled={isChecking || panicMode || triggerInProgress}
                 variant={isConfirming ? "destructive" : "outline"}
-                className={`transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-1 px-6 py-2 ${
+                className={`transition-all shadow-lg hover:opacity-90 px-6 py-2 ${
                   isConfirming ? 
-                    "bg-gradient-to-r from-red-600 to-red-500 text-white animate-pulse" : 
+                    "bg-gradient-to-r from-red-600 to-red-500 text-white" : 
                     "border-red-500 text-red-500 hover:bg-red-50"
                 }`}
                 size="lg"
