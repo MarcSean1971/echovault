@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Check, AlertCircle, MessageSquare } from "lucide-react";
 import { MessageCondition } from "@/types/message";
@@ -6,6 +7,7 @@ import { toast } from "@/components/ui/use-toast";
 import { useNavigate, Link } from "react-router-dom";
 import { useState } from "react";
 import { useTriggerDashboard } from "@/hooks/useTriggerDashboard";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface HeaderButtonsProps {
   conditions: MessageCondition[];
@@ -14,6 +16,7 @@ interface HeaderButtonsProps {
 
 export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const { handleCheckIn: handleDashboardCheckIn, isLoading: isChecking } = useTriggerDashboard();
   
   // Panic button states
@@ -114,18 +117,26 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
     return null;
   }
 
+  // Determine button styles based on screen size
+  const buttonSizeClass = isMobile ? "text-xs" : "";
+  const buttonPaddingClass = isMobile ? "px-2 py-1" : "px-6 py-2";
+  const iconSizeClass = isMobile ? "h-4 w-4" : "h-5 w-5";
+  const containerClass = isMobile 
+    ? "flex absolute right-14 transform -translate-y-1 z-20 space-x-1" 
+    : "hidden md:flex absolute left-1/2 transform -translate-x-1/2 z-20 space-x-4";
+
   return (
-    <div className="hidden md:flex absolute left-1/2 transform -translate-x-1/2 z-20 space-x-4">
+    <div className={containerClass}>
       {/* Messages button */}
       <Button 
-        className="bg-green-600 text-white hover:bg-green-700 hover:-translate-y-0.5 duration-200 transition-all shadow-lg px-6 py-2"
-        size="lg"
+        className={`bg-green-600 text-white hover:bg-green-700 hover:-translate-y-0.5 transition-all shadow-lg ${buttonPaddingClass} ${buttonSizeClass}`}
+        size={isMobile ? "sm" : "lg"}
         asChild
       >
         <Link to="/messages">
-          <span className="flex items-center gap-2 font-medium">
-            <MessageSquare className="h-5 w-5" />
-            Messages
+          <span className="flex items-center gap-1 font-medium">
+            <MessageSquare className={iconSizeClass} />
+            {!isMobile && "Messages"}
           </span>
         </Link>
       </Button>
@@ -135,12 +146,12 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
         <Button 
           onClick={handleDashboardCheckIn}
           disabled={isChecking || panicMode}
-          className="bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all shadow-lg px-6 py-2 text-white"
-          size="lg"
+          className={`bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all shadow-lg ${buttonPaddingClass} text-white ${buttonSizeClass}`}
+          size={isMobile ? "sm" : "lg"}
         >
-          <span className="flex items-center gap-2 font-medium">
-            <Check className="h-5 w-5" />
-            {isChecking ? "Checking In..." : "Check In Now"}
+          <span className="flex items-center gap-1 font-medium">
+            <Check className={iconSizeClass} />
+            {!isMobile ? "Check In Now" : "Check In"}
           </span>
         </Button>
       )}
@@ -150,18 +161,18 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
         <Button 
           onClick={handlePanicTrigger}
           disabled={isChecking || panicMode || triggerInProgress}
-          className="bg-red-600 text-white transition-all shadow-lg hover:opacity-90 px-6 py-2"
-          size="lg"
+          className={`bg-red-600 text-white transition-all shadow-lg hover:opacity-90 ${buttonPaddingClass} ${buttonSizeClass}`}
+          size={isMobile ? "sm" : "lg"}
         >
-          <span className="flex items-center gap-2 font-medium">
-            <AlertCircle className="h-5 w-5" />
+          <span className="flex items-center gap-1 font-medium">
+            <AlertCircle className={iconSizeClass} />
             {panicMode 
               ? countDown > 0 
-                ? `SENDING... (${countDown})` 
+                ? `SENDING... ${!isMobile ? `(${countDown})` : ""}` 
                 : "SENDING..." 
               : isConfirming 
-                ? "CONFIRM EMERGENCY" 
-                : "Emergency"
+                ? (isMobile ? "CONFIRM" : "CONFIRM EMERGENCY") 
+                : (isMobile ? "Emergency" : "Emergency")
             }
           </span>
         </Button>
