@@ -32,7 +32,7 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
   const [deadline, setDeadline] = useState<Date | null>(null);
   const [condition, setCondition] = useState<MessageCondition | null>(null);
   const [transcription, setTranscription] = useState<string | null>(null);
-  const [refreshCounter, setRefreshCounter] = useState(0); // Add refresh counter state
+  const [refreshCounter, setRefreshCounter] = useState(0);
   
   // Get the refresh function from our enhanced hook
   const { refreshConditions, isRefreshing } = useConditionRefresh();
@@ -41,9 +41,11 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
   useEffect(() => {
     const loadConditionStatus = async () => {
       try {
+        console.log(`[MessageCard] Loading condition for message ID: ${message.id}`);
         const messageCondition = await getConditionByMessageId(message.id);
         
         if (messageCondition) {
+          console.log(`[MessageCard] Got condition ID: ${messageCondition.id}, active: ${messageCondition.active}`);
           setCondition(messageCondition);
           setIsArmed(messageCondition.active);
           
@@ -51,7 +53,12 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
           if (messageCondition.active) {
             const deadlineDate = await getMessageDeadline(messageCondition.id);
             // Create a new Date object to ensure React detects the change
-            setDeadline(deadlineDate ? new Date(deadlineDate.getTime()) : null);
+            if (deadlineDate) {
+              console.log(`[MessageCard] Got deadline: ${deadlineDate.toISOString()}`);
+              setDeadline(new Date(deadlineDate.getTime()));
+            } else {
+              setDeadline(null);
+            }
           }
         }
       } catch (error) {
@@ -62,11 +69,13 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
     loadConditionStatus();
     
     // Also reload when conditions-updated event is received
-    const handleConditionsUpdated = () => {
-      console.log("MessageCard received conditions-updated event, reloading");
-      loadConditionStatus();
-      // Increment refresh counter to force re-render of timer
-      setRefreshCounter(prev => prev + 1);
+    const handleConditionsUpdated = (event: Event) => {
+      if (event instanceof CustomEvent) {
+        console.log(`[MessageCard ${message.id}] Received conditions-updated event, reloading with trigger: ${event.detail?.triggerValue || 'unknown'}`);
+        loadConditionStatus();
+        // Increment refresh counter to force re-render of timer
+        setRefreshCounter(prev => prev + 1);
+      }
     };
     
     window.addEventListener('conditions-updated', handleConditionsUpdated);
@@ -156,6 +165,8 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
     }
   };
 
+  console.log(`[MessageCard ${message.id}] Rendering with refreshCounter: ${refreshCounter}, deadline: ${deadline?.toISOString() || 'null'}, isArmed: ${isArmed}`);
+
   return (
     <Card 
       key={message.id} 
@@ -178,7 +189,7 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
           deadline={deadline} 
           condition={condition}
           transcription={transcription}
-          refreshTrigger={refreshCounter} // Pass refresh counter to MessageCardContent
+          refreshTrigger={refreshCounter}
         />
       </CardContent>
       <CardFooter className="flex justify-between border-t pt-4">

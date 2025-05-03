@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 interface MessageTimerProps {
   deadline: Date | null;
   isArmed: boolean;
-  refreshTrigger?: number; // Add refreshTrigger prop
+  refreshTrigger?: number;
 }
 
 export function MessageTimer({ deadline, isArmed, refreshTrigger }: MessageTimerProps) {
@@ -15,14 +15,32 @@ export function MessageTimer({ deadline, isArmed, refreshTrigger }: MessageTimer
   const [timePercentage, setTimePercentage] = useState(100);
   const [isUrgent, setIsUrgent] = useState(false);
   const [isVeryUrgent, setIsVeryUrgent] = useState(false);
+  const [lastDeadlineTime, setLastDeadlineTime] = useState<number | null>(null);
   const isMobile = useIsMobile();
   
   useEffect(() => {
+    // Log for debugging
+    console.log(`[MessageTimer] useEffect triggered with:
+      - deadline: ${deadline ? deadline.toISOString() : 'null'}
+      - isArmed: ${isArmed}
+      - refreshTrigger: ${refreshTrigger}
+      - lastDeadlineTime: ${lastDeadlineTime}`);
+    
     if (!deadline || !isArmed) {
+      console.log('[MessageTimer] No deadline or not armed, resetting timer');
       setTimeLeft("--:--:--");
       setIsUrgent(false);
       setIsVeryUrgent(false);
       return;
+    }
+    
+    // Store the deadline time for comparison
+    const currentDeadlineTime = deadline.getTime();
+    
+    // Check if the deadline has actually changed
+    if (lastDeadlineTime !== currentDeadlineTime) {
+      console.log(`[MessageTimer] Deadline changed from ${lastDeadlineTime} to ${currentDeadlineTime}`);
+      setLastDeadlineTime(currentDeadlineTime);
     }
     
     const calculateTimeLeft = () => {
@@ -76,7 +94,7 @@ export function MessageTimer({ deadline, isArmed, refreshTrigger }: MessageTimer
     }, 1000);
     
     return () => clearInterval(interval);
-  }, [deadline, isArmed, refreshTrigger]); // Add refreshTrigger to dependencies
+  }, [deadline, isArmed, refreshTrigger, lastDeadlineTime]);
   
   // Get timer color based on percentage and urgency
   const getTimerColor = () => {

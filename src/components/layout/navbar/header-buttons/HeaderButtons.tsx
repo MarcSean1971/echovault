@@ -25,6 +25,7 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
   const [triggerInProgress, setTriggerInProgress] = useState(false);
   const [isUrgent, setIsUrgent] = useState(false);
   const [isVeryUrgent, setIsVeryUrgent] = useState(false);
+  const [localRefreshTrigger, setLocalRefreshTrigger] = useState(0); // Added for local tracking
   
   // Get the lastRefresh value to trigger re-renders when conditions change
   const { handleCheckIn: handleDashboardCheckIn, isLoading: isChecking, nextDeadline, lastRefresh, refreshConditions } = useTriggerDashboard();
@@ -70,6 +71,27 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
     
     return () => clearInterval(interval);
   }, [nextDeadline]);
+
+  // Modified check-in handler to also dispatch the event directly
+  const handleCheckIn = async () => {
+    const success = await handleDashboardCheckIn();
+    
+    if (success) {
+      // Increment local trigger for immediate UI update
+      setLocalRefreshTrigger(prev => prev + 1);
+      
+      // Dispatch event with current timestamp for global updates
+      console.log("Dispatching conditions-updated event from HeaderButtons");
+      window.dispatchEvent(new CustomEvent('conditions-updated', { 
+        detail: { 
+          updatedAt: new Date().toISOString(),
+          triggerValue: Date.now() // Add unique value to ensure it's always different
+        }
+      }));
+    }
+    
+    return success;
+  };
 
   // Handle panic trigger
   const handlePanicTrigger = async () => {
@@ -172,7 +194,7 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
       {/* Check In Now button - only show when active check-in conditions exist */}
       {hasCheckInConditions && (
         <CheckInButton
-          onClick={handleDashboardCheckIn}
+          onClick={handleCheckIn}
           isDisabled={isChecking || panicMode}
           isMobile={isMobile}
           buttonPaddingClass={buttonPaddingClass}

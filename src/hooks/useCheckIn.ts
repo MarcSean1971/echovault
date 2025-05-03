@@ -25,6 +25,15 @@ export function useCheckIn() {
       
       await performCheckIn(userId, "app");
       
+      // Directly dispatch event to notify all components
+      console.log("Dispatching conditions-updated event from useCheckIn");
+      window.dispatchEvent(new CustomEvent('conditions-updated', { 
+        detail: { 
+          updatedAt: new Date().toISOString(),
+          triggerValue: Date.now() // Add unique timestamp to ensure events are distinct
+        }
+      }));
+      
       toast({
         title: "Check-In Successful",
         description: "Your Dead Man's Switch has been reset."

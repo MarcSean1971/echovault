@@ -1,6 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Check } from "lucide-react";
+import { BUTTON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface CheckInButtonProps {
   onClick: () => void;
@@ -23,7 +24,7 @@ export function CheckInButton({
     <Button 
       onClick={onClick}
       disabled={isDisabled}
-      className={`bg-orange-500 text-white ${buttonPaddingClass} ${buttonSizeClass}`}
+      className={`bg-orange-500 text-white ${buttonPaddingClass} ${buttonSizeClass} ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
       size={isMobile ? "sm" : "lg"}
       style={{ backgroundColor: "#f97316" }} 
     >
