@@ -44,6 +44,15 @@ interface MessageFormContextType {
   setReminderHours: (hours: number[]) => void;
   checkInCode: string;
   setCheckInCode: (code: string) => void;
+  // Location-related fields
+  shareLocation: boolean;
+  setShareLocation: (share: boolean) => void;
+  locationName: string | null;
+  setLocationName: (name: string | null) => void;
+  locationLatitude: number | null;
+  setLocationLatitude: (lat: number | null) => void;
+  locationLongitude: number | null;
+  setLocationLongitude: (lng: number | null) => void;
 }
 
 const MessageFormContext = createContext<MessageFormContextType | undefined>(undefined);
@@ -79,6 +88,12 @@ export const MessageFormProvider = ({ children }: { children: React.ReactNode })
   
   // Custom check-in code
   const [checkInCode, setCheckInCode] = useState("");
+  
+  // Location-related states
+  const [shareLocation, setShareLocation] = useState(false);
+  const [locationName, setLocationName] = useState<string | null>(null);
+  const [locationLatitude, setLocationLatitude] = useState<number | null>(null);
+  const [locationLongitude, setLocationLongitude] = useState<number | null>(null);
 
   const value = {
     title,
@@ -120,7 +135,16 @@ export const MessageFormProvider = ({ children }: { children: React.ReactNode })
     reminderHours,
     setReminderHours,
     checkInCode,
-    setCheckInCode
+    setCheckInCode,
+    // Add location-related values to the context
+    shareLocation,
+    setShareLocation,
+    locationName,
+    setLocationName,
+    locationLatitude,
+    setLocationLatitude,
+    locationLongitude,
+    setLocationLongitude
   };
 
   return (
