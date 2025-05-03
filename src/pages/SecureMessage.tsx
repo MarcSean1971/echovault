@@ -32,36 +32,37 @@ export default function SecureMessage() {
         throw new Error("Supabase URL not configured");
       }
       
-      console.log("Using Supabase URL:", supabaseUrl);
+      console.log("[SecureMessage] Using Supabase URL:", supabaseUrl);
       
       // Extract project ID from Supabase URL to construct the edge function URL correctly
       // Format: https://[PROJECT_REF].supabase.co
       const projectId = supabaseUrl.split("://")[1].split(".")[0];
-      console.log("Extracted project ID:", projectId);
+      console.log("[SecureMessage] Extracted project ID:", projectId);
       
       // Construct the edge function URL with the full, correct path
       const apiUrl = `https://${projectId}.supabase.co/functions/v1/access-message?id=${messageId}&recipient=${encodeURIComponent(recipient || "")}&delivery=${deliveryId || ""}`;
       
-      console.log("Requesting message from:", apiUrl);
+      console.log("[SecureMessage] Requesting message from:", apiUrl);
       
       const response = await fetch(apiUrl, {
         method: "GET",
         headers: {
-          "Accept": "text/html,application/xhtml+xml"
+          "Accept": "text/html,application/xhtml+xml",
+          "Content-Type": "text/html"
         }
       });
       
-      console.log("Response status:", response.status);
-      console.log("Response content type:", response.headers.get("Content-Type"));
+      console.log("[SecureMessage] Response status:", response.status);
+      console.log("[SecureMessage] Response content type:", response.headers.get("Content-Type"));
       
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("Error response:", errorText);
+        console.error("[SecureMessage] Error response:", errorText);
         throw new Error(`Failed to load message: ${response.status} - ${errorText}`);
       }
       
       const html = await response.text();
-      console.log("Response HTML length:", html.length);
+      console.log("[SecureMessage] Response HTML length:", html.length);
       
       // Check if the response contains PIN form
       if (html.includes("pin-form")) {
@@ -71,7 +72,7 @@ export default function SecureMessage() {
         setHtmlContent(html);
       }
     } catch (err: any) {
-      console.error("Error fetching message:", err);
+      console.error("[SecureMessage] Error fetching message:", err);
       setError(err.message || "Failed to load the secure message");
     } finally {
       setLoading(false);
@@ -158,7 +159,7 @@ export default function SecureMessage() {
       // Construct the edge function URL with the full, correct path
       const apiUrl = `https://${projectId}.supabase.co/functions/v1/access-message/verify-pin`;
       
-      console.log("Verifying PIN at:", apiUrl);
+      console.log("[SecureMessage] Verifying PIN at:", apiUrl);
       
       const response = await fetch(apiUrl, {
         method: "POST",
@@ -200,7 +201,7 @@ export default function SecureMessage() {
         description: "Message unlocked successfully",
       });
     } catch (err: any) {
-      console.error("Error verifying PIN:", err);
+      console.error("[SecureMessage] Error verifying PIN:", err);
       setVerifyError(err.message || "Error verifying PIN");
     } finally {
       setVerifying(false);
@@ -209,8 +210,10 @@ export default function SecureMessage() {
   
   useEffect(() => {
     if (messageId && (recipient || deliveryId)) {
+      console.log("[SecureMessage] Initializing with params:", { messageId, recipient, deliveryId });
       fetchMessage();
     } else {
+      console.error("[SecureMessage] Missing required parameters", { messageId, recipient, deliveryId });
       setError("Invalid message link. Missing required parameters.");
       setLoading(false);
     }

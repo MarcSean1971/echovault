@@ -21,11 +21,15 @@ export function generateAccessUrl(messageId: string, recipientEmail: string, del
     const urlObj = new URL(supabaseUrl.startsWith('http') ? supabaseUrl : `https://${supabaseUrl}`);
     const domain = urlObj.hostname;
     
-    // Construct a fully qualified URL to the web application's secure message page
-    // Using the correct path for the secure message page in the app, not the edge function
+    // IMPORTANT: We must use the frontend route for secure message
+    // NOT the edge function path
     const accessUrl = `https://${domain}/secure-message?id=${messageId}&recipient=${encodeURIComponent(recipientEmail)}&delivery=${deliveryId}`;
     
-    console.log(`Generated secure web access URL for message ${messageId}, recipient ${recipientEmail}: ${accessUrl}`);
+    console.log(`[URL Generator] Generated secure web access URL for message ${messageId}`);
+    console.log(`[URL Generator] Full URL: ${accessUrl}`);
+    console.log(`[URL Generator] Domain: ${domain}, Path: /secure-message`);
+    console.log(`[URL Generator] Parameters: id=${messageId}, recipient=${encodeURIComponent(recipientEmail)}, delivery=${deliveryId}`);
+    
     return accessUrl;
   } catch (error) {
     console.error("Error generating access URL:", error);
