@@ -2,7 +2,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Maximize2, Minimize2 } from "lucide-react";
-import { HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { HOVER_TRANSITION, ICON_HOVER_EFFECTS } from "@/utils/hoverEffects";
 
 interface FullscreenButtonProps {
   isFullscreen: boolean;
@@ -18,9 +18,9 @@ export function FullscreenButton({ isFullscreen, onClick }: FullscreenButtonProp
       onClick={onClick}
     >
       {isFullscreen ? (
-        <Minimize2 className={`h-4 w-4 ${HOVER_TRANSITION} hover:scale-110`} />
+        <Minimize2 className={`h-4 w-4 ${HOVER_TRANSITION} ${ICON_HOVER_EFFECTS.default}`} />
       ) : (
-        <Maximize2 className={`h-4 w-4 ${HOVER_TRANSITION} hover:scale-110`} />
+        <Maximize2 className={`h-4 w-4 ${HOVER_TRANSITION} ${ICON_HOVER_EFFECTS.default}`} />
       )}
     </Button>
   );

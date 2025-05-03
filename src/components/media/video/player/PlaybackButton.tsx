@@ -2,7 +2,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Play, Pause } from "lucide-react";
-import { HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { HOVER_TRANSITION, ICON_HOVER_EFFECTS } from "@/utils/hoverEffects";
 
 interface PlaybackButtonProps {
   isPlaying: boolean;
@@ -18,9 +18,9 @@ export function PlaybackButton({ isPlaying, onClick }: PlaybackButtonProps) {
       onClick={onClick}
     >
       {isPlaying ? (
-        <Pause className={`h-4 w-4 ${HOVER_TRANSITION} hover:scale-110`} />
+        <Pause className={`h-4 w-4 ${HOVER_TRANSITION} ${ICON_HOVER_EFFECTS.default}`} />
       ) : (
-        <Play className={`h-4 w-4 ${HOVER_TRANSITION} hover:scale-110`} />
+        <Play className={`h-4 w-4 ${HOVER_TRANSITION} ${ICON_HOVER_EFFECTS.default}`} />
       )}
     </Button>
   );
