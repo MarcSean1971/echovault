@@ -26,9 +26,29 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
   const [isUrgent, setIsUrgent] = useState(false);
   const [isVeryUrgent, setIsVeryUrgent] = useState(false);
   const [localRefreshTrigger, setLocalRefreshTrigger] = useState(0); // Added for local tracking
+  const [locationPermission, setLocationPermission] = useState<string>("unknown");
   
   // Get the lastRefresh value to trigger re-renders when conditions change
   const { handleCheckIn: handleDashboardCheckIn, isLoading: isChecking, nextDeadline, lastRefresh, refreshConditions } = useTriggerDashboard();
+  
+  // Check location permissions
+  useEffect(() => {
+    if (navigator.permissions && navigator.permissions.query) {
+      navigator.permissions.query({ name: 'geolocation' })
+        .then((result) => {
+          setLocationPermission(result.state);
+          
+          // Listen for permission changes
+          result.onchange = () => {
+            setLocationPermission(result.state);
+          };
+        })
+        .catch(err => {
+          console.error("Error checking location permissions:", err);
+          setLocationPermission("denied");
+        });
+    }
+  }, []);
   
   // Force refresh conditions when component mounts and when lastRefresh changes
   useEffect(() => {
@@ -102,6 +122,37 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
     }
   };
 
+  // Request location permission
+  const requestLocationPermission = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        () => {
+          setLocationPermission("granted");
+          handlePanicTrigger();
+        },
+        (error) => {
+          console.error("Location permission denied:", error);
+          setLocationPermission("denied");
+          toast({
+            title: "Location Access Denied",
+            description: "Your current location won't be included in the emergency message",
+            variant: "warning"
+          });
+          // Continue with panic trigger even without location
+          handlePanicTrigger();
+        }
+      );
+    } else {
+      toast({
+        title: "Location Not Available",
+        description: "Your device doesn't support location services",
+        variant: "warning"
+      });
+      // Continue with panic trigger even without location
+      handlePanicTrigger();
+    }
+  };
+
   // Handle panic trigger
   const handlePanicTrigger = async () => {
     if (!userId || !panicMessage) {
@@ -124,7 +175,7 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
         if (result.success) {
           toast({
             title: "EMERGENCY ALERT TRIGGERED",
-            description: "Your emergency messages are being sent immediately.",
+            description: "Your emergency messages with your current location are being sent immediately.",
             variant: "destructive"
           });
           
@@ -190,6 +241,28 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
     }
   };
 
+  // Handle panic button click with location permission check
+  const handlePanicButtonClick = () => {
+    if (isConfirming) {
+      // If already confirming, check/request location permission
+      if (locationPermission === "granted") {
+        handlePanicTrigger();
+      } else {
+        requestLocationPermission();
+      }
+    } else {
+      // Just show confirmation first time
+      setIsConfirming(true);
+      
+      // Auto-reset confirmation state if not clicked again
+      setTimeout(() => {
+        if (isConfirming) {
+          setIsConfirming(false);
+        }
+      }, 3000);
+    }
+  };
+
   // Determine button styles based on screen size
   const buttonSizeClass = isMobile ? "text-xs" : "";
   const buttonPaddingClass = isMobile ? "px-2 py-1" : "px-6 py-2";
@@ -225,7 +298,7 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
       {/* Emergency Panic Button - only shown when active panic message exists */}
       {panicMessage && (
         <PanicButton
-          onClick={handlePanicTrigger}
+          onClick={handlePanicButtonClick}
           isDisabled={isChecking || panicMode || triggerInProgress}
           isMobile={isMobile}
           buttonPaddingClass={buttonPaddingClass}

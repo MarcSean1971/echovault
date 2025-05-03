@@ -65,4 +65,3 @@ export interface EmailTemplateData {
   locationLongitude?: number | null;
   locationName?: string | null;
 }
-

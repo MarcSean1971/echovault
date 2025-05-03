@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, MapPin } from "lucide-react";
 
 interface PanicButtonProps {
   onClick: () => void;
@@ -29,20 +29,28 @@ export function PanicButton({
     <Button 
       onClick={onClick}
       disabled={isDisabled}
-      className={`bg-red-600 text-white ${buttonPaddingClass} ${buttonSizeClass}`}
+      className={`bg-red-600 text-white ${buttonPaddingClass} ${buttonSizeClass} hover:bg-red-700 transition-all`}
       size={isMobile ? "sm" : "lg"}
       style={{ backgroundColor: "#dc2626" }}
     >
       <span className="flex items-center gap-1 font-medium">
-        <AlertCircle className={iconSizeClass} />
-        {panicMode 
-          ? countDown > 0 
-            ? `SENDING... (${countDown})` 
-            : "SENDING..." 
-          : isConfirming 
-            ? (isMobile ? "CONFIRM" : "CONFIRM EMERGENCY") 
-            : (isMobile ? "Emergency" : "Emergency")
-        }
+        {panicMode ? (
+          <>
+            <AlertCircle className={iconSizeClass} />
+            {countDown > 0 ? `SENDING... (${countDown})` : "SENDING..."}
+          </>
+        ) : isConfirming ? (
+          <>
+            <AlertCircle className={iconSizeClass} />
+            {isMobile ? "CONFIRM" : "CONFIRM EMERGENCY"}
+          </>
+        ) : (
+          <>
+            <AlertCircle className={iconSizeClass} />
+            {isMobile ? "Emergency" : "Emergency"}
+            <MapPin className={`${iconSizeClass} ml-1`} />
+          </>
+        )}
       </span>
     </Button>
   );

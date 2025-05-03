@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/components/ui/use-toast";
@@ -21,6 +21,30 @@ export function PanicButtonCard({ userId, panicMessage, isChecking, isLoading }:
   const [triggerInProgress, setTriggerInProgress] = useState(false);
   const [countDown, setCountDown] = useState(0);
   const [hasPanicMessages, setHasPanicMessages] = useState(false);
+  const [locationPermission, setLocationPermission] = useState<string>("unknown");
+
+  // Check if location permissions are available
+  useEffect(() => {
+    if (navigator.permissions && navigator.permissions.query) {
+      navigator.permissions.query({ name: 'geolocation' })
+        .then((result) => {
+          setLocationPermission(result.state);
+          
+          // Listen for permission changes
+          result.onchange = () => {
+            setLocationPermission(result.state);
+          };
+        })
+        .catch(err => {
+          console.error("Error checking location permissions:", err);
+          setLocationPermission("denied");
+        });
+    } else if (navigator.geolocation) {
+      setLocationPermission("unknown");
+    } else {
+      setLocationPermission("unavailable");
+    }
+  }, []);
 
   // Debug info
   useEffect(() => {
@@ -52,6 +76,37 @@ export function PanicButtonCard({ userId, panicMessage, isChecking, isLoading }:
       checkPanicMessages();
     }
   }, [userId, panicMessage, isLoading]);
+
+  // Request location permission
+  const requestLocationPermission = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        () => {
+          setLocationPermission("granted");
+          handlePanicTrigger();
+        },
+        (error) => {
+          console.error("Location permission denied:", error);
+          setLocationPermission("denied");
+          toast({
+            title: "Location Access Denied",
+            description: "Your current location won't be included in the emergency message. Consider enabling location access for better assistance.",
+            variant: "warning"
+          });
+          // Continue with panic trigger even without location
+          handlePanicTrigger();
+        }
+      );
+    } else {
+      toast({
+        title: "Location Not Available",
+        description: "Your device doesn't support location services. The emergency message will be sent without your location.",
+        variant: "warning"
+      });
+      // Continue with panic trigger even without location
+      handlePanicTrigger();
+    }
+  };
 
   // Handle panic trigger
   const handlePanicTrigger = async () => {
@@ -87,7 +142,7 @@ export function PanicButtonCard({ userId, panicMessage, isChecking, isLoading }:
         if (result.success) {
           toast({
             title: "EMERGENCY ALERT TRIGGERED",
-            description: "Your emergency messages are being sent immediately.",
+            description: "Your emergency messages with your current location are being sent immediately.",
             variant: "destructive"
           });
           
@@ -174,6 +229,31 @@ export function PanicButtonCard({ userId, panicMessage, isChecking, isLoading }:
     return true; // Default value for safety
   };
 
+  // Handle panic button click with location permission check
+  const handlePanicButtonClick = () => {
+    if (isConfirming) {
+      // If already confirming, check/request location permission
+      if (locationPermission === "granted") {
+        handlePanicTrigger();
+      } else if (locationPermission === "prompt" || locationPermission === "unknown") {
+        requestLocationPermission();
+      } else {
+        // Location permission denied but still allow triggering
+        handlePanicTrigger();
+      }
+    } else {
+      // Just show confirmation first time
+      setIsConfirming(true);
+      
+      // Auto-reset confirmation state if not clicked again
+      setTimeout(() => {
+        if (isConfirming) {
+          setIsConfirming(false);
+        }
+      }, 3000);
+    }
+  };
+
   return (
     <Card className={panicMode ? "border-red-500" : ""}>
       <CardHeader>
@@ -185,13 +265,13 @@ export function PanicButtonCard({ userId, panicMessage, isChecking, isLoading }:
       <CardContent className="space-y-4">
         <p>
           Press this button in emergency situations to immediately trigger your 
-          configured emergency messages.
+          configured emergency messages with your current location.
         </p>
         
         {panicMessage ? (
           <Button 
             variant={isConfirming ? "destructive" : "outline"}
-            onClick={handlePanicTrigger}
+            onClick={handlePanicButtonClick}
             disabled={isChecking || panicMode || isLoading || triggerInProgress}
             className="w-full"
           >
@@ -201,7 +281,12 @@ export function PanicButtonCard({ userId, panicMessage, isChecking, isLoading }:
                 : "MESSAGES SENDING..." 
               : isConfirming 
                 ? "CONFIRM EMERGENCY TRIGGER" 
-                : "Emergency Panic Button"
+                : (
+                  <span className="flex items-center">
+                    <span>Emergency Panic Button</span>
+                    <MapPin className="h-4 w-4 ml-2" />
+                  </span>
+                )
             }
           </Button>
         ) : (
@@ -218,6 +303,12 @@ export function PanicButtonCard({ userId, panicMessage, isChecking, isLoading }:
         {isConfirming && (
           <p className="text-red-500 text-sm animate-pulse">
             Click again to confirm emergency trigger
+          </p>
+        )}
+
+        {locationPermission === "denied" && (
+          <p className="text-amber-500 text-sm">
+            Location access denied. Your current location won't be included in the emergency message.
           </p>
         )}
         
