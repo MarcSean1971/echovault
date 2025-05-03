@@ -111,7 +111,7 @@ export function useFormActions() {
           
           await createMessageCondition(
             message.id,
-            conditionType,
+            conditionType as TriggerType,
             {
               // Basic timing options
               hoursThreshold,

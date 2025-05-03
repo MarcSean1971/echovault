@@ -1,7 +1,7 @@
 
 import React, { createContext, useState, useContext, ReactNode } from 'react';
 import { FileAttachment } from "@/components/FileUploader";
-import { MessageCondition, RecurringPattern, PanicTriggerConfig } from "@/types/message";
+import { MessageCondition, RecurringPattern, PanicTriggerConfig, TriggerType, DeliveryOption } from "@/types/message";
 
 interface MessageFormContextProps {
   title: string;
@@ -26,10 +26,10 @@ interface MessageFormContextProps {
   setLocationName: (name: string) => void;
   
   // Delivery options
-  conditionType: string;
-  setConditionType: (type: string) => void;
-  deliveryOption: string;
-  setDeliveryOption: (option: string) => void;
+  conditionType: TriggerType;
+  setConditionType: (type: TriggerType) => void;
+  deliveryOption: DeliveryOption;
+  setDeliveryOption: (option: DeliveryOption) => void;
   hoursThreshold: number;
   setHoursThreshold: (hours: number) => void;
   minutesThreshold: number;
@@ -52,8 +52,8 @@ interface MessageFormContextProps {
   setReminderHours: (hours: number[]) => void;
   
   // Panic trigger options
-  panicTriggerConfig: PanicTriggerConfig | null;
-  setPanicTriggerConfig: (config: PanicTriggerConfig | null) => void;
+  panicTriggerConfig: PanicTriggerConfig | undefined;
+  setPanicTriggerConfig: (config: PanicTriggerConfig) => void;
   
   // Loading state
   isLoading: boolean;
@@ -80,8 +80,8 @@ export function MessageFormProvider({ children }: { children: ReactNode }) {
   const [locationName, setLocationName] = useState("");
   
   // Delivery options
-  const [conditionType, setConditionType] = useState("no_checkin");
-  const [deliveryOption, setDeliveryOption] = useState("once");
+  const [conditionType, setConditionType] = useState<TriggerType>("no_check_in");
+  const [deliveryOption, setDeliveryOption] = useState<DeliveryOption>("once");
   const [hoursThreshold, setHoursThreshold] = useState(72);
   const [minutesThreshold, setMinutesThreshold] = useState(0);
   const [recurringPattern, setRecurringPattern] = useState<RecurringPattern | null>(null);
@@ -96,7 +96,7 @@ export function MessageFormProvider({ children }: { children: ReactNode }) {
   const [reminderHours, setReminderHours] = useState<number[]>([24]);
   
   // Panic trigger options
-  const [panicTriggerConfig, setPanicTriggerConfig] = useState<PanicTriggerConfig | null>(null);
+  const [panicTriggerConfig, setPanicTriggerConfig] = useState<PanicTriggerConfig | undefined>(undefined);
   
   // Loading state
   const [isLoading, setIsLoading] = useState(false);

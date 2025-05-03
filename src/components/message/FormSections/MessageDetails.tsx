@@ -207,7 +207,7 @@ export function MessageDetails() {
         <Label>File Attachments</Label>
         <FileUploader 
           files={files} 
-          setFiles={setFiles} 
+          onChange={setFiles} 
         />
       </div>
     </div>

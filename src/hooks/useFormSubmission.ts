@@ -98,7 +98,7 @@ export function useFormSubmission() {
           // Create the message condition with all options
           await createMessageCondition(
             message.id,
-            conditionType,
+            conditionType as TriggerType,
             {
               // Basic timing options
               hoursThreshold,

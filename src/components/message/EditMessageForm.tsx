@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { FileText, Users } from "lucide-react";
 import { RecipientSelector } from "./FormSections/RecipientSelector";
 import { useEffect, useState } from "react";
-import { Message, MessageCondition, Recipient } from "@/types/message";
+import { Message, MessageCondition, Recipient, TriggerType } from "@/types/message";
 import { 
   fetchMessageConditions, 
   updateMessageCondition,
@@ -84,7 +84,9 @@ function MessageEditForm({ message, onCancel }: EditMessageFormProps) {
           setExistingCondition(messageCondition);
           
           // Populate form with condition data
-          setConditionType(messageCondition.condition_type);
+          if (messageCondition.condition_type) {
+            setConditionType(messageCondition.condition_type as TriggerType);
+          }
           setHoursThreshold(messageCondition.hours_threshold);
           setMinutesThreshold(messageCondition.minutes_threshold || 0);
           
@@ -171,7 +173,7 @@ function MessageEditForm({ message, onCancel }: EditMessageFormProps) {
     }
     
     loadMessageCondition();
-  }, [message, setTitle, setContent, setMessageType, setFiles]);
+  }, [message, setTitle, setContent, setMessageType, setFiles, setConditionType, setHoursThreshold, setMinutesThreshold, setSelectedRecipients, setRecipients, setRecurringPattern, setTriggerDate, setPanicTriggerConfig, setPinCode, setUnlockDelay, setExpiryHours, setDeliveryOption, setReminderHours]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -248,7 +250,7 @@ function MessageEditForm({ message, onCancel }: EditMessageFormProps) {
         // Create new condition
         await createMessageCondition(
           message.id,
-          conditionType,
+          conditionType as TriggerType,
           {
             hoursThreshold,
             minutesThreshold,

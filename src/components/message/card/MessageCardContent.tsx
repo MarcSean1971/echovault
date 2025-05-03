@@ -51,7 +51,7 @@ export function MessageCardContent({
       {/* Show attachments */}
       {message.attachments && message.attachments.length > 0 && (
         <div className="mt-3 flex items-center text-sm text-muted-foreground">
-          <MessageTypeIcon type="file" className="h-4 w-4 mr-1" />
+          <MessageTypeIcon messageType="file" className="h-4 w-4 mr-1" />
           <span>{message.attachments.length} attachment{message.attachments.length !== 1 ? 's' : ''}</span>
         </div>
       )}
@@ -61,7 +61,7 @@ export function MessageCardContent({
         <div className="mt-3">
           <MessageTimer 
             deadline={deadline} 
-            isActive={isArmed} 
+            active={isArmed} 
             refreshTrigger={refreshTrigger}
           />
         </div>

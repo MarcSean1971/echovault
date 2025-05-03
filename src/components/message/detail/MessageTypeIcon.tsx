@@ -1,10 +1,9 @@
 
 import React from "react";
 import { MessageSquare, File, Video } from "lucide-react";
-import { Message } from "@/types/message";
 
 interface MessageTypeIconProps {
-  messageType: Message["message_type"];
+  messageType: string;
   className?: string;
 }
 
