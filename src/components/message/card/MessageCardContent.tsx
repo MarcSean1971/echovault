@@ -11,6 +11,7 @@ interface MessageCardContentProps {
   deadline: Date | null;
   condition: any;
   transcription: string | null;
+  refreshTrigger?: number; // Add refreshTrigger prop
 }
 
 export function MessageCardContent({ 
@@ -18,7 +19,8 @@ export function MessageCardContent({
   isArmed, 
   deadline, 
   condition,
-  transcription
+  transcription,
+  refreshTrigger
 }: MessageCardContentProps) {
   const hasAttachments = message.attachments && message.attachments.length > 0;
   // If transcription wasn't passed, try to extract it
@@ -64,7 +66,11 @@ export function MessageCardContent({
       
       {condition && (
         <div className="mt-3 pt-3 border-t">
-          <MessageTimer deadline={deadline} isArmed={isArmed} />
+          <MessageTimer 
+            deadline={deadline} 
+            isArmed={isArmed} 
+            refreshTrigger={refreshTrigger} // Pass refreshTrigger prop
+          />
         </div>
       )}
     </div>
