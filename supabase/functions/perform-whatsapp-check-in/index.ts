@@ -54,13 +54,15 @@ serve(async (req) => {
         .eq("active", true);
         
       if (conditionsError) {
-        throw new Error(conditionsError.message);
+        throw new Error(`Error fetching conditions: ${conditionsError.message}`);
       }
+      
+      console.log(`Found ${conditionsData?.length || 0} active conditions for user ${userId}`);
       
       // Update all conditions with the new check-in time
       if (conditionsData && conditionsData.length > 0) {
         const conditionIds = conditionsData.map(c => c.id);
-        console.log(`Updating ${conditionIds.length} active conditions with new check-in time`);
+        console.log(`Updating ${conditionIds.length} active conditions with new check-in time: ${now}`);
         
         const { error: updateError } = await supabase
           .from("message_conditions")
@@ -70,7 +72,7 @@ serve(async (req) => {
           .in("id", conditionIds);
           
         if (updateError) {
-          throw new Error(updateError.message || "Failed to update conditions");
+          throw new Error(`Failed to update conditions: ${updateError.message}`);
         }
         
         console.log("Successfully updated conditions with new check-in time");

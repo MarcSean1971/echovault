@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { supabaseClient } from "./supabase-client.ts";
 
@@ -115,8 +114,8 @@ serve(async (req) => {
           .limit(1);
         
         if (profilesError) {
-          console.error("Error looking up profile:", profilesError);
-          throw profilesError;
+          console.error("Error looking up profile by WhatsApp number:", profilesError);
+          console.log(`No profile found with WhatsApp number: ${fromNumber}`);
         }
         
         if (profiles && profiles.length > 0) {
@@ -127,8 +126,7 @@ serve(async (req) => {
       
       // If still no user ID, check recipients table as fallback
       if (!userId) {
-        console.log("No profile found with WhatsApp number:", fromNumber);
-        console.log("Checking recipients table as fallback...");
+        console.log("No profile found with WhatsApp number, checking recipients table...");
         
         // As a fallback, check recipients table which also has phone numbers
         const { data: recipients, error: recipientError } = await supabase
@@ -139,89 +137,104 @@ serve(async (req) => {
         
         if (recipientError) {
           console.error("Error looking up recipient:", recipientError);
-          throw recipientError;
         }
         
-        if (!recipients || recipients.length === 0) {
-          console.log("No user found with this WhatsApp number");
-          
-          // Send a response indicating no user was found
-          await supabase.functions.invoke("send-whatsapp-notification", {
-            body: JSON.stringify({
+        if (recipients && recipients.length > 0) {
+          userId = recipients[0].user_id;
+          console.log(`Found user via recipients table: ${userId}`);
+        }
+      }
+      
+      if (!userId) {
+        console.log("No user found with this WhatsApp number");
+        
+        // Send a response indicating no user was found
+        try {
+          const whatsAppResult = await supabase.functions.invoke("send-whatsapp-notification", {
+            body: {
               to: fromNumber,
               message: "Your WhatsApp number is not registered with any account. Please update your profile or add this number as a recipient in the app."
-            })
+            }
           });
           
-          return new Response(
-            JSON.stringify({ 
-              success: false, 
-              message: "No user found with this WhatsApp number",
-              timestamp: new Date().toISOString()
-            }),
-            {
-              status: 404,
-              headers: { "Content-Type": "application/json", ...corsHeaders },
-            }
-          );
+          console.log("Sent not-found message response:", whatsAppResult);
+        } catch (err) {
+          console.error("Error sending not-found response:", err);
         }
         
-        // We found a user via the recipients table
-        userId = recipients[0].user_id;
-        console.log(`Found user via recipients table: ${userId}`);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            message: "No user found with this WhatsApp number",
+            timestamp: new Date().toISOString()
+          }),
+          {
+            status: 404,
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          }
+        );
       }
       
       // We have a user ID, now perform the check-in
-      if (userId) {
-        try {
-          const { data: checkInResult, error: checkInError } = await supabase.functions.invoke("perform-whatsapp-check-in", {
-            body: JSON.stringify({ 
-              userId: userId,
-              phoneNumber: fromNumber,
-              method: "whatsapp"
-            })
-          });
-          
-          if (checkInError) {
-            console.error("Error performing check-in:", checkInError);
-            throw checkInError;
+      try {
+        console.log(`Performing check-in for user ${userId}`);
+        const { data: checkInResult, error: checkInError } = await supabase.functions.invoke("perform-whatsapp-check-in", {
+          body: {
+            userId: userId,
+            phoneNumber: fromNumber,
+            method: "whatsapp"
           }
-          
-          console.log("Check-in successful:", checkInResult);
-          
-          // Send confirmation back to the user
-          await supabase.functions.invoke("send-whatsapp-notification", {
-            body: JSON.stringify({
+        });
+        
+        if (checkInError) {
+          console.error("Error performing check-in:", checkInError);
+          throw checkInError;
+        }
+        
+        console.log("Check-in successful:", checkInResult);
+        
+        // Send confirmation back to the user
+        try {
+          const confirmResult = await supabase.functions.invoke("send-whatsapp-notification", {
+            body: {
               to: fromNumber,
               message: "✅ CHECK-IN SUCCESSFUL. Your Dead Man's Switch has been reset."
-            })
+            }
           });
           
-          return new Response(
-            JSON.stringify({ 
-              success: true, 
-              type: "check-in",
-              message: "Check-in processed successfully",
-              timestamp: new Date().toISOString()
-            }),
-            {
-              status: 200,
-              headers: { "Content-Type": "application/json", ...corsHeaders },
-            }
-          );
-        } catch (e) {
-          console.error("Error in check-in flow:", e);
-          
-          // Send error message back to the user
+          console.log("Sent confirmation message:", confirmResult);
+        } catch (confirmError) {
+          console.error("Failed to send confirmation message:", confirmError);
+        }
+        
+        return new Response(
+          JSON.stringify({ 
+            success: true, 
+            type: "check-in",
+            message: "Check-in processed successfully",
+            timestamp: new Date().toISOString()
+          }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          }
+        );
+      } catch (e) {
+        console.error("Error in check-in flow:", e);
+        
+        // Send error message back to the user
+        try {
           await supabase.functions.invoke("send-whatsapp-notification", {
-            body: JSON.stringify({
+            body: {
               to: fromNumber,
               message: "❌ CHECK-IN FAILED. Please try again later or log in to the app."
-            })
+            }
           });
-          
-          throw e;
+        } catch (notifyError) {
+          console.error("Failed to send error notification:", notifyError);
         }
+        
+        throw e;
       }
     }
 

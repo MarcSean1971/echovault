@@ -55,8 +55,15 @@ serve(async (req) => {
     
     console.log(`Sending WhatsApp message to: ${to}`);
     
+    // Process phone number to ensure consistency
+    // Standardize phone number format - handle various formats and make sure it has + prefix
+    let normalizedPhoneNumber = to.replace("whatsapp:", "").trim();
+    if (!normalizedPhoneNumber.startsWith("+")) {
+      normalizedPhoneNumber = "+" + normalizedPhoneNumber.replace(/^0/, ""); // Replace leading 0 with +
+    }
+    
     // Format the WhatsApp number correctly (make sure it has the whatsapp: prefix)
-    const formattedTo = to.startsWith('whatsapp:') ? to : `whatsapp:${to}`;
+    const formattedTo = `whatsapp:${normalizedPhoneNumber}`;
     const formattedFrom = twilioWhatsappNumber.startsWith('whatsapp:') ? 
       twilioWhatsappNumber : `whatsapp:${twilioWhatsappNumber}`;
       
@@ -76,28 +83,47 @@ serve(async (req) => {
     // Create base64 encoded auth header
     const authHeader = btoa(`${accountSid}:${authToken}`);
     
-    // Make the request to Twilio API
-    const response = await fetch(twilioApiUrl, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Basic ${authHeader}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        To: formattedTo,
-        From: formattedFrom,
-        Body: completeMessage,
-      }).toString(),
-    });
+    // Make the request to Twilio API with retry logic
+    let maxRetries = 2;
+    let attempt = 0;
+    let response;
+    let responseData;
     
-    if (!response.ok) {
-      const responseData = await response.json();
-      console.error("Twilio API error:", responseData);
-      throw new Error(`Twilio API error: ${responseData.message || "Unknown error"}`);
+    while (attempt <= maxRetries) {
+      try {
+        response = await fetch(twilioApiUrl, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${authHeader}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            To: formattedTo,
+            From: formattedFrom,
+            Body: completeMessage,
+          }).toString(),
+        });
+        
+        responseData = await response.json();
+        
+        if (response.ok) {
+          console.log("WhatsApp message sent successfully:", responseData.sid);
+          break; // Success, exit retry loop
+        } else {
+          throw new Error(`Twilio API error: ${responseData.message || "Unknown error"}`);
+        }
+      } catch (error) {
+        attempt++;
+        console.error(`Twilio API error (attempt ${attempt}/${maxRetries + 1}):`, error);
+        
+        if (attempt > maxRetries) {
+          throw error; // Re-throw after max retries
+        }
+        
+        // Wait before retry (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+      }
     }
-    
-    const responseData = await response.json();
-    console.log("WhatsApp message sent successfully:", responseData.sid);
     
     return new Response(
       JSON.stringify({ 
