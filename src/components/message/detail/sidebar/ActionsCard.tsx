@@ -52,8 +52,8 @@ export function ActionsCard({
 }: ActionsCardProps) {
   const navigate = useNavigate();
 
-  // Common hover effect classes
-  const hoverEffect = "transition-all duration-200";
+  // Common hover effect classes - removed color changes but kept positioning effects
+  const hoverEffect = "transition-all";
   const iconHoverEffect = "transition-transform group-hover:scale-110";
 
   return (

@@ -29,12 +29,12 @@ export function PanicButton({
     <Button 
       onClick={onClick}
       disabled={isDisabled}
-      className={`bg-red-600 hover:bg-red-700 text-white ${buttonPaddingClass} ${buttonSizeClass} transition-all duration-200`}
+      className={`bg-red-600 text-white ${buttonPaddingClass} ${buttonSizeClass}`}
       size={isMobile ? "sm" : "lg"}
       style={{ backgroundColor: "#dc2626" }}
     >
       <span className="flex items-center gap-1 font-medium">
-        <AlertCircle className={`${iconSizeClass} transition-transform group-hover:scale-110`} />
+        <AlertCircle className={iconSizeClass} />
         {panicMode 
           ? countDown > 0 
             ? `SENDING... ${!isMobile ? `(${countDown})` : ""}` 
