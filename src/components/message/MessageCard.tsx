@@ -167,6 +167,9 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
 
   console.log(`[MessageCard ${message.id}] Rendering with refreshCounter: ${refreshCounter}, deadline: ${deadline?.toISOString() || 'null'}, isArmed: ${isArmed}`);
 
+  // Check if this is a panic trigger message
+  const isPanicTrigger = condition?.condition_type === 'panic_trigger';
+
   return (
     <Card 
       key={message.id} 
@@ -176,7 +179,8 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
         <MessageCardHeader 
           message={message} 
           isArmed={isArmed} 
-          formatDate={formatDate} 
+          formatDate={formatDate}
+          isPanicTrigger={isPanicTrigger}
         />
         <CardDescription className="pt-2 ml-7">
           {formatDate(message.created_at)}
