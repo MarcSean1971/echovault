@@ -193,8 +193,9 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
         <Button 
           onClick={handlePanicTrigger}
           disabled={isChecking || panicMode || triggerInProgress}
-          className={`bg-red-600 text-white transition-all shadow-lg hover:opacity-90 hover:-translate-y-0.5 ${buttonPaddingClass} ${buttonSizeClass}`}
+          className={`bg-red-600 text-white transition-all shadow-lg hover:bg-red-700 hover:-translate-y-0.5 ${buttonPaddingClass} ${buttonSizeClass}`}
           size={isMobile ? "sm" : "lg"}
+          style={{ backgroundColor: "#dc2626" }}
         >
           <span className="flex items-center gap-1 font-medium">
             <AlertCircle className={iconSizeClass} />
