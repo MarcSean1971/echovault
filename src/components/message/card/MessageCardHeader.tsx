@@ -20,7 +20,7 @@ export function MessageCardHeader({ message, isArmed, formatDate, isPanicTrigger
         <div className="mt-1 relative">
           {getMessageIcon(message.message_type)}
           {isPanicTrigger && (
-            <Shield className="h-4 w-4 text-red-500 absolute top-0 left-0 transform -translate-x-2/3 -translate-y-2/3" />
+            <Shield className="h-4 w-4 text-red-500 absolute top-0 left-0 transform -translate-x-full -translate-y-full" />
           )}
         </div>
         <div className="min-h-[3rem] flex flex-col justify-start">
