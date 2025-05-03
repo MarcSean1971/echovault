@@ -14,6 +14,7 @@ export async function sendWhatsAppNotification(
     location_latitude?: number | null;
     location_longitude?: number | null;
     location_name?: string | null;
+    user_id: string;  // Add user_id to retrieve sender name
   },
   debug: boolean = false,
   isEmergency: boolean = true
@@ -28,6 +29,23 @@ export async function sendWhatsAppNotification(
     
     // Initialize Supabase client
     const supabase = supabaseClient();
+    
+    // Get sender name from profiles table
+    const { data: sender, error: senderError } = await supabase
+      .from('profiles')
+      .select('first_name, last_name')
+      .eq('id', message.user_id)
+      .single();
+    
+    // Create sender name
+    let senderName = "Someone";
+    if (!senderError && sender) {
+      senderName = `${sender.first_name || ""} ${sender.last_name || ""}`.trim();
+      if (!senderName) senderName = "Someone";
+      if (debug) console.log(`Found sender name: ${senderName}`);
+    } else if (debug) {
+      console.log(`Could not retrieve sender name: ${senderError?.message || "Unknown error"}`);
+    }
     
     // Check if location should be included
     const includeLocation = message.share_location === true && 
@@ -47,9 +65,9 @@ export async function sendWhatsAppNotification(
     // Determine message content based on whether it's an emergency or reminder
     let whatsAppMessage = "";
     if (isEmergency) {
-      whatsAppMessage = `⚠️ EMERGENCY ALERT: ${message.title}\n\n${message.content || "An emergency alert has been triggered for you."}${locationInfo}\n\nCheck your email for more information.`;
+      whatsAppMessage = `⚠️ EMERGENCY ALERT FROM ${senderName.toUpperCase()}: ${message.title}\n\n${message.content || "An emergency alert has been triggered."}\n${senderName} needs help!${locationInfo}\n\nCheck your email for more information.`;
     } else {
-      whatsAppMessage = `🔔 REMINDER: ${message.title}\n\n${message.content || "A reminder has been sent regarding your message."}\n\nPlease check your email or log in to the system to take action.`;
+      whatsAppMessage = `🔔 REMINDER FROM ${senderName}: ${message.title}\n\n${message.content || "A reminder has been sent regarding your message."}\n\nPlease check your email or log in to the system to take action.`;
     }
     
     // Call the WhatsApp notification function directly using the Supabase functions API

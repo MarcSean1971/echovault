@@ -45,10 +45,10 @@ export async function sendEmailNotification(
     console.log(`APP_DOMAIN environment variable is ${appDomain ? "set to: " + appDomain : "not set"}`);
 
     // Determine emergency styling and messaging
-    const subjectPrefix = isEmergency ? "⚠️ EMERGENCY: " : "";
+    const subjectPrefix = isEmergency ? `⚠️ EMERGENCY FROM ${senderName.toUpperCase()}: ` : "";
     const emergencyBanner = isEmergency 
       ? `<div style="background-color: #ffebee; border-left: 4px solid #f44336; padding: 15px; margin-bottom: 20px;">
-          <strong>EMERGENCY MESSAGE:</strong> This is an urgent communication that requires your immediate attention.
+          <strong>EMERGENCY MESSAGE FROM ${senderName.toUpperCase()}:</strong> This is an urgent communication that requires your immediate attention.
         </div>`
       : "";
       
@@ -62,7 +62,7 @@ export async function sendEmailNotification(
       
       locationHtml = `
         <div style="background-color: #f0f8ff; border-left: 4px solid #4285f4; padding: 15px; margin: 20px 0; border-radius: 4px;">
-          <p style="margin: 0; font-weight: bold;">📍 Sender's Location: ${locationName}</p>
+          <p style="margin: 0; font-weight: bold;">📍 ${senderName}'s Location: ${locationName}</p>
           <p style="margin: 10px 0 0 0;">
             <a href="https://maps.google.com/?q=${location.latitude},${location.longitude}" 
                style="color: #4285f4; text-decoration: underline;">View on Google Maps</a>

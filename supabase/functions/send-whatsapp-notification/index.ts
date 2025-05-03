@@ -60,15 +60,10 @@ serve(async (req) => {
     const formattedFrom = twilioWhatsappNumber.startsWith('whatsapp:') ? 
       twilioWhatsappNumber : `whatsapp:${twilioWhatsappNumber}`;
       
-    // Determine the message text based on whether it's an emergency
-    let messageText = isEmergency
-      ? `⚠️ EMERGENCY ALERT: ${message}`
-      : message;
-    
-    // Add recipient name if provided
+    // The message already includes the emergency formatting and sender name from the calling function
     const finalMessage = recipientName 
-      ? `Hello ${recipientName}, ${messageText}`
-      : messageText;
+      ? `Hello ${recipientName}, ${message}`
+      : message;
       
     // Add trigger keyword information if provided
     const completeMessage = triggerKeyword 
