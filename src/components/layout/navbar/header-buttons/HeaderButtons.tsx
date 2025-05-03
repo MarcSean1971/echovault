@@ -31,7 +31,7 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
     c.condition_type === 'panic_trigger' && c.active === true
   ) || null;
 
-  // Find check-in related conditions - FIX: only count active conditions
+  // Find check-in related conditions - only count active conditions
   const hasCheckInConditions = conditions.some(c => 
     (c.condition_type === 'no_check_in' || c.condition_type === 'regular_check_in') && 
     c.active === true
@@ -140,23 +140,19 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
     }
   };
 
-  if (!hasCheckInConditions && !panicMessage) {
-    return null;
-  }
-
   // Determine button styles based on screen size
   const buttonSizeClass = isMobile ? "text-xs" : "";
   const buttonPaddingClass = isMobile ? "px-2 py-1" : "px-6 py-2";
   const iconSizeClass = isMobile ? "h-4 w-4" : "h-5 w-5";
   
-  // New improved container class for better mobile positioning
+  // Updated container class to always be visible on both mobile and desktop
   const containerClass = isMobile 
     ? "flex justify-center space-x-2 mt-0" 
-    : "hidden md:flex absolute left-1/2 transform -translate-x-1/2 z-20 space-x-4";
+    : "flex justify-center space-x-4"; // Removed "hidden md:flex" to make it visible
 
   return (
     <div className={containerClass}>
-      {/* Messages button */}
+      {/* Messages button - always visible */}
       <MessagesButton
         buttonPaddingClass={buttonPaddingClass}
         buttonSizeClass={buttonSizeClass}

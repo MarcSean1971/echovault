@@ -44,7 +44,7 @@ export default function Navbar({ isLoggedIn = false }: NavbarProps) {
           </div>
         )}
         
-        {/* Centered buttons - improved mobile positioning */}
+        {/* Centered buttons - modified to always display even when no conditions exist */}
         {authenticated && (
           <div className="flex-1 flex justify-center md:absolute md:left-1/2 md:transform md:-translate-x-1/2 z-20">
             <HeaderButtons 
