@@ -26,13 +26,13 @@ export function PlaybackControls({
         <Button
           variant="ghost"
           size="icon"
-          className={`w-full h-full rounded-full ${HOVER_TRANSITION} hover:bg-primary/10`}
+          className={`w-full h-full rounded-full ${HOVER_TRANSITION} hover:bg-primary/10 hover:scale-105`}
           onClick={onTogglePlayback}
         >
           {isPlaying ? (
-            <Pause className="w-10 h-10 text-primary" />
+            <Pause className="w-10 h-10 text-primary hover:scale-110 transition-all duration-200" />
           ) : (
-            <Play className="w-10 h-10 text-primary" />
+            <Play className="w-10 h-10 text-primary hover:scale-110 transition-all duration-200" />
           )}
         </Button>
       </div>
@@ -46,16 +46,16 @@ export function PlaybackControls({
           size="sm" 
           variant="outline" 
           onClick={onReset}
-          className={`text-destructive ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.outline}`}
+          className={`text-destructive ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.outline} hover:scale-105`}
         >
-          <Trash2 className="w-4 h-4 mr-1" /> Discard
+          <Trash2 className="w-4 h-4 mr-1 hover:scale-110 transition-all duration-200" /> Discard
         </Button>
         <Button 
           size="sm"
           onClick={onAccept}
-          className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
+          className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default} hover:scale-105`}
         >
-          <Check className="w-4 h-4 mr-1" /> Accept
+          <Check className="w-4 h-4 mr-1 hover:scale-110 transition-all duration-200" /> Accept
         </Button>
       </div>
     </>

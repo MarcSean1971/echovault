@@ -2,13 +2,13 @@
 import React, { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
-import { Mic } from "lucide-react";
+import { Mic, AlertCircle } from "lucide-react";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import { RecordingIndicator } from "./audio/RecordingIndicator";
 import { RecordingControls } from "./audio/RecordingControls";
 import { PlaybackControls } from "./audio/PlaybackControls";
-import { blobToBase64 } from "@/utils/audioUtils";
-import { formatDuration } from "@/utils/audioUtils";
+import { blobToBase64, formatDuration } from "@/utils/audioUtils";
+import { HOVER_TRANSITION, BUTTON_HOVER_EFFECTS } from "@/utils/hoverEffects";
 
 interface AudioRecorderProps {
   onAudioReady: (audioBlob: Blob, audioBase64: string) => void;
@@ -24,6 +24,7 @@ export function AudioRecorder({ onAudioReady, onCancel }: AudioRecorderProps) {
     audioURL,
     audioBlob,
     isBrowserSupported,
+    permissionDenied,
     audioRef,
     startRecording,
     pauseRecording,
@@ -93,6 +94,35 @@ export function AudioRecorder({ onAudioReady, onCancel }: AudioRecorderProps) {
     );
   }
   
+  if (permissionDenied) {
+    return (
+      <div className="p-4 text-center">
+        <div className="flex flex-col items-center gap-4 mb-6">
+          <AlertCircle className="text-destructive h-12 w-12" />
+          <h3 className="text-lg font-semibold">Microphone Access Required</h3>
+          <p className="text-muted-foreground">
+            Please allow access to your microphone in your browser settings and try again.
+          </p>
+        </div>
+        <div className="flex justify-center gap-4">
+          <Button 
+            onClick={() => startRecording()} 
+            className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
+          >
+            Try Again
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={onCancel}
+            className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.outline}`}
+          >
+            Cancel
+          </Button>
+        </div>
+      </div>
+    );
+  }
+  
   return (
     <div className="p-4 bg-background rounded-lg border">
       <div className="flex flex-col items-center justify-center gap-4">
@@ -147,7 +177,12 @@ export function AudioRecorder({ onAudioReady, onCancel }: AudioRecorderProps) {
       </div>
       
       <div className="mt-4 flex justify-end">
-        <Button variant="ghost" size="sm" onClick={onCancel} className="hover:bg-gray-100 transition-colors duration-200">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={onCancel} 
+          className="hover:bg-gray-100 transition-colors duration-200 hover:scale-105"
+        >
           Cancel
         </Button>
       </div>
