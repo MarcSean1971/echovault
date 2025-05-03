@@ -37,7 +37,7 @@ export function MessageCardContent({
   };
 
   return (
-    <div>
+    <div className="space-y-4">
       {/* Message Timer (only show if there's a condition and it has a deadline) */}
       {condition && deadline && (
         <MessageTimer deadline={deadline} isArmed={isArmed} refreshTrigger={refreshTrigger} />

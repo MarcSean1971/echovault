@@ -23,6 +23,9 @@ export function MessageCardActions({
 }: MessageCardActionsProps) {
   const navigate = useNavigate();
 
+  // Define a no-hover class that will override the hover color changes
+  const noHoverClass = "hover:bg-transparent hover:text-inherit";
+
   return (
     <div className="flex justify-between w-full">
       <div className="flex gap-2">
@@ -33,7 +36,7 @@ export function MessageCardActions({
               size="sm"
               onClick={onDisarmMessage}
               disabled={isLoading}
-              className="text-green-600 hover:text-green-700 hover:bg-green-50"
+              className={`text-green-600 ${noHoverClass}`}
             >
               <BellOff className="h-4 w-4 mr-1" /> Disarm
             </Button>
@@ -43,7 +46,7 @@ export function MessageCardActions({
               size="sm"
               onClick={onArmMessage}
               disabled={isLoading}
-              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+              className={`text-destructive ${noHoverClass}`}
             >
               <Bell className="h-4 w-4 mr-1" /> Arm
             </Button>
@@ -54,7 +57,7 @@ export function MessageCardActions({
         variant="ghost"
         size="sm"
         onClick={() => navigate(`/message/${messageId}`)}
-        className="hover:bg-secondary hover:text-secondary-foreground"
+        className={noHoverClass}
       >
         View <ArrowRight className="h-4 w-4 ml-1" />
       </Button>
