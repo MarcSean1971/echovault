@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
 import { useTriggerDashboard } from "@/hooks/useTriggerDashboard";
@@ -6,7 +5,7 @@ import { Logo } from "./navbar/Logo";
 import { DesktopNav } from "./navbar/DesktopNav";
 import { MobileNav } from "./navbar/MobileNav";
 import { GuestNav } from "./navbar/GuestNav";
-import { HeaderButtons } from "./navbar/HeaderButtons";
+import { HeaderButtons } from "./navbar/header-buttons";
 
 interface NavbarProps {
   isLoggedIn?: boolean;
@@ -33,7 +32,7 @@ export default function Navbar({ isLoggedIn = false }: NavbarProps) {
   const authenticated = isLoaded ? isSignedIn : isLoggedIn;
 
   return (
-    <header className="sticky top-0 z-30 w-full border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60 shadow-sm md:py-3 py-3 md:h-auto h-[6rem]">
+    <header className="sticky top-0 z-30 w-full border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60 shadow-sm md:py-3 py-3 md:h-auto h-16">
       <div className="container mx-auto px-4 flex items-center justify-between relative h-full">
         <Logo />
         
@@ -44,7 +43,7 @@ export default function Navbar({ isLoggedIn = false }: NavbarProps) {
           </div>
         )}
         
-        {/* Centered buttons for larger screens only */}
+        {/* Centered buttons */}
         {authenticated && (
           <HeaderButtons 
             conditions={conditions}
