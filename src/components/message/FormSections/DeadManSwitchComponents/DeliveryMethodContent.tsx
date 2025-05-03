@@ -10,6 +10,9 @@ import { InactivityToDate } from "./InactivityToDate";
 import { InactivityToRecurring } from "./InactivityToRecurring";
 import { PanicTrigger } from "./PanicTrigger";
 import { TriggerType, DeliveryOption, RecurringPattern, PanicTriggerConfig } from "@/types/message";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { AlertTriangle } from "lucide-react";
 
 interface DeliveryMethodContentProps {
   conditionType: TriggerType;
@@ -29,6 +32,8 @@ interface DeliveryMethodContentProps {
   reminderHours: number[];
   setReminderHours: (hours: number[]) => void;
   setActiveTab: (tab: string) => void;
+  checkInCode: string;
+  setCheckInCode: (code: string) => void;
 }
 
 export function DeliveryMethodContent({
@@ -48,7 +53,9 @@ export function DeliveryMethodContent({
   setPanicTriggerConfig,
   reminderHours,
   setReminderHours,
-  setActiveTab
+  setActiveTab,
+  checkInCode,
+  setCheckInCode
 }: DeliveryMethodContentProps) {
   
   // Initialize default panicTriggerConfig if not provided
@@ -64,6 +71,44 @@ export function DeliveryMethodContent({
   const handlePanicConfigUpdate = (config: PanicTriggerConfig) => {
     setPanicTriggerConfig(config);
     console.log("Updated panic trigger config:", config);
+  };
+  
+  // Custom check-in code validation
+  const isValidCheckInCode = (code: string) => {
+    return /^[A-Za-z0-9]+$/.test(code) || code === "";
+  };
+  
+  // Render the custom check-in code input
+  const renderCustomCheckInCode = () => {
+    // Only show for check-in related condition types
+    if (conditionType !== 'no_check_in' && conditionType !== 'regular_check_in') return null;
+    
+    return (
+      <div className="space-y-2">
+        <Label htmlFor="check-in-code">Custom WhatsApp Check-In Code</Label>
+        <Input
+          id="check-in-code"
+          placeholder="CHECKIN" 
+          value={checkInCode}
+          onChange={(e) => {
+            const value = e.target.value.trim();
+            if (isValidCheckInCode(value)) {
+              setCheckInCode(value);
+            }
+          }}
+          className="max-w-xs"
+        />
+        <p className="text-sm text-muted-foreground">
+          Set a custom code for WhatsApp check-ins. Default codes "CHECKIN" and "CODE" will still work.
+        </p>
+        {checkInCode && !isValidCheckInCode(checkInCode) && (
+          <div className="flex items-center text-amber-600 text-sm">
+            <AlertTriangle className="h-4 w-4 mr-1" />
+            <span>Code can only contain letters and numbers without spaces.</span>
+          </div>
+        )}
+      </div>
+    );
   };
   
   // Render different options based on selected condition type
@@ -92,16 +137,22 @@ export function DeliveryMethodContent({
               reminderHours={reminderHours}
               setReminderHours={setReminderHours}
             />
+            {/* Add custom check-in code input */}
+            {renderCustomCheckInCode()}
           </div>
         );
         
       case 'regular_check_in':
         return (
-          <TimeThresholdSelector
-            conditionType={conditionType}
-            hoursThreshold={hoursThreshold}
-            setHoursThreshold={setHoursThreshold}
-          />
+          <div className="space-y-6">
+            <TimeThresholdSelector
+              conditionType={conditionType}
+              hoursThreshold={hoursThreshold}
+              setHoursThreshold={setHoursThreshold}
+            />
+            {/* Add custom check-in code input */}
+            {renderCustomCheckInCode()}
+          </div>
         );
         
       case 'group_confirmation':

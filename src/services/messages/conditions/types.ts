@@ -28,6 +28,9 @@ export interface CreateConditionOptions {
   secondaryRecurringPattern?: RecurringPattern | null;
   reminderHours?: number[];
   panicTriggerConfig?: PanicTriggerConfig;
+  
+  // Custom check-in code
+  checkInCode?: string;
 }
 
 export interface CheckInResult {

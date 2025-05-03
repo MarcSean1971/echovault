@@ -1,3 +1,4 @@
+
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/components/ui/use-toast";
@@ -37,7 +38,8 @@ export function useFormSubmission() {
     unlockDelay,
     expiryHours,
     deliveryOption,
-    reminderHours
+    reminderHours,
+    checkInCode
   } = useMessageForm();
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -119,6 +121,9 @@ export function useFormSubmission() {
               
               // Panic trigger settings
               panicTriggerConfig,
+              
+              // Custom check-in code
+              checkInCode: checkInCode || undefined,
               
               // Recipients - now using the actual recipient objects
               recipients

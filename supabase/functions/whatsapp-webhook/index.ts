@@ -66,23 +66,67 @@ serve(async (req) => {
     // Find a user by this phone number
     const supabase = supabaseClient();
     
-    // First, check if this is a CHECK-IN code message (now checking before panic trigger)
-    if (messageBody.toUpperCase().startsWith("CHECKIN") || messageBody.toUpperCase().startsWith("CODE")) {
-      console.log("Check-in code detected, processing check-in request");
+    // First, check for custom check-in codes
+    const { data: customCodeConditions, error: customCodeError } = await supabase
+      .from("message_conditions")
+      .select("id, message_id, check_in_code, messages!inner(user_id)")
+      .not("check_in_code", "is", null)
+      .eq("active", true);
       
-      // First look in profiles table for the user with this WhatsApp number
-      const { data: profiles, error: profilesError } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("whatsapp_number", fromNumber)
-        .limit(1);
+    if (customCodeError) {
+      console.error("Error looking up custom check-in codes:", customCodeError);
+    }
+    
+    // Check if the message body matches any custom check-in codes
+    let customCodeMatch = false;
+    let customCodeUserId = null;
+    
+    if (customCodeConditions && customCodeConditions.length > 0) {
+      console.log(`Found ${customCodeConditions.length} active conditions with custom check-in codes`);
       
-      if (profilesError) {
-        console.error("Error looking up profile:", profilesError);
-        throw profilesError;
+      for (const condition of customCodeConditions) {
+        if (condition.check_in_code && 
+            messageBody.toUpperCase() === condition.check_in_code.toUpperCase()) {
+          console.log(`Found matching custom check-in code: ${condition.check_in_code}`);
+          customCodeMatch = true;
+          customCodeUserId = condition.messages.user_id;
+          break;
+        }
+      }
+    }
+    
+    // Then check if this is a standard CHECK-IN code message
+    if (customCodeMatch || messageBody.toUpperCase() === "CHECKIN" || messageBody.toUpperCase() === "CODE") {
+      if (!customCodeMatch) {
+        console.log("Standard check-in code detected, processing check-in request");
+      } else {
+        console.log("Custom check-in code detected, processing check-in request");
       }
       
-      if (!profiles || profiles.length === 0) {
+      // First try to get user ID from custom code match
+      let userId = customCodeUserId;
+      
+      // If no match from custom code, look in profiles table for the user with this WhatsApp number
+      if (!userId) {
+        const { data: profiles, error: profilesError } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("whatsapp_number", fromNumber)
+          .limit(1);
+        
+        if (profilesError) {
+          console.error("Error looking up profile:", profilesError);
+          throw profilesError;
+        }
+        
+        if (profiles && profiles.length > 0) {
+          userId = profiles[0].id;
+          console.log(`Found user via profile: ${userId}`);
+        }
+      }
+      
+      // If still no user ID, check recipients table as fallback
+      if (!userId) {
         console.log("No profile found with WhatsApp number:", fromNumber);
         console.log("Checking recipients table as fallback...");
         
@@ -123,66 +167,12 @@ serve(async (req) => {
         }
         
         // We found a user via the recipients table
-        const userId = recipients[0].user_id;
+        userId = recipients[0].user_id;
         console.log(`Found user via recipients table: ${userId}`);
-        
-        // Perform the check-in via calling our check-in service
-        try {
-          const { data: checkInResult, error: checkInError } = await supabase.functions.invoke("perform-whatsapp-check-in", {
-            body: JSON.stringify({ 
-              userId: userId,
-              phoneNumber: fromNumber,
-              method: "whatsapp"
-            })
-          });
-          
-          if (checkInError) {
-            console.error("Error performing check-in:", checkInError);
-            throw checkInError;
-          }
-          
-          console.log("Check-in successful:", checkInResult);
-          
-          // Send confirmation back to the user
-          await supabase.functions.invoke("send-whatsapp-notification", {
-            body: JSON.stringify({
-              to: fromNumber,
-              message: "✅ CHECK-IN SUCCESSFUL. Your Dead Man's Switch has been reset."
-            })
-          });
-          
-          return new Response(
-            JSON.stringify({ 
-              success: true, 
-              type: "check-in",
-              message: "Check-in processed successfully",
-              timestamp: new Date().toISOString()
-            }),
-            {
-              status: 200,
-              headers: { "Content-Type": "application/json", ...corsHeaders },
-            }
-          );
-          
-        } catch (e) {
-          console.error("Error in check-in flow:", e);
-          
-          // Send error message back to the user
-          await supabase.functions.invoke("send-whatsapp-notification", {
-            body: JSON.stringify({
-              to: fromNumber,
-              message: "❌ CHECK-IN FAILED. Please try again later or log in to the app."
-            })
-          });
-          
-          throw e;
-        }
-      } else {
-        // We found a user via their profile
-        const userId = profiles[0].id;
-        console.log(`Found user via profile: ${userId}`);
-        
-        // Perform the check-in via calling our check-in service
+      }
+      
+      // We have a user ID, now perform the check-in
+      if (userId) {
         try {
           const { data: checkInResult, error: checkInError } = await supabase.functions.invoke("perform-whatsapp-check-in", {
             body: JSON.stringify({ 

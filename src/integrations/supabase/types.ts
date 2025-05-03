@@ -78,6 +78,7 @@ export type Database = {
       message_conditions: {
         Row: {
           active: boolean
+          check_in_code: string | null
           condition_type: string
           confirmation_required: number | null
           confirmations_received: number | null
@@ -103,6 +104,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          check_in_code?: string | null
           condition_type: string
           confirmation_required?: number | null
           confirmations_received?: number | null
@@ -128,6 +130,7 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          check_in_code?: string | null
           condition_type?: string
           confirmation_required?: number | null
           confirmations_received?: number | null

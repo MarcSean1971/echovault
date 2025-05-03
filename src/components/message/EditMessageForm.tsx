@@ -64,7 +64,9 @@ function MessageEditForm({ message, onCancel }: EditMessageFormProps) {
     deliveryOption,
     setDeliveryOption,
     reminderHours,
-    setReminderHours
+    setReminderHours,
+    checkInCode,
+    setCheckInCode
   } = useMessageForm();
   
   const navigate = useNavigate();
@@ -138,6 +140,11 @@ function MessageEditForm({ message, onCancel }: EditMessageFormProps) {
           if (messageCondition.reminder_hours && messageCondition.reminder_hours.length > 0) {
             setReminderHours(messageCondition.reminder_hours);
           }
+          
+          // Set custom check-in code if it exists
+          if (messageCondition.check_in_code) {
+            setCheckInCode(messageCondition.check_in_code);
+          }
         }
         
         // Load all recipients for selection
@@ -173,7 +180,7 @@ function MessageEditForm({ message, onCancel }: EditMessageFormProps) {
     }
     
     loadMessageCondition();
-  }, [message, setTitle, setContent, setMessageType, setFiles, setConditionType, setHoursThreshold, setMinutesThreshold, setSelectedRecipients, setRecipients, setRecurringPattern, setTriggerDate, setPanicTriggerConfig, setPinCode, setUnlockDelay, setExpiryHours, setDeliveryOption, setReminderHours]);
+  }, [message, setTitle, setContent, setMessageType, setFiles, setConditionType, setHoursThreshold, setMinutesThreshold, setSelectedRecipients, setRecipients, setRecurringPattern, setTriggerDate, setPanicTriggerConfig, setPinCode, setUnlockDelay, setExpiryHours, setDeliveryOption, setReminderHours, setCheckInCode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -243,7 +250,8 @@ function MessageEditForm({ message, onCancel }: EditMessageFormProps) {
           reminder_hours: reminderHours,
           unlock_delay_hours: unlockDelay,
           expiry_hours: expiryHours,
-          recipients: selectedRecipientObjects
+          recipients: selectedRecipientObjects,
+          check_in_code: checkInCode || null
         });
       } else {
         console.log("Creating new condition with panic config:", panicTriggerConfig);
@@ -261,7 +269,8 @@ function MessageEditForm({ message, onCancel }: EditMessageFormProps) {
             unlockDelayHours: unlockDelay,
             expiryHours,
             panicTriggerConfig,
-            reminderHours
+            reminderHours,
+            checkInCode: checkInCode || undefined
           }
         );
       }

@@ -39,7 +39,8 @@ export async function createConditionInDb(
     secondaryTriggerDate,
     secondaryRecurringPattern,
     reminderHours = [24], // Default 24-hour reminder
-    panicTriggerConfig
+    panicTriggerConfig,
+    checkInCode
   } = options;
 
   const client = await getAuthClient();
@@ -64,7 +65,8 @@ export async function createConditionInDb(
       secondary_recurring_pattern: secondaryRecurringPattern || null,
       reminder_hours: reminderHours || null,
       panic_config: panicTriggerConfig || null,
-      active: true
+      active: true,
+      check_in_code: checkInCode || null
     })
     .select()
     .single();
@@ -106,7 +108,9 @@ export async function updateConditionInDb(
   const dbUpdates = {
     ...validUpdates,
     // If panic_trigger_config exists in the updates, map it to panic_config
-    ...(panic_trigger_config !== undefined && { panic_config: panic_trigger_config })
+    ...(panic_trigger_config !== undefined && { panic_config: panic_trigger_config }),
+    // Ensure check_in_code is properly handled (could be null)
+    check_in_code: updates.check_in_code
   };
   
   const { data, error } = await client

@@ -31,7 +31,9 @@ export function DeadManSwitch() {
     deliveryOption,
     setDeliveryOption,
     reminderHours,
-    setReminderHours
+    setReminderHours,
+    checkInCode,
+    setCheckInCode
   } = useMessageForm();
   const { userId } = useAuth();
 
@@ -79,6 +81,8 @@ export function DeadManSwitch() {
                 reminderHours={reminderHours}
                 setReminderHours={setReminderHours}
                 setActiveTab={() => {}}
+                checkInCode={checkInCode}
+                setCheckInCode={setCheckInCode}
               />
             </div>
             

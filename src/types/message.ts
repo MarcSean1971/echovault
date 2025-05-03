@@ -1,3 +1,4 @@
+
 export type Message = {
   id: string;
   user_id: string;
@@ -88,6 +89,7 @@ export type MessageCondition = {
     recurring_pattern?: RecurringPattern;
   };
   reminder_hours?: number[];
+  check_in_code?: string; // Add the new field for custom check-in code
 };
 
 // Update CheckIn type to include timestamp and device_info

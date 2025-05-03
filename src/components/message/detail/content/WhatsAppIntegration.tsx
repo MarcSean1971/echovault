@@ -1,10 +1,11 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Smartphone, Clock } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { sendTestWhatsAppMessage } from "@/services/messages/notificationService";
 import { HOVER_TRANSITION, ICON_HOVER_EFFECTS } from "@/utils/hoverEffects";
+import { supabase } from "@/integrations/supabase/client";
 
 interface WhatsAppIntegrationProps {
   messageId: string;
@@ -16,6 +17,32 @@ interface WhatsAppIntegrationProps {
 
 export function WhatsAppIntegration({ messageId, panicConfig }: WhatsAppIntegrationProps) {
   const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
+  const [checkInCode, setCheckInCode] = useState<string | null>(null);
+  
+  useEffect(() => {
+    // Fetch custom check-in code if it exists
+    const fetchCheckInCode = async () => {
+      if (!messageId) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from("message_conditions")
+          .select("check_in_code")
+          .eq("message_id", messageId)
+          .single();
+          
+        if (error) throw error;
+        
+        if (data && data.check_in_code) {
+          setCheckInCode(data.check_in_code);
+        }
+      } catch (error) {
+        console.error("Error fetching check-in code:", error);
+      }
+    };
+    
+    fetchCheckInCode();
+  }, [messageId]);
   
   const handleSendTestWhatsApp = async () => {
     if (!messageId) return;
@@ -75,7 +102,11 @@ export function WhatsAppIntegration({ messageId, panicConfig }: WhatsAppIntegrat
           <h4 className="text-sm font-medium">WhatsApp Check-In</h4>
         </div>
         <p className="text-xs text-gray-600 mt-1">
-          You can also check in via WhatsApp by sending "CHECKIN" or "CODE" to the WhatsApp number.
+          You can check in via WhatsApp by sending 
+          {checkInCode ? (
+            <> "<span className="font-medium">{checkInCode}</span>", </>
+          ) : null}
+          "CHECKIN" or "CODE" to the WhatsApp number.
         </p>
       </div>
     </div>
