@@ -1,11 +1,6 @@
 
 import { useCallback } from "react";
-import { 
-  ICON_HOVER_EFFECTS, 
-  BUTTON_HOVER_EFFECTS, 
-  HOVER_TRANSITION,
-  DROPDOWN_HOVER_EFFECTS 
-} from "@/utils/hoverEffects";
+import { ICON_HOVER_EFFECTS, BUTTON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 /**
  * Custom hook for applying consistent hover effects across the application
@@ -26,17 +21,9 @@ export function useHoverEffects() {
     return `${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS[variant] || BUTTON_HOVER_EFFECTS.default}`;
   }, []);
 
-  /**
-   * Get classNames for dropdown item hover effects
-   */
-  const getDropdownHoverClasses = useCallback(() => {
-    return DROPDOWN_HOVER_EFFECTS;
-  }, []);
-
   return {
     getIconHoverClasses,
     getButtonHoverClasses,
-    getDropdownHoverClasses,
     HOVER_TRANSITION
   };
 }

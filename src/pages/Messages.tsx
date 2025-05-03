@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -7,7 +8,7 @@ import { MessageFilter } from "@/components/message/MessageFilter";
 import { MessageGrid } from "@/components/message/MessageGrid";
 import { fetchMessages, deleteMessage } from "@/services/messages/messageService";
 import { Message } from "@/types/message";
-import { useHoverEffects } from "@/hooks/useHoverEffects";
+import { BUTTON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 export default function Messages() {
   const navigate = useNavigate();
@@ -15,7 +16,6 @@ export default function Messages() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [messageType, setMessageType] = useState<string | null>(null);
-  const { getButtonHoverClasses } = useHoverEffects();
 
   useEffect(() => {
     if (!userId) return;
@@ -77,7 +77,7 @@ export default function Messages() {
         />
         <Button 
           onClick={() => navigate("/create-message")}
-          className={getButtonHoverClasses()}
+          className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
         >
           Create New Message
         </Button>
