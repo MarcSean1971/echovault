@@ -4,9 +4,10 @@ import { supabaseClient } from "./supabase-client.ts";
 import { corsHeaders } from "./cors-headers.ts";
 import { renderMessagePage } from "./template.ts";
 import { getMessage, getMessageCondition, getDeliveryRecord, createDeliveryRecord } from "./message-service.ts";
-import { calculateSecurityDates, isAuthorizedRecipient, findRecipientByEmail } from "./security-service.ts";
+import { findRecipientByEmail } from "./security-service.ts";
 import { handleVerifyPin } from "./handlers/verify-pin-handler.ts";
 import { handleRecordView } from "./handlers/record-view-handler.ts";
+import { validateMessageRequest, validateMessageAuthorization, checkSecurityConditions } from "./message-validator.ts";
 
 // URL path handler - parses the URL path to extract messageId and other info
 const handleRequest = async (req: Request): Promise<Response> => {
@@ -29,33 +30,16 @@ const handleRequest = async (req: Request): Promise<Response> => {
       return await handleRecordView(req);
     }
     
-    // Try to extract message ID from query parameters first
-    let messageId = url.searchParams.get("id");
-    
-    // If not found in query params, try to extract from URL path (backwards compatibility)
-    if (!messageId) {
-      messageId = pathParts[pathParts.length - 1];
-      // If last path part is the function name itself, then there's no ID in the path
-      if (messageId === "access-message") {
-        messageId = null;
-      }
-    }
-    
-    if (!messageId) {
-      console.error("Missing message ID in both query parameters and URL path");
-      return new Response("Missing message ID - Please check the URL format", { 
-        status: 400, 
-        headers: { "Content-Type": "text/plain", ...corsHeaders } 
-      });
-    }
-    
-    // Extract recipient and delivery info from query parameters
-    const recipientEmail = url.searchParams.get("recipient");
-    const deliveryId = url.searchParams.get("delivery");
-    
-    if (!recipientEmail || !deliveryId) {
-      console.error(`Missing recipient (${recipientEmail}) or delivery information (${deliveryId})`);
-      return new Response("Missing recipient or delivery information", { 
+    // Validate request parameters
+    let messageId, recipientEmail, deliveryId;
+    try {
+      const validatedParams = await validateMessageRequest(url);
+      messageId = validatedParams.messageId;
+      recipientEmail = validatedParams.recipientEmail;
+      deliveryId = validatedParams.deliveryId;
+    } catch (paramError: any) {
+      console.error("Parameter validation error:", paramError.message);
+      return new Response(paramError.message, { 
         status: 400, 
         headers: { "Content-Type": "text/plain", ...corsHeaders } 
       });
@@ -66,36 +50,17 @@ const handleRequest = async (req: Request): Promise<Response> => {
     // Create Supabase client
     const supabase = supabaseClient();
     
-    // 1. Get the message
-    const { data: message, error: messageError } = await getMessage(messageId);
-      
-    if (messageError) {
-      console.error("Error fetching message:", messageError);
-      return new Response("Message not found", { 
-        status: 404, 
-        headers: { "Content-Type": "text/plain", ...corsHeaders } 
-      });
-    }
-    
-    // 2. Get the message condition to check security settings and recipients
-    const { data: condition, error: conditionError } = await getMessageCondition(messageId);
-      
-    if (conditionError) {
-      console.error("Error fetching message condition:", conditionError);
-      return new Response("Message condition not found", { 
-        status: 404, 
-        headers: { "Content-Type": "text/plain", ...corsHeaders } 
-      });
-    }
-    
-    // 3. Verify that the recipient is authorized to access this message
-    const authorizedRecipients = condition.recipients || [];
-    const isAuthorized = isAuthorizedRecipient(authorizedRecipients, recipientEmail);
-    
-    if (!isAuthorized) {
-      console.error(`Unauthorized access attempt by ${recipientEmail} for message ${messageId}`);
-      return new Response("You are not authorized to access this message", { 
-        status: 403, 
+    // Validate message authorization
+    let message, condition, authorizedRecipients;
+    try {
+      const authResult = await validateMessageAuthorization(messageId, recipientEmail);
+      message = authResult.message;
+      condition = authResult.condition;
+      authorizedRecipients = authResult.authorizedRecipients;
+    } catch (authError: any) {
+      console.error("Authorization error:", authError.message);
+      return new Response(authError.message, { 
+        status: authError.message.includes("not found") ? 404 : 403, 
         headers: { "Content-Type": "text/plain", ...corsHeaders } 
       });
     }
@@ -136,25 +101,15 @@ const handleRequest = async (req: Request): Promise<Response> => {
     }
     
     // 5. Check security settings
-    const hasPinCode = !!condition.pin_code;
-    const hasDelayedAccess = (condition.unlock_delay_hours || 0) > 0;
-    const hasExpiry = (condition.expiry_hours || 0) > 0;
-    
-    // Calculate dates for delay and expiry
-    const deliveryDate = deliveryRecord?.delivered_at 
-      ? new Date(deliveryRecord.delivered_at) 
-      : new Date(); // Fallback to current time if delivery date not available
-    
-    const { unlockDate, expiryDate, isExpired } = calculateSecurityDates(
-      deliveryDate, 
+    const { 
+      hasPinCode, 
       hasDelayedAccess, 
       hasExpiry, 
-      condition.unlock_delay_hours || 0, 
-      condition.expiry_hours || 0
-    );
-    
-    // 6. Check if the PIN has been verified for this session
-    const pinVerified = deliveryRecord?.viewed_count && deliveryRecord.viewed_count > 0;
+      unlockDate, 
+      expiryDate, 
+      isExpired, 
+      pinVerified 
+    } = checkSecurityConditions(condition, deliveryRecord);
     
     // If expired, show expired message
     if (isExpired) {
