@@ -30,7 +30,15 @@ serve(async (req) => {
       throw new Error("Missing Twilio credentials. Please set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_WHATSAPP_NUMBER.");
     }
 
-    const requestData: WhatsAppMessageRequest = await req.json();
+    // Parse the request body
+    let requestData: WhatsAppMessageRequest;
+    try {
+      requestData = await req.json();
+    } catch (e) {
+      console.error("Failed to parse request body:", e);
+      throw new Error("Invalid request body. Expected JSON object with 'to' and 'message' fields.");
+    }
+
     const { to, message, messageId, recipientName, isEmergency, triggerKeyword } = requestData;
     
     if (!to || !message) {
@@ -79,13 +87,13 @@ serve(async (req) => {
       }).toString(),
     });
     
-    const responseData = await response.json();
-    
     if (!response.ok) {
+      const responseData = await response.json();
       console.error("Twilio API error:", responseData);
       throw new Error(`Twilio API error: ${responseData.message || "Unknown error"}`);
     }
     
+    const responseData = await response.json();
     console.log("WhatsApp message sent successfully:", responseData.sid);
     
     return new Response(

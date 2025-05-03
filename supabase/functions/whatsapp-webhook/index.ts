@@ -29,26 +29,32 @@ serve(async (req) => {
     let messageData: WhatsAppMessage;
     
     const contentType = req.headers.get("content-type") || "";
-    if (contentType.includes("application/json")) {
-      messageData = await req.json();
-    } else if (contentType.includes("application/x-www-form-urlencoded")) {
-      const formData = await req.formData();
-      messageData = {
-        From: formData.get("From") as string,
-        Body: formData.get("Body") as string,
-        SmsStatus: formData.get("SmsStatus") as string,
-        MessageSid: formData.get("MessageSid") as string,
-        AccountSid: formData.get("AccountSid") as string,
-        To: formData.get("To") as string,
-      };
-    } else {
-      throw new Error("Unsupported content type");
+    
+    try {
+      if (contentType.includes("application/json")) {
+        messageData = await req.json();
+      } else if (contentType.includes("application/x-www-form-urlencoded")) {
+        const formData = await req.formData();
+        messageData = {
+          From: formData.get("From") as string,
+          Body: formData.get("Body") as string,
+          SmsStatus: formData.get("SmsStatus") as string,
+          MessageSid: formData.get("MessageSid") as string,
+          AccountSid: formData.get("AccountSid") as string,
+          To: formData.get("To") as string,
+        };
+      } else {
+        throw new Error(`Unsupported content type: ${contentType}`);
+      }
+    } catch (e) {
+      console.error("Failed to parse webhook payload:", e);
+      throw new Error("Failed to parse webhook payload. Check content type and payload format.");
     }
     
     console.log("Received WhatsApp message:", JSON.stringify(messageData, null, 2));
     
     if (!messageData.From || !messageData.Body) {
-      throw new Error("Missing required message fields");
+      throw new Error("Missing required message fields: From and Body are required");
     }
     
     // Extract the phone number from the From field (remove the 'whatsapp:' prefix)

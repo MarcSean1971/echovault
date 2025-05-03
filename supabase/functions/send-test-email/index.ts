@@ -24,10 +24,19 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { recipientName, recipientEmail, senderName, messageTitle, appName = "EchoVault" }: TestEmailRequest = await req.json();
+    // Parse request body safely
+    let requestBody: TestEmailRequest;
+    try {
+      requestBody = await req.json();
+    } catch (e) {
+      console.error("Failed to parse request body:", e);
+      throw new Error("Invalid request body format. Expected JSON.");
+    }
+
+    const { recipientName, recipientEmail, senderName, messageTitle, appName = "EchoVault" } = requestBody;
 
     if (!recipientEmail || !senderName || !messageTitle) {
-      throw new Error("Missing required parameters");
+      throw new Error("Missing required parameters: recipientEmail, senderName, and messageTitle are required");
     }
 
     console.log(`Sending test email to ${recipientEmail}`);
