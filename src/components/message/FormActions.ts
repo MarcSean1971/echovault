@@ -31,7 +31,12 @@ export function useFormActions() {
     unlockDelay,
     expiryHours,
     deliveryOption,
-    reminderHours
+    reminderHours,
+    // Location fields
+    shareLocation,
+    locationLatitude,
+    locationLongitude,
+    locationName
   } = useMessageForm();
 
   // Check if the form has valid required inputs
@@ -70,8 +75,21 @@ export function useFormActions() {
     }
     
     try {
-      // Create the basic message
-      const message = await createMessage(userId, title, content, messageType, files);
+      // Create the basic message with location data if enabled
+      const message = await createMessage(
+        userId, 
+        title, 
+        content, 
+        messageType, 
+        files,
+        // Location data
+        shareLocation ? {
+          latitude: locationLatitude,
+          longitude: locationLongitude,
+          name: locationName,
+          shareLocation
+        } : null
+      );
       
       // Create a condition (always required now)
       if (message) {

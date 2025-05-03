@@ -9,6 +9,36 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      check_in_locations: {
+        Row: {
+          created_at: string
+          device_info: string | null
+          id: string
+          latitude: number
+          location_name: string | null
+          longitude: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_info?: string | null
+          id?: string
+          latitude: number
+          location_name?: string | null
+          longitude: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_info?: string | null
+          id?: string
+          latitude?: number
+          location_name?: string | null
+          longitude?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       delivered_messages: {
         Row: {
           condition_id: string
@@ -137,7 +167,11 @@ export type Database = {
           content: string | null
           created_at: string
           id: string
+          location_latitude: number | null
+          location_longitude: number | null
+          location_name: string | null
           message_type: string
+          share_location: boolean
           title: string
           updated_at: string
           user_id: string
@@ -147,7 +181,11 @@ export type Database = {
           content?: string | null
           created_at?: string
           id?: string
+          location_latitude?: number | null
+          location_longitude?: number | null
+          location_name?: string | null
           message_type?: string
+          share_location?: boolean
           title: string
           updated_at?: string
           user_id: string
@@ -157,7 +195,11 @@ export type Database = {
           content?: string | null
           created_at?: string
           id?: string
+          location_latitude?: number | null
+          location_longitude?: number | null
+          location_name?: string | null
           message_type?: string
+          share_location?: boolean
           title?: string
           updated_at?: string
           user_id?: string

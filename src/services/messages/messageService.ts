@@ -60,7 +60,13 @@ export async function createMessage(
   title: string, 
   content: string | null, 
   messageType: string,
-  attachments: FileAttachment[] = []
+  attachments: FileAttachment[] = [],
+  locationData: {
+    latitude: number | null;
+    longitude: number | null;
+    name: string | null;
+    shareLocation: boolean;
+  } | null = null
 ) {
   try {
     // First, upload any attachments
@@ -68,18 +74,28 @@ export async function createMessage(
       ? await uploadAttachments(userId, attachments)
       : [];
 
-    // Then create the message with attachment references
+    // Then create the message with attachment references and location data
     const client = await getAuthClient();
+    
+    const messageData: any = {
+      user_id: userId,
+      title,
+      content,
+      message_type: messageType,
+      attachments: uploadedAttachments.length > 0 ? uploadedAttachments : null
+    };
+    
+    // Add location data if provided
+    if (locationData && locationData.shareLocation) {
+      messageData.location_latitude = locationData.latitude;
+      messageData.location_longitude = locationData.longitude;
+      messageData.location_name = locationData.name;
+      messageData.share_location = locationData.shareLocation;
+    }
     
     const { data, error } = await client
       .from('messages')
-      .insert({
-        user_id: userId,
-        title,
-        content,
-        message_type: messageType,
-        attachments: uploadedAttachments.length > 0 ? uploadedAttachments : null
-      })
+      .insert(messageData)
       .select();
 
     if (error) throw error;

@@ -1,18 +1,22 @@
-
 export type Message = {
   id: string;
+  user_id: string;
   title: string;
   content: string | null;
   message_type: string;
   created_at: string;
   updated_at: string;
-  user_id: string;
-  attachments?: Array<{
+  attachments: Array<{
     path: string;
     name: string;
     size: number;
     type: string;
   }> | null;
+  // Add location fields
+  location_latitude?: number | null;
+  location_longitude?: number | null;
+  location_name?: string | null;
+  share_location?: boolean;
 };
 
 export type Recipient = {

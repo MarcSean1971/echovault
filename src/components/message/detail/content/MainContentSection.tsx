@@ -7,6 +7,7 @@ import { Separator } from "@/components/ui/separator";
 import { WhatsAppIntegration } from "./WhatsAppIntegration";
 import { Message } from "@/types/message";
 import { Card } from "@/components/ui/card";
+import { MapPin } from "lucide-react";
 
 interface MainContentSectionProps {
   message: Message;
@@ -33,6 +34,11 @@ export function MainContentSection({
   const isPanicTrigger = condition?.condition_type === 'panic_trigger';
   const isWhatsAppPanicTrigger = isPanicTrigger && 
                                (condition?.panic_config?.methods?.includes('whatsapp'));
+  
+  // Check if location is available
+  const hasLocation = message.share_location && 
+                    message.location_latitude != null && 
+                    message.location_longitude != null;
 
   return (
     <Card className="overflow-hidden">
@@ -55,6 +61,32 @@ export function MainContentSection({
           
           {message.attachments && message.attachments.length > 0 && (
             <MessageAttachments message={message} />
+          )}
+          
+          {/* Display location if available */}
+          {hasLocation && (
+            <div className="mt-6">
+              <h3 className="text-md font-medium mb-2 flex items-center">
+                <MapPin className="h-5 w-5 mr-1" />
+                Location
+              </h3>
+              <div className="border rounded-lg p-4 space-y-2">
+                <p className="font-medium">{message.location_name || "Location attached"}</p>
+                <p className="text-sm text-muted-foreground">
+                  Latitude: {message.location_latitude?.toFixed(6)}, 
+                  Longitude: {message.location_longitude?.toFixed(6)}
+                </p>
+                
+                {/* Static map image using Mapbox */}
+                <div className="relative w-full h-48 mt-2 overflow-hidden rounded-lg border">
+                  <img 
+                    src={`https://api.mapbox.com/styles/v1/mapbox/streets-v11/static/pin-s+f00(${message.location_longitude},${message.location_latitude})/${message.location_longitude},${message.location_latitude},13,0/500x300?access_token=${import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN}`} 
+                    alt="Message location map"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              </div>
+            </div>
           )}
         </div>
         
