@@ -7,6 +7,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/use-toast";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, RefreshCw } from "lucide-react";
+import { SUPABASE_URL } from "@/integrations/supabase/client"; // Import the URL directly
 
 export default function SecureMessage() {
   const [searchParams] = useSearchParams();
@@ -31,16 +32,15 @@ export default function SecureMessage() {
     setTechnicalDetails(null);
     
     try {
-      // Get the Supabase project ID
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      if (!supabaseUrl) {
+      // Use the imported Supabase URL directly
+      if (!SUPABASE_URL) {
         throw new Error("Supabase URL not configured");
       }
       
-      console.log("[SecureMessage] Using Supabase URL:", supabaseUrl);
+      console.log("[SecureMessage] Using Supabase URL:", SUPABASE_URL);
       
       // Extract project ID from Supabase URL to construct the edge function URL correctly
-      const projectId = supabaseUrl.split("://")[1]?.split(".")[0];
+      const projectId = SUPABASE_URL.split("://")[1]?.split(".")[0];
       if (!projectId) {
         throw new Error("Failed to extract project ID from Supabase URL");
       }
@@ -185,13 +185,13 @@ export default function SecureMessage() {
     setVerifyError(null);
     
     try {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      if (!supabaseUrl) {
+      // Use the imported Supabase URL directly instead of environment variable
+      if (!SUPABASE_URL) {
         throw new Error("Supabase URL not configured");
       }
       
       // Extract project ID from Supabase URL
-      const projectId = supabaseUrl.split("://")[1]?.split(".")[0];
+      const projectId = SUPABASE_URL.split("://")[1]?.split(".")[0];
       if (!projectId) {
         throw new Error("Failed to extract project ID from Supabase URL");
       }
@@ -331,6 +331,7 @@ export default function SecureMessage() {
                 variant="outline" 
                 onClick={handleRetry}
                 className="flex items-center gap-2"
+                style={{ transition: "all 0.2s ease-in-out" }}
               >
                 <RefreshCw className="h-4 w-4" />
                 Retry
@@ -362,7 +363,11 @@ export default function SecureMessage() {
       </Card>
       
       <div className="w-full max-w-3xl mx-auto mt-6 text-center">
-        <Button variant="secondary" onClick={() => window.history.back()}>
+        <Button 
+          variant="secondary" 
+          onClick={() => window.history.back()}
+          style={{ transition: "all 0.2s ease-in-out" }}
+        >
           Go Back
         </Button>
       </div>
