@@ -37,7 +37,7 @@ export function PanicButton({
         <AlertCircle className={iconSizeClass} />
         {panicMode 
           ? countDown > 0 
-            ? `SENDING... ${!isMobile ? `(${countDown})` : ""}` 
+            ? `SENDING... (${countDown})` 
             : "SENDING..." 
           : isConfirming 
             ? (isMobile ? "CONFIRM" : "CONFIRM EMERGENCY") 
