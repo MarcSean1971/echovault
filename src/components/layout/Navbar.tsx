@@ -7,6 +7,7 @@ import { DesktopNav } from "./navbar/DesktopNav";
 import { MobileNav } from "./navbar/MobileNav";
 import { GuestNav } from "./navbar/GuestNav";
 import { HeaderButtons } from "./navbar/header-buttons";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface NavbarProps {
   isLoggedIn?: boolean;
@@ -17,6 +18,7 @@ export default function Navbar({ isLoggedIn = false }: NavbarProps) {
   const [userImage, setUserImage] = useState<string | null>(null);
   const [initials, setInitials] = useState("U");
   const { conditions } = useTriggerDashboard();
+  const isMobile = useIsMobile();
 
   // Determine user initials and image when user data is loaded
   useEffect(() => {
@@ -44,8 +46,8 @@ export default function Navbar({ isLoggedIn = false }: NavbarProps) {
           </div>
         )}
         
-        {/* Centered buttons - modified to always display even when no conditions exist */}
-        {authenticated && (
+        {/* Centered buttons - only show on desktop */}
+        {authenticated && !isMobile && (
           <div className="flex-1 flex justify-center md:absolute md:left-1/2 md:transform md:-translate-x-1/2 z-20">
             <HeaderButtons 
               conditions={conditions}

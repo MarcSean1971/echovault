@@ -77,8 +77,7 @@ export function MobileNav({ userImage, initials }: MobileNavProps) {
             
             <div className="mt-auto">
               <div className="border-t border-border pt-4 mt-4">
-                <div className="flex items-center justify-between p-2">
-                  <div className="text-sm font-medium">Account</div>
+                <div className="flex items-center justify-end p-2">
                   <UserMenu userImage={userImage} initials={initials} />
                 </div>
               </div>

@@ -2,6 +2,7 @@
 import { Outlet, useNavigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import Navbar from "./Navbar";
+import { MobileFooter } from "./MobileFooter";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -28,9 +29,10 @@ export default function AppLayout({ isLoggedIn = false }: AppLayoutProps) {
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar isLoggedIn={authStatus} />
       <Toaster />
-      <main className="flex-1 w-full">
+      <main className="flex-1 w-full pb-16 md:pb-0">
         <Outlet />
       </main>
+      {authStatus && <MobileFooter />}
     </div>
   );
 }
