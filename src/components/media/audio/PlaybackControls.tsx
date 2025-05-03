@@ -3,6 +3,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Play, Pause, Trash2, Check } from "lucide-react";
 import { formatDuration } from "@/utils/audioUtils";
+import { BUTTON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface PlaybackControlsProps {
   isPlaying: boolean;
@@ -25,7 +26,7 @@ export function PlaybackControls({
         <Button
           variant="ghost"
           size="icon"
-          className="w-full h-full rounded-full"
+          className={`w-full h-full rounded-full ${HOVER_TRANSITION} hover:bg-primary/10`}
           onClick={onTogglePlayback}
         >
           {isPlaying ? (
@@ -45,13 +46,14 @@ export function PlaybackControls({
           size="sm" 
           variant="outline" 
           onClick={onReset}
-          className="text-destructive"
+          className={`text-destructive ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.outline}`}
         >
           <Trash2 className="w-4 h-4 mr-1" /> Discard
         </Button>
         <Button 
           size="sm"
           onClick={onAccept}
+          className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
         >
           <Check className="w-4 h-4 mr-1" /> Accept
         </Button>

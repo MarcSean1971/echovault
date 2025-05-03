@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import { Mic } from "lucide-react";
@@ -34,11 +34,45 @@ export function AudioRecorder({ onAudioReady, onCancel }: AudioRecorderProps) {
     reset
   } = useAudioRecorder();
   
+  // Log component mount and browser support
+  useEffect(() => {
+    console.log("AudioRecorder mounted, browser supported:", isBrowserSupported);
+    
+    // Check for MediaRecorder support on mount
+    if (window.MediaRecorder) {
+      console.log("MediaRecorder is supported");
+      console.log("Available MIME types:", MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm supported' : 'audio/webm not supported');
+    } else {
+      console.error("MediaRecorder is not supported in this browser");
+    }
+    
+    return () => {
+      console.log("AudioRecorder unmounting");
+    };
+  }, [isBrowserSupported]);
+  
+  // Log recording status changes
+  useEffect(() => {
+    console.log("Recording status:", isRecording ? "recording" : "not recording", "isPaused:", isPaused);
+  }, [isRecording, isPaused]);
+  
+  // Log duration changes
+  useEffect(() => {
+    if (isRecording) {
+      console.log("Current recording duration:", recordingDuration);
+    }
+  }, [recordingDuration, isRecording]);
+  
   const handleAccept = async () => {
-    if (!audioBlob) return;
+    if (!audioBlob) {
+      console.error("No audio blob available");
+      return;
+    }
     
     try {
+      console.log("Processing audio blob:", audioBlob.size);
       const base64Audio = await blobToBase64(audioBlob);
+      console.log("Audio converted to base64, length:", base64Audio.length);
       onAudioReady(audioBlob, base64Audio);
     } catch (err) {
       console.error("Error processing audio:", err);
@@ -70,7 +104,7 @@ export function AudioRecorder({ onAudioReady, onCancel }: AudioRecorderProps) {
               <RecordingIndicator isPaused={isPaused} />
             ) : (
               <div className="relative w-20 h-20 rounded-full border-2 border-primary flex items-center justify-center mb-2">
-                <Mic className="w-10 h-10 text-primary" />
+                <Mic className="w-10 h-10 text-primary hover:scale-110 transition-all duration-200" />
               </div>
             )}
             
@@ -113,7 +147,7 @@ export function AudioRecorder({ onAudioReady, onCancel }: AudioRecorderProps) {
       </div>
       
       <div className="mt-4 flex justify-end">
-        <Button variant="ghost" size="sm" onClick={onCancel}>
+        <Button variant="ghost" size="sm" onClick={onCancel} className="hover:bg-gray-100 transition-colors duration-200">
           Cancel
         </Button>
       </div>

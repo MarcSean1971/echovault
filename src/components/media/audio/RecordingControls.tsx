@@ -2,6 +2,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Mic, Pause, Square } from "lucide-react";
+import { BUTTON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface RecordingControlsProps {
   isRecording: boolean;
@@ -28,7 +29,7 @@ export function RecordingControls({
             size="sm" 
             variant="outline" 
             onClick={onResume}
-            className="text-primary"
+            className={`text-primary ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.outline}`}
           >
             <Mic className="w-4 h-4 mr-1" /> Resume
           </Button>
@@ -37,7 +38,7 @@ export function RecordingControls({
             size="sm" 
             variant="outline" 
             onClick={onPause}
-            className="text-muted-foreground"
+            className={`text-muted-foreground ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.outline}`}
           >
             <Pause className="w-4 h-4 mr-1" /> Pause
           </Button>
@@ -46,6 +47,7 @@ export function RecordingControls({
           size="sm" 
           variant="destructive" 
           onClick={onStop}
+          className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
         >
           <Square className="w-4 h-4 mr-1" /> Stop
         </Button>
@@ -56,7 +58,7 @@ export function RecordingControls({
   return (
     <Button 
       onClick={onStart}
-      className="bg-primary"
+      className={`bg-primary ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
     >
       <Mic className="w-4 h-4 mr-1" /> Start Recording
     </Button>
