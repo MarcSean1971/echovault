@@ -26,9 +26,6 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
     refreshConditions 
   } = useTriggerDashboard();
 
-  // State for location permission
-  const [locationPermission, setLocationPermission] = useState<string>("unknown");
-  
   // Find panic message from conditions
   const panicMessage = conditions.find(c => 
     c.condition_type === 'panic_trigger' && c.active === true
@@ -50,25 +47,6 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
     triggerInProgress,
     handlePanicButtonClick 
   } = usePanicButton(userId, panicMessage);
-  
-  // Check location permissions
-  useEffect(() => {
-    if (navigator.permissions && navigator.permissions.query) {
-      navigator.permissions.query({ name: 'geolocation' })
-        .then((result) => {
-          setLocationPermission(result.state);
-          
-          // Listen for permission changes
-          result.onchange = () => {
-            setLocationPermission(result.state);
-          };
-        })
-        .catch(err => {
-          console.error("Error checking location permissions:", err);
-          setLocationPermission("denied");
-        });
-    }
-  }, []);
   
   // Force refresh conditions when component mounts and when lastRefresh changes
   useEffect(() => {

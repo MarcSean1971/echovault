@@ -1,5 +1,6 @@
 
 import { Button } from "@/components/ui/button";
+import { HOVER_TRANSITION, BUTTON_HOVER_EFFECTS } from "@/utils/hoverEffects";
 
 interface CreateMessageButtonProps {
   onClick: () => void;
@@ -12,7 +13,7 @@ export function CreateMessageButton({ onClick, disabled }: CreateMessageButtonPr
       variant="outline"
       onClick={onClick}
       disabled={disabled}
-      className="w-full"
+      className={`w-full ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
     >
       Create Emergency Message
     </Button>

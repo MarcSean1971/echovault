@@ -1,12 +1,13 @@
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { AlertCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageCondition } from "@/types/message";
-import { usePanicButtonLogic } from "@/hooks/usePanicButtonLogic";
+import { usePanicButton } from "@/hooks/usePanicButton";
 import { EmergencyButton } from "./panic-button/EmergencyButton";
 import { CreateMessageButton } from "./panic-button/CreateMessageButton";
 import { StatusMessages } from "./panic-button/StatusMessages";
+import { hasActivePanicMessages } from "@/services/messages/conditions/panicTriggerService";
 
 interface PanicButtonCardProps {
   userId: string | undefined;
@@ -16,18 +17,38 @@ interface PanicButtonCardProps {
 }
 
 export function PanicButtonCard({ userId, panicMessage, isChecking, isLoading }: PanicButtonCardProps) {
-  // Use the custom hook for panic button logic
+  // Use the panic button hook
   const {
     panicMode,
     isConfirming,
     triggerInProgress,
     countDown,
-    hasPanicMessages,
     locationPermission,
-    getKeepArmedValue,
     handlePanicButtonClick,
-    handleCreatePanicMessage
-  } = usePanicButtonLogic(userId, panicMessage, isChecking, isLoading);
+    handleCreatePanicMessage,
+    getKeepArmedValue
+  } = usePanicButton(userId, panicMessage);
+  
+  // State for checking if user has any panic messages (even if not loaded in this component)
+  const [hasPanicMessages, setHasPanicMessages] = useState(false);
+  
+  // Check if user has any panic messages on mount
+  useEffect(() => {
+    const checkPanicMessages = async () => {
+      if (!userId) return;
+      
+      try {
+        const hasMessages = await hasActivePanicMessages(userId);
+        setHasPanicMessages(hasMessages);
+      } catch (error) {
+        console.error("Error checking panic messages:", error);
+      }
+    };
+    
+    if (!panicMessage && !isLoading && userId) {
+      checkPanicMessages();
+    }
+  }, [userId, panicMessage, isLoading]);
 
   // Debug info
   useEffect(() => {
