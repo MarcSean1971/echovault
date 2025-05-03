@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -15,6 +14,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { FileUploader } from "@/components/FileUploader";
+import { AudioRecorderDialog } from "@/components/media/AudioRecorderDialog";
+import { AudioPlayer } from "@/components/media/AudioPlayer";
 
 export function MessageDetails() {
   const { 
@@ -29,6 +30,10 @@ export function MessageDetails() {
   } = useMessageForm();
   
   const [isCapturingLocation, setIsCapturingLocation] = useState(false);
+  const [showAudioRecorder, setShowAudioRecorder] = useState(false);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [audioBase64, setAudioBase64] = useState<string | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
 
   // Function to capture user's current location
   const captureLocation = () => {
@@ -74,6 +79,33 @@ export function MessageDetails() {
     setLocationName("");
   };
 
+  // Function to handle the audio type button click
+  const handleAudioTypeClick = () => {
+    setMessageType("audio");
+    if (!audioBlob) {
+      setShowAudioRecorder(true);
+    }
+  };
+
+  // Function to handle audio recording completion
+  const handleAudioReady = (audioBlob: Blob, audioBase64: string) => {
+    setAudioBlob(audioBlob);
+    setAudioBase64(audioBase64);
+    setContent(audioBase64); // Store the audio data in content
+    setAudioUrl(URL.createObjectURL(audioBlob));
+  };
+
+  // Function to clear recorded audio
+  const clearAudio = () => {
+    if (audioUrl) {
+      URL.revokeObjectURL(audioUrl);
+    }
+    setAudioBlob(null);
+    setAudioBase64(null);
+    setAudioUrl(null);
+    setContent("");
+  };
+
   return (
     <div className="space-y-6">
       {/* Title field */}
@@ -103,7 +135,7 @@ export function MessageDetails() {
           <Button
             type="button"
             variant={messageType === "audio" ? "default" : "outline"}
-            onClick={() => setMessageType("audio")}
+            onClick={handleAudioTypeClick}
             className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
           >
             Audio
@@ -131,7 +163,40 @@ export function MessageDetails() {
             placeholder="Enter your message content"
           />
         ) : messageType === "audio" ? (
-          <div>Audio recorder</div>
+          <div className="space-y-3">
+            {audioUrl ? (
+              <div className="space-y-3">
+                <AudioPlayer src={audioUrl} />
+                <div className="flex justify-end">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={() => setShowAudioRecorder(true)}
+                    className={`mr-2 ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.outline}`}
+                  >
+                    Record New
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="destructive" 
+                    onClick={clearAudio}
+                    className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
+                  >
+                    Clear Audio
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-[150px] border-2 border-dashed rounded-md border-gray-300 bg-gray-50 p-6">
+                <Button 
+                  onClick={() => setShowAudioRecorder(true)}
+                  className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
+                >
+                  Record Audio Message
+                </Button>
+              </div>
+            )}
+          </div>
         ) : messageType === "video" ? (
           <div>Video recorder</div>
         ) : (
@@ -203,6 +268,13 @@ export function MessageDetails() {
           onChange={setFiles} 
         />
       </div>
+
+      {/* Audio Recorder Dialog */}
+      <AudioRecorderDialog 
+        open={showAudioRecorder} 
+        onOpenChange={setShowAudioRecorder} 
+        onAudioReady={handleAudioReady}
+      />
     </div>
   );
 }
