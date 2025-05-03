@@ -119,28 +119,48 @@ export async function recordMessageDelivery(
 
       if (tableError) {
         console.warn("Delivered messages table may not exist, skipping delivery recording");
+        console.log("Details:", tableError);
         return null;
       }
       
-      // If table exists, insert the delivery record
+      // If table exists, check if delivery record already exists
+      const { data: existingRecord, error: checkError } = await supabase
+        .from("delivered_messages")
+        .select("id")
+        .eq("delivery_id", deliveryId)
+        .maybeSingle();
+        
+      if (checkError) {
+        console.error("Error checking for existing delivery record:", checkError);
+      }
+      
+      // If record exists, don't create a duplicate
+      if (existingRecord) {
+        console.log(`Delivery record already exists for ID ${deliveryId}`);
+        return existingRecord;
+      }
+      
+      // Insert the delivery record
       const { data, error } = await supabase
         .from("delivered_messages")
         .insert({
           message_id: messageId,
           condition_id: conditionId,
           recipient_id: recipientId,
-          delivery_id: deliveryId
+          delivery_id: deliveryId,
+          delivered_at: new Date().toISOString()
         })
         .select();
       
       if (error) {
-        console.error("Error recording message delivery:", error);
+        console.error("Error inserting message delivery:", error);
         throw error;
       }
       
+      console.log(`Successfully created delivery record: ${deliveryId} for message ${messageId}`);
       return data;
     } catch (tableCheckError) {
-      console.warn("Error checking delivered_messages table:", tableCheckError);
+      console.warn("Error with delivered_messages table:", tableCheckError);
       return null;
     }
   } catch (error) {

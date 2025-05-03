@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { supabaseClient } from "./supabase-client.ts";
 
@@ -249,11 +250,21 @@ const handleRequest = async (req: Request): Promise<Response> => {
       return await handleRecordView(req);
     }
     
-    // Extract message ID from URL path - should be the last part of the path
-    const messageId = pathParts[pathParts.length - 1];
+    // Try to extract message ID from query parameters first
+    let messageId = url.searchParams.get("id");
     
-    if (!messageId || messageId === "access-message") {
-      return new Response("Missing message ID", { 
+    // If not found in query params, try to extract from URL path (backwards compatibility)
+    if (!messageId) {
+      messageId = pathParts[pathParts.length - 1];
+      // If last path part is the function name itself, then there's no ID in the path
+      if (messageId === "access-message") {
+        messageId = null;
+      }
+    }
+    
+    if (!messageId) {
+      console.error("Missing message ID in both query parameters and URL path");
+      return new Response("Missing message ID - Please check the URL format", { 
         status: 400, 
         headers: { "Content-Type": "text/plain", ...corsHeaders } 
       });
@@ -264,13 +275,14 @@ const handleRequest = async (req: Request): Promise<Response> => {
     const deliveryId = url.searchParams.get("delivery");
     
     if (!recipientEmail || !deliveryId) {
+      console.error(`Missing recipient (${recipientEmail}) or delivery information (${deliveryId})`);
       return new Response("Missing recipient or delivery information", { 
         status: 400, 
         headers: { "Content-Type": "text/plain", ...corsHeaders } 
       });
     }
     
-    console.log(`Access request for message ${messageId} by recipient ${recipientEmail}`);
+    console.log(`Access request for message ${messageId} by recipient ${recipientEmail} with delivery ID ${deliveryId}`);
     
     // Create Supabase client
     const supabase = supabaseClient();
@@ -333,7 +345,35 @@ const handleRequest = async (req: Request): Promise<Response> => {
     
     if (!deliveryRecord) {
       console.warn(`No delivery record found for message ${messageId} with delivery ID ${deliveryId}`);
-      // Continue anyway as the recipient is authorized
+      // Try to create a delivery record if it doesn't exist
+      try {
+        // Find the recipient ID from the authorized recipients list
+        const recipient = authorizedRecipients.find((r: any) => 
+          r.email && r.email.toLowerCase() === recipientEmail.toLowerCase()
+        );
+        
+        if (recipient && recipient.id) {
+          const { error: createError } = await supabase
+            .from("delivered_messages")
+            .insert({
+              message_id: messageId,
+              condition_id: condition.id,
+              recipient_id: recipient.id,
+              delivery_id: deliveryId,
+              delivered_at: new Date().toISOString()
+            });
+            
+          if (createError) {
+            console.error("Error creating delivery record:", createError);
+            // Continue as the user is already authorized
+          } else {
+            console.log(`Created delivery record for message ${messageId} and recipient ${recipient.id}`);
+          }
+        }
+      } catch (recordError) {
+        console.error("Error creating delivery record:", recordError);
+        // Continue anyway as the recipient is authorized
+      }
     }
     
     // 5. Check security settings
