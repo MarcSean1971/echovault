@@ -18,7 +18,7 @@ export function MessageCardHeader({ message, isArmed, formatDate }: MessageCardH
         <div className="mt-1">
           {getMessageIcon(message.message_type)}
         </div>
-        <div className="min-h-[3rem] flex flex-col justify-center">
+        <div className="min-h-[3rem] flex flex-col justify-start">
           <CardTitle className="text-lg line-clamp-2 leading-tight">
             {message.title}
           </CardTitle>
