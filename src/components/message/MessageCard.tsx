@@ -127,7 +127,7 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
   return (
     <Card 
       key={message.id} 
-      className={`overflow-hidden ${isArmed ? 'border-destructive border-2' : ''}`}
+      className={`overflow-hidden ${isArmed ? 'border-destructive border-2' : 'border-green-500 border-2'}`}
     >
       <CardHeader className="pb-3">
         <MessageCardHeader 
