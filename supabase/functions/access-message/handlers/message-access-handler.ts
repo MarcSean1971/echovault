@@ -1,6 +1,6 @@
 
 import { corsHeaders } from "../cors-headers.ts";
-import { renderMessagePage } from "../template.ts";
+import { renderMessagePage, renderErrorPage } from "../template.ts";
 import { validateMessageRequest, validateMessageAuthorization, checkSecurityConditions } from "../message-validator.ts";
 import { getDeliveryRecord, createDeliveryRecord } from "../delivery-service.ts";
 import { findRecipientByEmail } from "../security-service.ts";

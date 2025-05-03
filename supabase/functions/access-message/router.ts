@@ -3,6 +3,7 @@ import { corsHeaders } from "./cors-headers.ts";
 import { handleVerifyPin } from "./handlers/verify-pin-handler.ts";
 import { handleRecordView } from "./handlers/record-view-handler.ts";
 import { handleMessageAccess } from "./handlers/message-access-handler.ts";
+import { renderErrorPage } from "./template.ts";
 
 /**
  * Routes the incoming request to the appropriate handler
@@ -52,25 +53,4 @@ export async function routeRequest(req: Request): Promise<Response> {
       headers: { "Content-Type": "text/html; charset=utf-8", ...corsHeaders }
     });
   }
-}
-
-/**
- * Render a simple error page
- */
-function renderErrorPage(title: string, message: string): string {
-  return `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-        <title>${title}</title>
-      </head>
-      <body>
-        <h1>${title}</h1>
-        <p>${message}</p>
-      </body>
-    </html>
-  `;
 }
