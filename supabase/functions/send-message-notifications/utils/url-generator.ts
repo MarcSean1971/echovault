@@ -25,7 +25,7 @@ export function generateAccessUrl(messageId: string, recipientEmail: string, del
     // Using the correct path for the secure message page in the app, not the edge function
     const accessUrl = `https://${domain}/secure-message?id=${messageId}&recipient=${encodeURIComponent(recipientEmail)}&delivery=${deliveryId}`;
     
-    console.log(`Generated secure web access URL: ${accessUrl}`);
+    console.log(`Generated secure web access URL for message ${messageId}, recipient ${recipientEmail}: ${accessUrl}`);
     return accessUrl;
   } catch (error) {
     console.error("Error generating access URL:", error);

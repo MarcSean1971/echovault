@@ -51,10 +51,11 @@ export function renderErrorPage(title: string, message: string): string {
             transform: translateY(-1px);
             opacity: 0.9;
           }
-          /* Consistent hover effect applied throughout */
+          /* Apply consistent hover effect throughout */
           button:hover, a:hover {
             opacity: 0.9;
             transition: opacity 0.2s ease;
+            cursor: pointer;
           }
         </style>
       </head>
