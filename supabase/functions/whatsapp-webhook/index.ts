@@ -82,9 +82,10 @@ serve(async (req) => {
     console.log(`Found recipient with ID: ${recipient.id}, user ID: ${recipient.user_id}`);
     
     // Look for panic messages with this trigger keyword
+    // Updated to only reference panic_config which exists in the database
     const { data: conditions, error: conditionsError } = await supabase
       .from("message_conditions")
-      .select("id, message_id, panic_trigger_config, panic_config")
+      .select("id, message_id, panic_config")
       .eq("condition_type", "panic_trigger")
       .eq("active", true);
 
@@ -99,8 +100,8 @@ serve(async (req) => {
     
     // Check each condition for matching keyword
     for (const condition of conditions || []) {
-      // Check in both possible locations for the config
-      const config = condition.panic_trigger_config || condition.panic_config;
+      // Updated to only use panic_config as the source of configuration
+      const config = condition.panic_config;
       
       if (!config || !config.methods || !config.methods.includes('whatsapp')) {
         continue; // Skip if not configured for WhatsApp
