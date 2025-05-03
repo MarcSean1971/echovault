@@ -1,6 +1,6 @@
 
-import { supabaseClient } from "../supabase-client.ts";
 import { corsHeaders } from "../cors-headers.ts";
+import { verifyPinAndRecordView } from "../delivery-service.ts";
 
 /**
  * Handle PIN verification for protected messages
@@ -20,60 +20,24 @@ export const handleVerifyPin = async (req: Request): Promise<Response> => {
       });
     }
     
-    // Create Supabase client
-    const supabase = supabaseClient();
-    
-    // Get the message condition to check PIN
-    const { data: condition, error: conditionError } = await supabase
-      .from("message_conditions")
-      .select("pin_code")
-      .eq("message_id", messageId)
-      .single();
+    try {
+      const result = await verifyPinAndRecordView(messageId, deliveryId, pin);
       
-    if (conditionError || !condition) {
-      console.error("Error fetching message condition:", conditionError);
+      return new Response(JSON.stringify({ 
+        success: true 
+      }), { 
+        headers: { "Content-Type": "application/json", ...corsHeaders } 
+      });
+    } catch (verifyError: any) {
+      console.warn(`PIN verification error: ${verifyError.message}`);
       return new Response(JSON.stringify({ 
         success: false, 
-        error: "Message condition not found" 
+        error: verifyError.message 
       }), { 
-        status: 404, 
+        status: verifyError.message.includes("not found") ? 404 : 401,
         headers: { "Content-Type": "application/json", ...corsHeaders } 
       });
     }
-    
-    // Verify PIN
-    if (condition.pin_code !== pin) {
-      console.warn(`Incorrect PIN attempt for message ${messageId}`);
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: "Incorrect PIN" 
-      }), { 
-        status: 401, 
-        headers: { "Content-Type": "application/json", ...corsHeaders } 
-      });
-    }
-    
-    // PIN is correct, update delivery record
-    const { data: deliveryRecord, error: deliveryError } = await supabase
-      .from("delivered_messages")
-      .update({ 
-        viewed_at: new Date().toISOString(),
-        viewed_count: 1
-      })
-      .eq("delivery_id", deliveryId)
-      .eq("message_id", messageId)
-      .select();
-      
-    if (deliveryError) {
-      console.error("Error updating delivery record:", deliveryError);
-      // Continue anyway, PIN verification succeeded
-    }
-    
-    return new Response(JSON.stringify({ 
-      success: true 
-    }), { 
-      headers: { "Content-Type": "application/json", ...corsHeaders } 
-    });
     
   } catch (error: any) {
     console.error("Error verifying PIN:", error);

@@ -1,6 +1,6 @@
 
-import { supabaseClient } from "../supabase-client.ts";
 import { corsHeaders } from "../cors-headers.ts";
+import { recordMessageView } from "../delivery-service.ts";
 
 /**
  * Handle recording message views
@@ -20,21 +20,13 @@ export const handleRecordView = async (req: Request): Promise<Response> => {
       });
     }
     
-    // Create Supabase client
-    const supabase = supabaseClient();
-    
-    // Check if the delivered_messages table exists
+    // Try to record the view
     try {
-      // Update delivery record
-      const { data, error } = await supabase
-        .from("delivered_messages")
-        .update({ 
-          viewed_at: new Date().toISOString(),
-          viewed_count: 1,
-          device_info: req.headers.get("user-agent") || null
-        })
-        .eq("delivery_id", deliveryId)
-        .eq("message_id", messageId);
+      const { error } = await recordMessageView(
+        messageId, 
+        deliveryId, 
+        req.headers.get("user-agent") || null
+      );
         
       if (error) {
         console.error("Error recording message view:", error);

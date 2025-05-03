@@ -3,11 +3,12 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { supabaseClient } from "./supabase-client.ts";
 import { corsHeaders } from "./cors-headers.ts";
 import { renderMessagePage } from "./template.ts";
-import { getMessage, getMessageCondition, getDeliveryRecord, createDeliveryRecord } from "./message-service.ts";
+import { getMessage, getMessageCondition } from "./message-service.ts";
 import { findRecipientByEmail } from "./security-service.ts";
 import { handleVerifyPin } from "./handlers/verify-pin-handler.ts";
 import { handleRecordView } from "./handlers/record-view-handler.ts";
 import { validateMessageRequest, validateMessageAuthorization, checkSecurityConditions } from "./message-validator.ts";
+import { getDeliveryRecord, createDeliveryRecord } from "./delivery-service.ts";
 
 // URL path handler - parses the URL path to extract messageId and other info
 const handleRequest = async (req: Request): Promise<Response> => {
@@ -47,9 +48,6 @@ const handleRequest = async (req: Request): Promise<Response> => {
     
     console.log(`Access request for message ${messageId} by recipient ${recipientEmail} with delivery ID ${deliveryId}`);
     
-    // Create Supabase client
-    const supabase = supabaseClient();
-    
     // Validate message authorization
     let message, condition, authorizedRecipients;
     try {
@@ -65,7 +63,7 @@ const handleRequest = async (req: Request): Promise<Response> => {
       });
     }
     
-    // 4. Check for message delivery record
+    // Check for message delivery record
     const { data: deliveryRecord, error: deliveryError } = await getDeliveryRecord(messageId, deliveryId);
       
     if (deliveryError) {
@@ -100,7 +98,7 @@ const handleRequest = async (req: Request): Promise<Response> => {
       }
     }
     
-    // 5. Check security settings
+    // Check security settings
     const { 
       hasPinCode, 
       hasDelayedAccess, 

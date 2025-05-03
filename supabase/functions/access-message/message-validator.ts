@@ -1,6 +1,7 @@
 
 import { calculateSecurityDates, isAuthorizedRecipient } from "./security-service.ts";
-import { getMessage, getMessageCondition, getDeliveryRecord } from "./message-service.ts";
+import { getMessage, getMessageCondition } from "./message-service.ts";
+import { getDeliveryRecord } from "./delivery-service.ts";
 
 /**
  * Validate message access request parameters
