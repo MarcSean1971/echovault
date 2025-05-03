@@ -6,9 +6,10 @@ interface UseMediaStreamOptions {
   audio?: boolean;
   video?: boolean;
   videoConstraints?: MediaTrackConstraints;
+  autoInitialize?: boolean; // Add option to control automatic initialization
 }
 
-export function useMediaStream(options: UseMediaStreamOptions = { audio: true, video: true }) {
+export function useMediaStream(options: UseMediaStreamOptions = { audio: true, video: true, autoInitialize: false }) {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [isBrowserSupported, setIsBrowserSupported] = useState(true);
   const [isInitializing, setIsInitializing] = useState(false);
@@ -110,11 +111,16 @@ export function useMediaStream(options: UseMediaStreamOptions = { audio: true, v
         errorMessage = "Permission request timed out. Please check browser permissions and try again.";
       }
       
-      toast({
-        title: "Camera Access Failed",
-        description: errorMessage,
-        variant: "destructive"
-      });
+      console.error(errorMessage);
+      
+      // Don't show toast for initial load, as it might be confusing
+      if (initAttempts.current > 1) {
+        toast({
+          title: "Camera Access Failed",
+          description: errorMessage,
+          variant: "destructive"
+        });
+      }
       
       // Auto retry once with lower quality if appropriate
       if (shouldRetry && initAttempts.current < 2) {
@@ -147,9 +153,10 @@ export function useMediaStream(options: UseMediaStreamOptions = { audio: true, v
     setPermissionDenied(false);
   }, [stopStream]);
 
-  // Initialize stream when component mounts if browser is supported
+  // Initialize stream when component mounts if browser is supported AND autoInitialize is true
   useEffect(() => {
-    if (isBrowserSupported) {
+    if (isBrowserSupported && options.autoInitialize) {
+      console.log("Auto-initializing media stream");
       initStream().catch(err => {
         console.error("Failed initial stream initialization:", err);
       });
@@ -159,7 +166,7 @@ export function useMediaStream(options: UseMediaStreamOptions = { audio: true, v
     return () => {
       stopStream();
     };
-  }, [isBrowserSupported, initStream, stopStream]);
+  }, [isBrowserSupported, options.autoInitialize, initStream, stopStream]);
 
   return {
     stream,

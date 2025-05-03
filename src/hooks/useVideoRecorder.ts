@@ -8,9 +8,12 @@ import { toast } from "@/components/ui/use-toast";
 
 interface UseVideoRecorderOptions {
   onRecordingComplete?: (blob: Blob, videoURL: string) => void;
+  autoInitialize?: boolean; // Add option to control automatic initialization
 }
 
 export function useVideoRecorder(options?: UseVideoRecorderOptions) {
+  const autoInitialize = options?.autoInitialize ?? false; // Default to false for explicit permission request
+  
   // References to video elements
   const videoPreviewRef = useRef<HTMLVideoElement | null>(null);
   const recordedVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -34,7 +37,8 @@ export function useVideoRecorder(options?: UseVideoRecorderOptions) {
       width: { ideal: 1280 },
       height: { ideal: 720 },
       frameRate: { ideal: 30 }
-    }
+    },
+    autoInitialize, // Pass through the auto-initialize option
   });
   
   const {
@@ -98,12 +102,9 @@ export function useVideoRecorder(options?: UseVideoRecorderOptions) {
     }
   }, [stream, resetStream]);
   
-  // Function to reinitialize the stream if needed
-  const reinitializeStream = useCallback(async () => {
-    console.log("Reinitializing media stream");
-    setStreamReady(false);
-    resetStream(); // This will stop the current stream
-    
+  // Function to initialize the stream (new explicit initialization method)
+  const initializeStream = useCallback(async () => {
+    console.log("Explicitly initializing media stream");
     try {
       toast({
         title: "Connecting to camera",
@@ -115,11 +116,9 @@ export function useVideoRecorder(options?: UseVideoRecorderOptions) {
         throw new Error("Failed to initialize stream");
       }
       
-      // Connection to video element happens in the effect above
-      console.log("Stream reinitialized successfully");
       return true;
     } catch (err) {
-      console.error("Failed to reinitialize stream:", err);
+      console.error("Failed to initialize stream:", err);
       toast({
         title: "Camera Error",
         description: "Could not access your camera. Please check permissions and try again.",
@@ -127,7 +126,16 @@ export function useVideoRecorder(options?: UseVideoRecorderOptions) {
       });
       return false;
     }
-  }, [initStream, resetStream]);
+  }, [initStream]);
+  
+  // Function to reinitialize the stream if needed
+  const reinitializeStream = useCallback(async () => {
+    console.log("Reinitializing media stream");
+    setStreamReady(false);
+    resetStream(); // This will stop the current stream
+    
+    return initializeStream();
+  }, [initializeStream, resetStream]);
   
   // Cleanup resources on unmount
   useEffect(() => {
@@ -155,7 +163,7 @@ export function useVideoRecorder(options?: UseVideoRecorderOptions) {
         description: "Please wait for camera to initialize or try again.",
         variant: "destructive"
       });
-      reinitializeStream();
+      initializeStream();
       return;
     }
     
@@ -166,13 +174,13 @@ export function useVideoRecorder(options?: UseVideoRecorderOptions) {
         description: "Camera access is required for recording.",
         variant: "destructive"
       });
-      reinitializeStream();
+      initializeStream();
       return;
     }
     
     console.log("Starting recording with stream:", stream.id);
     startRecording();
-  }, [stream, streamReady, startRecording, reinitializeStream]);
+  }, [stream, streamReady, startRecording, initializeStream]);
   
   // Reset recording state and prepare for new recording
   const reset = useCallback(() => {
@@ -181,9 +189,9 @@ export function useVideoRecorder(options?: UseVideoRecorderOptions) {
     
     // Reinitialize the stream if it was stopped
     if (!stream) {
-      reinitializeStream();
+      initializeStream();
     }
-  }, [resetRecording, stream, reinitializeStream]);
+  }, [resetRecording, stream, initializeStream]);
   
   // Process and accept the recorded video
   const handleAccept = useCallback(async () => {
@@ -245,6 +253,7 @@ export function useVideoRecorder(options?: UseVideoRecorderOptions) {
     handleVideoEnded: handleEnded,
     reset,
     handleAccept,
-    reinitializeStream
+    reinitializeStream,
+    initializeStream, // Expose the explicit initialization method
   };
 }

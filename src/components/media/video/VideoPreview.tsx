@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { formatDuration } from "@/utils/audioUtils";
 import { RecordingIndicator } from "./RecordingIndicator";
 import { Spinner } from "@/components/ui/spinner";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Camera } from "lucide-react";
 
 interface VideoPreviewProps {
   videoPreviewRef: React.RefObject<HTMLVideoElement>;
@@ -89,6 +89,12 @@ export function VideoPreview({
             <p className="text-xs text-gray-300 mt-1">
               Please check your browser settings and allow camera access to record video
             </p>
+            <div className="mt-3 bg-black/40 p-2 rounded text-xs text-gray-300">
+              <p className="mb-1">Browser-specific instructions:</p>
+              <p>Chrome: Click the camera icon in the address bar</p>
+              <p>Firefox: Click the shield icon in the address bar</p>
+              <p>Safari: Check Settings → Websites → Camera</p>
+            </div>
           </div>
         </div>
       )}
@@ -97,6 +103,7 @@ export function VideoPreview({
       {!isInitializing && !permissionDenied && !streamActive && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/70">
           <div className="text-center p-4">
+            <Camera className="h-8 w-8 text-white/70 mx-auto mb-2" />
             <p className="text-sm text-white">Camera not available</p>
             <p className="text-xs text-gray-300 mt-1">Please check your camera permissions</p>
           </div>

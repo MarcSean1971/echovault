@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { VideoPlayer } from "@/components/media/VideoPlayer";
 import { BUTTON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
-import { AlertCircle, Video } from "lucide-react";
+import { AlertCircle, Video, Camera } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 
 interface VideoContentProps {
@@ -77,7 +77,7 @@ export function VideoContent({
         onClick={onRecordClick}
         className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
       >
-        Record Video Message
+        <Camera className="mr-2 h-4 w-4" /> Record Video Message
       </Button>
     </div>
   );
