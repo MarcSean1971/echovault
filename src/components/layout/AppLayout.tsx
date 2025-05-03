@@ -29,7 +29,7 @@ export default function AppLayout({ isLoggedIn = false }: AppLayoutProps) {
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar isLoggedIn={authStatus} />
       <Toaster />
-      <main className="flex-1 w-full pb-16 md:pb-0">
+      <main className="flex-1 w-full">
         <Outlet />
       </main>
       {authStatus && <MobileFooter />}

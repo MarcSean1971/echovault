@@ -65,6 +65,18 @@ export default function Navbar({ isLoggedIn = false }: NavbarProps) {
           )}
         </div>
       </div>
+      
+      {/* Second line for mobile buttons */}
+      {authenticated && isMobile && (
+        <div className="md:hidden border-t border-border/40 py-2">
+          <div className="container mx-auto px-4 flex justify-center">
+            <HeaderButtons 
+              conditions={conditions}
+              userId={userId}
+            />
+          </div>
+        </div>
+      )}
     </header>
   );
 }
