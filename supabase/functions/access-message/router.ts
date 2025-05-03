@@ -4,9 +4,10 @@ import { handleVerifyPin } from "./handlers/verify-pin-handler.ts";
 import { handleRecordView } from "./handlers/record-view-handler.ts";
 import { handleMessageAccess } from "./handlers/message-access-handler.ts";
 import { renderErrorPage } from "./templates/error-page.ts";
+import { checkSupabaseConnection } from "./supabase-client.ts";
 
 /**
- * Routes the incoming request to the appropriate handler
+ * Routes the incoming request to the appropriate handler with enhanced error logging
  */
 export async function routeRequest(req: Request): Promise<Response> {
   try {
@@ -33,6 +34,20 @@ export async function routeRequest(req: Request): Promise<Response> {
     // Log search params for debugging
     console.log("[Router] URL search params:", Object.fromEntries(url.searchParams.entries()));
     
+    // Test database connection
+    const connectionResult = await checkSupabaseConnection();
+    if (!connectionResult.success) {
+      console.error("[Router] Database connection test failed:", connectionResult.error);
+      const errorHtml = renderErrorPage(
+        "Database Connection Error", 
+        "We're having trouble connecting to our database. Please try again in a few moments."
+      );
+      return new Response(errorHtml, { 
+        status: 500, 
+        headers: htmlHeaders
+      });
+    }
+    
     const pathParts = url.pathname.split('/');
     console.log("[Router] Path parts:", pathParts);
     
@@ -54,6 +69,7 @@ export async function routeRequest(req: Request): Promise<Response> {
       return await handleMessageAccess(req, url);
     } catch (messageAccessError: any) {
       console.error("[Router] Error in handleMessageAccess:", messageAccessError);
+      console.error("[Router] Error stack:", messageAccessError.stack);
       const errorHtml = renderErrorPage("Error accessing message", messageAccessError.message);
       return new Response(errorHtml, { 
         status: 500, 
@@ -64,7 +80,16 @@ export async function routeRequest(req: Request): Promise<Response> {
   } catch (error: any) {
     console.error("[Router] Error routing request:", error);
     console.error("[Router] Error stack:", error.stack);
-    const errorHtml = renderErrorPage("Error processing request", error.message);
+    
+    // Include available environment information in logs
+    const envVarNames = Object.keys(Deno.env.toObject()).join(', ');
+    console.error(`[Router] Available environment variables: ${envVarNames}`);
+    
+    const errorHtml = renderErrorPage(
+      "Error processing request", 
+      "We encountered a problem processing your request. Our team has been notified."
+    );
+    
     return new Response(errorHtml, { 
       status: 500, 
       headers: { "Content-Type": "text/html; charset=utf-8", ...corsHeaders }

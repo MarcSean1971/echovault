@@ -33,6 +33,7 @@ export function generateAccessUrl(messageId: string, recipientEmail: string, del
     return accessUrl;
   } catch (error) {
     console.error("Error generating access URL:", error);
+    console.error("Available environment variables:", Object.keys(Deno.env.toObject()).join(', '));
     throw error;
   }
 }

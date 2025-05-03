@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/use-toast";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle, RefreshCw } from "lucide-react";
 
 export default function SecureMessage() {
   const [searchParams] = useSearchParams();
@@ -14,16 +16,19 @@ export default function SecureMessage() {
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [technicalDetails, setTechnicalDetails] = useState<string | null>(null);
   const [htmlContent, setHtmlContent] = useState<string | null>(null);
   const [pinProtected, setPinProtected] = useState(false);
   const [pin, setPin] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [verifyError, setVerifyError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   
   const fetchMessage = async () => {
     setLoading(true);
     setError(null);
+    setTechnicalDetails(null);
     
     try {
       // Get the Supabase project ID
@@ -35,8 +40,11 @@ export default function SecureMessage() {
       console.log("[SecureMessage] Using Supabase URL:", supabaseUrl);
       
       // Extract project ID from Supabase URL to construct the edge function URL correctly
-      // Format: https://[PROJECT_REF].supabase.co
-      const projectId = supabaseUrl.split("://")[1].split(".")[0];
+      const projectId = supabaseUrl.split("://")[1]?.split(".")[0];
+      if (!projectId) {
+        throw new Error("Failed to extract project ID from Supabase URL");
+      }
+      
       console.log("[SecureMessage] Extracted project ID:", projectId);
       
       // Construct the edge function URL with the full, correct path
@@ -58,11 +66,33 @@ export default function SecureMessage() {
       if (!response.ok) {
         const errorText = await response.text();
         console.error("[SecureMessage] Error response:", errorText);
-        throw new Error(`Failed to load message: ${response.status} - ${errorText}`);
+        
+        // Attempt to extract more detailed error info
+        let technicalInfo = "";
+        try {
+          // Check if the error response is HTML
+          if (errorText.includes('<html') || errorText.includes('<body')) {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = errorText;
+            technicalInfo = tempDiv.textContent || errorText;
+          } else {
+            technicalInfo = errorText;
+          }
+        } catch (parseError) {
+          console.error("[SecureMessage] Error parsing error response:", parseError);
+          technicalInfo = errorText.substring(0, 500); // Limit length
+        }
+        
+        setTechnicalDetails(technicalInfo);
+        throw new Error(`Server returned ${response.status} ${response.statusText}`);
       }
       
       const html = await response.text();
       console.log("[SecureMessage] Response HTML length:", html.length);
+      
+      if (html.length < 10) {
+        throw new Error("Received empty or invalid response from server");
+      }
       
       // Check if the response contains PIN form
       if (html.includes("pin-form")) {
@@ -74,6 +104,13 @@ export default function SecureMessage() {
     } catch (err: any) {
       console.error("[SecureMessage] Error fetching message:", err);
       setError(err.message || "Failed to load the secure message");
+      
+      // Show toast for error
+      toast({
+        variant: "destructive",
+        title: "Error loading message",
+        description: err.message || "Failed to load the secure message"
+      });
     } finally {
       setLoading(false);
     }
@@ -154,7 +191,10 @@ export default function SecureMessage() {
       }
       
       // Extract project ID from Supabase URL
-      const projectId = supabaseUrl.split("://")[1].split(".")[0];
+      const projectId = supabaseUrl.split("://")[1]?.split(".")[0];
+      if (!projectId) {
+        throw new Error("Failed to extract project ID from Supabase URL");
+      }
       
       // Construct the edge function URL with the full, correct path
       const apiUrl = `https://${projectId}.supabase.co/functions/v1/access-message/verify-pin`;
@@ -208,6 +248,12 @@ export default function SecureMessage() {
     }
   };
   
+  // Retry fetching the message
+  const handleRetry = () => {
+    setRetryCount(prev => prev + 1);
+    fetchMessage();
+  };
+  
   useEffect(() => {
     if (messageId && (recipient || deliveryId)) {
       console.log("[SecureMessage] Initializing with params:", { messageId, recipient, deliveryId });
@@ -217,7 +263,7 @@ export default function SecureMessage() {
       setError("Invalid message link. Missing required parameters.");
       setLoading(false);
     }
-  }, [messageId, recipient, deliveryId]);
+  }, [messageId, recipient, deliveryId, retryCount]);
   
   // Set iframe height based on content
   const setIframeHeight = () => {
@@ -262,9 +308,34 @@ export default function SecureMessage() {
           <div className="text-center">
             <h1 className="text-2xl font-bold text-destructive mb-4">Error</h1>
             <p className="mb-6">{error}</p>
-            <Button variant="secondary" onClick={() => window.history.back()}>
-              Go Back
-            </Button>
+            
+            {technicalDetails && (
+              <Alert variant="destructive" className="mb-6 text-left">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Technical Details</AlertTitle>
+                <AlertDescription className="text-xs overflow-auto max-h-[200px]">
+                  {technicalDetails}
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Button 
+                variant="secondary" 
+                onClick={() => window.history.back()}
+              >
+                Go Back
+              </Button>
+              
+              <Button 
+                variant="outline" 
+                onClick={handleRetry}
+                className="flex items-center gap-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Retry
+              </Button>
+            </div>
           </div>
         </Card>
       </div>
@@ -284,7 +355,7 @@ export default function SecureMessage() {
         <iframe 
           ref={iframeRef}
           title="Secure Message Content"
-          className="w-full border-0 overflow-hidden"
+          className="w-full border-0 overflow-hidden transition-all duration-300"
           style={{ minHeight: '400px', width: '100%' }}
           sandbox="allow-same-origin allow-scripts"
         />
