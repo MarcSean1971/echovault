@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Edit, Mail, Trash2 } from "lucide-react";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useNavigate } from "react-router-dom";
+import { WhatsAppIntegration } from "./content/WhatsAppIntegration";
 
 interface MessageDetailContentProps {
   message: Message;
@@ -65,6 +66,12 @@ export function MessageDetailContent({
   const transcription = message && message.message_type !== 'text' ? 
     extractTranscription(message.message_type, message.content) : null;
   
+  // Check if this is a WhatsApp-enabled panic trigger
+  const isPanicTrigger = condition?.condition_type === 'panic_trigger';
+  const isWhatsAppPanicTrigger = isPanicTrigger && 
+                               condition?.panic_config && 
+                               condition?.panic_config?.methods?.includes('whatsapp');
+  
   if (isLoading) {
     return <MessageLoading />;
   }
@@ -104,6 +111,17 @@ export function MessageDetailContent({
               <>
                 <Separator className="my-4" />
                 <MessageAttachments message={message} />
+              </>
+            )}
+            
+            {/* Add WhatsApp Test Button for WhatsApp panic triggers */}
+            {isWhatsAppPanicTrigger && (
+              <>
+                <Separator className="my-4" />
+                <WhatsAppIntegration 
+                  messageId={message.id} 
+                  panicConfig={condition?.panic_config} 
+                />
               </>
             )}
           </CardContent>
