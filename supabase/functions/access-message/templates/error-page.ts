@@ -1,6 +1,6 @@
 
 /**
- * Template for error pages
+ * Render an error page with improved styling and error details
  */
 export function renderErrorPage(title: string, message: string): string {
   return `
@@ -9,7 +9,6 @@ export function renderErrorPage(title: string, message: string): string {
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
         <title>${title}</title>
         <style>
           body {
@@ -19,43 +18,27 @@ export function renderErrorPage(title: string, message: string): string {
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
-            background-color: #f9fafb;
           }
           .error-container {
-            border: 1px solid #f44336;
-            border-radius: 8px;
-            padding: 20px;
-            margin-top: 20px;
             background-color: #fff;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            margin-top: 50px;
+            border-top: 5px solid #e53e3e;
           }
           h1 {
-            color: #d32f2f;
+            color: #e53e3e;
+            font-size: 24px;
             margin-top: 0;
           }
-          .back-button {
-            display: inline-block;
-            background-color: #f1f5f9;
-            color: #0f172a;
-            padding: 10px 16px;
-            border-radius: 6px;
-            text-decoration: none;
-            font-weight: 500;
-            margin-top: 20px;
-            border: 1px solid #e2e8f0;
-            transition: all 0.2s ease;
+          p {
+            font-size: 16px;
           }
-          .back-button:hover {
-            background-color: #e2e8f0;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-            transform: translateY(-1px);
-            opacity: 0.9;
-          }
-          /* Apply consistent hover effect throughout */
-          button:hover, a:hover {
-            opacity: 0.9;
-            transition: opacity 0.2s ease;
-            cursor: pointer;
+          .timestamp {
+            color: #666;
+            font-size: 12px;
+            margin-top: 30px;
           }
         </style>
       </head>
@@ -63,7 +46,7 @@ export function renderErrorPage(title: string, message: string): string {
         <div class="error-container">
           <h1>${title}</h1>
           <p>${message}</p>
-          <a href="javascript:history.back()" class="back-button">Go Back</a>
+          <p class="timestamp">Error occurred at: ${new Date().toISOString()}</p>
         </div>
       </body>
     </html>
