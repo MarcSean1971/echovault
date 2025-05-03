@@ -148,8 +148,10 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
   const buttonSizeClass = isMobile ? "text-xs" : "";
   const buttonPaddingClass = isMobile ? "px-2 py-1" : "px-6 py-2";
   const iconSizeClass = isMobile ? "h-4 w-4" : "h-5 w-5";
+  
+  // New improved container class for better mobile positioning
   const containerClass = isMobile 
-    ? "flex absolute left-1/2 transform -translate-x-1/2 translate-y-[2.5rem] z-20 space-x-2 justify-center" 
+    ? "flex justify-center space-x-2 mt-0" 
     : "hidden md:flex absolute left-1/2 transform -translate-x-1/2 z-20 space-x-4";
 
   return (
