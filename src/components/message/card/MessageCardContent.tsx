@@ -38,9 +38,7 @@ export function MessageCardContent({
       {isPanicSending && (
         <div className="mb-3 flex items-center text-destructive font-semibold animate-pulse">
           <AlertCircle className="h-5 w-5 mr-1.5" />
-          <span className="text-lg">
-            {panicCountDown > 0 ? `SENDING... (${panicCountDown})` : "SENDING..."}
-          </span>
+          <span className="text-lg">SENDING...</span>
         </div>
       )}
 
