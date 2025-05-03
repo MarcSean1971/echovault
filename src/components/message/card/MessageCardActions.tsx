@@ -3,7 +3,6 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { BellOff, Bell, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useHoverEffects } from "@/hooks/useHoverEffects";
 
 interface MessageCardActionsProps {
   messageId: string;
@@ -28,7 +27,7 @@ export function MessageCardActions({
   const noHoverClass = "hover:bg-transparent hover:text-inherit";
 
   return (
-    <div className="flex justify-between">
+    <div className="flex justify-between w-full">
       <div className="flex gap-2">
         {condition && (
           isArmed ? (
