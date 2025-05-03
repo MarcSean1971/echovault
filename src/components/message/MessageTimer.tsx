@@ -77,12 +77,11 @@ export function MessageTimer({ deadline, isArmed }: MessageTimerProps) {
     return () => clearInterval(interval);
   }, [deadline, isArmed]);
   
-  if (!isArmed) {
-    return null;
-  }
+  // Removed the conditional return - we now always render the component
   
   // Get timer color based on percentage and urgency
   const getTimerColor = () => {
+    if (!isArmed) return 'bg-gray-300';
     if (timePercentage < 10 || isVeryUrgent) return 'bg-destructive';
     if (timePercentage < 30 || isUrgent) return 'bg-orange-500';
     if (timePercentage < 60) return 'bg-amber-400';
@@ -91,6 +90,7 @@ export function MessageTimer({ deadline, isArmed }: MessageTimerProps) {
   
   // Get pulse animation class based on urgency
   const getPulseClass = () => {
+    if (!isArmed) return '';
     if (isVeryUrgent) return 'animate-[pulse_1s_cubic-bezier(0.4,0,0.6,1)_infinite]';
     if (isUrgent) return 'animate-[pulse_2s_cubic-bezier(0.4,0,0.6,1)_infinite]';
     return '';
@@ -100,20 +100,26 @@ export function MessageTimer({ deadline, isArmed }: MessageTimerProps) {
     <div className={`space-y-2 ${isMobile ? 'px-1' : ''}`}>
       <div className={cn(
         "flex items-center justify-between transition-colors duration-300",
-        isVeryUrgent ? 'text-destructive' : isUrgent ? 'text-orange-500' : 'text-destructive/80',
-        isVeryUrgent ? getPulseClass() : ''
+        isArmed ? (
+          isVeryUrgent ? 'text-destructive' : isUrgent ? 'text-orange-500' : 'text-destructive/80'
+        ) : 'text-muted-foreground',
+        isArmed && isVeryUrgent ? getPulseClass() : ''
       )}>
         <div className="flex items-center">
-          {isVeryUrgent ? (
-            <AlertCircle className="h-5 w-5 mr-1.5" />
-          ) : isUrgent ? (
-            <Clock className="h-5 w-5 mr-1.5" />
+          {isArmed ? (
+            isVeryUrgent ? (
+              <AlertCircle className="h-5 w-5 mr-1.5" />
+            ) : (
+              <Clock className="h-5 w-5 mr-1.5" />
+            )
           ) : (
-            <Clock className="h-5 w-5 mr-1.5" />
+            <TimerOff className="h-5 w-5 mr-1.5" />
           )}
           <span className={cn(
             "font-mono text-lg transition-all duration-300",
-            isVeryUrgent ? 'font-bold' : isUrgent ? 'font-semibold' : 'font-medium'
+            isArmed ? (
+              isVeryUrgent ? 'font-bold' : isUrgent ? 'font-semibold' : 'font-medium'
+            ) : 'font-normal'
           )}>
             {timeLeft}
           </span>
@@ -122,9 +128,11 @@ export function MessageTimer({ deadline, isArmed }: MessageTimerProps) {
         {!isMobile && (
           <div className={cn(
             "text-xs transition-colors duration-300",
-            isVeryUrgent ? 'text-destructive font-medium' : 'text-muted-foreground'
+            isArmed ? (
+              isVeryUrgent ? 'text-destructive font-medium' : 'text-muted-foreground'
+            ) : 'text-muted-foreground'
           )}>
-            {isVeryUrgent ? 'Critical' : isUrgent ? 'Urgent' : 'Countdown'}
+            {isArmed ? (isVeryUrgent ? 'Critical' : isUrgent ? 'Urgent' : 'Countdown') : 'Disarmed'}
           </div>
         )}
       </div>
@@ -134,9 +142,9 @@ export function MessageTimer({ deadline, isArmed }: MessageTimerProps) {
           className={cn(
             "h-2.5 rounded-full transition-all duration-500",
             getTimerColor(),
-            isVeryUrgent ? 'animate-pulse' : ''
+            isArmed && isVeryUrgent ? 'animate-pulse' : ''
           )}
-          style={{ width: `${timePercentage}%` }}
+          style={{ width: isArmed ? `${timePercentage}%` : '100%' }}
         ></div>
       </div>
     </div>
