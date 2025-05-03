@@ -1,6 +1,7 @@
 
 import { sendEmailNotification } from "../email-service.ts";
 import { sendWhatsAppNotification } from "./whatsapp-service.ts";
+import { supabaseClient } from "../supabase-client.ts";
 
 interface NotificationOptions {
   isEmergency?: boolean;
@@ -23,19 +24,29 @@ export async function notifyRecipient(
   const { isEmergency = false, debug = false, maxRetries = 1, retryDelay = 5000, isWhatsAppEnabled = false, triggerKeyword = "" } = options;
   
   try {
-    // Get user details
-    const { data: sender, error: senderError } = await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/profiles?id=eq.${message.user_id}&select=first_name,last_name`, {
-      headers: {
-        "Content-Type": "application/json",
-        "apiKey": Deno.env.get("SUPABASE_ANON_KEY") || "",
-        "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""}`,
-      },
-    }).then(res => res.json());
+    // Initialize Supabase client for reliable data access
+    const supabase = supabaseClient();
     
+    // Get user details using Supabase client instead of direct fetch
+    const { data: senderData, error: senderError } = await supabase
+      .from("profiles")
+      .select("first_name, last_name")
+      .eq("id", message.user_id)
+      .single();
+    
+    // Build sender name with better fallback handling
     let senderName = "A user";
-    if (!senderError && sender && sender.length > 0) {
-      senderName = `${sender[0].first_name || ""} ${sender[0].last_name || ""}`.trim();
-      if (!senderName) senderName = "A user";
+    if (!senderError && senderData) {
+      const firstName = senderData.first_name || "";
+      const lastName = senderData.last_name || "";
+      const fullName = `${firstName} ${lastName}`.trim();
+      senderName = fullName || "A user";
+      
+      if (debug) {
+        console.log(`Retrieved sender name: "${senderName}" for user ID ${message.user_id}`);
+      }
+    } else if (debug) {
+      console.error(`Error retrieving sender profile: ${senderError?.message || "Unknown error"}`);
     }
     
     // Send email notification with retries for emergency messages
