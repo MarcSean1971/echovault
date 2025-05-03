@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LogOut, User, Settings, Users } from "lucide-react";
+import { LogOut, User, Settings, Users, Check } from "lucide-react";
 
 interface UserMenuProps {
   userImage: string | null;
@@ -54,6 +54,12 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
             <Link to="/profile" className="w-full cursor-pointer hover:opacity-90 transition-opacity">
               <User className="mr-2 h-4 w-4" />
               <span>Profile</span>
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link to="/check-in" className="w-full cursor-pointer hover:opacity-90 transition-opacity">
+              <Check className="mr-2 h-4 w-4" />
+              <span>Check In</span>
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
