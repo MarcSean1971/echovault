@@ -22,6 +22,7 @@ export function generateAccessUrl(messageId: string, recipientEmail: string, del
     const domain = urlObj.hostname;
     
     // Construct a fully qualified URL to the web application's secure message page
+    // Use the application's secure-message route, not the edge function
     const accessUrl = `https://${domain}/secure-message?id=${messageId}&recipient=${encodeURIComponent(recipientEmail)}&delivery=${deliveryId}`;
     
     console.log(`Generated secure web access URL: ${accessUrl}`);

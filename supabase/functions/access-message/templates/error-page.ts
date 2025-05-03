@@ -47,6 +47,13 @@ export function renderErrorPage(title: string, message: string): string {
           }
           .back-button:hover {
             background-color: #e2e8f0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            transform: translateY(-1px);
+          }
+          /* Consistent hover effect applied throughout */
+          button:hover, a:hover {
+            opacity: 0.9;
+            transition: opacity 0.2s ease;
           }
         </style>
       </head>
