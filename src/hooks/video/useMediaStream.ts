@@ -72,13 +72,8 @@ export function useMediaStream(options: UseMediaStreamOptions = { audio: true, v
 
       console.log("Requesting media with constraints:", constraints);
       
-      // Add timeout to detect when permissions dialog might be hanging
-      const mediaPromise = navigator.mediaDevices.getUserMedia(constraints);
-      const timeoutPromise = new Promise<null>((_, reject) => {
-        setTimeout(() => reject(new Error("Media request timeout - check permissions")), 10000);
-      });
-      
-      const mediaStream = await Promise.race([mediaPromise, timeoutPromise]) as MediaStream;
+      // Remove the problematic timeout that was causing "Permission request timeout" errors
+      const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
       
       if (!mediaStream) throw new Error("Failed to get media stream");
       
@@ -110,8 +105,6 @@ export function useMediaStream(options: UseMediaStreamOptions = { audio: true, v
         } else if (err.name === "AbortError") {
           errorMessage = "Hardware or permission error. Please check your device and permissions.";
         }
-      } else if (err instanceof Error && err.message.includes("timeout")) {
-        errorMessage = "Permission request timed out. Please check browser permissions and try again.";
       }
       
       console.error(errorMessage);

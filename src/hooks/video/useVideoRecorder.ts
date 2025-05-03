@@ -66,44 +66,77 @@ export function useVideoRecorder(options?: UseVideoRecorderOptions): VideoRecord
     togglePlayback
   } = usePlayback();
   
-  // Track stream connection to video element
+  // Improved stream connection to video element with better readiness detection
   useEffect(() => {
     if (stream && videoPreviewRef.current) {
       console.log("Connecting stream to video element");
       
-      // Check if stream is already connected
-      const currentStream = videoPreviewRef.current.srcObject as MediaStream | null;
-      if (currentStream && currentStream.id === stream.id) {
-        console.log("Stream already connected to video element");
-        setStreamReady(true);
-        return;
-      }
-      
+      // Set stream to video element
       videoPreviewRef.current.srcObject = stream;
       
-      // Ensure the video element loads the stream
+      // Create a more reliable way to check readiness
+      const checkStreamActive = () => {
+        if (!videoPreviewRef.current) return;
+        
+        const videoElem = videoPreviewRef.current;
+        
+        // Multiple checks to confirm stream is truly ready
+        const isVideoPlaying = 
+          !videoElem.paused && 
+          !videoElem.ended && 
+          videoElem.currentTime > 0 &&
+          videoElem.readyState >= 2; // HAVE_CURRENT_DATA or better
+          
+        const hasActiveStream = 
+          videoElem.srcObject instanceof MediaStream && 
+          (videoElem.srcObject as MediaStream).active &&
+          (videoElem.srcObject as MediaStream).getVideoTracks().length > 0 &&
+          (videoElem.srcObject as MediaStream).getVideoTracks()[0].readyState === 'live';
+        
+        const isReady = isVideoPlaying && hasActiveStream;
+        console.log("Stream active check:", isReady, "Video playing:", isVideoPlaying, "Has active stream:", hasActiveStream);
+        
+        if (isReady) {
+          setStreamReady(true);
+        }
+      };
+      
+      // Check immediately and also set up event listeners
       videoPreviewRef.current.onloadedmetadata = () => {
         console.log("Video element loaded stream metadata");
         if (videoPreviewRef.current) {
           videoPreviewRef.current.play()
             .then(() => {
               console.log("Video preview playing successfully");
-              setStreamReady(true);
+              // Use a short delay to let the video truly start playing
+              setTimeout(checkStreamActive, 100);
+              setTimeout(checkStreamActive, 500);
+              setTimeout(checkStreamActive, 1000);
             })
             .catch(err => {
               console.error("Error playing stream in video element:", err);
               setStreamReady(false);
-              // Try to recover by reinitializing
-              resetStream();
             });
+        }
+      };
+      
+      // Additional event listeners to check stream readiness
+      videoPreviewRef.current.addEventListener('playing', checkStreamActive);
+      videoPreviewRef.current.addEventListener('timeupdate', checkStreamActive);
+      
+      // Clean up
+      return () => {
+        if (videoPreviewRef.current) {
+          videoPreviewRef.current.removeEventListener('playing', checkStreamActive);
+          videoPreviewRef.current.removeEventListener('timeupdate', checkStreamActive);
         }
       };
     } else {
       setStreamReady(false);
     }
-  }, [stream, resetStream]);
+  }, [stream]);
   
-  // Function to initialize the stream
+  // Function to initialize the stream with better error handling
   const initializeStream = useCallback(async () => {
     console.log("Explicitly initializing media stream");
     try {
@@ -113,11 +146,14 @@ export function useVideoRecorder(options?: UseVideoRecorderOptions): VideoRecord
       });
       
       const newStream = await initStream();
-      if (!newStream) {
+      
+      // Give the stream time to properly initialize before concluding
+      if (newStream) {
+        console.log("Stream initialized, waiting for video element to connect");
+        return true;
+      } else {
         throw new Error("Failed to initialize stream");
       }
-      
-      return true;
     } catch (err) {
       console.error("Failed to initialize stream:", err);
       toast({
@@ -155,7 +191,7 @@ export function useVideoRecorder(options?: UseVideoRecorderOptions): VideoRecord
     togglePlayback(recordedVideoRef.current);
   }, [togglePlayback]);
   
-  // Start recording with checks
+  // Start recording with better checks and feedback
   const safeStartRecording = useCallback(() => {
     if (!streamReady) {
       console.log("Stream not ready, cannot start recording");
@@ -164,22 +200,15 @@ export function useVideoRecorder(options?: UseVideoRecorderOptions): VideoRecord
         description: "Please wait for camera to initialize or try again.",
         variant: "destructive"
       });
-      initializeStream();
+      
+      // Try to reinitialize if needed
+      if (!stream || !streamReady) {
+        initializeStream();
+      }
       return;
     }
     
-    if (!stream) {
-      console.log("No stream available, cannot start recording");
-      toast({
-        title: "No camera available",
-        description: "Camera access is required for recording.",
-        variant: "destructive"
-      });
-      initializeStream();
-      return;
-    }
-    
-    console.log("Starting recording with stream:", stream.id);
+    console.log("Starting recording with stream:", stream?.id);
     startRecording();
   }, [stream, streamReady, startRecording, initializeStream]);
   

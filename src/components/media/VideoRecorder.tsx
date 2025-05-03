@@ -18,9 +18,8 @@ interface VideoRecorderProps {
 }
 
 export function VideoRecorder({ onVideoReady, onCancel }: VideoRecorderProps) {
-  // Hide permission request by default - we'll check permissions first
-  const [showCameraPermissionRequest, setShowCameraPermissionRequest] = useState(false);
-  const [initializing, setInitializing] = useState(true);
+  // Simplify the permission flow: we'll let the hook handle initialization
+  const [showPermissionRequest, setShowPermissionRequest] = useState(false);
   
   const {
     // State
@@ -52,42 +51,33 @@ export function VideoRecorder({ onVideoReady, onCancel }: VideoRecorderProps) {
     initializeStream,
     reinitializeStream
   } = useVideoRecorder({
-    autoInitialize: true // Initialize automatically to check permissions
+    // Don't auto-initialize - we'll handle this more carefully
+    autoInitialize: false
   });
   
-  // Initial check for permissions
+  // Handle initial camera setup
   useEffect(() => {
-    const checkPermissions = async () => {
-      try {
-        // Try to get permissions automatically first
-        const result = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-          .then(stream => {
-            // We got permissions, clean up this temporary stream
-            stream.getTracks().forEach(track => track.stop());
-            return true;
-          })
-          .catch(() => false);
-          
-        // If we couldn't get permissions, show the permission request screen
-        if (!result) {
-          setShowCameraPermissionRequest(true);
-        }
-      } catch (error) {
-        // On error, show permission request
-        setShowCameraPermissionRequest(true);
-      } finally {
-        setInitializing(false);
+    const setupCamera = async () => {
+      console.log("Setting up camera initially");
+      
+      // If not supported, don't try to initialize
+      if (!isBrowserSupported) return;
+      
+      // Try to initialize the stream
+      const result = await initializeStream();
+      
+      // If initialization failed, show the permission request screen
+      if (!result) {
+        console.log("Initial camera setup failed, showing permission request");
+        setShowPermissionRequest(true);
       }
     };
     
-    // Only check if browser supports media devices
-    if (isBrowserSupported) {
-      checkPermissions();
-    }
-  }, [isBrowserSupported]);
+    setupCamera();
+  }, [isBrowserSupported, initializeStream]);
   
   const handleRequestCameraAccess = () => {
-    setShowCameraPermissionRequest(false);
+    setShowPermissionRequest(false);
     initializeStream();
   };
   
@@ -106,24 +96,24 @@ export function VideoRecorder({ onVideoReady, onCancel }: VideoRecorderProps) {
     return <UnsupportedBrowser onCancel={onCancel} />;
   }
   
-  // Show loading spinner while checking permissions
-  if (initializing) {
-    return (
-      <div className="p-4 bg-background rounded-lg border flex items-center justify-center" style={{minHeight: '300px'}}>
-        <div className="text-center">
-          <Spinner className="mx-auto mb-2" />
-          <p className="text-sm">Checking camera access...</p>
-        </div>
-      </div>
-    );
-  }
-  
   // Show camera permission request screen if needed
-  if (showCameraPermissionRequest) {
+  if (showPermissionRequest || permissionDenied) {
     return <CameraPermissionRequest 
       onRequestAccess={handleRequestCameraAccess} 
       onCancel={onCancel} 
     />;
+  }
+  
+  // Show loading state during initialization
+  if (isInitializing) {
+    return (
+      <div className="p-4 bg-background rounded-lg border flex items-center justify-center" style={{minHeight: '300px'}}>
+        <div className="text-center">
+          <Spinner className="mx-auto mb-2" />
+          <p className="text-sm">Connecting to camera...</p>
+        </div>
+      </div>
+    );
   }
   
   return (
@@ -147,14 +137,12 @@ export function VideoRecorder({ onVideoReady, onCancel }: VideoRecorderProps) {
           />
         )}
         
-        {/* Permission denied retry button */}
-        {permissionDenied && !videoURL && (
-          <PermissionRetryButton onRetry={handleRetryCamera} />
-        )}
-        
         {/* Camera not ready warning */}
-        {!streamReady && !isInitializing && !permissionDenied && !videoURL && (
-          <CameraNotReadyWarning />
+        {!streamReady && !isInitializing && !videoURL && (
+          <div className="flex flex-col w-full gap-2">
+            <CameraNotReadyWarning />
+            <PermissionRetryButton onRetry={handleRetryCamera} />
+          </div>
         )}
         
         {/* Controls */}
