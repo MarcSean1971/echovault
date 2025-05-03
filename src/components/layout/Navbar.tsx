@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
 import { useTriggerDashboard } from "@/hooks/useTriggerDashboard";
@@ -33,8 +32,8 @@ export default function Navbar({ isLoggedIn = false }: NavbarProps) {
   const authenticated = isLoaded ? isSignedIn : isLoggedIn;
 
   return (
-    <header className="sticky top-0 z-30 w-full border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60 shadow-sm md:py-3 py-2 md:h-auto">
-      <div className="container mx-auto px-4 flex items-center justify-between relative">
+    <header className="sticky top-0 z-30 w-full border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60 shadow-sm md:py-3 py-3 md:h-auto h-16">
+      <div className="container mx-auto px-4 flex items-center justify-between relative h-full">
         <Logo />
         
         {/* Desktop navigation */}
@@ -44,18 +43,16 @@ export default function Navbar({ isLoggedIn = false }: NavbarProps) {
           </div>
         )}
         
-        {/* Centered buttons - improved mobile positioning */}
+        {/* Centered buttons */}
         {authenticated && (
-          <div className="flex-1 flex justify-center md:absolute md:left-1/2 md:transform md:-translate-x-1/2 z-20">
-            <HeaderButtons 
-              conditions={conditions}
-              userId={userId}
-            />
-          </div>
+          <HeaderButtons 
+            conditions={conditions}
+            userId={userId}
+          />
         )}
         
         {/* Mobile navigation */}
-        <div className="md:hidden flex justify-end">
+        <div className="md:hidden flex flex-1 justify-end">
           {authenticated ? (
             <MobileNav userImage={userImage} initials={initials} />
           ) : (
