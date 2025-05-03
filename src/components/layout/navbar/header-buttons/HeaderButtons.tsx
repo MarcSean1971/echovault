@@ -31,7 +31,7 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
     c.condition_type === 'panic_trigger' && c.active === true
   ) || null;
 
-  // Find check-in related conditions
+  // Find check-in related conditions - FIX: only count active conditions
   const hasCheckInConditions = conditions.some(c => 
     (c.condition_type === 'no_check_in' || c.condition_type === 'regular_check_in') && 
     c.active === true
