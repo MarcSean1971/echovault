@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LogOut, User, Settings } from "lucide-react";
+import { LogOut, User, Settings, Users } from "lucide-react";
 
 interface UserMenuProps {
   userImage: string | null;
@@ -26,7 +26,7 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <div 
-          className="relative h-10 w-10 rounded-full border border-border cursor-pointer focus:outline-none"
+          className="relative h-10 w-10 rounded-full border border-border cursor-pointer focus:outline-none hover:opacity-90 transition-opacity"
           role="button"
           tabIndex={0}
         >
@@ -51,14 +51,20 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
-            <Link to="/profile" className="w-full cursor-pointer">
+            <Link to="/profile" className="w-full cursor-pointer hover:opacity-90 transition-opacity">
               <User className="mr-2 h-4 w-4" />
               <span>Profile</span>
             </Link>
           </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link to="/recipients" className="w-full cursor-pointer hover:opacity-90 transition-opacity">
+              <Users className="mr-2 h-4 w-4" />
+              <span>Recipients</span>
+            </Link>
+          </DropdownMenuItem>
           {isAdmin && (
             <DropdownMenuItem asChild>
-              <Link to="/admin" className="w-full cursor-pointer">
+              <Link to="/admin" className="w-full cursor-pointer hover:opacity-90 transition-opacity">
                 <Settings className="mr-2 h-4 w-4" />
                 <span>Admin Dashboard</span>
               </Link>
@@ -66,7 +72,7 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
           )}
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer">
+        <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer hover:opacity-90 transition-opacity">
           <LogOut className="mr-2 h-4 w-4" />
           <span>Log out</span>
         </DropdownMenuItem>

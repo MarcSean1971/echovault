@@ -31,16 +31,6 @@ export function DesktopNav({ userImage, initials }: DesktopNavProps) {
                 </Link>
               </NavigationMenuLink>
             </NavigationMenuItem>
-            <NavigationMenuItem>
-              <NavigationMenuLink 
-                asChild 
-                className={navigationMenuTriggerStyle() + " nav-link relative transition-all"}
-              >
-                <Link to="/recipients">
-                  Recipients
-                </Link>
-              </NavigationMenuLink>
-            </NavigationMenuItem>
           </NavigationMenuList>
         </NavigationMenu>
       </div>
