@@ -1,126 +1,131 @@
 
-import { Message, Condition, EmailTemplateData, Recipient } from "../types.ts";
 import { sendEmailNotification } from "../email-service.ts";
-import { supabaseClient } from "../supabase-client.ts";
-import { recordMessageDelivery } from "../db-service.ts";
-import { generateAccessUrl } from "../utils/url-generator.ts";
-import { calculateDates } from "../utils/date-utils.ts";
 import { sendWhatsAppNotification } from "./whatsapp-service.ts";
 
+interface NotificationOptions {
+  isEmergency?: boolean;
+  debug?: boolean;
+  maxRetries?: number;
+  retryDelay?: number;
+  isWhatsAppEnabled?: boolean;
+  triggerKeyword?: string;
+}
+
 /**
- * Send notifications to a single recipient
+ * Notify a single recipient about a message
  */
 export async function notifyRecipient(
-  recipient: Recipient,
-  message: Message,
-  condition: Condition,
-  options: {
-    isEmergency: boolean;
-    debug: boolean;
-    maxRetries: number;
-    retryDelay: number;
-    isWhatsAppEnabled: boolean;
-    triggerKeyword: string;
-  }
-): Promise<{
-  recipient: string;
-  success: boolean;
-  attempts: number;
-  error: string | null;
-}> {
-  const { isEmergency, debug, maxRetries, retryDelay, isWhatsAppEnabled } = options;
-  let attempt = 0;
-  let success = false;
-  let error = null;
+  recipient: any, 
+  message: any, 
+  condition: any, 
+  options: NotificationOptions = {}
+) {
+  const { isEmergency = false, debug = false, maxRetries = 1, retryDelay = 5000, isWhatsAppEnabled = false, triggerKeyword = "" } = options;
   
-  // Create a unique delivery ID for this recipient
-  const deliveryId = crypto.randomUUID();
-  
-  // Create secure access URL with delivery tracking
-  const secureAccessUrl = generateAccessUrl(message.id, recipient.email, deliveryId);
-  
-  if (debug) console.log(`Access URL for ${recipient.email}: ${secureAccessUrl}`);
-  
-  // Determine security settings
-  const hasPinCode = !!condition.pin_code;
-  const hasDelayedAccess = (condition.unlock_delay_hours || 0) > 0;
-  const hasExpiry = (condition.expiry_hours || 0) > 0;
-  
-  // Calculate dates for delay and expiry if applicable
-  const { unlockDate, expiryDate } = calculateDates(
-    hasDelayedAccess, 
-    hasExpiry,
-    condition.unlock_delay_hours,
-    condition.expiry_hours
-  );
-  
-  // Prepare common email data
-  const emailData: EmailTemplateData = {
-    senderName: "EchoVault", // You could fetch the actual user's name here
-    messageTitle: message.title,
-    recipientName: recipient.name,
-    messageType: message.message_type,
-    hasPinCode,
-    hasDelayedAccess,
-    hasExpiry,
-    unlockDate: hasDelayedAccess ? new Date(unlockDate).toISOString() : null,
-    expiryDate: hasExpiry ? new Date(expiryDate!).toISOString() : null,
-    accessUrl: secureAccessUrl,
-    isEmergency: isEmergency
-  };
-  
-  // Initialize Supabase client for making function calls
-  const supabase = supabaseClient();
-  
-  // Record the message delivery
   try {
-    await recordMessageDelivery(message.id, condition.id, recipient.id, deliveryId);
-    if (debug) console.log(`Successfully recorded delivery for message ${message.id} to recipient ${recipient.id}`);
-  } catch (recordError) {
-    console.error(`Error recording message delivery: ${recordError}`);
-    // Continue despite record error - don't block email sending
-  }
-  
-  // Try sending email with retry for emergency messages
-  while (!success && attempt < maxRetries) {
-    try {
-      if (debug) console.log(`Sending email to ${recipient.email} (attempt ${attempt + 1}/${maxRetries})`);
-      
-      // Send email notification
-      const emailResult = await sendEmailNotification(
-        message.id,
-        recipient.email,
-        recipient.name,
-        emailData.senderName,
-        message.title,
-        isEmergency
-      );
-      
-      if (debug) console.log(`Email sending result:`, emailResult);
-      success = true;
-      
-      // For emergency messages and WhatsApp enabled recipients, also send a WhatsApp message
-      if (isEmergency && recipient.phone && (isWhatsAppEnabled || isEmergency)) {
-        await sendWhatsAppNotification(recipient, message, debug);
+    // Get user details
+    const { data: sender, error: senderError } = await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/profiles?id=eq.${message.user_id}&select=first_name,last_name`, {
+      headers: {
+        "Content-Type": "application/json",
+        "apiKey": Deno.env.get("SUPABASE_ANON_KEY") || "",
+        "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""}`,
+      },
+    }).then(res => res.json());
+    
+    let senderName = "A user";
+    if (!senderError && sender && sender.length > 0) {
+      senderName = `${sender[0].first_name || ""} ${sender[0].last_name || ""}`.trim();
+      if (!senderName) senderName = "A user";
+    }
+    
+    // Send email notification with retries for emergency messages
+    let emailSuccess = false;
+    let emailError = null;
+    
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      if (attempt > 0 && debug) {
+        console.log(`Retry attempt ${attempt + 1} for email to ${recipient.email}`);
       }
       
-    } catch (emailError: any) {
-      attempt++;
-      error = emailError;
-      console.error(`Error sending email to ${recipient.email} (attempt ${attempt}):`, emailError);
-      
-      if (attempt < maxRetries) {
-        // Only wait and retry if we have attempts remaining
-        if (debug) console.log(`Retrying in ${retryDelay/1000} seconds...`);
-        await new Promise(resolve => setTimeout(resolve, retryDelay));
+      try {
+        // Send email with location data if available
+        const emailResult = await sendEmailNotification(
+          message.id,
+          recipient.email,
+          recipient.name,
+          senderName,
+          message.title,
+          message.content,
+          {
+            share_location: message.share_location,
+            latitude: message.location_latitude,
+            longitude: message.location_longitude,
+            name: message.location_name
+          },
+          isEmergency
+        );
+        
+        if (emailResult.success) {
+          emailSuccess = true;
+          break;
+        } else {
+          emailError = emailResult.error;
+          if (attempt < maxRetries - 1) {
+            await new Promise(r => setTimeout(r, retryDelay));
+          }
+        }
+      } catch (err) {
+        emailError = err;
+        if (debug) console.error(`Email delivery attempt ${attempt + 1} failed:`, err);
+        if (attempt < maxRetries - 1) {
+          await new Promise(r => setTimeout(r, retryDelay));
+        }
       }
     }
+    
+    // Send WhatsApp notification if enabled and recipient has a phone
+    let whatsAppSuccess = false;
+    let whatsAppError = null;
+    
+    if (isWhatsAppEnabled && recipient.phone) {
+      try {
+        const whatsAppResult = await sendWhatsAppNotification(
+          recipient,
+          message,
+          debug,
+          isEmergency
+        );
+        
+        whatsAppSuccess = whatsAppResult.success;
+        if (!whatsAppResult.success) {
+          whatsAppError = whatsAppResult.error;
+        }
+      } catch (err) {
+        whatsAppError = err;
+        if (debug) console.error(`WhatsApp delivery failed:`, err);
+      }
+    }
+    
+    // Return results
+    return {
+      success: emailSuccess || whatsAppSuccess,
+      recipient: recipient.email,
+      email: { 
+        success: emailSuccess, 
+        error: emailError 
+      },
+      whatsapp: { 
+        success: whatsAppSuccess, 
+        error: whatsAppError, 
+        enabled: isWhatsAppEnabled && !!recipient.phone
+      }
+    };
+  } catch (error) {
+    console.error(`Error notifying recipient ${recipient.email}:`, error);
+    return {
+      success: false,
+      recipient: recipient.email,
+      error: error.message || "Unknown error"
+    };
   }
-  
-  return { 
-    recipient: recipient.email,
-    success, 
-    attempts: attempt + 1,
-    error: error ? error.message || "Unknown error" : null
-  };
 }

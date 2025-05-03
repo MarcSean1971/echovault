@@ -16,6 +16,13 @@ export async function sendEmailNotification(
   recipientName: string | null, 
   senderName: string,
   messageTitle: string,
+  messageContent: string | null = null,
+  location: {
+    share_location?: boolean;
+    latitude?: number | null;
+    longitude?: number | null;
+    name?: string | null;
+  } = {},
   isEmergency: boolean = false,
   appName: string = "EchoVault"
 ) {
@@ -36,6 +43,25 @@ export async function sendEmailNotification(
           <strong>EMERGENCY MESSAGE:</strong> This is an urgent communication that requires your immediate attention.
         </div>`
       : "";
+      
+    // Add location information if available and sharing is enabled
+    let locationHtml = "";
+    if (location.share_location === true && 
+        location.latitude !== null && 
+        location.longitude !== null) {
+      
+      const locationName = location.name ? location.name : `${location.latitude}, ${location.longitude}`;
+      
+      locationHtml = `
+        <div style="background-color: #f0f8ff; border-left: 4px solid #4285f4; padding: 15px; margin: 20px 0; border-radius: 4px;">
+          <p style="margin: 0; font-weight: bold;">📍 Sender's Location: ${locationName}</p>
+          <p style="margin: 10px 0 0 0;">
+            <a href="https://maps.google.com/?q=${location.latitude},${location.longitude}" 
+               style="color: #4285f4; text-decoration: underline;">View on Google Maps</a>
+          </p>
+        </div>
+      `;
+    }
 
     // Send the email
     const emailResponse = await resend.emails.send({
@@ -55,6 +81,14 @@ export async function sendEmailNotification(
           <p style="font-size: 16px; line-height: 1.5; margin-bottom: 20px;">
             <strong>${senderName}</strong> has sent you a secure message titled "<strong>${messageTitle}</strong>".
           </p>
+          
+          ${messageContent ? `
+          <div style="background-color: #f7f7f7; padding: 15px; border-radius: 4px; margin-bottom: 20px;">
+            <p style="font-size: 14px; line-height: 1.5; margin: 0; font-style: italic;">${messageContent}</p>
+          </div>
+          ` : ''}
+          
+          ${locationHtml}
           
           <p style="font-size: 16px; line-height: 1.5; margin-bottom: 30px;">
             This message has been secured and can only be accessed through the link below.
@@ -109,6 +143,13 @@ export const sendEmailToRecipient = (
     data.recipientName,
     data.senderName,
     data.messageTitle,
+    data.messageContent,
+    {
+      share_location: data.shareLocation,
+      latitude: data.locationLatitude,
+      longitude: data.locationLongitude,
+      name: data.locationName
+    },
     data.isEmergency || false
   );
 };

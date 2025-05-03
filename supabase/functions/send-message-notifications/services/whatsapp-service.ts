@@ -6,7 +6,15 @@ import { supabaseClient } from "../supabase-client.ts";
  */
 export async function sendWhatsAppNotification(
   recipient: { phone?: string; name: string },
-  message: { id: string; title: string; content: string | null },
+  message: { 
+    id: string; 
+    title: string; 
+    content: string | null;
+    share_location?: boolean;
+    location_latitude?: number | null;
+    location_longitude?: number | null;
+    location_name?: string | null;
+  },
   debug: boolean = false,
   isEmergency: boolean = true
 ): Promise<{ success: boolean; error?: string }> {
@@ -21,10 +29,25 @@ export async function sendWhatsAppNotification(
     // Initialize Supabase client
     const supabase = supabaseClient();
     
+    // Check if location should be included
+    const includeLocation = message.share_location === true && 
+                         message.location_latitude !== null && 
+                         message.location_longitude !== null;
+    
+    // Format location information if available
+    let locationInfo = "";
+    if (includeLocation) {
+      const locationName = message.location_name ? 
+        `Location: ${message.location_name}` : 
+        `Location coordinates: ${message.location_latitude}, ${message.location_longitude}`;
+        
+      locationInfo = `\n\n📍 ${locationName}\n📲 Maps: https://maps.google.com/?q=${message.location_latitude},${message.location_longitude}`;
+    }
+    
     // Determine message content based on whether it's an emergency or reminder
     let whatsAppMessage = "";
     if (isEmergency) {
-      whatsAppMessage = `⚠️ EMERGENCY ALERT: ${message.title}\n\n${message.content || "An emergency alert has been triggered for you."}\n\nCheck your email for more information.`;
+      whatsAppMessage = `⚠️ EMERGENCY ALERT: ${message.title}\n\n${message.content || "An emergency alert has been triggered for you."}${locationInfo}\n\nCheck your email for more information.`;
     } else {
       whatsAppMessage = `🔔 REMINDER: ${message.title}\n\n${message.content || "A reminder has been sent regarding your message."}\n\nPlease check your email or log in to the system to take action.`;
     }
