@@ -1,3 +1,4 @@
+
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -25,6 +26,7 @@ import CheckIn from "./pages/CheckIn";
 import CheckIns from "./pages/CheckIns";
 import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
+import SecureMessage from "./pages/SecureMessage";
 
 // Create a new query client with error handling
 const queryClient = new QueryClient({
@@ -69,6 +71,7 @@ const App = () => {
                 <Route index element={<Home />} />
                 <Route path="login" element={<Login />} />
                 <Route path="register" element={<Register />} />
+                <Route path="secure-message" element={<SecureMessage />} />
               </Route>
               
               {/* Protected routes */}

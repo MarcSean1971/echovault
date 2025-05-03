@@ -16,20 +16,15 @@ export function generateAccessUrl(messageId: string, recipientEmail: string, del
       throw new Error("Missing Supabase URL configuration");
     }
     
-    // Make sure the URL doesn't have a trailing slash
-    const baseUrl = supabaseUrl.endsWith('/') ? supabaseUrl.slice(0, -1) : supabaseUrl;
+    // Extract the main domain from the Supabase URL
+    // Converts e.g. https://project-id.supabase.co to project-id.supabase.co
+    const urlObj = new URL(supabaseUrl.startsWith('http') ? supabaseUrl : `https://${supabaseUrl}`);
+    const domain = urlObj.hostname;
     
-    // Always ensure we have a fully qualified URL with protocol
-    const fullBaseUrl = baseUrl.startsWith('http') ? baseUrl : `https://${baseUrl}`;
+    // Construct a fully qualified URL to the web application's secure message page
+    const accessUrl = `https://${domain}/secure-message?id=${messageId}&recipient=${encodeURIComponent(recipientEmail)}&delivery=${deliveryId}`;
     
-    // Log the URL components for debugging
-    console.log(`Base URL: ${baseUrl}`);
-    console.log(`Full base URL with protocol: ${fullBaseUrl}`);
-    
-    // Construct the fully qualified access URL with query parameters
-    const accessUrl = `${fullBaseUrl}/functions/v1/access-message?id=${messageId}&recipient=${encodeURIComponent(recipientEmail)}&delivery=${deliveryId}`;
-    
-    console.log(`Generated absolute access URL: ${accessUrl}`);
+    console.log(`Generated secure web access URL: ${accessUrl}`);
     return accessUrl;
   } catch (error) {
     console.error("Error generating access URL:", error);

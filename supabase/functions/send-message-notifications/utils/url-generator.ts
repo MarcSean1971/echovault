@@ -8,7 +8,7 @@
  */
 export function generateAccessUrl(messageId: string, recipientEmail: string, deliveryId: string): string {
   try {
-    // Get the Supabase URL and project ID from environment
+    // Get the Supabase URL from environment
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
     
     if (!supabaseUrl) {
@@ -16,16 +16,15 @@ export function generateAccessUrl(messageId: string, recipientEmail: string, del
       throw new Error("Missing Supabase URL configuration");
     }
     
-    // Make sure the URL doesn't have a trailing slash
-    const baseUrl = supabaseUrl.endsWith('/') ? supabaseUrl.slice(0, -1) : supabaseUrl;
+    // Extract the main domain from the Supabase URL
+    // Converts e.g. https://project-id.supabase.co to project-id.supabase.co
+    const urlObj = new URL(supabaseUrl.startsWith('http') ? supabaseUrl : `https://${supabaseUrl}`);
+    const domain = urlObj.hostname;
     
-    // Ensure we have a fully qualified URL that includes protocol (https://)
-    const fullBaseUrl = baseUrl.startsWith('http') ? baseUrl : `https://${baseUrl}`;
+    // Construct a fully qualified URL to the web application's secure message page
+    const accessUrl = `https://${domain}/secure-message?id=${messageId}&recipient=${encodeURIComponent(recipientEmail)}&delivery=${deliveryId}`;
     
-    // Construct the fully qualified access URL with query parameters
-    const accessUrl = `${fullBaseUrl}/functions/v1/access-message?id=${messageId}&recipient=${encodeURIComponent(recipientEmail)}&delivery=${deliveryId}`;
-    
-    console.log(`Generated access URL: ${accessUrl}`);
+    console.log(`Generated secure web access URL: ${accessUrl}`);
     return accessUrl;
   } catch (error) {
     console.error("Error generating access URL:", error);
