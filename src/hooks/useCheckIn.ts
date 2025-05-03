@@ -2,9 +2,11 @@
 import { useState } from "react";
 import { toast } from "@/components/ui/use-toast";
 import { performCheckIn } from "@/services/messages/conditions/checkInService";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function useCheckIn() {
   const [isChecking, setIsChecking] = useState(false);
+  const { userId } = useAuth();
   
   const handleCheckIn = async () => {
     if (isChecking) return;
@@ -12,17 +14,13 @@ export function useCheckIn() {
     setIsChecking(true);
     
     try {
-      const userId = localStorage.getItem("supabase.auth.token.currentSession")
-        ? JSON.parse(localStorage.getItem("supabase.auth.token.currentSession") || "{}")?.user?.id
-        : null;
-        
       if (!userId) {
         toast({
           title: "Authentication Required",
           description: "You must be logged in to perform a check-in.",
           variant: "destructive"
         });
-        return;
+        return false;
       }
       
       await performCheckIn(userId, "app");
