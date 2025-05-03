@@ -54,7 +54,7 @@ export function MessageContent({ message, isArmed }: MessageContentProps) {
     <div className="space-y-4 pt-2">
       {message.message_type === 'text' ? (
         <TextMessageContent content={message.content} />
-      ) : message.message_type === 'voice' ? (
+      ) : message.message_type === 'audio' ? (
         <AudioMessageContent 
           mediaUrl={mediaUrl} 
           transcription={transcription} 

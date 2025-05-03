@@ -3,6 +3,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Play, Pause, Trash2, Check } from "lucide-react";
 import { formatDuration } from "@/utils/audioUtils";
+import { BUTTON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface PlaybackControlsProps {
   isPlaying: boolean;
@@ -25,11 +26,12 @@ export function PlaybackControls({
         variant="outline"
         size="sm"
         onClick={onTogglePlayback}
+        className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.outline} hover:scale-105`}
       >
         {isPlaying ? (
-          <><Pause className="w-4 h-4 mr-1" /> Pause</>
+          <><Pause className="w-4 h-4 mr-1 hover:scale-110 transition-all duration-200" /> Pause</>
         ) : (
-          <><Play className="w-4 h-4 mr-1" /> Play</>
+          <><Play className="w-4 h-4 mr-1 hover:scale-110 transition-all duration-200" /> Play</>
         )}
       </Button>
       
@@ -42,15 +44,16 @@ export function PlaybackControls({
           size="sm" 
           variant="outline" 
           onClick={onReset}
-          className="text-destructive"
+          className={`text-destructive ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.outline} hover:scale-105`}
         >
-          <Trash2 className="w-4 h-4 mr-1" /> Discard
+          <Trash2 className="w-4 h-4 mr-1 hover:scale-110 transition-all duration-200" /> Discard
         </Button>
         <Button 
           size="sm"
           onClick={onAccept}
+          className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default} hover:scale-105`}
         >
-          <Check className="w-4 h-4 mr-1" /> Accept
+          <Check className="w-4 h-4 mr-1 hover:scale-110 transition-all duration-200" /> Accept
         </Button>
       </div>
     </div>

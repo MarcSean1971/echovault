@@ -16,6 +16,10 @@ import {
 import { FileUploader } from "@/components/FileUploader";
 import { AudioRecorderDialog } from "@/components/media/AudioRecorderDialog";
 import { AudioPlayer } from "@/components/media/AudioPlayer";
+import { VideoRecorderDialog } from "@/components/media/VideoRecorderDialog";
+import { VideoPlayer } from "@/components/media/VideoPlayer";
+import { transcribeVideo } from "@/services/messages/transcriptionService";
+import { toast } from "@/components/ui/use-toast";
 
 export function MessageDetails() {
   const { 
@@ -30,10 +34,20 @@ export function MessageDetails() {
   } = useMessageForm();
   
   const [isCapturingLocation, setIsCapturingLocation] = useState(false);
+  
+  // Audio recording states
   const [showAudioRecorder, setShowAudioRecorder] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [audioBase64, setAudioBase64] = useState<string | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+
+  // Video recording states
+  const [showVideoRecorder, setShowVideoRecorder] = useState(false);
+  const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
+  const [videoBase64, setVideoBase64] = useState<string | null>(null);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [isTranscribingVideo, setIsTranscribingVideo] = useState(false);
+  const [videoTranscription, setVideoTranscription] = useState<string | null>(null);
 
   // Function to capture user's current location
   const captureLocation = () => {
@@ -87,12 +101,62 @@ export function MessageDetails() {
     }
   };
 
+  // Function to handle the video type button click
+  const handleVideoTypeClick = () => {
+    setMessageType("video");
+    if (!videoBlob) {
+      setShowVideoRecorder(true);
+    }
+  };
+
   // Function to handle audio recording completion
   const handleAudioReady = (audioBlob: Blob, audioBase64: string) => {
     setAudioBlob(audioBlob);
     setAudioBase64(audioBase64);
     setContent(audioBase64); // Store the audio data in content
     setAudioUrl(URL.createObjectURL(audioBlob));
+  };
+
+  // Function to handle video recording completion
+  const handleVideoReady = async (videoBlob: Blob, videoBase64: string) => {
+    setVideoBlob(videoBlob);
+    setVideoBase64(videoBase64);
+    setVideoUrl(URL.createObjectURL(videoBlob));
+    
+    // Start transcribing the video
+    setIsTranscribingVideo(true);
+    try {
+      const transcription = await transcribeVideo(videoBase64, 'video/webm');
+      setVideoTranscription(transcription);
+      
+      // Store both video data and transcription in content as JSON
+      const contentData = {
+        videoData: videoBase64,
+        transcription: transcription
+      };
+      setContent(JSON.stringify(contentData));
+      
+      toast({
+        title: "Video transcription complete",
+        description: "Your video has been successfully transcribed.",
+      });
+    } catch (error) {
+      console.error("Error transcribing video:", error);
+      toast({
+        title: "Transcription failed",
+        description: "Could not transcribe video. Video will be saved without transcription.",
+        variant: "destructive",
+      });
+      
+      // Still save the video data in content even if transcription fails
+      const contentData = {
+        videoData: videoBase64,
+        transcription: null
+      };
+      setContent(JSON.stringify(contentData));
+    } finally {
+      setIsTranscribingVideo(false);
+    }
   };
 
   // Function to clear recorded audio
@@ -103,6 +167,18 @@ export function MessageDetails() {
     setAudioBlob(null);
     setAudioBase64(null);
     setAudioUrl(null);
+    setContent("");
+  };
+
+  // Function to clear recorded video
+  const clearVideo = () => {
+    if (videoUrl) {
+      URL.revokeObjectURL(videoUrl);
+    }
+    setVideoBlob(null);
+    setVideoBase64(null);
+    setVideoUrl(null);
+    setVideoTranscription(null);
     setContent("");
   };
 
@@ -143,7 +219,7 @@ export function MessageDetails() {
           <Button
             type="button"
             variant={messageType === "video" ? "default" : "outline"}
-            onClick={() => setMessageType("video")}
+            onClick={handleVideoTypeClick}
             className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
           >
             Video
@@ -198,7 +274,54 @@ export function MessageDetails() {
             )}
           </div>
         ) : messageType === "video" ? (
-          <div>Video recorder</div>
+          <div className="space-y-3">
+            {videoUrl ? (
+              <div className="space-y-3">
+                <VideoPlayer src={videoUrl} className="w-full aspect-video" />
+                
+                {videoTranscription && (
+                  <div className="mt-4 p-3 border rounded-lg bg-muted/30">
+                    <h4 className="font-medium mb-1">Transcription:</h4>
+                    <p className="text-sm italic">"{videoTranscription}"</p>
+                  </div>
+                )}
+                
+                {isTranscribingVideo && (
+                  <div className="flex items-center justify-center p-3">
+                    <div className="animate-pulse text-sm">Transcribing video...</div>
+                  </div>
+                )}
+                
+                <div className="flex justify-end">
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    onClick={() => setShowVideoRecorder(true)}
+                    className={`mr-2 ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.outline}`}
+                  >
+                    Record New
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="destructive" 
+                    onClick={clearVideo}
+                    className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
+                  >
+                    Clear Video
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-[150px] border-2 border-dashed rounded-md border-gray-300 bg-gray-50 p-6">
+                <Button 
+                  onClick={() => setShowVideoRecorder(true)}
+                  className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
+                >
+                  Record Video Message
+                </Button>
+              </div>
+            )}
+          </div>
         ) : (
           <div className="p-4 bg-muted rounded-md text-center">
             Please select a message type
@@ -274,6 +397,13 @@ export function MessageDetails() {
         open={showAudioRecorder} 
         onOpenChange={setShowAudioRecorder} 
         onAudioReady={handleAudioReady}
+      />
+      
+      {/* Video Recorder Dialog */}
+      <VideoRecorderDialog 
+        open={showVideoRecorder} 
+        onOpenChange={setShowVideoRecorder} 
+        onVideoReady={handleVideoReady}
       />
     </div>
   );
