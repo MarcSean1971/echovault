@@ -32,6 +32,7 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
   const [deadline, setDeadline] = useState<Date | null>(null);
   const [condition, setCondition] = useState<MessageCondition | null>(null);
   const [transcription, setTranscription] = useState<string | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   
   // Get the refresh function from our enhanced hook
   const { refreshConditions, isRefreshing } = useConditionRefresh();
@@ -49,7 +50,10 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
           // Get deadline if message is armed
           if (messageCondition.active) {
             const deadlineDate = await getMessageDeadline(messageCondition.id);
-            setDeadline(deadlineDate);
+            // Create a new Date object to ensure reference changes
+            setDeadline(deadlineDate ? new Date(deadlineDate.getTime()) : null);
+          } else {
+            setDeadline(null);
           }
         }
       } catch (error) {
@@ -63,6 +67,8 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
     const handleConditionsUpdated = () => {
       console.log("MessageCard received conditions-updated event, reloading");
       loadConditionStatus();
+      // Force timer components to refresh by updating the trigger
+      setRefreshTrigger(prev => prev + 1);
     };
     
     window.addEventListener('conditions-updated', handleConditionsUpdated);
@@ -96,7 +102,11 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
       
       // Get updated deadline
       const deadlineDate = await getMessageDeadline(condition.id);
-      setDeadline(deadlineDate);
+      // Create a new Date object to ensure reference changes
+      setDeadline(deadlineDate ? new Date(deadlineDate.getTime()) : null);
+      
+      // Force timer components to refresh by updating the trigger
+      setRefreshTrigger(prev => prev + 1);
       
       // Refresh condition data in other components
       await refreshConditions();
@@ -125,6 +135,9 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
       await disarmMessage(condition.id);
       setIsArmed(false);
       setDeadline(null);
+      
+      // Force timer components to refresh by updating the trigger
+      setRefreshTrigger(prev => prev + 1);
       
       // Refresh condition data in other components
       await refreshConditions();
@@ -167,6 +180,7 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
           deadline={deadline} 
           condition={condition}
           transcription={transcription}
+          refreshTrigger={refreshTrigger}
         />
       </CardContent>
       <CardFooter className="flex justify-between border-t pt-4">
