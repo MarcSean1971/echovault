@@ -19,6 +19,7 @@ import { formatDate } from "@/utils/messageFormatUtils";
 import { MessageCardHeader } from "./card/MessageCardHeader";
 import { MessageCardContent } from "./card/MessageCardContent";
 import { MessageCardActions } from "./card/MessageCardActions";
+import { useConditionRefresh } from "@/hooks/useConditionRefresh";
 
 interface MessageCardProps {
   message: Message;
@@ -31,6 +32,9 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
   const [deadline, setDeadline] = useState<Date | null>(null);
   const [condition, setCondition] = useState<MessageCondition | null>(null);
   const [transcription, setTranscription] = useState<string | null>(null);
+  
+  // Get the refresh function from our new hook
+  const { refreshConditions } = useConditionRefresh();
   
   // Load message condition status
   useEffect(() => {
@@ -83,6 +87,9 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
       const deadlineDate = await getMessageDeadline(condition.id);
       setDeadline(deadlineDate);
       
+      // Refresh condition data in other components
+      await refreshConditions();
+      
       toast({
         title: "Message armed",
         description: "Your message has been armed and will trigger according to your settings",
@@ -107,6 +114,9 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
       await disarmMessage(condition.id);
       setIsArmed(false);
       setDeadline(null);
+      
+      // Refresh condition data in other components
+      await refreshConditions();
       
       toast({
         title: "Message disarmed",

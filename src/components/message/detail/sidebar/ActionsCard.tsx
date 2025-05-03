@@ -52,6 +52,10 @@ export function ActionsCard({
 }: ActionsCardProps) {
   const navigate = useNavigate();
 
+  // Common hover effect classes
+  const hoverEffect = "transition-all hover:-translate-y-0.5 hover:shadow-md";
+  const iconHoverEffect = "transition-transform group-hover:scale-110";
+
   return (
     <Card>
       <CardContent className="p-4 space-y-4">
@@ -64,18 +68,18 @@ export function ActionsCard({
         {conditionId && (
           <Button
             variant={isArmed ? "destructive" : "default"}
-            className="w-full"
+            className={`w-full group ${hoverEffect}`}
             onClick={isArmed ? handleDisarmMessage : handleArmMessage}
             disabled={isActionLoading}
           >
             {isArmed ? (
               <>
-                <ShieldOff className="h-4 w-4 mr-2" />
+                <ShieldOff className={`h-4 w-4 mr-2 ${iconHoverEffect}`} />
                 Disarm Message
               </>
             ) : (
               <>
-                <Shield className="h-4 w-4 mr-2" />
+                <Shield className={`h-4 w-4 mr-2 ${iconHoverEffect}`} />
                 Arm Message
               </>
             )}
@@ -86,11 +90,11 @@ export function ActionsCard({
         {conditionId && supportsReminders && onViewReminderHistory && (
           <Button
             variant="outline"
-            className="w-full"
+            className={`w-full group ${hoverEffect}`}
             onClick={onViewReminderHistory}
             disabled={isActionLoading}
           >
-            <Clock className="h-4 w-4 mr-2" />
+            <Clock className={`h-4 w-4 mr-2 ${iconHoverEffect}`} />
             View Reminder History
           </Button>
         )}
@@ -103,11 +107,11 @@ export function ActionsCard({
                 <div>
                   <Button
                     variant="outline"
-                    className="w-full"
+                    className={`w-full group ${hoverEffect}`}
                     onClick={onSendTestMessage}
                     disabled={isArmed || isActionLoading}
                   >
-                    <Mail className="h-4 w-4 mr-2" />
+                    <Mail className={`h-4 w-4 mr-2 ${iconHoverEffect}`} />
                     Send Test Message
                   </Button>
                 </div>
@@ -128,11 +132,11 @@ export function ActionsCard({
               <div>
                 <Button
                   variant="outline"
-                  className="w-full"
+                  className={`w-full group ${hoverEffect}`}
                   onClick={() => navigate(`/message/${messageId}/edit`)}
                   disabled={isArmed || isActionLoading}
                 >
-                  <Pencil className="h-4 w-4 mr-2" />
+                  <Pencil className={`h-4 w-4 mr-2 ${iconHoverEffect}`} />
                   Edit Message
                 </Button>
               </div>
@@ -155,7 +159,7 @@ export function ActionsCard({
                     <Button
                       variant="default"
                       size="sm"
-                      className="flex-1"
+                      className={`flex-1 group ${hoverEffect}`}
                       onClick={() => setShowDeleteConfirm(false)}
                     >
                       Cancel
@@ -163,7 +167,7 @@ export function ActionsCard({
                     <Button
                       variant="destructive"
                       size="sm"
-                      className="flex-1"
+                      className={`flex-1 group ${hoverEffect}`}
                       onClick={handleDelete}
                       disabled={isActionLoading}
                     >
@@ -173,11 +177,11 @@ export function ActionsCard({
                 ) : (
                   <Button
                     variant="outline"
-                    className="w-full border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                    className={`w-full group border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground ${hoverEffect}`}
                     onClick={() => setShowDeleteConfirm(true)}
                     disabled={isArmed || isActionLoading}
                   >
-                    <Trash2 className="h-4 w-4 mr-2" />
+                    <Trash2 className={`h-4 w-4 mr-2 ${iconHoverEffect}`} />
                     Delete Message
                   </Button>
                 )}

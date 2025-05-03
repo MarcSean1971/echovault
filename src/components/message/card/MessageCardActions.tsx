@@ -33,9 +33,9 @@ export function MessageCardActions({
               size="sm"
               onClick={onDisarmMessage}
               disabled={isLoading}
-              className="text-green-600 hover:bg-green-50 hover:text-green-700"
+              className="text-green-600 hover:bg-green-50 hover:text-green-700 transition-all hover:-translate-y-0.5"
             >
-              <BellOff className="h-4 w-4 mr-1" /> Disarm
+              <BellOff className="h-4 w-4 mr-1 transition-transform hover:scale-110" /> Disarm
             </Button>
           ) : (
             <Button
@@ -43,9 +43,9 @@ export function MessageCardActions({
               size="sm"
               onClick={onArmMessage}
               disabled={isLoading}
-              className="text-destructive hover:bg-destructive/10"
+              className="text-destructive hover:bg-destructive/10 transition-all hover:-translate-y-0.5"
             >
-              <Bell className="h-4 w-4 mr-1" /> Arm
+              <Bell className="h-4 w-4 mr-1 transition-transform hover:scale-110" /> Arm
             </Button>
           )
         )}
@@ -54,8 +54,9 @@ export function MessageCardActions({
         variant="ghost"
         size="sm"
         onClick={() => navigate(`/message/${messageId}`)}
+        className="transition-all hover:-translate-y-0.5"
       >
-        View <ArrowRight className="h-4 w-4 ml-1" />
+        View <ArrowRight className="h-4 w-4 ml-1 transition-transform hover:scale-110" />
       </Button>
     </div>
   );

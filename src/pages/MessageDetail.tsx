@@ -10,12 +10,14 @@ import { useMessageDetail } from "@/hooks/useMessageDetail";
 import { deleteMessage, handleArmMessage, handleDisarmMessage } from "@/services/messages/messageDetailService";
 import { MessageRecipientsList } from "@/components/message/detail/MessageRecipientsList";
 import { sendTestNotification } from "@/services/messages/notificationService";
+import { useConditionRefresh } from "@/hooks/useConditionRefresh";
 
 export default function MessageDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [showSendTestDialog, setShowSendTestDialog] = useState(false);
+  const { refreshConditions } = useConditionRefresh();
 
   // Use memoized callback for error navigation to prevent recreation on each render
   const handleError = useCallback(() => navigate("/messages"), [navigate]);
@@ -44,7 +46,11 @@ export default function MessageDetail() {
     if (!conditionId) return;
     
     setIsActionLoading(true);
-    await handleArmMessage(conditionId, setIsArmed);
+    const newDeadline = await handleArmMessage(conditionId, setIsArmed);
+    
+    // Refresh conditions data in header buttons
+    await refreshConditions();
+    
     setIsActionLoading(false);
   };
   
@@ -53,6 +59,10 @@ export default function MessageDetail() {
     
     setIsActionLoading(true);
     await handleDisarmMessage(conditionId, setIsArmed);
+    
+    // Refresh conditions data in header buttons
+    await refreshConditions();
+    
     setIsActionLoading(false);
   };
 
