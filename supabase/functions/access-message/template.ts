@@ -1,3 +1,4 @@
+
 /**
  * HTML template for displaying messages
  */
@@ -62,6 +63,7 @@ export const renderMessagePage = (
       }
       .attachment-item:hover {
         background: #e0e0e0;
+        transition: background 0.2s ease;
       }
       .pin-form {
         margin: 40px auto;
@@ -88,6 +90,7 @@ export const renderMessagePage = (
       }
       .submit-button:hover {
         background: #0060df;
+        transition: background 0.2s ease;
       }
       .error-message {
         color: #d32f2f;
@@ -160,9 +163,20 @@ export const renderMessagePage = (
           
           try {
             // Use absolute URL to avoid path resolution issues
-            const currentUrl = new URL(window.location.href);
-            const baseUrl = currentUrl.origin;
-            const response = await fetch(baseUrl + '/functions/v1/access-message/verify-pin', {
+            const currentUrl = window.location.href;
+            // Extract the base URL up to and including functions/v1/
+            const urlParts = currentUrl.split('/');
+            const baseUrlParts = [];
+            for (let i = 0; i < urlParts.length; i++) {
+              baseUrlParts.push(urlParts[i]);
+              if (urlParts[i] === 'v1') {
+                break;
+              }
+            }
+            const baseUrl = baseUrlParts.join('/');
+            
+            console.log('Using base URL for API calls:', baseUrl);
+            const response = await fetch(baseUrl + '/access-message/verify-pin', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ 
@@ -182,6 +196,7 @@ export const renderMessagePage = (
               document.getElementById('pin-error').style.display = 'block';
             }
           } catch (error) {
+            console.error('Error verifying PIN:', error);
             document.getElementById('pin-error').textContent = 'An error occurred. Please try again.';
             document.getElementById('pin-error').style.display = 'block';
           }
@@ -212,11 +227,22 @@ export const renderMessagePage = (
       
       <script>
         // Use absolute URL to avoid path resolution issues
-        const currentUrl = new URL(window.location.href);
-        const baseUrl = currentUrl.origin;
+        const currentUrl = window.location.href;
+        // Extract the base URL up to and including functions/v1/
+        const urlParts = currentUrl.split('/');
+        const baseUrlParts = [];
+        for (let i = 0; i < urlParts.length; i++) {
+          baseUrlParts.push(urlParts[i]);
+          if (urlParts[i] === 'v1') {
+            break;
+          }
+        }
+        const baseUrl = baseUrlParts.join('/');
+        
+        console.log('Using base URL for API calls:', baseUrl);
         
         // Record that this message was viewed
-        fetch(baseUrl + '/functions/v1/access-message/record-view', {
+        fetch(baseUrl + '/access-message/record-view', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
@@ -224,7 +250,7 @@ export const renderMessagePage = (
             deliveryId: '${deliveryId || ''}',
             recipientEmail: '${recipientEmail || ''}'
           })
-        });
+        }).catch(error => console.error('Error recording view:', error));
       </script>
     `}
   </body>

@@ -26,6 +26,8 @@ export const handleRecordView = async (req: Request): Promise<Response> => {
       });
     }
     
+    console.log(`Recording message view for message ${messageId}, delivery ${deliveryId}`);
+    
     // Try to record the view
     try {
       const { error } = await recordMessageView(
@@ -50,6 +52,8 @@ export const handleRecordView = async (req: Request): Promise<Response> => {
           headers: jsonHeaders 
         });
       }
+      
+      console.log(`Successfully recorded view for message ${messageId}`);
       
       return new Response(JSON.stringify({ 
         success: true 

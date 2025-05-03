@@ -14,7 +14,7 @@ import { getDeliveryRecord, createDeliveryRecord } from "./delivery-service.ts";
 const handleRequest = async (req: Request): Promise<Response> => {
   // Set HTML content type for all HTML responses
   const htmlHeaders = { 
-    "Content-Type": "text/html", 
+    "Content-Type": "text/html; charset=utf-8", 
     ...corsHeaders 
   };
   
@@ -33,6 +33,7 @@ const handleRequest = async (req: Request): Promise<Response> => {
     console.log(`Received request: ${req.url}`);
     const url = new URL(req.url);
     console.log(`Parsed URL path: ${url.pathname}, search: ${url.search}`);
+    console.log(`Request headers:`, Object.fromEntries(req.headers.entries()));
     const pathParts = url.pathname.split('/');
     
     // Check for PIN verification endpoint
@@ -169,6 +170,7 @@ const handleRequest = async (req: Request): Promise<Response> => {
         recipientEmail
       );
       
+      console.log("Sending PIN protected message HTML response");
       return new Response(html, { headers: htmlHeaders });
     }
     
@@ -184,6 +186,7 @@ const handleRequest = async (req: Request): Promise<Response> => {
       recipientEmail
     );
     
+    console.log("Sending full message HTML response");
     return new Response(html, { headers: htmlHeaders });
     
   } catch (error: any) {

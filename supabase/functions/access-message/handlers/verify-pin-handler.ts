@@ -26,8 +26,12 @@ export const handleVerifyPin = async (req: Request): Promise<Response> => {
       });
     }
     
+    console.log(`Processing PIN verification request for message ${messageId}, delivery ${deliveryId}`);
+    
     try {
       const result = await verifyPinAndRecordView(messageId, deliveryId, pin);
+      
+      console.log(`PIN verification successful for message ${messageId}`);
       
       return new Response(JSON.stringify({ 
         success: true 
