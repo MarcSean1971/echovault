@@ -1,13 +1,13 @@
 
 import { useState, useEffect } from 'react';
-import { Clock, AlertCircle, TimerOff } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
 interface MessageTimerProps {
   deadline: Date | null;
   isArmed: boolean;
-  refreshTrigger?: number; // New prop to force refresh
+  refreshTrigger?: number; // Keep this prop to force refresh
 }
 
 export function MessageTimer({ deadline, isArmed, refreshTrigger = 0 }: MessageTimerProps) {
@@ -77,7 +77,7 @@ export function MessageTimer({ deadline, isArmed, refreshTrigger = 0 }: MessageT
     }, 1000);
     
     return () => clearInterval(interval);
-  }, [deadline, isArmed, refreshTrigger]); // Added refreshTrigger to dependencies
+  }, [deadline, isArmed, refreshTrigger]); // Keep refreshTrigger in dependencies
   
   // Get timer color based on percentage and urgency
   const getTimerColor = () => {
@@ -88,61 +88,25 @@ export function MessageTimer({ deadline, isArmed, refreshTrigger = 0 }: MessageT
     return 'bg-green-500';
   };
   
-  // Get pulse animation class based on urgency
-  const getPulseClass = () => {
-    if (!isArmed) return '';
-    if (isVeryUrgent) return 'animate-[pulse_1s_cubic-bezier(0.4,0,0.6,1)_infinite]';
-    if (isUrgent) return 'animate-[pulse_2s_cubic-bezier(0.4,0,0.6,1)_infinite]';
-    return '';
-  };
-  
   return (
-    <div className={`space-y-2 ${isMobile ? 'px-1' : ''}`}>
+    <div className={isMobile ? 'px-1' : ''}>
       <div className={cn(
-        "flex items-center justify-between transition-colors duration-300",
+        "flex items-center",
         isArmed ? (
-          isVeryUrgent ? 'text-destructive' : isUrgent ? 'text-orange-500' : 'text-destructive/80'
-        ) : 'text-muted-foreground',
-        isArmed && isVeryUrgent ? getPulseClass() : ''
+          isVeryUrgent ? 'text-destructive' : isUrgent ? 'text-orange-500' : 'text-muted-foreground'
+        ) : 'text-muted-foreground'
       )}>
-        <div className="flex items-center">
-          {isArmed ? (
-            isVeryUrgent ? (
-              <AlertCircle className="h-5 w-5 mr-1.5" />
-            ) : (
-              <Clock className="h-5 w-5 mr-1.5" />
-            )
-          ) : (
-            <TimerOff className="h-5 w-5 mr-1.5" />
-          )}
-          <span className={cn(
-            "font-mono text-lg transition-all duration-300",
-            isArmed ? (
-              isVeryUrgent ? 'font-bold' : isUrgent ? 'font-semibold' : 'font-medium'
-            ) : 'font-normal'
-          )}>
-            {timeLeft}
-          </span>
-        </div>
-        
-        {!isMobile && (
-          <div className={cn(
-            "text-xs transition-colors duration-300",
-            isArmed ? (
-              isVeryUrgent ? 'text-destructive font-medium' : 'text-muted-foreground'
-            ) : 'text-muted-foreground'
-          )}>
-            {isArmed ? (isVeryUrgent ? 'Critical' : isUrgent ? 'Urgent' : 'Countdown') : 'Disarmed'}
-          </div>
-        )}
+        <Clock className="h-5 w-5 mr-1.5" />
+        <span className="font-mono">
+          {timeLeft}
+        </span>
       </div>
       
-      <div className="w-full bg-muted rounded-full h-2.5 overflow-hidden">
+      <div className="w-full bg-muted rounded-full h-2 mt-1 mb-3">
         <div 
           className={cn(
-            "h-2.5 rounded-full transition-all duration-500",
-            getTimerColor(),
-            isArmed && isVeryUrgent ? 'animate-pulse' : ''
+            "h-2 rounded-full transition-all duration-300",
+            getTimerColor()
           )}
           style={{ width: isArmed ? `${timePercentage}%` : '100%' }}
         ></div>

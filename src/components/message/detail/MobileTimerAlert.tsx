@@ -2,7 +2,7 @@
 import { MessageTimer } from "@/components/message/MessageTimer";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { cn } from "@/lib/utils";
-import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface MobileTimerAlertProps {
   deadline: Date | null;
@@ -31,23 +31,22 @@ export function MobileTimerAlert({ deadline, isArmed, refreshTrigger }: MobileTi
       <Alert 
         variant={isExpired || isVeryUrgent ? "destructive" : "default"}
         className={cn(
-          "border transition-all duration-300",
+          "border transition-colors duration-300",
           isExpired ? "bg-destructive/10 border-destructive" :
           isVeryUrgent ? "bg-destructive/5 border-destructive" : 
           isUrgent ? "bg-orange-500/5 border-orange-500" : 
           "bg-amber-400/5 border-amber-400/50"
         )}
       >
-        <div className={cn("flex items-center gap-2 mb-2")}>
+        <div className="flex items-center gap-2 mb-2">
           <StatusBadge 
             status={status}
-            pulseAnimation={isVeryUrgent}
             className="font-medium"
           >
             {title}
           </StatusBadge>
         </div>
-        <AlertDescription className="pt-1">
+        <AlertDescription>
           <MessageTimer deadline={deadline} isArmed={isArmed} refreshTrigger={refreshTrigger} />
         </AlertDescription>
       </Alert>
