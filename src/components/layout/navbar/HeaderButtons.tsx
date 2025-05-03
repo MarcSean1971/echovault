@@ -1,10 +1,9 @@
-
 import { Button } from "@/components/ui/button";
-import { Check, AlertCircle } from "lucide-react";
+import { Check, AlertCircle, MessageSquare } from "lucide-react";
 import { MessageCondition } from "@/types/message";
 import { triggerPanicMessage } from "@/services/messages/conditions/panicTriggerService";
 import { toast } from "@/components/ui/use-toast";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useState } from "react";
 import { useTriggerDashboard } from "@/hooks/useTriggerDashboard";
 
@@ -117,6 +116,20 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
 
   return (
     <div className="hidden md:flex absolute left-1/2 transform -translate-x-1/2 z-20 space-x-4">
+      {/* Messages button */}
+      <Button 
+        className="bg-green-600 text-white hover:bg-green-700 hover:-translate-y-0.5 duration-200 transition-all shadow-lg px-6 py-2"
+        size="lg"
+        asChild
+      >
+        <Link to="/messages">
+          <span className="flex items-center gap-2 font-medium">
+            <MessageSquare className="h-5 w-5" />
+            Messages
+          </span>
+        </Link>
+      </Button>
+      
       {/* Check In Now button - only show when active check-in conditions exist */}
       {hasCheckInConditions && (
         <Button 
