@@ -6,11 +6,16 @@ import { recordMessageView } from "../delivery-service.ts";
  * Handle recording message views
  */
 export const handleRecordView = async (req: Request): Promise<Response> => {
-  // Set JSON content type for all responses
+  // Set explicit JSON content type for all responses with CORS headers
   const jsonHeaders = { 
     "Content-Type": "application/json", 
     ...corsHeaders 
   };
+  
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
   
   try {
     // Parse the request body
@@ -38,11 +43,6 @@ export const handleRecordView = async (req: Request): Promise<Response> => {
         
       if (error) {
         console.error("Error recording message view:", error);
-        
-        // If table doesn't exist, try to create it through our function
-        if (error.code === "42P01") {
-          console.warn("Delivered messages table not found. It may need to be created.");
-        }
         
         // Return success anyway to avoid breaking the user experience
         return new Response(JSON.stringify({ 

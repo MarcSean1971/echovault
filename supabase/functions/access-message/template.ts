@@ -22,6 +22,7 @@ export const renderMessagePage = (
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
     <title>${message.title || 'Secure Message'}</title>
     <style>
       body {
@@ -60,10 +61,10 @@ export const renderMessagePage = (
         border-radius: 4px;
         text-decoration: none;
         color: #333;
+        transition: background 0.2s ease;
       }
       .attachment-item:hover {
         background: #e0e0e0;
-        transition: background 0.2s ease;
       }
       .pin-form {
         margin: 40px auto;
@@ -87,10 +88,10 @@ export const renderMessagePage = (
         border-radius: 4px;
         cursor: pointer;
         font-size: 16px;
+        transition: background 0.2s ease;
       }
       .submit-button:hover {
         background: #0060df;
-        transition: background 0.2s ease;
       }
       .error-message {
         color: #d32f2f;
@@ -162,18 +163,9 @@ export const renderMessagePage = (
           const recipientEmail = document.getElementById('recipient-email').value;
           
           try {
-            // Use absolute URL to avoid path resolution issues
+            // Get the current absolute URL base
             const currentUrl = window.location.href;
-            // Extract the base URL up to and including functions/v1/
-            const urlParts = currentUrl.split('/');
-            const baseUrlParts = [];
-            for (let i = 0; i < urlParts.length; i++) {
-              baseUrlParts.push(urlParts[i]);
-              if (urlParts[i] === 'v1') {
-                break;
-              }
-            }
-            const baseUrl = baseUrlParts.join('/');
+            const baseUrl = currentUrl.split('/access-message')[0];
             
             console.log('Using base URL for API calls:', baseUrl);
             const response = await fetch(baseUrl + '/access-message/verify-pin', {
@@ -226,18 +218,9 @@ export const renderMessagePage = (
       </div>
       
       <script>
-        // Use absolute URL to avoid path resolution issues
+        // Get the current absolute URL base
         const currentUrl = window.location.href;
-        // Extract the base URL up to and including functions/v1/
-        const urlParts = currentUrl.split('/');
-        const baseUrlParts = [];
-        for (let i = 0; i < urlParts.length; i++) {
-          baseUrlParts.push(urlParts[i]);
-          if (urlParts[i] === 'v1') {
-            break;
-          }
-        }
-        const baseUrl = baseUrlParts.join('/');
+        const baseUrl = currentUrl.split('/access-message')[0];
         
         console.log('Using base URL for API calls:', baseUrl);
         

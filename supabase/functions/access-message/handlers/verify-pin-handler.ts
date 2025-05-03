@@ -6,11 +6,16 @@ import { verifyPinAndRecordView } from "../delivery-service.ts";
  * Handle PIN verification for protected messages
  */
 export const handleVerifyPin = async (req: Request): Promise<Response> => {
-  // Set JSON content type for all responses
+  // Set explicit JSON content type for all responses with CORS headers
   const jsonHeaders = { 
     "Content-Type": "application/json", 
     ...corsHeaders 
   };
+  
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: jsonHeaders });
+  }
   
   try {
     // Parse the request body

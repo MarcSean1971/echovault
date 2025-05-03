@@ -12,7 +12,7 @@ import { getDeliveryRecord, createDeliveryRecord } from "./delivery-service.ts";
 
 // URL path handler - parses the URL path to extract messageId and other info
 const handleRequest = async (req: Request): Promise<Response> => {
-  // Set HTML content type for all HTML responses
+  // Set HTML content type for all HTML responses with proper headers
   const htmlHeaders = { 
     "Content-Type": "text/html; charset=utf-8", 
     ...corsHeaders 
@@ -31,6 +31,7 @@ const handleRequest = async (req: Request): Promise<Response> => {
 
   try {
     console.log(`Received request: ${req.url}`);
+    console.log(`Request method: ${req.method}`);
     const url = new URL(req.url);
     console.log(`Parsed URL path: ${url.pathname}, search: ${url.search}`);
     console.log(`Request headers:`, Object.fromEntries(req.headers.entries()));
@@ -38,11 +39,13 @@ const handleRequest = async (req: Request): Promise<Response> => {
     
     // Check for PIN verification endpoint
     if (pathParts[pathParts.length - 1] === "verify-pin") {
+      console.log("Processing verify-pin request");
       return await handleVerifyPin(req);
     }
     
     // Check for record view endpoint
     if (pathParts[pathParts.length - 1] === "record-view") {
+      console.log("Processing record-view request");
       return await handleRecordView(req);
     }
     
@@ -56,9 +59,24 @@ const handleRequest = async (req: Request): Promise<Response> => {
       console.log(`Validated params: messageId=${messageId}, recipient=${recipientEmail}, deliveryId=${deliveryId}`);
     } catch (paramError: any) {
       console.error("Parameter validation error:", paramError.message);
-      return new Response(paramError.message, { 
+      const errorHtml = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+            <title>Error</title>
+          </head>
+          <body>
+            <h1>Error</h1>
+            <p>${paramError.message}</p>
+          </body>
+        </html>
+      `;
+      return new Response(errorHtml, { 
         status: 400, 
-        headers: htmlHeaders // Using HTML headers for error pages
+        headers: htmlHeaders
       });
     }
     
@@ -73,9 +91,24 @@ const handleRequest = async (req: Request): Promise<Response> => {
       authorizedRecipients = authResult.authorizedRecipients;
     } catch (authError: any) {
       console.error("Authorization error:", authError.message);
-      return new Response(authError.message, { 
+      const errorHtml = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+            <title>Access Denied</title>
+          </head>
+          <body>
+            <h1>Access Denied</h1>
+            <p>${authError.message}</p>
+          </body>
+        </html>
+      `;
+      return new Response(errorHtml, { 
         status: authError.message.includes("not found") ? 404 : 403, 
-        headers: htmlHeaders // Using HTML headers for error pages
+        headers: htmlHeaders
       });
     }
     
@@ -138,6 +171,7 @@ const handleRequest = async (req: Request): Promise<Response> => {
         recipientEmail
       );
       
+      console.log("Sending expired message HTML response with Content-Type:", htmlHeaders["Content-Type"]);
       return new Response(html, { headers: htmlHeaders });
     }
     
@@ -154,6 +188,7 @@ const handleRequest = async (req: Request): Promise<Response> => {
         recipientEmail
       );
       
+      console.log("Sending delayed message HTML response with Content-Type:", htmlHeaders["Content-Type"]);
       return new Response(html, { headers: htmlHeaders });
     }
     
@@ -170,7 +205,7 @@ const handleRequest = async (req: Request): Promise<Response> => {
         recipientEmail
       );
       
-      console.log("Sending PIN protected message HTML response");
+      console.log("Sending PIN protected message HTML response with Content-Type:", htmlHeaders["Content-Type"]);
       return new Response(html, { headers: htmlHeaders });
     }
     
@@ -186,17 +221,36 @@ const handleRequest = async (req: Request): Promise<Response> => {
       recipientEmail
     );
     
-    console.log("Sending full message HTML response");
+    console.log("Sending full message HTML response with Content-Type:", htmlHeaders["Content-Type"]);
+    // Check if HTML is valid and content length
+    console.log(`HTML response length: ${html.length} bytes`);
+    
     return new Response(html, { headers: htmlHeaders });
     
   } catch (error: any) {
     console.error("Error processing request:", error);
-    return new Response(`Error processing request: ${error.message}`, { 
+    const errorHtml = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+          <title>Error</title>
+        </head>
+        <body>
+          <h1>Error</h1>
+          <p>Error processing request: ${error.message}</p>
+        </body>
+      </html>
+    `;
+    return new Response(errorHtml, { 
       status: 500, 
-      headers: { "Content-Type": "text/plain", ...corsHeaders } 
+      headers: { "Content-Type": "text/html; charset=utf-8", ...corsHeaders }
     });
   }
 };
 
 // Start the HTTP server
+console.log("Starting access-message server...");
 serve(handleRequest);
