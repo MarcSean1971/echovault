@@ -33,6 +33,9 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
   const [condition, setCondition] = useState<MessageCondition | null>(null);
   const [transcription, setTranscription] = useState<string | null>(null);
   const [refreshCounter, setRefreshCounter] = useState(0);
+  // Add panic sending states
+  const [isPanicSending, setIsPanicSending] = useState(false);
+  const [panicCountDown, setPanicCountDown] = useState(0);
   
   // Get the refresh function from our enhanced hook
   const { refreshConditions, isRefreshing } = useConditionRefresh();
@@ -75,6 +78,16 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
         loadConditionStatus();
         // Increment refresh counter to force re-render of timer
         setRefreshCounter(prev => prev + 1);
+        
+        // Check if this is a panic trigger event
+        if (event.detail?.panicMessageId === message.id) {
+          console.log(`[MessageCard ${message.id}] This is the panic message being triggered!`);
+          handlePanicSendingState();
+        } else if (event.detail?.panicTrigger && isPanicSending) {
+          // Reset panic state if another panic was triggered and this one was already in sending state
+          setIsPanicSending(false);
+          setPanicCountDown(0);
+        }
       }
     };
     
@@ -83,6 +96,25 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
       window.removeEventListener('conditions-updated', handleConditionsUpdated);
     };
   }, [message.id]);
+  
+  // Handle panic sending state with countdown
+  const handlePanicSendingState = () => {
+    setIsPanicSending(true);
+    let count = 3;
+    setPanicCountDown(count);
+    
+    const interval = setInterval(() => {
+      count -= 1;
+      setPanicCountDown(count);
+      
+      if (count <= 0) {
+        clearInterval(interval);
+        setTimeout(() => {
+          setIsPanicSending(false);
+        }, 1000); // Keep "SENDING..." displayed for 1 more second after countdown
+      }
+    }, 1000);
+  };
   
   // Try to extract transcription from content for voice/video messages
   useEffect(() => {
@@ -173,7 +205,7 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
   return (
     <Card 
       key={message.id} 
-      className={`overflow-hidden ${isArmed ? 'border-destructive border-2' : 'border-green-500 border-2'}`}
+      className={`overflow-hidden ${isPanicSending ? 'border-red-500 border-2 animate-pulse' : isArmed ? 'border-destructive border-2' : 'border-green-500 border-2'}`}
     >
       <CardHeader className="pb-3">
         <MessageCardHeader 
@@ -194,6 +226,8 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
           condition={condition}
           transcription={transcription}
           refreshTrigger={refreshCounter}
+          isPanicSending={isPanicSending}
+          panicCountDown={panicCountDown}
         />
       </CardContent>
       <CardFooter className="flex justify-between border-t pt-4">
@@ -201,7 +235,7 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
           messageId={message.id}
           condition={condition}
           isArmed={isArmed}
-          isLoading={isLoading || isRefreshing}
+          isLoading={isLoading || isRefreshing || isPanicSending}
           onArmMessage={handleArmMessage}
           onDisarmMessage={handleDisarmMessage}
         />

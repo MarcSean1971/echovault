@@ -4,6 +4,7 @@ import { MessageTimer } from "../MessageTimer";
 import { MessageTypeIcon } from "../detail/MessageTypeIcon";
 import { MapPin } from "lucide-react";
 import { ICON_HOVER_EFFECTS } from "@/utils/hoverEffects";
+import { AlertCircle } from "lucide-react";
 
 interface MessageCardContentProps {
   message: Message;
@@ -12,6 +13,8 @@ interface MessageCardContentProps {
   condition: MessageCondition | null;
   transcription: string | null;
   refreshTrigger: number;
+  isPanicSending?: boolean;
+  panicCountDown?: number;
 }
 
 export function MessageCardContent({
@@ -20,7 +23,9 @@ export function MessageCardContent({
   deadline,
   condition,
   transcription,
-  refreshTrigger
+  refreshTrigger,
+  isPanicSending = false,
+  panicCountDown = 0
 }: MessageCardContentProps) {
   // Display location if available and enabled
   const hasLocation = message.share_location && 
@@ -29,6 +34,16 @@ export function MessageCardContent({
 
   return (
     <div>
+      {/* Show panic sending state with countdown if active */}
+      {isPanicSending && (
+        <div className="mb-3 flex items-center text-destructive font-semibold animate-pulse">
+          <AlertCircle className="h-5 w-5 mr-1.5" />
+          <span className="text-lg">
+            {panicCountDown > 0 ? `SENDING... (${panicCountDown})` : "SENDING..."}
+          </span>
+        </div>
+      )}
+
       {/* Show content preview */}
       <div className="mt-1 mb-3 text-sm text-muted-foreground line-clamp-2">
         {message.content || transcription || (
@@ -56,7 +71,7 @@ export function MessageCardContent({
         </div>
       )}
       
-      {/* Show deadline timer if armed - changed 'active' to 'isArmed' to match component props */}
+      {/* Show deadline timer if armed */}
       {isArmed && deadline && (
         <div className="mt-3">
           <MessageTimer 

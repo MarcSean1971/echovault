@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { triggerPanicMessage } from "@/services/messages/conditions/panicTriggerService";
@@ -132,6 +131,16 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
           // Start countdown for visual feedback
           let secondsLeft = 3;
           setCountDown(secondsLeft);
+          
+          // Dispatch event with panic message ID so message cards can show countdown
+          window.dispatchEvent(new CustomEvent('conditions-updated', { 
+            detail: { 
+              updatedAt: new Date().toISOString(),
+              triggerValue: Date.now(),
+              panicTrigger: true,
+              panicMessageId: panicMessage.message_id
+            }
+          }));
           
           const timer = setInterval(() => {
             secondsLeft -= 1;

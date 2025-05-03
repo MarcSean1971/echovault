@@ -95,6 +95,16 @@ export function PanicButtonCard({ userId, panicMessage, isChecking, isLoading }:
           let secondsLeft = 3;
           setCountDown(secondsLeft);
           
+          // Dispatch event with panic message ID
+          window.dispatchEvent(new CustomEvent('conditions-updated', { 
+            detail: { 
+              updatedAt: new Date().toISOString(),
+              triggerValue: Date.now(),
+              panicTrigger: true,
+              panicMessageId: panicMessage.message_id
+            }
+          }));
+          
           const timer = setInterval(() => {
             secondsLeft -= 1;
             setCountDown(secondsLeft);
