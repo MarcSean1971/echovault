@@ -26,15 +26,23 @@ export default function SecureMessage() {
     setError(null);
     
     try {
-      // Get the Supabase URL from environment
+      // Get the Supabase project ID
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       if (!supabaseUrl) {
         throw new Error("Supabase URL not configured");
       }
       
-      // Make sure the URL doesn't have a trailing slash
-      const baseUrl = supabaseUrl.endsWith('/') ? supabaseUrl.slice(0, -1) : supabaseUrl;
-      const apiUrl = `${baseUrl}/functions/v1/access-message?id=${messageId}&recipient=${encodeURIComponent(recipient || "")}&delivery=${deliveryId || ""}`;
+      console.log("Using Supabase URL:", supabaseUrl);
+      
+      // Extract project ID from Supabase URL to construct the edge function URL correctly
+      // Format: https://[PROJECT_REF].supabase.co
+      const projectId = supabaseUrl.split("://")[1].split(".")[0];
+      console.log("Extracted project ID:", projectId);
+      
+      // Construct the edge function URL with the full, correct path
+      const apiUrl = `https://${projectId}.supabase.co/functions/v1/access-message?id=${messageId}&recipient=${encodeURIComponent(recipient || "")}&delivery=${deliveryId || ""}`;
+      
+      console.log("Requesting message from:", apiUrl);
       
       const response = await fetch(apiUrl, {
         method: "GET",
@@ -43,11 +51,17 @@ export default function SecureMessage() {
         }
       });
       
+      console.log("Response status:", response.status);
+      console.log("Response content type:", response.headers.get("Content-Type"));
+      
       if (!response.ok) {
-        throw new Error(`Failed to load message: ${response.status}`);
+        const errorText = await response.text();
+        console.error("Error response:", errorText);
+        throw new Error(`Failed to load message: ${response.status} - ${errorText}`);
       }
       
       const html = await response.text();
+      console.log("Response HTML length:", html.length);
       
       // Check if the response contains PIN form
       if (html.includes("pin-form")) {
@@ -138,9 +152,13 @@ export default function SecureMessage() {
         throw new Error("Supabase URL not configured");
       }
       
-      // Make sure the URL doesn't have a trailing slash
-      const baseUrl = supabaseUrl.endsWith('/') ? supabaseUrl.slice(0, -1) : supabaseUrl;
-      const apiUrl = `${baseUrl}/functions/v1/access-message/verify-pin`;
+      // Extract project ID from Supabase URL
+      const projectId = supabaseUrl.split("://")[1].split(".")[0];
+      
+      // Construct the edge function URL with the full, correct path
+      const apiUrl = `https://${projectId}.supabase.co/functions/v1/access-message/verify-pin`;
+      
+      console.log("Verifying PIN at:", apiUrl);
       
       const response = await fetch(apiUrl, {
         method: "POST",

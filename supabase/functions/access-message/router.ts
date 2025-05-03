@@ -3,7 +3,7 @@ import { corsHeaders } from "./cors-headers.ts";
 import { handleVerifyPin } from "./handlers/verify-pin-handler.ts";
 import { handleRecordView } from "./handlers/record-view-handler.ts";
 import { handleMessageAccess } from "./handlers/message-access-handler.ts";
-import { renderErrorPage } from "./template.ts";
+import { renderErrorPage } from "./templates/error-page.ts";
 
 /**
  * Routes the incoming request to the appropriate handler
@@ -27,7 +27,12 @@ export async function routeRequest(req: Request): Promise<Response> {
     const url = new URL(req.url);
     console.log(`Parsed URL path: ${url.pathname}, search: ${url.search}`);
     console.log(`Request headers:`, Object.fromEntries(req.headers.entries()));
+    
+    // Log search params for debugging
+    console.log("URL search params:", Object.fromEntries(url.searchParams.entries()));
+    
     const pathParts = url.pathname.split('/');
+    console.log("Path parts:", pathParts);
     
     // Check for PIN verification endpoint
     if (pathParts[pathParts.length - 1] === "verify-pin") {
