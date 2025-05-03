@@ -136,7 +136,7 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
           toast({
             title: "Location Access Denied",
             description: "Your current location won't be included in the emergency message",
-            variant: "warning"
+            variant: "destructive"
           });
           // Continue with panic trigger even without location
           handlePanicTrigger();
@@ -146,7 +146,7 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
       toast({
         title: "Location Not Available",
         description: "Your device doesn't support location services",
-        variant: "warning"
+        variant: "destructive"
       });
       // Continue with panic trigger even without location
       handlePanicTrigger();

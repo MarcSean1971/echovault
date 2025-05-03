@@ -91,7 +91,7 @@ export function PanicButtonCard({ userId, panicMessage, isChecking, isLoading }:
           toast({
             title: "Location Access Denied",
             description: "Your current location won't be included in the emergency message. Consider enabling location access for better assistance.",
-            variant: "warning"
+            variant: "destructive"
           });
           // Continue with panic trigger even without location
           handlePanicTrigger();
@@ -101,7 +101,7 @@ export function PanicButtonCard({ userId, panicMessage, isChecking, isLoading }:
       toast({
         title: "Location Not Available",
         description: "Your device doesn't support location services. The emergency message will be sent without your location.",
-        variant: "warning"
+        variant: "destructive"
       });
       // Continue with panic trigger even without location
       handlePanicTrigger();

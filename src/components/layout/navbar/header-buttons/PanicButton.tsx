@@ -1,6 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { AlertCircle, MapPin } from "lucide-react";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface PanicButtonProps {
   onClick: () => void;
@@ -29,7 +30,7 @@ export function PanicButton({
     <Button 
       onClick={onClick}
       disabled={isDisabled}
-      className={`bg-red-600 text-white ${buttonPaddingClass} ${buttonSizeClass} hover:bg-red-700 transition-all`}
+      className={`bg-red-600 text-white ${buttonPaddingClass} ${buttonSizeClass} hover:bg-red-700 ${HOVER_TRANSITION}`}
       size={isMobile ? "sm" : "lg"}
       style={{ backgroundColor: "#dc2626" }}
     >
