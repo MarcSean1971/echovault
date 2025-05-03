@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Check, AlertCircle, MessageSquare } from "lucide-react";
 import { MessageCondition } from "@/types/message";
@@ -136,7 +135,7 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
         <Link to="/messages">
           <span className="flex items-center gap-1 font-medium">
             <MessageSquare className={iconSizeClass} />
-            {!isMobile && "Messages"}
+            Messages
           </span>
         </Link>
       </Button>
