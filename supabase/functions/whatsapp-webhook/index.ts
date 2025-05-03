@@ -134,7 +134,7 @@ serve(async (req) => {
           const { error: responseError } = await supabase.functions.invoke("send-whatsapp-notification", {
             body: {
               to: fromNumber,
-              message: "⚠️ EMERGENCY ALERT TRIGGERED. Your emergency messages are now being sent.",
+              message: "⚠️ EMERGENCY ALERT TRIGGERED. Your emergency messages have been sent to all recipients.",
               isEmergency: true
             }
           });

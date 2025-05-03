@@ -1,4 +1,3 @@
-
 import {
   trackMessageNotification,
   recordMessageDelivery,
@@ -7,6 +6,7 @@ import {
 } from "./db-service.ts";
 import { sendEmailToRecipient } from "./email-service.ts";
 import { Message, Condition } from "./types.ts";
+import { supabaseClient } from "./supabase-client.ts";
 
 interface NotificationOptions {
   isEmergency?: boolean;
@@ -88,6 +88,9 @@ export async function sendMessageNotification(
       }
     }
     
+    // Initialize Supabase client for making function calls
+    const supabase = supabaseClient();
+    
     // Send a notification to each recipient with retry for emergencies
     const recipientResults = await Promise.all(condition.recipients.map(async (recipient) => {
       let attempt = 0;
@@ -145,25 +148,19 @@ export async function sendMessageNotification(
               // Basic emergency message content
               const whatsAppMessage = `⚠️ EMERGENCY ALERT: ${message.title}\n\n${message.content || "An emergency alert has been triggered for you."}\n\nCheck your email for more information.`;
               
-              // Call the WhatsApp notification function
-              const response = await fetch(`${baseUrl}/send-whatsapp-notification`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': req.headers.get('Authorization') || ''
-                },
-                body: JSON.stringify({
+              // Call the WhatsApp notification function directly using the Supabase functions API
+              const { data: whatsAppResult, error: whatsAppError } = await supabase.functions.invoke("send-whatsapp-notification", {
+                body: {
                   to: recipient.phone,
                   message: whatsAppMessage,
                   messageId: message.id,
                   recipientName: recipient.name,
                   isEmergency: true
-                })
+                }
               });
               
-              if (!response.ok) {
-                const errorData = await response.json();
-                if (debug) console.error(`WhatsApp sending error:`, errorData);
+              if (whatsAppError) {
+                console.error(`WhatsApp sending error:`, whatsAppError);
               } else {
                 if (debug) console.log(`WhatsApp message sent successfully to ${recipient.phone}`);
               }

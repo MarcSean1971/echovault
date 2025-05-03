@@ -33,7 +33,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log(`Sending test email to ${recipientEmail}`);
     
     const emailResponse = await resend.emails.send({
-      from: `${appName} <noreply@resend.dev>`,
+      from: `${appName} <notifications@echo-vault.app>`,
       to: [recipientEmail],
       subject: `You've been added as a recipient for a secure message`,
       html: `

@@ -169,7 +169,7 @@ This message was sent securely through EchoVault.
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        from: "EchoVault <notification@onwthrpgcnfydxzzmyot.resend.dev>", // Use verified sender domain
+        from: "EchoVault <notifications@echo-vault.app>", // Using verified sender domain
         to: [recipientEmail],
         subject: subject,
         html: htmlContent,
