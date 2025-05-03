@@ -14,7 +14,7 @@ export function TitleInput() {
         id="title"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        className={`w-full p-2 border rounded-md ${HOVER_TRANSITION} focus:ring-2 focus:ring-primary/20 focus:border-primary`}
+        className={`w-full p-2 border rounded-md ${HOVER_TRANSITION} focus:ring-2 focus:ring-primary/20 focus:border-primary hover:border-primary/50`}
         placeholder="Enter a title for your message"
       />
     </div>

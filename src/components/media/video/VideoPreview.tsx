@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { formatDuration } from "@/utils/audioUtils";
 import { RecordingIndicator } from "./RecordingIndicator";
 import { Spinner } from "@/components/ui/spinner";
+import { AlertCircle } from "lucide-react";
 
 interface VideoPreviewProps {
   videoPreviewRef: React.RefObject<HTMLVideoElement>;
@@ -10,6 +11,7 @@ interface VideoPreviewProps {
   isPaused: boolean;
   recordingDuration: number;
   isInitializing?: boolean;
+  permissionDenied?: boolean;
 }
 
 export function VideoPreview({ 
@@ -17,7 +19,8 @@ export function VideoPreview({
   isRecording, 
   isPaused,
   recordingDuration,
-  isInitializing = false
+  isInitializing = false,
+  permissionDenied = false
 }: VideoPreviewProps) {
   const [streamActive, setStreamActive] = useState(false);
   
@@ -27,20 +30,32 @@ export function VideoPreview({
     if (!videoElem) return;
     
     const checkStream = () => {
-      const hasStream = videoElem.srcObject instanceof MediaStream;
-      setStreamActive(hasStream);
+      const hasActiveStream = videoElem.srcObject instanceof MediaStream && 
+                             (videoElem.srcObject as MediaStream).active;
+      setStreamActive(hasActiveStream);
+      console.log("Stream active check:", hasActiveStream);
     };
     
-    // Initially check if stream exists
+    // Initially check if stream exists and is active
     checkStream();
     
-    // Add event listeners to detect when video starts playing
+    // Add event listeners to detect when video starts playing or metadata loads
     videoElem.addEventListener('playing', checkStream);
     videoElem.addEventListener('loadedmetadata', checkStream);
+    
+    // Also check when readyState changes
+    const readyStateCheck = () => {
+      if (videoElem.readyState >= 2) { // HAVE_CURRENT_DATA or better
+        checkStream();
+      }
+    };
+    
+    videoElem.addEventListener('loadeddata', readyStateCheck);
     
     return () => {
       videoElem.removeEventListener('playing', checkStream);
       videoElem.removeEventListener('loadedmetadata', checkStream);
+      videoElem.removeEventListener('loadeddata', readyStateCheck);
     };
   }, [videoPreviewRef]);
 
@@ -65,8 +80,21 @@ export function VideoPreview({
         </div>
       )}
       
-      {/* No camera message */}
-      {!isInitializing && !streamActive && (
+      {/* Permission denied state */}
+      {permissionDenied && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/70">
+          <div className="text-center p-4 max-w-xs">
+            <AlertCircle className="h-8 w-8 text-red-500 mx-auto mb-2" />
+            <p className="text-sm text-white font-medium">Camera access denied</p>
+            <p className="text-xs text-gray-300 mt-1">
+              Please check your browser settings and allow camera access to record video
+            </p>
+          </div>
+        </div>
+      )}
+      
+      {/* No camera message - only show when not initializing and camera was attempted */}
+      {!isInitializing && !permissionDenied && !streamActive && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/70">
           <div className="text-center p-4">
             <p className="text-sm text-white">Camera not available</p>
@@ -75,7 +103,7 @@ export function VideoPreview({
         </div>
       )}
       
-      {/* Recording indicators */}
+      {/* Recording indicators - only show when stream is active */}
       {isRecording && streamActive && (
         <>
           <div className="absolute top-2 left-2 z-10">

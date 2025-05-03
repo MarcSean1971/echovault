@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "@/components/ui/use-toast";
 
 interface UseMediaStreamOptions {
@@ -12,6 +12,8 @@ export function useMediaStream(options: UseMediaStreamOptions = { audio: true, v
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [isBrowserSupported, setIsBrowserSupported] = useState(true);
   const [isInitializing, setIsInitializing] = useState(false);
+  const [permissionDenied, setPermissionDenied] = useState(false);
+  const initAttempts = useRef(0);
 
   // Check browser support for media devices
   const checkBrowserSupport = useCallback(() => {
@@ -27,32 +29,59 @@ export function useMediaStream(options: UseMediaStreamOptions = { audio: true, v
     return true;
   }, []);
 
-  // Initialize media stream with enhanced constraints
+  // Initialize media stream with enhanced constraints and retry logic
   const initStream = useCallback(async () => {
     try {
       if (!checkBrowserSupport()) return null;
       
       setIsInitializing(true);
+      initAttempts.current += 1;
+      console.log(`Initializing media stream (attempt ${initAttempts.current})`);
       
-      // Default video constraints for better quality and performance
-      const defaultVideoConstraints: MediaTrackConstraints = {
-        width: { ideal: 1280 },
-        height: { ideal: 720 },
-        frameRate: { ideal: 30 }
-      };
+      // Reset permission denied state on new attempts
+      setPermissionDenied(false);
+      
+      // Try with lower quality first if this is a retry attempt
+      let videoConstraints: MediaTrackConstraints = options.videoConstraints || {};
+      
+      if (initAttempts.current > 1) {
+        console.log("Using fallback lower quality constraints");
+        videoConstraints = {
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+          frameRate: { ideal: 15 }
+        };
+      } else {
+        // Default video constraints for better quality and performance
+        videoConstraints = {
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+          frameRate: { ideal: 30 },
+          ...videoConstraints
+        };
+      }
       
       const constraints = {
-        video: options.video ? 
-          (options.videoConstraints || defaultVideoConstraints) : 
-          false,
+        video: options.video ? videoConstraints : false,
         audio: options.audio
       };
 
       console.log("Requesting media with constraints:", constraints);
       
-      const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+      // Add timeout to detect when permissions dialog might be hanging
+      const mediaPromise = navigator.mediaDevices.getUserMedia(constraints);
+      const timeoutPromise = new Promise<null>((_, reject) => {
+        setTimeout(() => reject(new Error("Media request timeout - check permissions")), 10000);
+      });
       
-      console.log("Media stream acquired successfully");
+      const mediaStream = await Promise.race([mediaPromise, timeoutPromise]) as MediaStream;
+      
+      if (!mediaStream) throw new Error("Failed to get media stream");
+      
+      console.log("Media stream acquired successfully:", mediaStream.getTracks().length, "tracks");
+      console.log("Video tracks:", mediaStream.getVideoTracks().length);
+      console.log("Audio tracks:", mediaStream.getAudioTracks().length);
+      
       setStream(mediaStream);
       return mediaStream;
     } catch (err) {
@@ -60,24 +89,39 @@ export function useMediaStream(options: UseMediaStreamOptions = { audio: true, v
       
       // More descriptive error messages based on error type
       let errorMessage = "Could not access your camera or microphone. Please check permissions.";
+      let shouldRetry = false;
       
       if (err instanceof DOMException) {
         if (err.name === "NotAllowedError" || err.name === "PermissionDeniedError") {
           errorMessage = "Camera/microphone access was denied. Please grant permission and try again.";
+          setPermissionDenied(true);
         } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
           errorMessage = "No camera or microphone found on your device.";
         } else if (err.name === "NotReadableError" || err.name === "TrackStartError") {
           errorMessage = "Your camera or microphone is already in use by another application.";
+          shouldRetry = true;
         } else if (err.name === "OverconstrainedError") {
           errorMessage = "The requested camera settings are not supported by your device.";
+          shouldRetry = initAttempts.current < 2; // Only retry once with lower quality
+        } else if (err.name === "AbortError") {
+          errorMessage = "Hardware or permission error. Please check your device and permissions.";
         }
+      } else if (err instanceof Error && err.message.includes("timeout")) {
+        errorMessage = "Permission request timed out. Please check browser permissions and try again.";
       }
       
       toast({
-        title: "Media Access Failed",
+        title: "Camera Access Failed",
         description: errorMessage,
         variant: "destructive"
       });
+      
+      // Auto retry once with lower quality if appropriate
+      if (shouldRetry && initAttempts.current < 2) {
+        console.log("Will retry with lower quality");
+        setTimeout(() => initStream(), 1000);
+      }
+      
       return null;
     } finally {
       setIsInitializing(false);
@@ -96,10 +140,19 @@ export function useMediaStream(options: UseMediaStreamOptions = { audio: true, v
     }
   }, [stream]);
 
+  // Reset state for a fresh initialization
+  const resetStream = useCallback(() => {
+    stopStream();
+    initAttempts.current = 0;
+    setPermissionDenied(false);
+  }, [stopStream]);
+
   // Initialize stream when component mounts if browser is supported
   useEffect(() => {
     if (isBrowserSupported) {
-      initStream();
+      initStream().catch(err => {
+        console.error("Failed initial stream initialization:", err);
+      });
     }
     
     // Clean up on unmount
@@ -112,7 +165,9 @@ export function useMediaStream(options: UseMediaStreamOptions = { audio: true, v
     stream,
     isBrowserSupported,
     isInitializing,
+    permissionDenied,
     initStream,
-    stopStream
+    stopStream,
+    resetStream
   };
 }

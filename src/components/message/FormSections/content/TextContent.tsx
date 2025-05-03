@@ -13,7 +13,7 @@ export function TextContent() {
         id="content"
         value={content}
         onChange={(e) => setContent(e.target.value)}
-        className={`w-full p-2 border rounded-md min-h-[150px] ${HOVER_TRANSITION} focus:ring-2 focus:ring-primary/20 focus:border-primary`}
+        className={`w-full p-2 border rounded-md min-h-[150px] ${HOVER_TRANSITION} focus:ring-2 focus:ring-primary/20 focus:border-primary hover:border-primary/50`}
         placeholder="Enter your message content"
       />
     </>

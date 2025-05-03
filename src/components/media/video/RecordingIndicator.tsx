@@ -36,7 +36,7 @@ export function RecordingIndicator({ isPaused }: RecordingIndicatorProps) {
           ${isPaused 
             ? 'opacity-50' 
             : isVisible 
-              ? 'opacity-100' 
+              ? 'opacity-100 animate-pulse' 
               : 'opacity-20'
           }
         `} 

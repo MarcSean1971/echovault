@@ -2,7 +2,8 @@
 import { Button } from "@/components/ui/button";
 import { VideoPlayer } from "@/components/media/VideoPlayer";
 import { BUTTON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Video } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 
 interface VideoContentProps {
   videoUrl: string | null;
@@ -32,8 +33,9 @@ export function VideoContent({
         )}
         
         {isTranscribingVideo && (
-          <div className="flex items-center justify-center p-3">
-            <div className="animate-pulse text-sm">Transcribing video...</div>
+          <div className="p-3 border rounded-lg bg-blue-50 flex items-center gap-2">
+            <Spinner className="h-4 w-4 text-blue-600" />
+            <span className="text-sm text-blue-700">Transcribing video...</span>
           </div>
         )}
         
@@ -62,8 +64,12 @@ export function VideoContent({
   return (
     <div className="flex flex-col items-center justify-center h-[200px] border-2 border-dashed rounded-md border-gray-300 bg-gray-50 p-6">
       <div className="text-center mb-4">
-        <p className="text-sm text-muted-foreground mb-2">
-          <AlertCircle className="inline mr-1 h-4 w-4" />
+        <Video className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
+        <p className="text-sm text-muted-foreground mb-1">
+          Record a video message
+        </p>
+        <p className="text-xs text-muted-foreground mb-3">
+          <AlertCircle className="inline mr-1 h-3 w-3" />
           Make sure your camera and microphone are connected
         </p>
       </div>

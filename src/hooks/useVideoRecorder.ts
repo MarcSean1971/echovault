@@ -15,13 +15,18 @@ export function useVideoRecorder(options?: UseVideoRecorderOptions) {
   const videoPreviewRef = useRef<HTMLVideoElement | null>(null);
   const recordedVideoRef = useRef<HTMLVideoElement | null>(null);
   
+  // State to track readiness
+  const [streamReady, setStreamReady] = useState(false);
+  
   // Use our utility hooks
   const { 
     stream, 
     isBrowserSupported,
     isInitializing,
+    permissionDenied,
     stopStream,
-    initStream
+    initStream,
+    resetStream
   } = useMediaStream({ 
     audio: true, 
     video: true,
@@ -44,7 +49,7 @@ export function useVideoRecorder(options?: UseVideoRecorderOptions) {
     stopRecording,
     resetRecording,
     cleanup: cleanupRecording
-  } = useRecording(stream, {
+  } = useRecording(streamReady ? stream : null, {
     timeslice: 1000, // Get data every second
     videoBitsPerSecond: 2500000, // 2.5 Mbps
     audioBitsPerSecond: 128000 // 128 kbps
@@ -56,15 +61,63 @@ export function useVideoRecorder(options?: UseVideoRecorderOptions) {
     togglePlayback
   } = usePlayback();
   
+  // Track stream connection to video element
+  useEffect(() => {
+    if (stream && videoPreviewRef.current) {
+      console.log("Connecting stream to video element");
+      
+      // Check if stream is already connected to avoid redundant assignments
+      const currentStream = videoPreviewRef.current.srcObject as MediaStream | null;
+      if (currentStream && currentStream.id === stream.id) {
+        console.log("Stream already connected to video element");
+        setStreamReady(true);
+        return;
+      }
+      
+      videoPreviewRef.current.srcObject = stream;
+      
+      // Ensure the video element loads the stream
+      videoPreviewRef.current.onloadedmetadata = () => {
+        console.log("Video element loaded stream metadata");
+        if (videoPreviewRef.current) {
+          videoPreviewRef.current.play()
+            .then(() => {
+              console.log("Video preview playing successfully");
+              setStreamReady(true);
+            })
+            .catch(err => {
+              console.error("Error playing stream in video element:", err);
+              setStreamReady(false);
+              // Try to recover by reinitializing
+              resetStream();
+            });
+        }
+      };
+    } else {
+      setStreamReady(false);
+    }
+  }, [stream, resetStream]);
+  
   // Function to reinitialize the stream if needed
   const reinitializeStream = useCallback(async () => {
     console.log("Reinitializing media stream");
+    setStreamReady(false);
+    resetStream(); // This will stop the current stream
+    
     try {
+      toast({
+        title: "Connecting to camera",
+        description: "Please allow camera access if prompted",
+      });
+      
       const newStream = await initStream();
-      if (newStream && videoPreviewRef.current) {
-        videoPreviewRef.current.srcObject = newStream;
-        console.log("Stream reinitialized and connected to video element");
+      if (!newStream) {
+        throw new Error("Failed to initialize stream");
       }
+      
+      // Connection to video element happens in the effect above
+      console.log("Stream reinitialized successfully");
+      return true;
     } catch (err) {
       console.error("Failed to reinitialize stream:", err);
       toast({
@@ -72,26 +125,9 @@ export function useVideoRecorder(options?: UseVideoRecorderOptions) {
         description: "Could not access your camera. Please check permissions and try again.",
         variant: "destructive"
       });
+      return false;
     }
-  }, [initStream]);
-  
-  // Connect video preview to stream
-  useEffect(() => {
-    if (videoPreviewRef.current && stream) {
-      console.log("Connecting stream to video element");
-      videoPreviewRef.current.srcObject = stream;
-      
-      // Ensure the video element loads the stream
-      videoPreviewRef.current.onloadedmetadata = () => {
-        console.log("Video element loaded stream metadata");
-        if (videoPreviewRef.current) {
-          videoPreviewRef.current.play().catch(err => {
-            console.error("Error playing stream in video element:", err);
-          });
-        }
-      };
-    }
-  }, [stream, videoPreviewRef]);
+  }, [initStream, resetStream]);
   
   // Cleanup resources on unmount
   useEffect(() => {
@@ -109,6 +145,34 @@ export function useVideoRecorder(options?: UseVideoRecorderOptions) {
   const handleTogglePlayback = useCallback(() => {
     togglePlayback(recordedVideoRef.current);
   }, [togglePlayback]);
+  
+  // Start recording with checks
+  const safeStartRecording = useCallback(() => {
+    if (!streamReady) {
+      console.log("Stream not ready, cannot start recording");
+      toast({
+        title: "Camera not ready",
+        description: "Please wait for camera to initialize or try again.",
+        variant: "destructive"
+      });
+      reinitializeStream();
+      return;
+    }
+    
+    if (!stream) {
+      console.log("No stream available, cannot start recording");
+      toast({
+        title: "No camera available",
+        description: "Camera access is required for recording.",
+        variant: "destructive"
+      });
+      reinitializeStream();
+      return;
+    }
+    
+    console.log("Starting recording with stream:", stream.id);
+    startRecording();
+  }, [stream, streamReady, startRecording, reinitializeStream]);
   
   // Reset recording state and prepare for new recording
   const reset = useCallback(() => {
@@ -164,14 +228,16 @@ export function useVideoRecorder(options?: UseVideoRecorderOptions) {
     videoBlob,
     isBrowserSupported,
     isInitializing,
+    streamReady,
     stream,
+    permissionDenied,
     
     // Refs
     videoPreviewRef,
     recordedVideoRef,
     
     // Methods
-    startRecording,
+    startRecording: safeStartRecording,
     pauseRecording,
     resumeRecording,
     stopRecording,
