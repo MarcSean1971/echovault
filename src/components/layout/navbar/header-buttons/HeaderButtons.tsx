@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { triggerPanicMessage } from "@/services/messages/conditions/panicTriggerService";
@@ -74,25 +75,32 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
 
   // Modified check-in handler to also dispatch the event directly
   const handleCheckIn = async () => {
-    const success = await handleDashboardCheckIn();
-    
-    if (success) {
-      // Increment local trigger for immediate UI update
-      setLocalRefreshTrigger(prev => prev + 1);
+    try {
+      // Explicitly ensure we get a boolean result from handleDashboardCheckIn
+      const success = await handleDashboardCheckIn();
       
-      // Dispatch event with current timestamp for global updates
-      console.log("Dispatching conditions-updated event from HeaderButtons");
-      window.dispatchEvent(new CustomEvent('conditions-updated', { 
-        detail: { 
-          updatedAt: new Date().toISOString(),
-          triggerValue: Date.now() // Add unique value to ensure it's always different
-        }
-      }));
+      // Only proceed if success is explicitly true
+      if (success === true) {
+        // Increment local trigger for immediate UI update
+        setLocalRefreshTrigger(prev => prev + 1);
+        
+        // Dispatch event with current timestamp for global updates
+        console.log("Dispatching conditions-updated event from HeaderButtons");
+        window.dispatchEvent(new CustomEvent('conditions-updated', { 
+          detail: { 
+            updatedAt: new Date().toISOString(),
+            triggerValue: Date.now() // Add unique value to ensure it's always different
+          }
+        }));
+        
+        return true;
+      }
       
-      return true;
+      return false;
+    } catch (error) {
+      console.error("Error during check-in:", error);
+      return false;
     }
-    
-    return false;
   };
 
   // Handle panic trigger

@@ -8,8 +8,8 @@ export function useCheckIn() {
   const [isChecking, setIsChecking] = useState(false);
   const { userId } = useAuth();
   
-  const handleCheckIn = async () => {
-    if (isChecking) return;
+  const handleCheckIn = async (): Promise<boolean> => {
+    if (isChecking) return false;
     
     setIsChecking(true);
     

@@ -27,20 +27,24 @@ export function useTriggerDashboard() {
   } = useDashboardData();
 
   // Handle check-in with refreshed deadline
-  const handleDashboardCheckIn = async () => {
-    if (!userId) return;
+  const handleDashboardCheckIn = async (): Promise<boolean> => {
+    if (!userId) return false;
     
     console.log("Performing check-in from dashboard");
     const success = await handleCheckIn();
     
-    if (success) {
+    if (success === true) {
       console.log("Check-in successful, refreshing conditions");
       // Refresh conditions data to get updated deadlines
-      const updatedConditions = await refreshConditions();
+      await refreshConditions();
       
       // Update last check-in time
       setLastCheckIn(new Date().toISOString());
+      
+      return true;
     }
+    
+    return false;
   };
   
   // Listen for condition updates via the custom event
