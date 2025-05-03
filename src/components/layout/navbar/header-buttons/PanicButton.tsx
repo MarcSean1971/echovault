@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { AlertCircle, MapPin } from "lucide-react";
-import { HOVER_TRANSITION, BUTTON_HOVER_EFFECTS } from "@/utils/hoverEffects";
+import { HOVER_TRANSITION, BUTTON_HOVER_EFFECTS, CONFIRMATION_ANIMATION } from "@/utils/hoverEffects";
 
 interface PanicButtonProps {
   onClick: () => void;
@@ -30,7 +30,9 @@ export function PanicButton({
     <Button 
       onClick={onClick}
       disabled={isDisabled}
-      className={`bg-red-600 text-white ${buttonPaddingClass} ${buttonSizeClass} hover:bg-red-700 ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.destructive}`}
+      className={`bg-red-600 text-white ${buttonPaddingClass} ${buttonSizeClass} hover:bg-red-700 
+        ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.destructive}
+        ${isConfirming ? CONFIRMATION_ANIMATION.pulse : ""}`}
       size={isMobile ? "sm" : "lg"}
       style={{ backgroundColor: "#dc2626" }}
     >
@@ -42,7 +44,7 @@ export function PanicButton({
           </>
         ) : isConfirming ? (
           <>
-            <AlertCircle className={iconSizeClass} />
+            <AlertCircle className={`${iconSizeClass} animate-pulse`} />
             {isMobile ? "CONFIRM" : "CONFIRM EMERGENCY"}
           </>
         ) : (

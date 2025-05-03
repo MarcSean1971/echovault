@@ -1,18 +1,11 @@
 
 import { useCallback } from "react";
-import { ICON_HOVER_EFFECTS, BUTTON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { BUTTON_HOVER_EFFECTS, HOVER_TRANSITION, CONFIRMATION_ANIMATION } from "@/utils/hoverEffects";
 
 /**
  * Custom hook for applying consistent hover effects across the application
  */
 export function useHoverEffects() {
-  /**
-   * Get classNames for icon hover effects
-   */
-  const getIconHoverClasses = useCallback(() => {
-    return ICON_HOVER_EFFECTS;
-  }, []);
-
   /**
    * Get classNames for button hover effects based on variant
    * @param variant Button variant ('default', 'primary', 'secondary', etc.)
@@ -21,9 +14,17 @@ export function useHoverEffects() {
     return `${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS[variant] || BUTTON_HOVER_EFFECTS.default}`;
   }, []);
 
+  /**
+   * Get classNames for confirmation animation effects
+   * @param animationType Animation type ('pulse', 'shake', 'highlight')
+   */
+  const getConfirmationAnimationClasses = useCallback((animationType: keyof typeof CONFIRMATION_ANIMATION = 'pulse') => {
+    return CONFIRMATION_ANIMATION[animationType];
+  }, []);
+
   return {
-    getIconHoverClasses,
     getButtonHoverClasses,
+    getConfirmationAnimationClasses,
     HOVER_TRANSITION
   };
 }

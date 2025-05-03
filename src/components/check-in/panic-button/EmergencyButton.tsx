@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { AlertCircle, MapPin } from "lucide-react";
-import { HOVER_TRANSITION, BUTTON_HOVER_EFFECTS } from "@/utils/hoverEffects";
+import { HOVER_TRANSITION, BUTTON_HOVER_EFFECTS, CONFIRMATION_ANIMATION } from "@/utils/hoverEffects";
 
 interface EmergencyButtonProps {
   isPanicMode: boolean;
@@ -23,14 +23,24 @@ export function EmergencyButton({
       variant={isConfirming ? "destructive" : "outline"}
       onClick={onClick}
       disabled={disabled}
-      className={`w-full ${HOVER_TRANSITION} ${isConfirming ? BUTTON_HOVER_EFFECTS.destructive : BUTTON_HOVER_EFFECTS.default}`}
+      className={`w-full ${HOVER_TRANSITION} ${
+        isConfirming 
+          ? `${BUTTON_HOVER_EFFECTS.destructive} ${CONFIRMATION_ANIMATION.pulse}` 
+          : BUTTON_HOVER_EFFECTS.default
+      }`}
     >
       {isPanicMode 
         ? countDown > 0 
           ? `MESSAGES SENDING... (${countDown})` 
           : "MESSAGES SENDING..." 
         : isConfirming 
-          ? "CONFIRM EMERGENCY TRIGGER" 
+          ? (
+            <span className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 animate-pulse" />
+              CONFIRM EMERGENCY TRIGGER
+              <AlertCircle className="h-4 w-4 animate-pulse" />
+            </span>
+          ) 
           : (
             <span className="flex items-center">
               <span>Emergency Panic Button</span>
