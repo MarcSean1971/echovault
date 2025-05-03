@@ -2,7 +2,7 @@
 import { UserMenu } from "./UserMenu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Menu, Home, MessageSquare, Users, Bell, Settings, Check } from "lucide-react";
+import { Menu, Home, MessageSquare, Users, Bell, Settings } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
@@ -75,14 +75,7 @@ export function MobileNav({ userImage, initials }: MobileNavProps) {
               </Link>
             </div>
             
-            <div className="mt-auto space-y-4">
-              <Button className="w-full bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all shadow-md flex items-center gap-2" asChild>
-                <Link to="/check-in">
-                  <Check className="h-4 w-4" />
-                  Check In Now
-                </Link>
-              </Button>
-              
+            <div className="mt-auto">
               <div className="border-t border-border pt-4 mt-4">
                 <div className="flex items-center justify-between p-2">
                   <div className="text-sm font-medium">Account</div>
