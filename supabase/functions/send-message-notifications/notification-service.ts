@@ -1,11 +1,12 @@
+
 import {
   trackMessageNotification,
   recordMessageDelivery,
   updateConditionStatus,
   getPanicConfig
 } from "./db-service.ts";
-import { sendEmailToRecipient } from "./email-service.ts";
-import { Message, Condition } from "./types.ts";
+import { sendEmailNotification } from "./email-service.ts";
+import { Message, Condition, EmailTemplateData } from "./types.ts";
 import { supabaseClient } from "./supabase-client.ts";
 
 interface NotificationOptions {
@@ -22,7 +23,7 @@ export function generateAccessUrl(messageId: string, recipientEmail: string, del
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
     
     // Construct the access URL with proper path and query parameters
-    const accessUrl = `${supabaseUrl}/functions/v1/access-message/${messageId}?recipient=${encodeURIComponent(recipientEmail)}&delivery=${deliveryId}`;
+    const accessUrl = `${supabaseUrl}/functions/v1/access-message?id=${messageId}&recipient=${encodeURIComponent(recipientEmail)}&delivery=${deliveryId}`;
     
     return accessUrl;
   } catch (error) {
@@ -116,9 +117,6 @@ export async function sendMessageNotification(
       ? new Date(now.getTime() + (condition.expiry_hours || 0) * 60 * 60 * 1000) 
       : null;
     
-    // Create access link based on security settings
-    const baseUrl = "https://onwthrpgcnfydxzzmyot.supabase.co/functions/v1";
-    
     // Track the notifications in the database
     try {
       await trackMessageNotification(message.id, condition.id);
@@ -158,19 +156,19 @@ export async function sendMessageNotification(
       const deliveryId = crypto.randomUUID();
       
       // Create secure access URL with delivery tracking
-      const secureAccessUrl = `${baseUrl}/${message.id}?recipient=${encodeURIComponent(recipient.email)}&delivery=${deliveryId}`;
+      const secureAccessUrl = generateAccessUrl(message.id, recipient.email, deliveryId);
       
       if (debug) console.log(`Access URL for ${recipient.email}: ${secureAccessUrl}`);
       
       // Prepare common email data
-      const emailData = {
+      const emailData: EmailTemplateData = {
         senderName: "EchoVault", // You could fetch the actual user's name here
         messageTitle: message.title,
         recipientName: recipient.name,
         messageType: message.message_type,
-        hasPinCode: hasPinCode,
-        hasDelayedAccess: hasDelayedAccess,
-        hasExpiry: hasExpiry,
+        hasPinCode,
+        hasDelayedAccess,
+        hasExpiry,
         unlockDate: hasDelayedAccess ? new Date(unlockDate).toISOString() : null,
         expiryDate: hasExpiry ? new Date(expiryDate!).toISOString() : null,
         accessUrl: secureAccessUrl,
@@ -191,8 +189,15 @@ export async function sendMessageNotification(
         try {
           if (debug) console.log(`Sending email to ${recipient.email} (attempt ${attempt + 1}/${maxRetries})`);
           
-          // Send email notification
-          const emailResult = await sendEmailToRecipient(recipient.email, emailData);
+          // Send email notification - IMPORTANT: Updated to use the correct function name
+          const emailResult = await sendEmailNotification(
+            message.id,
+            recipient.email,
+            recipient.name,
+            emailData.senderName,
+            message.title,
+            isEmergencyMessage
+          );
           
           if (debug) console.log(`Email sending result:`, emailResult);
           success = true;

@@ -2,6 +2,7 @@
 // Import necessary modules
 import { Resend } from "npm:resend@2.0.0";
 import { generateAccessUrl } from "./notification-service.ts";
+import { EmailTemplateData } from "./types.ts";
 
 // Create Resend client with API key
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
@@ -96,3 +97,18 @@ export async function sendEmailNotification(
     };
   }
 }
+
+// Add the alias function to maintain compatibility with older code
+export const sendEmailToRecipient = (
+  recipientEmail: string, 
+  data: EmailTemplateData
+) => {
+  return sendEmailNotification(
+    data.accessUrl.split('id=')[1]?.split('&')[0] || '', // Extract message ID from URL
+    recipientEmail,
+    data.recipientName,
+    data.senderName,
+    data.messageTitle,
+    data.isEmergency || false
+  );
+};

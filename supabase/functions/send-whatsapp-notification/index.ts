@@ -33,7 +33,15 @@ serve(async (req) => {
     // Parse the request body
     let requestData: WhatsAppMessageRequest;
     try {
-      requestData = await req.json();
+      const contentType = req.headers.get("content-type") || "";
+      
+      if (contentType.includes("application/json")) {
+        requestData = await req.json();
+      } else {
+        throw new Error("Unsupported content type. Expected application/json");
+      }
+      
+      console.log("Received WhatsApp notification request:", JSON.stringify(requestData, null, 2));
     } catch (e) {
       console.error("Failed to parse request body:", e);
       throw new Error("Invalid request body. Expected JSON object with 'to' and 'message' fields.");

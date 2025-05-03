@@ -121,12 +121,13 @@ serve(async (req) => {
         
         // Trigger the panic message
         try {
+          // When invoking the send-message-notifications function, provide a properly structured request body
           const { data: triggerResult, error: triggerError } = await supabase.functions.invoke("send-message-notifications", {
-            body: { 
+            body: JSON.stringify({ 
               messageId: condition.message_id,
               isEmergency: true,
               debug: true
-            }
+            })
           });
           
           if (triggerError) {
@@ -138,11 +139,11 @@ serve(async (req) => {
           
           // Send confirmation back to the user
           const { error: responseError } = await supabase.functions.invoke("send-whatsapp-notification", {
-            body: {
+            body: JSON.stringify({
               to: fromNumber,
               message: "⚠️ EMERGENCY ALERT TRIGGERED. Your emergency messages have been sent to all recipients.",
               isEmergency: true
-            }
+            })
           });
           
           if (responseError) {
@@ -161,10 +162,10 @@ serve(async (req) => {
       console.log("No matching trigger keyword found");
       // Optionally send a message back saying no keyword matched
       await supabase.functions.invoke("send-whatsapp-notification", {
-        body: {
+        body: JSON.stringify({
           to: fromNumber,
           message: "No matching emergency trigger found. Please check the keyword and try again."
-        }
+        })
       });
     }
     

@@ -17,8 +17,18 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    // Get the message ID if provided in the request body
-    const requestData: MessageNotificationRequest = await req.json().catch(() => ({}));
+    // Validate the request body
+    let requestData: MessageNotificationRequest;
+    
+    try {
+      // Try to parse the request body as JSON
+      requestData = await req.json();
+    } catch (parseError) {
+      console.error("Error parsing request body:", parseError);
+      // Default to empty object if JSON parsing fails
+      requestData = {};
+    }
+    
     const { messageId, isEmergency = false, debug = false, keepArmed = undefined } = requestData;
     
     console.log(`===== SEND MESSAGE NOTIFICATIONS =====`);

@@ -36,6 +36,7 @@ export interface Condition {
     cancel_window_seconds?: number;
     bypass_logging?: boolean;
     keep_armed?: boolean;
+    trigger_keyword?: string;
   };
 }
 
