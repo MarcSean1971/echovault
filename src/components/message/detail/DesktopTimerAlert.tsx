@@ -6,9 +6,10 @@ import { cn } from "@/lib/utils";
 interface DesktopTimerAlertProps {
   deadline: Date | null;
   isArmed: boolean;
+  refreshTrigger?: number; // Added refreshTrigger prop
 }
 
-export function DesktopTimerAlert({ deadline, isArmed }: DesktopTimerAlertProps) {
+export function DesktopTimerAlert({ deadline, isArmed, refreshTrigger }: DesktopTimerAlertProps) {
   if (!isArmed || !deadline) return null;
   
   // Calculate time left to determine urgency for styling
@@ -41,7 +42,7 @@ export function DesktopTimerAlert({ deadline, isArmed }: DesktopTimerAlertProps)
           {title}
         </StatusBadge>
       </div>
-      <MessageTimer deadline={deadline} isArmed={isArmed} />
+      <MessageTimer deadline={deadline} isArmed={isArmed} refreshTrigger={refreshTrigger} />
     </div>
   );
 }
