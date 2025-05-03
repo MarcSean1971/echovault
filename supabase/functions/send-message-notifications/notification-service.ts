@@ -1,77 +1,17 @@
-
 import {
   trackMessageNotification,
-  recordMessageDelivery,
   updateConditionStatus,
   getPanicConfig
 } from "./db-service.ts";
-import { sendEmailNotification } from "./email-service.ts";
-import { Message, Condition, EmailTemplateData } from "./types.ts";
-import { supabaseClient } from "./supabase-client.ts";
+import { Message, Condition } from "./types.ts";
+import { notifyRecipient } from "./services/recipient-notification-service.ts";
 
 interface NotificationOptions {
   isEmergency?: boolean;
   debug?: boolean;
 }
 
-/**
- * Generate a secure access URL for a message
- */
-export function generateAccessUrl(messageId: string, recipientEmail: string, deliveryId: string): string {
-  try {
-    // Get the Supabase URL from environment
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-    
-    // Construct the access URL with query parameters - consistently using query parameters
-    // This matches our updated access-message function that now supports query parameters
-    const accessUrl = `${supabaseUrl}/functions/v1/access-message?id=${messageId}&recipient=${encodeURIComponent(recipientEmail)}&delivery=${deliveryId}`;
-    
-    console.log(`Generated access URL: ${accessUrl}`);
-    return accessUrl;
-  } catch (error) {
-    console.error("Error generating access URL:", error);
-    throw error;
-  }
-}
-
-/**
- * Record a message delivery in the database
- */
-export async function recordMessageDelivery(
-  supabase: any,
-  messageId: string, 
-  recipientId: string,
-  deliveryId: string
-) {
-  try {
-    // Try to record the delivery in the delivered_messages table
-    const { data, error } = await supabase
-      .from("delivered_messages")
-      .insert({
-        message_id: messageId,
-        recipient_id: recipientId,
-        delivery_id: deliveryId,
-        delivered_at: new Date().toISOString()
-      })
-      .select();
-      
-    if (error) {
-      if (error.code === "42P01") {
-        // Table doesn't exist yet, log but continue
-        console.error("Delivered messages table may not exist, skipping delivery recording");
-        return null;
-      }
-      throw error;
-    }
-    
-    console.log(`Successfully recorded delivery for message ${messageId} to recipient ${recipientId}`);
-    return data[0];
-  } catch (error) {
-    console.error("Error recording message delivery:", error);
-    // Non-critical error, continue with notification process
-    return null;
-  }
-}
+export { generateAccessUrl } from "./utils/url-generator.ts";
 
 export async function sendMessageNotification(
   data: {message: Message, condition: Condition}, 
@@ -105,20 +45,6 @@ export async function sendMessageNotification(
       console.log("THIS IS AN EMERGENCY MESSAGE - Special handling activated");
     }
     
-    // Determine security settings
-    const hasPinCode = !!condition.pin_code;
-    const hasDelayedAccess = (condition.unlock_delay_hours || 0) > 0;
-    const hasExpiry = (condition.expiry_hours || 0) > 0;
-    
-    // Calculate dates for delay and expiry if applicable
-    const now = new Date();
-    const unlockDate = hasDelayedAccess 
-      ? new Date(now.getTime() + (condition.unlock_delay_hours || 0) * 60 * 60 * 1000) 
-      : now;
-    const expiryDate = hasExpiry 
-      ? new Date(now.getTime() + (condition.expiry_hours || 0) * 60 * 60 * 1000) 
-      : null;
-    
     // Track the notifications in the database
     try {
       await trackMessageNotification(message.id, condition.id);
@@ -145,115 +71,17 @@ export async function sendMessageNotification(
       }
     }
     
-    // Initialize Supabase client for making function calls
-    const supabase = supabaseClient();
-    
-    // Send a notification to each recipient with retry for emergencies
-    const recipientResults = await Promise.all(condition.recipients.map(async (recipient) => {
-      let attempt = 0;
-      let success = false;
-      let error = null;
-      
-      // Create a unique delivery ID for this recipient
-      const deliveryId = crypto.randomUUID();
-      
-      // Create secure access URL with delivery tracking
-      const secureAccessUrl = generateAccessUrl(message.id, recipient.email, deliveryId);
-      
-      if (debug) console.log(`Access URL for ${recipient.email}: ${secureAccessUrl}`);
-      
-      // Prepare common email data
-      const emailData: EmailTemplateData = {
-        senderName: "EchoVault", // You could fetch the actual user's name here
-        messageTitle: message.title,
-        recipientName: recipient.name,
-        messageType: message.message_type,
-        hasPinCode,
-        hasDelayedAccess,
-        hasExpiry,
-        unlockDate: hasDelayedAccess ? new Date(unlockDate).toISOString() : null,
-        expiryDate: hasExpiry ? new Date(expiryDate!).toISOString() : null,
-        accessUrl: secureAccessUrl,
-        isEmergency: isEmergencyMessage
-      };
-      
-      // Record the message delivery
-      try {
-        await recordMessageDelivery(supabase, message.id, recipient.id, deliveryId);
-        if (debug) console.log(`Successfully recorded delivery for message ${message.id} to recipient ${recipient.id}`);
-      } catch (recordError) {
-        console.error(`Error recording message delivery: ${recordError}`);
-        // Continue despite record error - don't block email sending
-      }
-      
-      // Try sending email with retry for emergency messages
-      while (!success && attempt < maxRetries) {
-        try {
-          if (debug) console.log(`Sending email to ${recipient.email} (attempt ${attempt + 1}/${maxRetries})`);
-          
-          // Send email notification - IMPORTANT: Updated to use the correct function name
-          const emailResult = await sendEmailNotification(
-            message.id,
-            recipient.email,
-            recipient.name,
-            emailData.senderName,
-            message.title,
-            isEmergencyMessage
-          );
-          
-          if (debug) console.log(`Email sending result:`, emailResult);
-          success = true;
-          
-          // For emergency messages and WhatsApp enabled recipients, also send a WhatsApp message
-          if (isEmergencyMessage && recipient.phone && (isWhatsAppEnabled || isEmergency)) {
-            try {
-              if (debug) console.log(`Sending WhatsApp message to ${recipient.phone}`);
-              
-              // Basic emergency message content
-              const whatsAppMessage = `⚠️ EMERGENCY ALERT: ${message.title}\n\n${message.content || "An emergency alert has been triggered for you."}\n\nCheck your email for more information.`;
-              
-              // Call the WhatsApp notification function directly using the Supabase functions API
-              const { data: whatsAppResult, error: whatsAppError } = await supabase.functions.invoke("send-whatsapp-notification", {
-                body: {
-                  to: recipient.phone,
-                  message: whatsAppMessage,
-                  messageId: message.id,
-                  recipientName: recipient.name,
-                  isEmergency: true
-                }
-              });
-              
-              if (whatsAppError) {
-                console.error(`WhatsApp sending error:`, whatsAppError);
-              } else {
-                if (debug) console.log(`WhatsApp message sent successfully to ${recipient.phone}`);
-              }
-            } catch (whatsAppError) {
-              console.error(`Error sending WhatsApp message:`, whatsAppError);
-              // Continue despite WhatsApp error - we already sent the email
-            }
-          }
-          
-        } catch (emailError: any) {
-          attempt++;
-          error = emailError;
-          console.error(`Error sending email to ${recipient.email} (attempt ${attempt}):`, emailError);
-          
-          if (attempt < maxRetries) {
-            // Only wait and retry if we have attempts remaining
-            if (debug) console.log(`Retrying in ${retryDelay/1000} seconds...`);
-            await new Promise(resolve => setTimeout(resolve, retryDelay));
-          }
-        }
-      }
-      
-      return { 
-        recipient: recipient.email,
-        success, 
-        attempts: attempt + 1,
-        error: error ? error.message || "Unknown error" : null
-      };
-    }));
+    // Send a notification to each recipient
+    const recipientResults = await Promise.all(condition.recipients.map(recipient => 
+      notifyRecipient(recipient, message, condition, {
+        isEmergency: isEmergencyMessage,
+        debug,
+        maxRetries,
+        retryDelay,
+        isWhatsAppEnabled,
+        triggerKeyword
+      })
+    ));
     
     const anySuccessful = recipientResults.some(r => r.success);
     const allFailed = recipientResults.every(r => !r.success);
