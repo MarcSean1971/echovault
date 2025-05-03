@@ -22,10 +22,14 @@ export function generateAccessUrl(messageId: string, recipientEmail: string, del
     // Always ensure we have a fully qualified URL with protocol
     const fullBaseUrl = baseUrl.startsWith('http') ? baseUrl : `https://${baseUrl}`;
     
+    // Log the URL components for debugging
+    console.log(`Base URL: ${baseUrl}`);
+    console.log(`Full base URL with protocol: ${fullBaseUrl}`);
+    
     // Construct the fully qualified access URL with query parameters
     const accessUrl = `${fullBaseUrl}/functions/v1/access-message?id=${messageId}&recipient=${encodeURIComponent(recipientEmail)}&delivery=${deliveryId}`;
     
-    console.log(`Generated absolute access URL with protocol: ${accessUrl}`);
+    console.log(`Generated absolute access URL: ${accessUrl}`);
     return accessUrl;
   } catch (error) {
     console.error("Error generating access URL:", error);
