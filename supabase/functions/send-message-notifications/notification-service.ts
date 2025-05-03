@@ -13,6 +13,63 @@ interface NotificationOptions {
   debug?: boolean;
 }
 
+/**
+ * Generate a secure access URL for a message
+ */
+export function generateAccessUrl(messageId: string, recipientEmail: string, deliveryId: string): string {
+  try {
+    // Get the Supabase URL from environment
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+    
+    // Construct the access URL with proper path and query parameters
+    const accessUrl = `${supabaseUrl}/functions/v1/access-message/${messageId}?recipient=${encodeURIComponent(recipientEmail)}&delivery=${deliveryId}`;
+    
+    return accessUrl;
+  } catch (error) {
+    console.error("Error generating access URL:", error);
+    throw error;
+  }
+}
+
+/**
+ * Record a message delivery in the database
+ */
+export async function recordMessageDelivery(
+  supabase: any,
+  messageId: string, 
+  recipientId: string,
+  deliveryId: string
+) {
+  try {
+    // Try to record the delivery in the delivered_messages table
+    const { data, error } = await supabase
+      .from("delivered_messages")
+      .insert({
+        message_id: messageId,
+        recipient_id: recipientId,
+        delivery_id: deliveryId,
+        delivered_at: new Date().toISOString()
+      })
+      .select();
+      
+    if (error) {
+      if (error.code === "42P01") {
+        // Table doesn't exist yet, log but continue
+        console.error("Delivered messages table may not exist, skipping delivery recording");
+        return null;
+      }
+      throw error;
+    }
+    
+    console.log(`Successfully recorded delivery for message ${messageId} to recipient ${recipientId}`);
+    return data[0];
+  } catch (error) {
+    console.error("Error recording message delivery:", error);
+    // Non-critical error, continue with notification process
+    return null;
+  }
+}
+
 export async function sendMessageNotification(
   data: {message: Message, condition: Condition}, 
   options: NotificationOptions = {}
@@ -122,7 +179,7 @@ export async function sendMessageNotification(
       
       // Record the message delivery
       try {
-        await recordMessageDelivery(message.id, condition.id, recipient.id, deliveryId);
+        await recordMessageDelivery(supabase, message.id, recipient.id, deliveryId);
         if (debug) console.log(`Successfully recorded delivery for message ${message.id} to recipient ${recipient.id}`);
       } catch (recordError) {
         console.error(`Error recording message delivery: ${recordError}`);
