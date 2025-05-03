@@ -1,0 +1,251 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "@/components/ui/use-toast";
+import { MessageCondition } from "@/types/message";
+import { triggerPanicMessage, hasActivePanicMessages } from "@/services/messages/conditions/panicTriggerService";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
+
+export function usePanicButtonLogic(
+  userId: string | undefined,
+  panicMessage: MessageCondition | null,
+  isChecking: boolean,
+  isLoading: boolean
+) {
+  const navigate = useNavigate();
+  const [panicMode, setPanicMode] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [triggerInProgress, setTriggerInProgress] = useState(false);
+  const [countDown, setCountDown] = useState(0);
+  const [hasPanicMessages, setHasPanicMessages] = useState(false);
+  const [locationPermission, setLocationPermission] = useState<string>("unknown");
+
+  // Check if user has any panic messages on mount
+  useEffect(() => {
+    const checkPanicMessages = async () => {
+      if (!userId) return;
+      
+      try {
+        const hasMessages = await hasActivePanicMessages(userId);
+        setHasPanicMessages(hasMessages);
+      } catch (error) {
+        console.error("Error checking panic messages:", error);
+      }
+    };
+    
+    if (!panicMessage && !isLoading && userId) {
+      checkPanicMessages();
+    }
+  }, [userId, panicMessage, isLoading]);
+
+  // Check if location permissions are available
+  useEffect(() => {
+    if (navigator.permissions && navigator.permissions.query) {
+      navigator.permissions.query({ name: 'geolocation' })
+        .then((result) => {
+          setLocationPermission(result.state);
+          
+          // Listen for permission changes
+          result.onchange = () => {
+            setLocationPermission(result.state);
+          };
+        })
+        .catch(err => {
+          console.error("Error checking location permissions:", err);
+          setLocationPermission("denied");
+        });
+    } else if (navigator.geolocation) {
+      setLocationPermission("unknown");
+    } else {
+      setLocationPermission("unavailable");
+    }
+  }, []);
+
+  // Request location permission
+  const requestLocationPermission = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        () => {
+          setLocationPermission("granted");
+          handlePanicTrigger();
+        },
+        (error) => {
+          console.error("Location permission denied:", error);
+          setLocationPermission("denied");
+          toast({
+            title: "Location Access Denied",
+            description: "Your current location won't be included in the emergency message. Consider enabling location access for better assistance.",
+            variant: "destructive"
+          });
+          // Continue with panic trigger even without location
+          handlePanicTrigger();
+        }
+      );
+    } else {
+      toast({
+        title: "Location Not Available",
+        description: "Your device doesn't support location services. The emergency message will be sent without your location.",
+        variant: "destructive"
+      });
+      // Continue with panic trigger even without location
+      handlePanicTrigger();
+    }
+  };
+
+  // Get keep_armed value from config
+  const getKeepArmedValue = () => {
+    // First check panic_trigger_config
+    if (panicMessage?.panic_trigger_config) {
+      return panicMessage.panic_trigger_config.keep_armed;
+    }
+    
+    // Fall back to panic_config if panic_trigger_config is not available
+    if (panicMessage?.panic_config) {
+      return panicMessage.panic_config.keep_armed;
+    }
+    
+    return true; // Default value for safety
+  };
+
+  // Handle panic trigger
+  const handlePanicTrigger = async () => {
+    if (!userId || !panicMessage) {
+      toast({
+        title: "Error",
+        description: "No panic message is configured",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (isConfirming) {
+      setTriggerInProgress(true);
+      setPanicMode(true);
+      
+      try {
+        console.log(`Triggering panic message: ${panicMessage.message_id}`);
+        
+        // Log config to help with debugging
+        if (panicMessage.panic_trigger_config) {
+          console.log("Using panic_trigger_config:", panicMessage.panic_trigger_config);
+        }
+        if (panicMessage.panic_config) {
+          console.log("Found panic_config as well:", panicMessage.panic_config);
+        }
+        
+        // Try triggering the panic message
+        const result = await triggerPanicMessage(userId, panicMessage.message_id);
+        
+        console.log("Panic trigger result:", result);
+        
+        if (result.success) {
+          toast({
+            title: "EMERGENCY ALERT TRIGGERED",
+            description: "Your emergency messages with your current location are being sent immediately.",
+            variant: "destructive"
+          });
+          
+          // Start countdown for visual feedback
+          let secondsLeft = 3;
+          setCountDown(secondsLeft);
+          
+          // Dispatch event with panic message ID
+          window.dispatchEvent(new CustomEvent('conditions-updated', { 
+            detail: { 
+              updatedAt: new Date().toISOString(),
+              triggerValue: Date.now(),
+              panicTrigger: true,
+              panicMessageId: panicMessage.message_id
+            }
+          }));
+          
+          const timer = setInterval(() => {
+            secondsLeft -= 1;
+            setCountDown(secondsLeft);
+            
+            if (secondsLeft <= 0) {
+              clearInterval(timer);
+              setPanicMode(false);
+              setIsConfirming(false);
+              setTriggerInProgress(false);
+              
+              // If the message is still armed (keepArmed=true), we should refresh to show it's still active
+              // Otherwise navigate to messages
+              if (result.keepArmed) {
+                console.log("Message stays armed (keepArmed=true). Refreshing page.");
+                toast({
+                  title: "Emergency message still armed",
+                  description: "Your emergency message remains active and can be triggered again if needed."
+                });
+                window.location.reload(); // Refresh to update the UI state
+              } else {
+                console.log("Message is now disarmed (keepArmed=false). Navigating to messages.");
+                navigate('/messages'); // Redirect to messages page
+              }
+            }
+          }, 1000);
+        }
+      } catch (error: any) {
+        console.error("Error triggering panic message:", error);
+        toast({
+          title: "Error",
+          description: error.message || "Failed to trigger panic message. Please try again.",
+          variant: "destructive"
+        });
+        setPanicMode(false);
+        setIsConfirming(false);
+        setTriggerInProgress(false);
+      }
+    } else {
+      setIsConfirming(true);
+      
+      // Auto-reset confirmation state if not clicked again
+      setTimeout(() => {
+        if (isConfirming) {
+          setIsConfirming(false);
+        }
+      }, 3000);
+    }
+  };
+
+  // Handle panic button click with location permission check
+  const handlePanicButtonClick = () => {
+    if (isConfirming) {
+      // If already confirming, check/request location permission
+      if (locationPermission === "granted") {
+        handlePanicTrigger();
+      } else if (locationPermission === "prompt" || locationPermission === "unknown") {
+        requestLocationPermission();
+      } else {
+        // Location permission denied but still allow triggering
+        handlePanicTrigger();
+      }
+    } else {
+      // Just show confirmation first time
+      setIsConfirming(true);
+      
+      // Auto-reset confirmation state if not clicked again
+      setTimeout(() => {
+        if (isConfirming) {
+          setIsConfirming(false);
+        }
+      }, 3000);
+    }
+  };
+
+  // Create new panic message
+  const handleCreatePanicMessage = () => {
+    navigate('/create-message');
+  };
+
+  return {
+    panicMode,
+    isConfirming,
+    triggerInProgress,
+    countDown,
+    hasPanicMessages,
+    locationPermission,
+    getKeepArmedValue,
+    handlePanicButtonClick,
+    handleCreatePanicMessage
+  };
+}
