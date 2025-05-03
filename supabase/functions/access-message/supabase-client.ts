@@ -15,6 +15,7 @@ export function supabaseClient() {
       console.warn("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY. Will try alternative connection method.");
     } else {
       console.log(`Connecting to Supabase with URL: ${new URL(supabaseUrl).hostname}`);
+      console.log(`Service role key is ${supabaseKey ? "set" : "not set"}`);
       
       return createClient(supabaseUrl, supabaseKey, {
         auth: {
@@ -42,6 +43,8 @@ export function supabaseClient() {
 export async function checkSupabaseConnection() {
   try {
     const client = supabaseClient();
+    console.log("Testing database connection...");
+    
     const { data, error } = await client.from("messages").select("count").limit(1);
     
     if (error) {

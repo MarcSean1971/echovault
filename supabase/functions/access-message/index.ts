@@ -30,5 +30,6 @@ checkSupabaseConnection()
     console.error("Error testing database connection:", err);
   });
 
-console.log("Ready to handle requests...");
+// Log an additional startup message to ensure a change is detected
+console.log("Ready to handle requests... (Updated: 2025-05-03)");
 serve(routeRequest);

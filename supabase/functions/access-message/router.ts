@@ -52,13 +52,13 @@ export async function routeRequest(req: Request): Promise<Response> {
     console.log("[Router] Path parts:", pathParts);
     
     // Check for PIN verification endpoint
-    if (pathParts[pathParts.length - 1] === "verify-pin") {
+    if (pathParts.includes("verify-pin")) {
       console.log("[Router] Routing to verify-pin handler");
       return await handleVerifyPin(req);
     }
     
     // Check for record view endpoint
-    if (pathParts[pathParts.length - 1] === "record-view") {
+    if (pathParts.includes("record-view")) {
       console.log("[Router] Routing to record-view handler");
       return await handleRecordView(req);
     }
