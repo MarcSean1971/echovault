@@ -2,6 +2,7 @@
 import { useNavigate } from "react-router-dom";
 import { useDashboardData } from "./useDashboardData";
 import { useCheckIn } from "./useCheckIn";
+import { useEffect, useState } from "react";
 
 /**
  * Main hook for the dashboard trigger system
@@ -10,6 +11,7 @@ import { useCheckIn } from "./useCheckIn";
 export function useTriggerDashboard() {
   const navigate = useNavigate();
   const { handleCheckIn } = useCheckIn();
+  const [lastRefresh, setLastRefresh] = useState<string | null>(null);
   
   const {
     messages,
@@ -40,6 +42,22 @@ export function useTriggerDashboard() {
       setLastCheckIn(new Date().toISOString());
     }
   };
+  
+  // Listen for condition updates via the custom event
+  useEffect(() => {
+    const handleConditionsUpdated = async (event: Event) => {
+      if (event instanceof CustomEvent) {
+        console.log("useTriggerDashboard received conditions-updated event");
+        setLastRefresh(event.detail.updatedAt);
+        await refreshConditions();
+      }
+    };
+    
+    window.addEventListener('conditions-updated', handleConditionsUpdated);
+    return () => {
+      window.removeEventListener('conditions-updated', handleConditionsUpdated);
+    };
+  }, [refreshConditions]);
 
   // Log deadline information to help with debugging
   console.log("useTriggerDashboard - current nextDeadline:", nextDeadline);
@@ -51,6 +69,7 @@ export function useTriggerDashboard() {
     nextDeadline,
     lastCheckIn,
     isLoading,
+    lastRefresh,
     handleCheckIn: handleDashboardCheckIn,
     navigate,
     userId,

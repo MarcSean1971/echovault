@@ -33,8 +33,8 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
   const [condition, setCondition] = useState<MessageCondition | null>(null);
   const [transcription, setTranscription] = useState<string | null>(null);
   
-  // Get the refresh function from our new hook
-  const { refreshConditions } = useConditionRefresh();
+  // Get the refresh function from our enhanced hook
+  const { refreshConditions, isRefreshing } = useConditionRefresh();
   
   // Load message condition status
   useEffect(() => {
@@ -58,6 +58,17 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
     };
     
     loadConditionStatus();
+    
+    // Also reload when conditions-updated event is received
+    const handleConditionsUpdated = () => {
+      console.log("MessageCard received conditions-updated event, reloading");
+      loadConditionStatus();
+    };
+    
+    window.addEventListener('conditions-updated', handleConditionsUpdated);
+    return () => {
+      window.removeEventListener('conditions-updated', handleConditionsUpdated);
+    };
   }, [message.id]);
   
   // Try to extract transcription from content for voice/video messages
@@ -163,7 +174,7 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
           messageId={message.id}
           condition={condition}
           isArmed={isArmed}
-          isLoading={isLoading}
+          isLoading={isLoading || isRefreshing}
           onArmMessage={handleArmMessage}
           onDisarmMessage={handleDisarmMessage}
         />

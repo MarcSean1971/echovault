@@ -26,6 +26,17 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
   const [isUrgent, setIsUrgent] = useState(false);
   const [isVeryUrgent, setIsVeryUrgent] = useState(false);
   
+  // Get the lastRefresh value to trigger re-renders when conditions change
+  const { handleCheckIn: handleDashboardCheckIn, isLoading: isChecking, nextDeadline, lastRefresh, refreshConditions } = useTriggerDashboard();
+  
+  // Force refresh conditions when component mounts and when lastRefresh changes
+  useEffect(() => {
+    if (userId) {
+      console.log("HeaderButtons refreshing conditions");
+      refreshConditions();
+    }
+  }, [userId, lastRefresh, refreshConditions]);
+  
   // Find panic message from conditions
   const panicMessage = conditions.find(c => 
     c.condition_type === 'panic_trigger' && c.active === true
@@ -36,9 +47,6 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
     (c.condition_type === 'no_check_in' || c.condition_type === 'regular_check_in') && 
     c.active === true
   );
-  
-  // Handle check-in logic
-  const { handleCheckIn: handleDashboardCheckIn, isLoading: isChecking, nextDeadline } = useTriggerDashboard();
   
   // Keep the deadline effect as it updates state used by other components
   useEffect(() => {
@@ -110,7 +118,8 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
                   title: "Emergency message still armed",
                   description: "Your emergency message remains active and can be triggered again if needed."
                 });
-                window.location.reload();
+                // Refresh conditions instead of reloading the page
+                refreshConditions();
               } else {
                 navigate('/messages');
               }

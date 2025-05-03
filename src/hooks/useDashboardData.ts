@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { 
   fetchMessageConditions,
@@ -45,6 +45,7 @@ export function useDashboardData() {
         if (conditionsData && conditionsData.length > 0) {
           const mostRecent = conditionsData.reduce(
             (latest, condition) => {
+              if (!condition.last_checked) return latest;
               const lastChecked = new Date(condition.last_checked);
               return lastChecked > latest ? lastChecked : latest;
             },
@@ -68,11 +69,27 @@ export function useDashboardData() {
     loadDashboardData();
   }, [userId]);
 
-  const refreshConditions = async () => {
-    if (!userId) return;
+  // Memoize refreshConditions to prevent unnecessary re-renders
+  const refreshConditions = useCallback(async () => {
+    if (!userId) return null;
+    
+    console.log("Refreshing conditions in useDashboardData");
+    setIsLoading(true);
+    
     try {
-      const updatedConditions = await fetchMessageConditions(userId);
+      // Refresh both messages and conditions
+      const [messagesData, updatedConditions] = await Promise.all([
+        fetchMessages(),
+        fetchMessageConditions(userId)
+      ]);
+      
+      setMessages(messagesData);
       setConditions(updatedConditions);
+      
+      // Also refresh the next deadline
+      const { deadline } = await getNextCheckInDeadline(userId);
+      setNextDeadline(deadline);
+      
       return updatedConditions;
     } catch (error) {
       console.error("Failed to refresh conditions:", error);
@@ -82,8 +99,10 @@ export function useDashboardData() {
         variant: "destructive",
       });
       return null;
+    } finally {
+      setIsLoading(false);
     }
-  };
+  }, [userId]);
 
   return {
     messages,
