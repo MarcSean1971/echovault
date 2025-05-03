@@ -18,13 +18,13 @@ export function MessagesButton({
 }: MessagesButtonProps) {
   return (
     <Button 
-      className={`bg-green-600 text-white ${buttonPaddingClass} ${buttonSizeClass}`}
+      className={`bg-green-600 text-white hover:bg-green-700 ${buttonPaddingClass} ${buttonSizeClass} transition-all duration-200`}
       size={isMobile ? "sm" : "lg"}
       asChild
     >
       <Link to="/messages">
         <span className="flex items-center gap-1 font-medium">
-          <MessageSquare className={iconSizeClass} />
+          <MessageSquare className={`${iconSizeClass} transition-transform group-hover:scale-110`} />
           Messages
         </span>
       </Link>

@@ -23,12 +23,12 @@ export function CheckInButton({
     <Button 
       onClick={onClick}
       disabled={isDisabled}
-      className={`bg-orange-500 text-white ${buttonPaddingClass} ${buttonSizeClass}`}
+      className={`bg-orange-500 hover:bg-orange-600 text-white ${buttonPaddingClass} ${buttonSizeClass} transition-all duration-200`}
       size={isMobile ? "sm" : "lg"}
       style={{ backgroundColor: "#f97316" }} 
     >
       <span className="flex items-center gap-1 font-medium">
-        <Check className={iconSizeClass} />
+        <Check className={`${iconSizeClass} transition-transform group-hover:scale-110`} />
         {!isMobile ? "Check In Now" : "Check In"}
       </span>
     </Button>

@@ -30,9 +30,9 @@ export function MessageHeader({
             variant="ghost"
             size="icon"
             onClick={() => navigate("/messages")}
-            className="rounded-full hover:bg-accent hover:text-accent-foreground"
+            className="rounded-full hover:bg-accent hover:text-accent-foreground transition-all duration-200"
           >
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="h-5 w-5 transition-transform hover:scale-110" />
           </Button>
           <h1 className="text-xl font-medium md:text-2xl">Message Details</h1>
         </div>
@@ -44,20 +44,20 @@ export function MessageHeader({
               variant="outline"
               onClick={handleDisarmMessage}
               disabled={isActionLoading}
-              className="text-green-600 hover:bg-green-50 hover:text-green-700"
+              className="text-green-600 transition-all duration-200 hover:bg-green-50 hover:text-green-700"
               size="sm"
             >
-              <BellOff className="h-4 w-4 mr-2" /> Disarm
+              <BellOff className="h-4 w-4 mr-2 transition-transform hover:scale-110" /> Disarm
             </Button>
           ) : (
             <Button
               variant="outline"
               onClick={handleArmMessage}
               disabled={isActionLoading}
-              className="text-destructive hover:bg-destructive/10"
+              className="text-destructive transition-all duration-200 hover:bg-destructive/10"
               size="sm"
             >
-              <Bell className="h-4 w-4 mr-2" /> Arm
+              <Bell className="h-4 w-4 mr-2 transition-transform hover:scale-110" /> Arm
             </Button>
           )}
         </div>
