@@ -6,6 +6,8 @@ interface UseRecordingOptions {
   onRecordingComplete?: (blob: Blob, url: string) => void;
   mimeType?: string;
   timeslice?: number;
+  videoBitsPerSecond?: number;
+  audioBitsPerSecond?: number;
 }
 
 export function useRecording(
@@ -24,6 +26,28 @@ export function useRecording(
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<number | null>(null);
   
+  // Get supported mime type for video recording
+  const getSupportedMimeType = useCallback(() => {
+    const defaultType = 'video/webm';
+    const preferredTypes = [
+      'video/webm;codecs=vp9,opus',
+      'video/webm;codecs=vp8,opus',
+      'video/webm;codecs=h264,opus',
+      'video/webm',
+      'video/mp4'
+    ];
+    
+    for (const type of preferredTypes) {
+      if (MediaRecorder.isTypeSupported(type)) {
+        console.log(`Using supported mime type: ${type}`);
+        return type;
+      }
+    }
+    
+    console.log(`Defaulting to mime type: ${defaultType}`);
+    return defaultType;
+  }, []);
+  
   // Timer functions
   const startTimer = useCallback(() => {
     timerRef.current = window.setInterval(() => {
@@ -40,14 +64,29 @@ export function useRecording(
   
   // Media recorder event handlers
   const handleDataAvailable = useCallback((event: BlobEvent) => {
-    if (event.data.size > 0) {
+    if (event.data && event.data.size > 0) {
+      console.log(`Received data chunk of size: ${event.data.size}`);
       chunksRef.current.push(event.data);
     }
   }, []);
   
   const handleRecordingStop = useCallback(() => {
-    const mimeType = options.mimeType || 'video/webm';
+    console.log("Recording stopped, processing chunks...");
+    
+    if (chunksRef.current.length === 0) {
+      console.error("No data chunks recorded");
+      toast({
+        title: "Recording Error",
+        description: "No data was recorded. Please try again.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    const mimeType = options.mimeType || getSupportedMimeType();
     const recordedBlob = new Blob(chunksRef.current, { type: mimeType });
+    console.log(`Created blob of size: ${recordedBlob.size}, type: ${recordedBlob.type}`);
+    
     const url = URL.createObjectURL(recordedBlob);
     
     setRecordedBlob(recordedBlob);
@@ -56,7 +95,7 @@ export function useRecording(
     if (options.onRecordingComplete) {
       options.onRecordingComplete(recordedBlob, url);
     }
-  }, [options]);
+  }, [options, getSupportedMimeType]);
   
   // Recording control functions
   const startRecording = useCallback(() => {
@@ -74,16 +113,39 @@ export function useRecording(
       chunksRef.current = [];
       setRecordingDuration(0);
       
-      // Initialize MediaRecorder
-      const mimeType = options.mimeType || 'video/webm';
-      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType });
+      // Get supported mime type
+      const mimeType = options.mimeType || getSupportedMimeType();
+      
+      console.log("Starting MediaRecorder with options:", {
+        mimeType,
+        videoBitsPerSecond: options.videoBitsPerSecond || 2500000, // 2.5 Mbps default
+        audioBitsPerSecond: options.audioBitsPerSecond || 128000 // 128 kbps default
+      });
+      
+      // Initialize MediaRecorder with options
+      mediaRecorderRef.current = new MediaRecorder(stream, {
+        mimeType,
+        videoBitsPerSecond: options.videoBitsPerSecond || 2500000,
+        audioBitsPerSecond: options.audioBitsPerSecond || 128000
+      });
       
       // Set up event handlers
       mediaRecorderRef.current.ondataavailable = handleDataAvailable;
       mediaRecorderRef.current.onstop = handleRecordingStop;
+      mediaRecorderRef.current.onerror = (event) => {
+        console.error("MediaRecorder error:", event);
+        toast({
+          title: "Recording Error",
+          description: "An error occurred during recording. Please try again.",
+          variant: "destructive"
+        });
+        stopRecording();
+      };
       
-      // Start recording
-      mediaRecorderRef.current.start(options.timeslice);
+      // Start recording with timeslice to get data during recording
+      mediaRecorderRef.current.start(options.timeslice || 1000);
+      console.log("MediaRecorder started");
+      
       setIsRecording(true);
       setIsPaused(false);
       
@@ -97,10 +159,11 @@ export function useRecording(
         variant: "destructive"
       });
     }
-  }, [stream, options, handleDataAvailable, handleRecordingStop, startTimer]);
+  }, [stream, options, handleDataAvailable, handleRecordingStop, startTimer, getSupportedMimeType]);
   
   const pauseRecording = useCallback(() => {
-    if (mediaRecorderRef.current && isRecording && !isPaused) {
+    if (mediaRecorderRef.current && isRecording && !isPaused && 'pause' in mediaRecorderRef.current) {
+      console.log("Pausing recording");
       mediaRecorderRef.current.pause();
       setIsPaused(true);
       stopTimer();
@@ -108,7 +171,8 @@ export function useRecording(
   }, [isRecording, isPaused, stopTimer]);
   
   const resumeRecording = useCallback(() => {
-    if (mediaRecorderRef.current && isRecording && isPaused) {
+    if (mediaRecorderRef.current && isRecording && isPaused && 'resume' in mediaRecorderRef.current) {
+      console.log("Resuming recording");
       mediaRecorderRef.current.resume();
       setIsPaused(false);
       startTimer();
@@ -117,6 +181,7 @@ export function useRecording(
   
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && isRecording) {
+      console.log("Stopping recording");
       mediaRecorderRef.current.stop();
       setIsRecording(false);
       setIsPaused(false);
@@ -126,6 +191,7 @@ export function useRecording(
   
   // Reset recording state
   const resetRecording = useCallback(() => {
+    console.log("Resetting recording state");
     if (recordedUrl) {
       URL.revokeObjectURL(recordedUrl);
     }
@@ -139,6 +205,7 @@ export function useRecording(
   
   // Cleanup function
   const cleanup = useCallback(() => {
+    console.log("Cleaning up recording resources");
     // Stop media recorder if active
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();

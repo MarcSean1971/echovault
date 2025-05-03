@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { useVideoRecorder } from "@/hooks/useVideoRecorder";
 import { VideoPreview } from "./video/VideoPreview";
@@ -22,6 +22,8 @@ export function VideoRecorder({ onVideoReady, onCancel }: VideoRecorderProps) {
     videoURL,
     videoBlob,
     isBrowserSupported,
+    isInitializing,
+    stream,
     
     // Refs
     videoPreviewRef,
@@ -35,8 +37,17 @@ export function VideoRecorder({ onVideoReady, onCancel }: VideoRecorderProps) {
     togglePlayback,
     handleVideoEnded,
     reset,
-    handleAccept
+    handleAccept,
+    reinitializeStream
   } = useVideoRecorder();
+  
+  // Effect to reinitialize stream if needed
+  useEffect(() => {
+    if (!stream && !videoURL && !isInitializing) {
+      console.log("No stream detected, attempting to reinitialize");
+      reinitializeStream();
+    }
+  }, [stream, videoURL, isInitializing, reinitializeStream]);
   
   const handleAcceptVideo = async () => {
     const result = await handleAccept();
@@ -59,6 +70,7 @@ export function VideoRecorder({ onVideoReady, onCancel }: VideoRecorderProps) {
             isRecording={isRecording}
             isPaused={isPaused}
             recordingDuration={recordingDuration}
+            isInitializing={isInitializing}
           />
         ) : (
           <VideoPlayback

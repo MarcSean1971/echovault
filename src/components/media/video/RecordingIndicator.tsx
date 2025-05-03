@@ -14,9 +14,10 @@ export function RecordingIndicator({ isPaused }: RecordingIndicatorProps) {
     let interval: number | null = null;
     
     if (!isPaused) {
+      // Faster blink rate for better visibility
       interval = window.setInterval(() => {
         setIsVisible(prev => !prev);
-      }, 800);
+      }, 500);
     } else {
       setIsVisible(true);
     }
@@ -29,14 +30,14 @@ export function RecordingIndicator({ isPaused }: RecordingIndicatorProps) {
   }, [isPaused]);
   
   return (
-    <div className="w-4 h-4 rounded-full border border-red-500 flex items-center justify-center">
+    <div className="w-5 h-5 rounded-full border border-red-500 flex items-center justify-center bg-black/30 p-0.5">
       <div 
-        className={`w-3 h-3 rounded-full bg-red-500 ${HOVER_TRANSITION}
+        className={`w-full h-full rounded-full bg-red-600 ${HOVER_TRANSITION}
           ${isPaused 
             ? 'opacity-50' 
             : isVisible 
               ? 'opacity-100' 
-              : 'opacity-40'
+              : 'opacity-20'
           }
         `} 
       />
