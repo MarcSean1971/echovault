@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Check, AlertCircle } from "lucide-react";
 import { MessageCondition } from "@/types/message";
@@ -5,7 +6,7 @@ import { triggerPanicMessage } from "@/services/messages/conditions/panicTrigger
 import { toast } from "@/components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { useCheckIn } from "@/hooks/useCheckIn";
+import { useTriggerDashboard } from "@/hooks/useTriggerDashboard";
 
 interface HeaderButtonsProps {
   conditions: MessageCondition[];
@@ -14,7 +15,7 @@ interface HeaderButtonsProps {
 
 export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
   const navigate = useNavigate();
-  const { isChecking, handleCheckIn } = useCheckIn();
+  const { handleCheckIn: handleDashboardCheckIn, isLoading: isChecking } = useTriggerDashboard();
   
   // Panic button states
   const [panicMode, setPanicMode] = useState(false);
@@ -119,7 +120,7 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
       {/* Check In Now button - only show when active check-in conditions exist */}
       {hasCheckInConditions && (
         <Button 
-          onClick={handleCheckIn}
+          onClick={handleDashboardCheckIn}
           disabled={isChecking || panicMode}
           className="bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-all shadow-lg px-6 py-2 text-white"
           size="lg"
