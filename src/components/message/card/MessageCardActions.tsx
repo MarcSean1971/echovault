@@ -35,7 +35,7 @@ export function MessageCardActions({
               size="sm"
               onClick={onDisarmMessage}
               disabled={isLoading}
-              className={`text-green-600 hover:bg-green-50 hover:text-green-700 ${getButtonHoverClasses('outline')}`}
+              className={`text-green-600 ${getButtonHoverClasses('outline')}`}
             >
               <BellOff className="h-4 w-4 mr-1 transition-transform hover:scale-110" /> Disarm
             </Button>
@@ -45,7 +45,7 @@ export function MessageCardActions({
               size="sm"
               onClick={onArmMessage}
               disabled={isLoading}
-              className={`text-destructive hover:bg-destructive/10 ${getButtonHoverClasses('destructive')}`}
+              className={`text-destructive ${getButtonHoverClasses('destructive')}`}
             >
               <Bell className="h-4 w-4 mr-1 transition-transform hover:scale-110" /> Arm
             </Button>
