@@ -11,6 +11,14 @@ export const BUTTON_HOVER_EFFECTS = {
   outline: "hover:shadow-md hover:transform hover:translate-y-[-2px] hover:brightness-95",
 };
 
+// Icon hover effects by type
+export const ICON_HOVER_EFFECTS = {
+  default: "hover:text-primary transition-colors duration-200",
+  muted: "hover:text-foreground transition-colors duration-200",
+  primary: "hover:text-primary-dark transition-colors duration-200",
+  destructive: "hover:text-destructive-dark transition-colors duration-200",
+};
+
 // Confirmation animation effects
 export const CONFIRMATION_ANIMATION = {
   pulse: "animate-[pulse_1.5s_cubic-bezier(0.4,0,0.6,1)_infinite] shadow-lg shadow-red-500/50",

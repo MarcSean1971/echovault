@@ -61,7 +61,7 @@ export function ReminderHistoryDialog({
         <div className="py-4">
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className={`h-6 w-6 animate-spin text-muted-foreground ${ICON_HOVER_EFFECTS}`} />
+              <Loader2 className={`h-6 w-6 animate-spin text-muted-foreground ${ICON_HOVER_EFFECTS.default}`} />
             </div>
           ) : error ? (
             <div className="text-center text-sm text-destructive py-6">
@@ -80,7 +80,7 @@ export function ReminderHistoryDialog({
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex space-x-2 items-center mb-2">
-                      <Mail className={`h-4 w-4 text-primary ${ICON_HOVER_EFFECTS}`} />
+                      <Mail className={`h-4 w-4 text-primary ${ICON_HOVER_EFFECTS.primary}`} />
                       <span className="text-sm font-medium">
                         Reminder Sent
                       </span>
@@ -90,7 +90,7 @@ export function ReminderHistoryDialog({
                     </div>
                   </div>
                   <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-                    <Clock className={`h-3 w-3 ${ICON_HOVER_EFFECTS}`} />
+                    <Clock className={`h-3 w-3 ${ICON_HOVER_EFFECTS.muted}`} />
                     <span>Deadline: {formatDate(reminder.deadline)}</span>
                   </div>
                 </div>
