@@ -2,7 +2,7 @@
 import { UserMenu } from "./UserMenu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Menu, Home, MessageSquare, Users, Bell, Settings } from "lucide-react";
+import { Menu, Home, MessageSquare, Users, Bell, Settings, Check } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
