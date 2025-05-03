@@ -1,7 +1,6 @@
-
 import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useVideoRecorder } from "@/hooks/useVideoRecorder";
+import { useVideoRecorder } from "@/hooks/video/useVideoRecorder";
 import { VideoPreview } from "./video/VideoPreview";
 import { VideoPlayback } from "./video/VideoPlayback";
 import { RecordingControls } from "./video/RecordingControls";

@@ -4,6 +4,7 @@ import { formatDuration } from "@/utils/audioUtils";
 import { RecordingIndicator } from "./RecordingIndicator";
 import { Spinner } from "@/components/ui/spinner";
 import { AlertCircle, Camera } from "lucide-react";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface VideoPreviewProps {
   videoPreviewRef: React.RefObject<HTMLVideoElement>;
