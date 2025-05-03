@@ -33,8 +33,8 @@ export default function Navbar({ isLoggedIn = false }: NavbarProps) {
   const authenticated = isLoaded ? isSignedIn : isLoggedIn;
 
   return (
-    <header className="sticky top-0 z-30 w-full border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60 shadow-sm">
-      <div className="container mx-auto px-4 py-3 flex items-center justify-between relative">
+    <header className="sticky top-0 z-30 w-full border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60 shadow-sm md:py-3 py-3 md:h-auto h-[6rem]">
+      <div className="container mx-auto px-4 flex items-center justify-between relative h-full">
         <Logo />
         
         {/* Desktop navigation */}
