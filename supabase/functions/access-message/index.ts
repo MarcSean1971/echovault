@@ -12,13 +12,27 @@ import { getDeliveryRecord, createDeliveryRecord } from "./delivery-service.ts";
 
 // URL path handler - parses the URL path to extract messageId and other info
 const handleRequest = async (req: Request): Promise<Response> => {
+  // Set HTML content type for all HTML responses
+  const htmlHeaders = { 
+    "Content-Type": "text/html", 
+    ...corsHeaders 
+  };
+  
+  // Set JSON content type for all JSON responses
+  const jsonHeaders = { 
+    "Content-Type": "application/json", 
+    ...corsHeaders 
+  };
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
+    console.log(`Received request: ${req.url}`);
     const url = new URL(req.url);
+    console.log(`Parsed URL path: ${url.pathname}, search: ${url.search}`);
     const pathParts = url.pathname.split('/');
     
     // Check for PIN verification endpoint
@@ -38,11 +52,12 @@ const handleRequest = async (req: Request): Promise<Response> => {
       messageId = validatedParams.messageId;
       recipientEmail = validatedParams.recipientEmail;
       deliveryId = validatedParams.deliveryId;
+      console.log(`Validated params: messageId=${messageId}, recipient=${recipientEmail}, deliveryId=${deliveryId}`);
     } catch (paramError: any) {
       console.error("Parameter validation error:", paramError.message);
       return new Response(paramError.message, { 
         status: 400, 
-        headers: { "Content-Type": "text/plain", ...corsHeaders } 
+        headers: htmlHeaders // Using HTML headers for error pages
       });
     }
     
@@ -59,7 +74,7 @@ const handleRequest = async (req: Request): Promise<Response> => {
       console.error("Authorization error:", authError.message);
       return new Response(authError.message, { 
         status: authError.message.includes("not found") ? 404 : 403, 
-        headers: { "Content-Type": "text/plain", ...corsHeaders } 
+        headers: htmlHeaders // Using HTML headers for error pages
       });
     }
     
@@ -122,9 +137,7 @@ const handleRequest = async (req: Request): Promise<Response> => {
         recipientEmail
       );
       
-      return new Response(html, { 
-        headers: { "Content-Type": "text/html", ...corsHeaders } 
-      });
+      return new Response(html, { headers: htmlHeaders });
     }
     
     // If delayed access and still within delay period, show waiting message
@@ -140,9 +153,7 @@ const handleRequest = async (req: Request): Promise<Response> => {
         recipientEmail
       );
       
-      return new Response(html, { 
-        headers: { "Content-Type": "text/html", ...corsHeaders } 
-      });
+      return new Response(html, { headers: htmlHeaders });
     }
     
     // If PIN protected and not yet verified, show PIN form
@@ -158,9 +169,7 @@ const handleRequest = async (req: Request): Promise<Response> => {
         recipientEmail
       );
       
-      return new Response(html, { 
-        headers: { "Content-Type": "text/html", ...corsHeaders } 
-      });
+      return new Response(html, { headers: htmlHeaders });
     }
     
     // All security checks passed, show the message
@@ -175,9 +184,7 @@ const handleRequest = async (req: Request): Promise<Response> => {
       recipientEmail
     );
     
-    return new Response(html, { 
-      headers: { "Content-Type": "text/html", ...corsHeaders } 
-    });
+    return new Response(html, { headers: htmlHeaders });
     
   } catch (error: any) {
     console.error("Error processing request:", error);

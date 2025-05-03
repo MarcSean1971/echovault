@@ -1,4 +1,3 @@
-
 /**
  * HTML template for displaying messages
  */
@@ -160,7 +159,10 @@ export const renderMessagePage = (
           const recipientEmail = document.getElementById('recipient-email').value;
           
           try {
-            const response = await fetch('/functions/v1/access-message/verify-pin', {
+            // Use absolute URL to avoid path resolution issues
+            const currentUrl = new URL(window.location.href);
+            const baseUrl = currentUrl.origin;
+            const response = await fetch(baseUrl + '/functions/v1/access-message/verify-pin', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ 
@@ -209,8 +211,12 @@ export const renderMessagePage = (
       </div>
       
       <script>
+        // Use absolute URL to avoid path resolution issues
+        const currentUrl = new URL(window.location.href);
+        const baseUrl = currentUrl.origin;
+        
         // Record that this message was viewed
-        fetch('/functions/v1/access-message/record-view', {
+        fetch(baseUrl + '/functions/v1/access-message/record-view', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 

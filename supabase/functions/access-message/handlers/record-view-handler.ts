@@ -6,6 +6,12 @@ import { recordMessageView } from "../delivery-service.ts";
  * Handle recording message views
  */
 export const handleRecordView = async (req: Request): Promise<Response> => {
+  // Set JSON content type for all responses
+  const jsonHeaders = { 
+    "Content-Type": "application/json", 
+    ...corsHeaders 
+  };
+  
   try {
     // Parse the request body
     const { messageId, deliveryId, recipientEmail } = await req.json();
@@ -16,7 +22,7 @@ export const handleRecordView = async (req: Request): Promise<Response> => {
         error: "Missing required parameters" 
       }), { 
         status: 400, 
-        headers: { "Content-Type": "application/json", ...corsHeaders } 
+        headers: jsonHeaders 
       });
     }
     
@@ -41,14 +47,14 @@ export const handleRecordView = async (req: Request): Promise<Response> => {
           success: true,
           message: "View tracking is not available at this time"
         }), { 
-          headers: { "Content-Type": "application/json", ...corsHeaders } 
+          headers: jsonHeaders 
         });
       }
       
       return new Response(JSON.stringify({ 
         success: true 
       }), { 
-        headers: { "Content-Type": "application/json", ...corsHeaders } 
+        headers: jsonHeaders 
       });
     } catch (error: any) {
       console.error("Error in record view handling:", error);
@@ -58,7 +64,7 @@ export const handleRecordView = async (req: Request): Promise<Response> => {
         success: true,
         message: "View recorded (with warnings)" 
       }), { 
-        headers: { "Content-Type": "application/json", ...corsHeaders } 
+        headers: jsonHeaders 
       });
     }
   } catch (error: any) {
@@ -68,7 +74,7 @@ export const handleRecordView = async (req: Request): Promise<Response> => {
       error: "Error processing request" 
     }), { 
       status: 500, 
-      headers: { "Content-Type": "application/json", ...corsHeaders } 
+      headers: jsonHeaders
     });
   }
 };

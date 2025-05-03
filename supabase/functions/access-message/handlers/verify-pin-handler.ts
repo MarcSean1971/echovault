@@ -6,6 +6,12 @@ import { verifyPinAndRecordView } from "../delivery-service.ts";
  * Handle PIN verification for protected messages
  */
 export const handleVerifyPin = async (req: Request): Promise<Response> => {
+  // Set JSON content type for all responses
+  const jsonHeaders = { 
+    "Content-Type": "application/json", 
+    ...corsHeaders 
+  };
+  
   try {
     // Parse the request body
     const { pin, messageId, deliveryId, recipientEmail } = await req.json();
@@ -16,7 +22,7 @@ export const handleVerifyPin = async (req: Request): Promise<Response> => {
         error: "Missing required parameters" 
       }), { 
         status: 400, 
-        headers: { "Content-Type": "application/json", ...corsHeaders } 
+        headers: jsonHeaders 
       });
     }
     
@@ -26,7 +32,7 @@ export const handleVerifyPin = async (req: Request): Promise<Response> => {
       return new Response(JSON.stringify({ 
         success: true 
       }), { 
-        headers: { "Content-Type": "application/json", ...corsHeaders } 
+        headers: jsonHeaders 
       });
     } catch (verifyError: any) {
       console.warn(`PIN verification error: ${verifyError.message}`);
@@ -35,7 +41,7 @@ export const handleVerifyPin = async (req: Request): Promise<Response> => {
         error: verifyError.message 
       }), { 
         status: verifyError.message.includes("not found") ? 404 : 401,
-        headers: { "Content-Type": "application/json", ...corsHeaders } 
+        headers: jsonHeaders 
       });
     }
     
@@ -46,7 +52,7 @@ export const handleVerifyPin = async (req: Request): Promise<Response> => {
       error: "Error processing request" 
     }), { 
       status: 500, 
-      headers: { "Content-Type": "application/json", ...corsHeaders } 
+      headers: jsonHeaders
     });
   }
 };

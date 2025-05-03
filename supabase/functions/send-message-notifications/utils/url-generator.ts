@@ -8,11 +8,15 @@
  */
 export function generateAccessUrl(messageId: string, recipientEmail: string, deliveryId: string): string {
   try {
-    // Get the Supabase URL from environment
+    // Get the Supabase URL and project ID from environment
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
     
-    // Construct the access URL with query parameters - consistently using query parameters
-    // This matches our updated access-message function that now supports query parameters
+    // Extract the project ID from the Supabase URL
+    // Required for fully qualified function URLs
+    const projectIdMatch = supabaseUrl.match(/\/projects\/([^\/]+)/);
+    const projectId = projectIdMatch ? projectIdMatch[1] : "onwthrpgcnfydxzzmyot"; // Fall back to the known project ID
+    
+    // Construct the fully qualified access URL with query parameters
     const accessUrl = `${supabaseUrl}/functions/v1/access-message?id=${messageId}&recipient=${encodeURIComponent(recipientEmail)}&delivery=${deliveryId}`;
     
     console.log(`Generated access URL: ${accessUrl}`);
