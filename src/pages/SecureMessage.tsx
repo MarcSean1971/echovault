@@ -75,5 +75,9 @@ export default function SecureMessage() {
   }
 
   // Display the message
-  return <MessageContent message={message} />;
+  return <MessageContent 
+    message={message}
+    deliveryId={deliveryId}
+    recipientEmail={recipientEmail}
+  />;
 }

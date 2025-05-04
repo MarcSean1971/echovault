@@ -3,6 +3,7 @@ import { corsHeaders } from "./cors-headers.ts";
 import { handleVerifyPin } from "./handlers/verify-pin-handler.ts";
 import { handleRecordView } from "./handlers/record-view-handler.ts";
 import { handleMessageAccess } from "./handlers/message-access-handler.ts";
+import { handleDownloadAttachment } from "./handlers/download-attachment-handler.ts";
 import { renderErrorPage } from "./templates/error-page.ts";
 import { checkSupabaseConnection } from "./supabase-client.ts";
 
@@ -61,6 +62,12 @@ export async function routeRequest(req: Request): Promise<Response> {
     if (pathParts.includes("record-view")) {
       console.log("[Router] Routing to record-view handler");
       return await handleRecordView(req);
+    }
+    
+    // Check for attachment download endpoint
+    if (pathParts.includes("download-attachment")) {
+      console.log("[Router] Routing to download-attachment handler");
+      return await handleDownloadAttachment(req);
     }
     
     // Default to message access handler - now accepting both path and query parameters
