@@ -289,6 +289,7 @@ async function processCheckIn(fromNumber: string) {
 // Main webhook handler
 serve(async (req) => {
   console.log(`[WEBHOOK] WhatsApp webhook received ${req.method} request`);
+  console.log("[WEBHOOK] Request headers:", Object.fromEntries(req.headers.entries()));
   
   // CORS handling
   if (req.method === 'OPTIONS') {
@@ -297,6 +298,7 @@ serve(async (req) => {
   }
   
   try {
+    // Debug all request information
     console.log("[WEBHOOK] Request headers:", 
       Object.fromEntries(req.headers.entries()));
     
@@ -331,6 +333,19 @@ serve(async (req) => {
         
       } catch (formError) {
         console.error("[WEBHOOK] Error parsing form data:", formError);
+        // Try to get raw text as fallback
+        const rawBody = await req.text();
+        console.log("[WEBHOOK] Raw request body:", rawBody);
+        
+        // Try to parse as URL parameters
+        try {
+          const params = new URLSearchParams(rawBody);
+          fromNumber = params.get("From") || "";
+          messageBody = params.get("Body") || "";
+          console.log(`[WEBHOOK] Extracted from URL params: From=${fromNumber}, Body=${messageBody}`);
+        } catch (e) {
+          console.error("[WEBHOOK] Failed to parse URL params:", e);
+        }
       }
     } else {
       // Last resort: try to parse as text
@@ -370,7 +385,7 @@ serve(async (req) => {
           timestamp: new Date().toISOString()
         }),
         {
-          status: 400,
+          status: 200, // Return 200 even for errors to prevent Twilio retries
           headers: { "Content-Type": "application/json", ...corsHeaders }
         }
       );
@@ -390,7 +405,7 @@ serve(async (req) => {
           timestamp: new Date().toISOString()
         }),
         {
-          status: result.success ? 200 : 500,
+          status: 200, // Always return 200 so Twilio doesn't retry
           headers: { "Content-Type": "application/json", ...corsHeaders }
         }
       );
