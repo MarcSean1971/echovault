@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Smartphone, Clock } from "lucide-react";
+import { Smartphone, Clock, AlertTriangle } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
 import { sendTestWhatsAppMessage } from "@/services/messages/notificationService";
 import { HOVER_TRANSITION, ICON_HOVER_EFFECTS } from "@/utils/hoverEffects";
@@ -17,6 +17,7 @@ interface WhatsAppIntegrationProps {
 
 export function WhatsAppIntegration({ messageId, panicConfig }: WhatsAppIntegrationProps) {
   const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
+  const [isSendingTemplate, setIsSendingTemplate] = useState(false);
   const [checkInCode, setCheckInCode] = useState<string | null>(null);
   
   useEffect(() => {
@@ -66,6 +67,115 @@ export function WhatsAppIntegration({ messageId, panicConfig }: WhatsAppIntegrat
     }
   };
   
+  // Add function to test the WhatsApp template
+  const handleTestTemplate = async () => {
+    if (!messageId) return;
+    
+    try {
+      setIsSendingTemplate(true);
+      
+      // Get the first recipient with a phone number
+      const { data: condition, error: conditionError } = await supabase
+        .from("message_conditions")
+        .select("recipients")
+        .eq("message_id", messageId)
+        .single();
+      
+      if (conditionError) throw conditionError;
+      
+      const recipients = condition?.recipients || [];
+      const recipient = recipients.find((r: any) => r.phone);
+      
+      if (!recipient || !recipient.phone) {
+        toast({
+          title: "No WhatsApp Number",
+          description: "Please add a recipient with a phone number to test the template.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Get message data for location information
+      const { data: message, error: messageError } = await supabase
+        .from("messages")
+        .select("title, share_location, location_latitude, location_longitude, location_name")
+        .eq("id", messageId)
+        .single();
+        
+      if (messageError) throw messageError;
+      
+      // Get the user's profile for sender information
+      const { data: profile, error: profileError } = await supabase.auth.getUser();
+      
+      if (profileError) throw profileError;
+      
+      const userId = profile?.user?.id;
+      
+      if (!userId) throw new Error("User not authenticated");
+      
+      const { data: userData, error: userDataError } = await supabase
+        .from("profiles")
+        .select("first_name, last_name")
+        .eq("id", userId)
+        .single();
+        
+      if (userDataError) throw userDataError;
+      
+      // Format location information
+      let locationInfo = "Test location";
+      let mapUrl = "https://maps.example.com";
+      
+      if (message?.share_location && message?.location_latitude && message?.location_longitude) {
+        locationInfo = message.location_name || `${message.location_latitude}, ${message.location_longitude}`;
+        mapUrl = `https://maps.google.com/?q=${message.location_latitude},${message.location_longitude}`;
+      }
+      
+      // Format sender name
+      const senderName = `${userData?.first_name || ""} ${userData?.last_name || ""}`.trim() || "You";
+      
+      // Use the template ID
+      const templateId = "test_emergency_alert_hx4386568436c1f993dd47146448194dd8";
+      
+      // Prepare template parameters
+      const templateParams = [
+        senderName,            // Parameter 1: Sender name
+        recipient.name,        // Parameter 2: Recipient name
+        locationInfo,          // Parameter 3: Location
+        mapUrl                 // Parameter 4: Map URL
+      ];
+      
+      // Call the WhatsApp notification function with template
+      const { data, error } = await supabase.functions.invoke("send-whatsapp-notification", {
+        body: {
+          to: recipient.phone,
+          useTemplate: true,
+          templateId: templateId,
+          templateParams: templateParams,
+          messageId: messageId,
+          recipientName: recipient.name,
+          isEmergency: true
+        }
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Template Test Sent",
+        description: "A test WhatsApp template message has been sent to " + recipient.name,
+      });
+      
+    } catch (error: any) {
+      console.error("Error sending template test:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send template test",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSendingTemplate(false);
+    }
+  };
+  
   return (
     <div className="mt-4 p-3 bg-blue-50 rounded-lg">
       <div className="flex items-center justify-between">
@@ -78,16 +188,28 @@ export function WhatsAppIntegration({ messageId, panicConfig }: WhatsAppIntegrat
             Test the WhatsApp notification for this message
           </p>
         </div>
-        <Button 
-          variant="outline"
-          size="sm"
-          disabled={isSendingWhatsApp}
-          onClick={handleSendTestWhatsApp}
-          className={`flex items-center ${HOVER_TRANSITION}`}
-        >
-          <Smartphone className={`h-3 w-3 mr-1 ${ICON_HOVER_EFFECTS.default}`} />
-          {isSendingWhatsApp ? "Sending..." : "Test WhatsApp"}
-        </Button>
+        <div className="space-x-2">
+          <Button 
+            variant="outline"
+            size="sm"
+            disabled={isSendingWhatsApp}
+            onClick={handleSendTestWhatsApp}
+            className={`flex items-center ${HOVER_TRANSITION}`}
+          >
+            <Smartphone className={`h-3 w-3 mr-1 ${ICON_HOVER_EFFECTS.default}`} />
+            {isSendingWhatsApp ? "Sending..." : "Test Message"}
+          </Button>
+          <Button 
+            variant="outline"
+            size="sm"
+            disabled={isSendingTemplate}
+            onClick={handleTestTemplate}
+            className={`flex items-center ${HOVER_TRANSITION}`}
+          >
+            <AlertTriangle className={`h-3 w-3 mr-1 ${ICON_HOVER_EFFECTS.default}`} />
+            {isSendingTemplate ? "Sending..." : "Test Template"}
+          </Button>
+        </div>
       </div>
       
       {panicConfig?.trigger_keyword && (

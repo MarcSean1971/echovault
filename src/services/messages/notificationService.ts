@@ -192,3 +192,32 @@ export async function sendTestWhatsAppMessage(messageId: string) {
     throw error;
   }
 }
+
+/**
+ * Test sending a WhatsApp template message
+ */
+export async function testWhatsAppTemplate(
+  messageId: string,
+  recipientId: string,
+  templateId: string
+) {
+  try {
+    // Implementation will be handled directly in the WhatsAppIntegration component
+    // for simplicity, as it requires several API calls to gather the necessary data
+    
+    toast({
+      title: "Testing template",
+      description: "Preparing to send WhatsApp template message...",
+    });
+    
+    return true;
+  } catch (error: any) {
+    console.error("Error testing WhatsApp template:", error);
+    toast({
+      title: "Error",
+      description: error.message || "Failed to test WhatsApp template",
+      variant: "destructive"
+    });
+    throw error;
+  }
+}

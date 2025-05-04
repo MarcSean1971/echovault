@@ -16,7 +16,11 @@ interface WhatsAppMessageRequest {
   messageId?: string;
   recipientName?: string;
   isEmergency?: boolean;
-  triggerKeyword?: string; // Add trigger keyword for template messages
+  triggerKeyword?: string; 
+  // Template-related fields
+  useTemplate?: boolean;
+  templateId?: string;
+  templateParams?: string[];
 }
 
 serve(async (req) => {
@@ -55,6 +59,10 @@ serve(async (req) => {
             messageId: formData.get("messageId") || undefined,
             recipientName: formData.get("recipientName") || undefined,
             isEmergency: formData.get("isEmergency") === "true",
+            // Add template-related fields
+            useTemplate: formData.get("useTemplate") === "true",
+            templateId: formData.get("templateId") || undefined,
+            templateParams: formData.getAll("templateParams") || [],
           };
           console.log("Successfully parsed request as form data");
         } else {
@@ -69,14 +77,33 @@ serve(async (req) => {
       throw new Error("Invalid request body. Expected JSON object with 'to' and 'message' fields.");
     }
 
-    const { to, message, messageId, recipientName, isEmergency, triggerKeyword } = requestData;
+    const { 
+      to, 
+      message, 
+      messageId, 
+      recipientName, 
+      isEmergency, 
+      triggerKeyword,
+      useTemplate = false,
+      templateId = '',
+      templateParams = [] 
+    } = requestData;
     
-    if (!to || !message) {
-      throw new Error("Missing required parameters: 'to' phone number and 'message' are required.");
+    if (!to) {
+      throw new Error("Missing required parameter: 'to' phone number is required.");
+    }
+    
+    if (!useTemplate && !message) {
+      throw new Error("Either 'message' or template information is required.");
     }
     
     console.log(`Sending WhatsApp message to: ${to}`);
     console.log(`Is emergency: ${isEmergency ? "Yes" : "No"}`);
+    console.log(`Using template: ${useTemplate ? "Yes" : "No"}`);
+    if (useTemplate) {
+      console.log(`Template ID: ${templateId}`);
+      console.log(`Template params: ${JSON.stringify(templateParams)}`);
+    }
     
     // Process phone number to ensure consistency
     // Standardize phone number format - handle various formats and make sure it has + prefix
@@ -91,12 +118,12 @@ serve(async (req) => {
       twilioWhatsappNumber : `whatsapp:${twilioWhatsappNumber}`;
       
     // The message already includes the emergency formatting and sender name from the calling function
-    const finalMessage = recipientName 
+    const finalMessage = !useTemplate && recipientName 
       ? `Hello ${recipientName}, ${message}`
       : message;
       
-    // Add trigger keyword information if provided
-    const completeMessage = triggerKeyword 
+    // Add trigger keyword information if provided and not using templates
+    const completeMessage = !useTemplate && triggerKeyword 
       ? `${finalMessage}\n\nTo trigger this alert in an emergency, send "${triggerKeyword}" to this number.`
       : finalMessage;
     
@@ -117,13 +144,34 @@ serve(async (req) => {
         console.log(`Attempt ${attempt + 1}: Sending to Twilio API`);
         console.log(`To: ${formattedTo}`);
         console.log(`From: ${formattedFrom}`);
-        console.log(`Message length: ${completeMessage.length} characters`);
         
-        const formData = new URLSearchParams({
-          To: formattedTo,
-          From: formattedFrom,
-          Body: completeMessage,
-        });
+        // Create form data for the request
+        const formData = new URLSearchParams();
+        formData.append("To", formattedTo);
+        formData.append("From", formattedFrom);
+        
+        if (useTemplate && templateId) {
+          console.log(`Using template: ${templateId}`);
+          // Use content template for WhatsApp Business API
+          formData.append("ContentSid", templateId);
+          
+          // Add template parameters if provided
+          if (templateParams && templateParams.length > 0) {
+            // Format the parameters as JSON according to Twilio's requirements
+            const contentVariables = JSON.stringify(
+              templateParams.reduce((obj, val, idx) => {
+                obj[`${idx+1}`] = val; // Twilio uses 1-indexed parameters
+                return obj;
+              }, {})
+            );
+            formData.append("ContentVariables", contentVariables);
+            console.log(`Template variables: ${contentVariables}`);
+          }
+        } else {
+          console.log(`Using standard message with length: ${completeMessage.length} characters`);
+          // Use regular message body for standard messages
+          formData.append("Body", completeMessage);
+        }
         
         console.log(`Request body: ${formData.toString()}`);
         
@@ -173,6 +221,8 @@ serve(async (req) => {
         success: true,
         messageId: responseData.sid,
         status: responseData.status,
+        usingTemplate: useTemplate,
+        templateId: useTemplate ? templateId : null,
         timestamp: new Date().toISOString()
       }),
       {

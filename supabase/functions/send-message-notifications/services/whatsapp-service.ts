@@ -54,40 +54,90 @@ export async function sendWhatsAppNotification(
     
     // Format location information if available
     let locationInfo = "";
+    let mapUrl = "";
+    
     if (includeLocation) {
       const locationName = message.location_name ? 
-        `Location: ${message.location_name}` : 
-        `Location coordinates: ${message.location_latitude}, ${message.location_longitude}`;
+        `${message.location_name}` : 
+        `${message.location_latitude}, ${message.location_longitude}`;
         
-      locationInfo = `\n\n📍 ${locationName}\n📲 Maps: https://maps.google.com/?q=${message.location_latitude},${message.location_longitude}`;
+      locationInfo = locationName;
+      mapUrl = `https://maps.google.com/?q=${message.location_latitude},${message.location_longitude}`;
     }
     
-    // Determine message content based on whether it's an emergency or reminder
-    let whatsAppMessage = "";
-    if (isEmergency) {
-      whatsAppMessage = `⚠️ EMERGENCY ALERT FROM ${senderName.toUpperCase()}: ${message.title}\n\n${message.content || "An emergency alert has been triggered."}\n${senderName} needs help!${locationInfo}\n\nCheck your email for more information.`;
-    } else {
-      whatsAppMessage = `🔔 REMINDER FROM ${senderName}: ${message.title}\n\n${message.content || "A reminder has been sent regarding your message."}\n\nPlease check your email or log in to the system to take action.`;
-    }
+    // Determine if we should use template or regular message
+    const useTemplate = isEmergency; // For now, we only use templates for emergency messages
+    const emergencyTemplateId = "test_emergency_alert_hx4386568436c1f993dd47146448194dd8"; // This is the Facebook reference ID for the approved template
     
-    // Call the WhatsApp notification function directly using the Supabase functions API
-    const { data: whatsAppResult, error: whatsAppError } = await supabase.functions.invoke("send-whatsapp-notification", {
-      body: {
-        to: recipient.phone,
-        message: whatsAppMessage,
-        messageId: message.id,
-        recipientName: recipient.name,
-        isEmergency: isEmergency
+    if (useTemplate && isEmergency) {
+      if (debug) console.log(`Using WhatsApp template for emergency message: ${emergencyTemplateId}`);
+      
+      // Prepare template parameters
+      // {{1}} - Sender name
+      // {{2}} - Recipient name
+      // {{3}} - Location
+      // {{4}} - Map URL
+      const templateParams = [
+        senderName,                   // Parameter 1: Sender name
+        recipient.name,               // Parameter 2: Recipient name
+        locationInfo || "Unknown",    // Parameter 3: Location info
+        mapUrl || "Not available"     // Parameter 4: Map URL
+      ];
+      
+      if (debug) {
+        console.log(`Template params: ${JSON.stringify(templateParams)}`);
       }
-    });
-    
-    if (whatsAppError) {
-      console.error(`WhatsApp sending error:`, whatsAppError);
-      return { success: false, error: whatsAppError.message || "Unknown WhatsApp error" };
+      
+      // Call the WhatsApp notification function with template information
+      const { data: whatsAppResult, error: whatsAppError } = await supabase.functions.invoke("send-whatsapp-notification", {
+        body: {
+          to: recipient.phone,
+          useTemplate: true,
+          templateId: emergencyTemplateId,
+          templateParams: templateParams,
+          messageId: message.id,
+          recipientName: recipient.name,
+          isEmergency: isEmergency
+        }
+      });
+      
+      if (whatsAppError) {
+        console.error(`WhatsApp template sending error:`, whatsAppError);
+        return { success: false, error: whatsAppError.message || "Unknown WhatsApp error" };
+      }
+      
+      if (debug) console.log(`WhatsApp template message sent successfully to ${recipient.phone}`);
+      return { success: true };
+      
+    } else {
+      // Fallback to the original text-based message if not using templates
+      // Determine message content based on whether it's an emergency or reminder
+      let whatsAppMessage = "";
+      if (isEmergency) {
+        whatsAppMessage = `⚠️ EMERGENCY ALERT FROM ${senderName.toUpperCase()}: ${message.title}\n\n${message.content || "An emergency alert has been triggered."}\n${senderName} needs help!${locationInfo ? `\n\n📍 ${locationInfo}\n📲 Maps: ${mapUrl}` : ""}\n\nCheck your email for more information.`;
+      } else {
+        whatsAppMessage = `🔔 REMINDER FROM ${senderName}: ${message.title}\n\n${message.content || "A reminder has been sent regarding your message."}\n\nPlease check your email or log in to the system to take action.`;
+      }
+      
+      // Call the WhatsApp notification function directly using the Supabase functions API
+      const { data: whatsAppResult, error: whatsAppError } = await supabase.functions.invoke("send-whatsapp-notification", {
+        body: {
+          to: recipient.phone,
+          message: whatsAppMessage,
+          messageId: message.id,
+          recipientName: recipient.name,
+          isEmergency: isEmergency
+        }
+      });
+      
+      if (whatsAppError) {
+        console.error(`WhatsApp sending error:`, whatsAppError);
+        return { success: false, error: whatsAppError.message || "Unknown WhatsApp error" };
+      }
+      
+      if (debug) console.log(`WhatsApp message sent successfully to ${recipient.phone}`);
+      return { success: true };
     }
-    
-    if (debug) console.log(`WhatsApp message sent successfully to ${recipient.phone}`);
-    return { success: true };
     
   } catch (whatsAppError: any) {
     console.error(`Error sending WhatsApp message:`, whatsAppError);
