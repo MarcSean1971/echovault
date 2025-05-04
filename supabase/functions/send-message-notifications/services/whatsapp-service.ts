@@ -1,3 +1,4 @@
+
 import { supabaseClient } from "../supabase-client.ts";
 
 /**
@@ -55,21 +56,24 @@ export async function sendWhatsAppNotification(
       locationLink = `https://maps.google.com/?q=${message.location_latitude},${message.location_longitude}`;
     }
     
+    // Format phone number to ensure proper format (remove whatsapp: prefix if it exists)
+    const formattedPhone = recipient.phone.replace("whatsapp:", "");
+    const cleanPhone = formattedPhone.startsWith('+') ? 
+      formattedPhone : 
+      `+${formattedPhone.replace(/\D/g, '')}`;
+    
     // Use template for emergency messages with simplified approach
     if (isEmergency) {
       if (debug) console.log("Using WhatsApp template for emergency message");
       
-      // Call the WhatsApp notification function with simplified parameters
-      const { data: whatsAppResult, error: whatsAppError } = await supabase.functions.invoke("send-whatsapp-notification", {
+      // Call the new simplified WhatsApp alert function
+      const { data: whatsAppResult, error: whatsAppError } = await supabase.functions.invoke("send-whatsapp-alert", {
         body: {
-          recipientPhone: recipient.phone,
+          recipientPhone: cleanPhone,
           senderName: senderName,
           recipientName: recipient.name,
           locationText: locationText || "Unknown location",
-          locationLink: locationLink || "No map link available",
-          messageId: message.id,
-          useTemplate: true,
-          templateId: "HX4386568436c1f993dd47146448194dd8"
+          locationLink: locationLink || "No map link available"
         }
       });
       
@@ -78,7 +82,7 @@ export async function sendWhatsAppNotification(
         return { success: false, error: whatsAppError.message || "Unknown WhatsApp error" };
       }
       
-      if (debug) console.log(`WhatsApp template message sent successfully to ${recipient.phone}`);
+      if (debug) console.log(`WhatsApp template message sent successfully to ${cleanPhone}`);
       return { success: true };
     } else {
       // For non-emergency messages, use standard text messages
@@ -93,7 +97,7 @@ export async function sendWhatsAppNotification(
       // Call the WhatsApp notification function directly using the Supabase functions API
       const { data: whatsAppResult, error: whatsAppError } = await supabase.functions.invoke("send-whatsapp-notification", {
         body: {
-          to: recipient.phone,
+          to: cleanPhone,
           message: whatsAppMessage,
           messageId: message.id,
           recipientName: recipient.name,
@@ -106,7 +110,7 @@ export async function sendWhatsAppNotification(
         return { success: false, error: whatsAppError.message || "Unknown WhatsApp error" };
       }
       
-      if (debug) console.log(`WhatsApp message sent successfully to ${recipient.phone}`);
+      if (debug) console.log(`WhatsApp message sent successfully to ${cleanPhone}`);
       return { success: true };
     }
     

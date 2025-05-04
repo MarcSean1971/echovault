@@ -35,16 +35,16 @@ serve(async (req) => {
     }
     
     // Get request parameters with defaults
-    const to = body.to || ""; // e.g. whatsapp:+27796310601
+    const to = body.recipientPhone || ""; // e.g. +27796310601
     const templateSid = body.templateId || "HX4386568436c1f993dd47146448194dd8";
     const languageCode = body.languageCode || "en_US"; // Add explicit language code
     const from = body.from || "whatsapp:+14155238886"; // Twilio WhatsApp sender
     
     // Extract template parameters or use defaults
-    const param1 = body.params?.[0] || "Sender Name";
-    const param2 = body.params?.[1] || "Recipient Name";
-    const param3 = body.params?.[2] || "Location Information";
-    const param4 = body.params?.[3] || "https://maps.example.com";
+    const param1 = body.senderName || "Sender Name";
+    const param2 = body.recipientName || "Recipient Name";
+    const param3 = body.locationText || "Location Information";
+    const param4 = body.locationLink || "https://maps.example.com";
     
     console.log(`Sending template alert to ${to} using template ${templateSid} with language ${languageCode}`);
     console.log(`Parameters: [${param1}, ${param2}, ${param3}, ${param4}]`);
@@ -52,7 +52,7 @@ serve(async (req) => {
     // Validate required parameters
     if (!to) {
       return new Response(
-        JSON.stringify({ success: false, error: "Missing required 'to' parameter" }),
+        JSON.stringify({ success: false, error: "Missing required 'recipientPhone' parameter" }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
       );
     }

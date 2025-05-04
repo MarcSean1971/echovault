@@ -36,21 +36,30 @@ export async function sendTestWhatsAppTemplate(messageId: string): Promise<boole
     // Format location information
     const { locationInfo, mapUrl } = formatLocationInfo(message);
     
+    console.log(`Sending WhatsApp template to ${recipient.phone} with location info: ${locationInfo}`);
+    
+    // Format phone number to ensure proper format (remove whatsapp: prefix if it exists)
+    const formattedPhone = recipient.phone.startsWith('+') ? 
+      recipient.phone : 
+      `+${recipient.phone.replace(/\D/g, '')}`;
+    
     // Use direct approach similar to the working example
-    const { error } = await supabase.functions.invoke("send-whatsapp-notification", {
+    const { data, error } = await supabase.functions.invoke("send-whatsapp-alert", {
       body: {
-        recipientPhone: recipient.phone, // Using the same parameter name as the example
+        recipientPhone: formattedPhone,
         senderName: senderName,
         recipientName: recipient.name,
         locationText: locationInfo,
-        locationLink: mapUrl,
-        messageId: messageId,
-        templateId: "HX4386568436c1f993dd47146448194dd8",
-        useTemplate: true
+        locationLink: mapUrl
       }
     });
     
-    if (error) throw error;
+    if (error) {
+      console.error("Error sending template:", error);
+      throw error;
+    }
+    
+    console.log("WhatsApp template response:", data);
     
     toast({
       title: "Template Test Sent",
@@ -59,6 +68,7 @@ export async function sendTestWhatsAppTemplate(messageId: string): Promise<boole
     
     return true;
   } catch (error: any) {
+    console.error("Template test error:", error);
     handleWhatsAppError(error, "sending template test");
     return false;
   }
