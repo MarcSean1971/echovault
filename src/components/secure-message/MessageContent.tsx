@@ -77,17 +77,16 @@ export function MessageContent({ message }: MessageContentProps) {
             {message.attachments.map((attachment: any, index: number) => (
               <li key={index} className="p-2 bg-muted rounded-md flex items-center">
                 <span className="flex-1 truncate">{attachment.name}</span>
-                <a 
-                  href={attachment.url} 
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`ml-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 ${HOVER_TRANSITION}`}
-                >
-                  Download
-                </a>
+                <span className="ml-2 text-muted-foreground text-sm">
+                  {attachment.size ? `(${(attachment.size / 1024).toFixed(1)} KB)` : ''}
+                </span>
+                {/* Note: In secure view, we don't provide direct download links for security */}
               </li>
             ))}
           </ul>
+          <p className="mt-2 text-sm text-muted-foreground">
+            For security reasons, attachments cannot be directly downloaded from this secure view.
+          </p>
         </div>
       );
     }

@@ -8,6 +8,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { useEffect } from "react";
 
 import AppLayout from "./components/layout/AppLayout";
+import SecureMessageLayout from "./components/layout/SecureMessageLayout";
 import ProtectedLayout from "./components/layout/ProtectedLayout";
 import AdminGuard from "./components/guards/AdminGuard";
 
@@ -71,6 +72,10 @@ const App = () => {
                 <Route index element={<Home />} />
                 <Route path="login" element={<Login />} />
                 <Route path="register" element={<Register />} />
+              </Route>
+              
+              {/* Secure message route with its own layout */}
+              <Route path="/" element={<SecureMessageLayout />}>
                 <Route path="secure-message" element={<SecureMessage />} />
               </Route>
               

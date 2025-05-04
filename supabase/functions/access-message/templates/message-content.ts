@@ -75,11 +75,16 @@ function renderAttachments(message: any): string {
   return `
     <div class="message-attachments">
       <h3>Attachments</h3>
-      ${message.attachments.map((attachment: any) => `
-        <a href="#" class="attachment-item" onclick="alert('Attachments are currently not available for direct download from this secure view. Please contact the sender if you need access to this file.')">
-          ${attachment.name} (${(attachment.size / 1024).toFixed(1)} KB)
-        </a>
-      `).join('')}
+      <div class="attachment-list">
+        ${message.attachments.map((attachment: any) => `
+          <div class="attachment-item">
+            ${attachment.name} (${(attachment.size / 1024).toFixed(1)} KB)
+          </div>
+        `).join('')}
+      </div>
+      <p class="attachment-note">
+        For security reasons, attachments cannot be directly downloaded from this secure view.
+      </p>
     </div>
   `;
 }
