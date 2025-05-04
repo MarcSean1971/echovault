@@ -1,7 +1,6 @@
 
 import { useRef, useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 
 interface MessageViewerProps {
   htmlContent: string | null;
@@ -102,19 +101,9 @@ export function MessageViewer({
           title="Secure Message Content"
           className="w-full border-0 overflow-hidden transition-all duration-300"
           style={{ minHeight: '400px', width: '100%' }}
-          sandbox="allow-same-origin allow-scripts allow-downloads"
+          sandbox="allow-same-origin allow-scripts allow-downloads allow-popups allow-popups-to-escape-sandbox allow-forms"
         />
       </Card>
-      
-      <div className="w-full max-w-3xl mx-auto mt-6 text-center">
-        <Button 
-          variant="secondary" 
-          onClick={() => window.history.back()}
-          className="hover:bg-secondary/90 transition-colors"
-        >
-          Go Back
-        </Button>
-      </div>
     </>
   );
 }
