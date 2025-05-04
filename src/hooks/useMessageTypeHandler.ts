@@ -25,10 +25,10 @@ export function useMessageTypeHandler() {
   const [textContent, setTextContent] = useState("");
   const [audioContent, setAudioContent] = useState("");
   const [videoContent, setVideoContent] = useState("");
-  
-  // Save and restore content when message type changes
+
+  // Effect to save the current content to the appropriate state
+  // This runs when content changes to save it to the right type's state
   useEffect(() => {
-    // First, save the current content to the appropriate state based on previous type
     if (content) {
       switch (messageType) {
         case "text":
@@ -47,13 +47,15 @@ export function useMessageTypeHandler() {
           break;
       }
     }
-    
-    // Then restore content based on the new message type
+  }, [content, messageType]);
+  
+  // Effect to restore content when message type changes
+  // This runs when messageType changes to restore the right content
+  useEffect(() => {
     switch (messageType) {
       case "text":
-        // When switching to text mode, if we have saved text content, use that
-        // otherwise use an empty string to prevent JSON from appearing
-        setContent(textContent || "");
+        // When switching to text mode, use the saved text content
+        setContent(textContent);
         break;
       case "audio":
         setContent(audioContent);
@@ -65,7 +67,7 @@ export function useMessageTypeHandler() {
         setContent("");
         break;
     }
-  }, [messageType]);
+  }, [messageType, setContent, textContent, audioContent, videoContent]);
   
   // Function to handle text type button click
   const handleTextTypeClick = () => {
