@@ -2,7 +2,7 @@
 import { corsHeaders } from "../cors-headers.ts";
 import { validateRequestParameters, validateMessageAuth, logSecuritySettings, determineSecurityResponse } from "./security-utils.ts";
 import { processDeliveryRecord, logDeliveryStatus } from "./delivery-handler.ts";
-import { checkSecurityConditions } from "../message-validator.ts";
+import { checkSecurityConditions } from "../validators/index.ts";
 import { 
   generateExpiredMessageResponse,
   generateDelayedMessageResponse,

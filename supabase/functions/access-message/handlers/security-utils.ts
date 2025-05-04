@@ -1,5 +1,5 @@
 
-import { validateMessageRequest, validateMessageAuthorization, checkSecurityConditions } from "../message-validator.ts";
+import { validateMessageRequest, validateMessageAuthorization, checkSecurityConditions } from "../validators/index.ts";
 import { htmlHeaders } from "./response-utils.ts";
 import { generateErrorResponse } from "./response-utils.ts";
 
