@@ -1,4 +1,3 @@
-
 import { useState, useRef, useCallback } from "react";
 import { toast } from "@/components/ui/use-toast";
 import { getOptimalMimeType, stopMediaTracks } from "./audioUtils";
@@ -98,9 +97,10 @@ export function useAudioRecording() {
         streamRef.current = null;
       };
       
-      // Start recording and update state
-      mediaRecorderRef.current.start();
-      console.log("MediaRecorder.start() called");
+      // Start recording with a timeslice of 1000ms (1 second)
+      // This ensures ondataavailable is called periodically during recording
+      mediaRecorderRef.current.start(1000);
+      console.log("MediaRecorder.start(1000) called with timeslice");
       
       setIsRecording(true);
       setIsPaused(false);
