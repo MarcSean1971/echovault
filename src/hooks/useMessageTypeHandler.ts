@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { MediaType } from "./useMediaRecording";
 import { useMessageForm } from "@/components/message/MessageFormContext";
 
@@ -20,17 +20,18 @@ const isJsonMediaContent = (content: string): boolean => {
 export function useMessageTypeHandler() {
   const [messageType, setMessageType] = useState("text");
   const { content, setContent } = useMessageForm();
+  const previousMessageTypeRef = useRef(messageType);
   
   // Store content separately for each message type
   const [textContent, setTextContent] = useState("");
   const [audioContent, setAudioContent] = useState("");
   const [videoContent, setVideoContent] = useState("");
 
-  // Effect to save the current content to the appropriate state
-  // This runs when content changes to save it to the right type's state
+  // Combined effect to handle both saving and restoring content
   useEffect(() => {
+    // First, save content from the previous message type
     if (content) {
-      switch (messageType) {
+      switch (previousMessageTypeRef.current) {
         case "text":
           // Only save actual text content, not JSON
           if (!isJsonMediaContent(content)) {
@@ -47,27 +48,29 @@ export function useMessageTypeHandler() {
           break;
       }
     }
-  }, [content, messageType]);
-  
-  // Effect to restore content when message type changes
-  // This runs when messageType changes to restore the right content
-  useEffect(() => {
-    switch (messageType) {
-      case "text":
-        // When switching to text mode, use the saved text content
-        setContent(textContent);
-        break;
-      case "audio":
-        setContent(audioContent);
-        break;
-      case "video":
-        setContent(videoContent);
-        break;
-      default:
-        setContent("");
-        break;
+    
+    // If the message type has changed, restore the appropriate content
+    if (messageType !== previousMessageTypeRef.current) {
+      // Restore content based on the new message type
+      switch (messageType) {
+        case "text":
+          setContent(textContent);
+          break;
+        case "audio":
+          setContent(audioContent);
+          break;
+        case "video":
+          setContent(videoContent);
+          break;
+        default:
+          setContent("");
+          break;
+      }
+      
+      // Update the ref to track the message type change
+      previousMessageTypeRef.current = messageType;
     }
-  }, [messageType, setContent, textContent, audioContent, videoContent]);
+  }, [messageType, content, setContent, textContent, audioContent, videoContent]);
   
   // Function to handle text type button click
   const handleTextTypeClick = () => {
