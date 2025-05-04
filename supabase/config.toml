@@ -93,13 +93,9 @@ uuid_ossp = true
 pg_cron = true
 pg_net = true
 
-# Register the pg_graphql Extension
-# [pgvector]
-# vector_dimensions = 3
-
 # Register edge functions
 [functions]
-access-message = {}
+access-message = { verify_jwt = false }
 enhance-message = {}
 get-mapbox-token = {}
 location-services = {}
@@ -112,4 +108,3 @@ send-whatsapp-notification = {}
 send-whatsapp-alert = {}
 transcribe-audio = {}
 whatsapp-webhook = { verify_jwt = false }
-

@@ -30,7 +30,25 @@ export async function routeRequest(req: Request): Promise<Response> {
     console.log(`[Router] Parsed URL: ${url.toString()}`);
     console.log(`[Router] Path: ${url.pathname}`);
     console.log(`[Router] Search params: ${url.search}`);
-    console.log(`[Router] Request headers:`, Object.fromEntries(req.headers.entries()));
+    
+    // Log ALL headers for debugging auth issues
+    const headersDebug = Array.from(req.headers.entries())
+      .map(([key, value]) => `${key}: ${key.toLowerCase().includes('auth') ? '[REDACTED]' : value}`)
+      .join('\n');
+    console.log(`[Router] Request headers:\n${headersDebug}`);
+    
+    // Detect if request is coming from custom domain vs direct Supabase URL
+    const host = req.headers.get('host') || '';
+    const origin = req.headers.get('origin') || '';
+    const referer = req.headers.get('referer') || '';
+    
+    console.log(`[Router] Request host: ${host}`);
+    console.log(`[Router] Request origin: ${origin}`);
+    console.log(`[Router] Request referer: ${referer}`);
+    
+    // Extract client info
+    const clientInfo = req.headers.get('x-client-info') || 'Unknown client';
+    console.log(`[Router] Client info: ${clientInfo}`);
     
     // Log search params for debugging
     console.log("[Router] URL search params:", Object.fromEntries(url.searchParams.entries()));
@@ -49,6 +67,10 @@ export async function routeRequest(req: Request): Promise<Response> {
       });
     }
     
+    // Use APP_DOMAIN from environment if available
+    const appDomain = Deno.env.get("APP_DOMAIN");
+    console.log(`[Router] APP_DOMAIN environment variable: ${appDomain || 'not set'}`);
+
     const pathParts = url.pathname.split('/');
     console.log("[Router] Path parts:", pathParts);
     

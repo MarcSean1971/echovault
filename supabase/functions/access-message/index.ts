@@ -33,7 +33,7 @@ checkSupabaseConnection()
   });
 
 // Log an additional startup message to ensure a change is detected
-console.log("Ready to handle requests... (Updated: 2025-05-04)");
+console.log("Ready to handle requests... (JWT verification disabled, Updated: 2025-05-04)");
 
 // The serve function handles incoming requests and routes them
 serve(async (req: Request) => {
@@ -58,6 +58,20 @@ serve(async (req: Request) => {
     
     console.log("Auth header present:", !!authHeader);
     console.log("API key present:", !!apiKey);
+    
+    // Check if request is from custom domain
+    const host = req.headers.get('host') || '';
+    const isCustomDomain = !host.includes('supabase.co') && 
+                          !host.includes('localhost') &&
+                          !host.includes('127.0.0.1');
+    
+    console.log(`Request host: ${host}, Is custom domain: ${isCustomDomain}`);
+    
+    // For custom domain access, we don't need to worry about auth headers since JWT verification is disabled
+    if (isCustomDomain) {
+      console.log("Custom domain access detected - JWT verification disabled");
+      return await routeRequest(req);
+    }
     
     // Enhance the request with authorization header if possible but missing
     if (!authHeader && apiKey) {
