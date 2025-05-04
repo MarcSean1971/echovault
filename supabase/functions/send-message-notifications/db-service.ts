@@ -19,6 +19,9 @@ export async function getMessagesToNotify(messageId?: string) {
         pin_code,
         unlock_delay_hours,
         expiry_hours,
+        hours_threshold,
+        minutes_threshold,
+        last_checked,
         panic_config
       `)
       .eq("active", true);
@@ -39,31 +42,61 @@ export async function getMessagesToNotify(messageId?: string) {
       return [];
     }
     
-    // Get all the message data for these conditions
-    const messageIds = conditions.map(c => c.message_id);
+    // Filter conditions that need to be triggered
+    const now = new Date();
+    const messagesToTrigger = [];
     
-    const { data: messages, error: messagesError } = await supabase
-      .from("messages")
-      .select("*")
-      .in("id", messageIds);
-    
-    if (messagesError) {
-      console.error("Error fetching messages:", messagesError);
-      throw messagesError;
+    for (const condition of conditions) {
+      let shouldTrigger = false;
+      
+      // For deadman's switch (no_check_in), check if the time threshold has passed
+      if (condition.condition_type === 'no_check_in' && condition.last_checked) {
+        const lastChecked = new Date(condition.last_checked);
+        const thresholdMs = (condition.hours_threshold || 0) * 60 * 60 * 1000 + 
+                           (condition.minutes_threshold || 0) * 60 * 1000;
+        
+        if (now.getTime() - lastChecked.getTime() >= thresholdMs) {
+          console.log(`Deadman's switch condition ${condition.id} has passed its threshold`);
+          shouldTrigger = true;
+        }
+      }
+      
+      // For panic_trigger, these are manually triggered, so if active they should be processed
+      if (condition.condition_type === 'panic_trigger') {
+        // For panic triggers, we need to check if it's a manual trigger request
+        if (messageId && messageId === condition.message_id) {
+          console.log(`Manual trigger requested for panic message ${condition.message_id}`);
+          shouldTrigger = true;
+        }
+      }
+
+      // For other condition types, if it's specifically requested by messageId, process it
+      if (messageId && messageId === condition.message_id) {
+        console.log(`Manual trigger requested for message ${condition.message_id}`);
+        shouldTrigger = true;
+      }
+      
+      if (shouldTrigger) {
+        // If we should trigger, get the message details
+        const { data: message, error: msgError } = await supabase
+          .from("messages")
+          .select("*")
+          .eq("id", condition.message_id)
+          .single();
+        
+        if (!msgError && message) {
+          messagesToTrigger.push({
+            condition,
+            message
+          });
+        } else {
+          console.error(`Error fetching message ${condition.message_id}:`, msgError);
+        }
+      }
     }
     
-    if (!messages || messages.length === 0) {
-      return [];
-    }
-    
-    // Map messages to conditions
-    return conditions.map(condition => {
-      const message = messages.find(m => m.id === condition.message_id);
-      return {
-        condition,
-        message
-      };
-    }).filter(item => !!item.message); // Only include items where the message was found
+    console.log(`Found ${messagesToTrigger.length} messages to notify out of ${conditions.length} active conditions`);
+    return messagesToTrigger;
   } catch (error) {
     console.error("Error in getMessagesToNotify:", error);
     throw error;

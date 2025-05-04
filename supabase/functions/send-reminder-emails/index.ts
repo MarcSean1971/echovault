@@ -55,10 +55,11 @@ function isDeadlineApproaching(deadline: Date): boolean {
 }
 
 // Function to calculate deadline based on last check-in and threshold
-function calculateDeadline(lastChecked: string, hoursThreshold: number): Date {
+function calculateDeadline(lastChecked: string, hoursThreshold: number, minutesThreshold: number = 0): Date {
   const lastCheckDate = new Date(lastChecked);
   const deadline = new Date(lastCheckDate);
   deadline.setHours(deadline.getHours() + hoursThreshold);
+  deadline.setMinutes(deadline.getMinutes() + minutesThreshold);
   return deadline;
 }
 
@@ -81,7 +82,7 @@ async function sendReminderEmail(
     const conditionTypeFormatted = getConditionType(conditionType);
     
     const { data, error } = await resend.emails.send({
-      from: "EchoVault <notifications@echovault.org>",
+      from: "EchoVault <notifications@echo-vault.app>",
       to: [userEmail],
       subject: `⚠️ Reminder: Your message "${messageTitle}" will trigger soon`,
       html: `
@@ -135,7 +136,7 @@ async function sendReminderEmail(
   }
 }
 
-// New function to send WhatsApp reminder
+// Function to send WhatsApp reminder
 async function sendWhatsAppReminder(
   phoneNumber: string,
   userName: string,
@@ -198,8 +199,20 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     console.log("Starting reminder check...");
     
+    // Process any specific message ID if provided
+    let messageId: string | undefined;
+    try {
+      const requestData = await req.json();
+      messageId = requestData.messageId;
+      if (messageId) {
+        console.log(`Checking specific message ID: ${messageId}`);
+      }
+    } catch (e) {
+      // No request body or not JSON, continue with all messages
+    }
+    
     // Get all active conditions
-    const { data: conditions, error: conditionsError } = await supabase
+    const conditionsQuery = supabase
       .from("message_conditions")
       .select(`
         *,
@@ -210,6 +223,12 @@ const handler = async (req: Request): Promise<Response> => {
         )
       `)
       .eq("active", true);
+      
+    if (messageId) {
+      conditionsQuery.eq("message_id", messageId);
+    }
+    
+    const { data: conditions, error: conditionsError } = await conditionsQuery;
       
     if (conditionsError) {
       throw new Error(`Error fetching conditions: ${conditionsError.message}`);
@@ -224,18 +243,27 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
     
-    // Track remindes to be sent
+    // Track reminders to be sent
     const remindersSent = [];
     
     // Process each condition
     for (const condition of conditions) {
-      if (!condition.last_checked || !condition.hours_threshold) {
-        console.log(`Skipping condition ${condition.id}: Missing last_checked or hours_threshold`);
+      if (!condition.last_checked) {
+        console.log(`Skipping condition ${condition.id}: Missing last_checked`);
         continue;
       }
       
       // Calculate the deadline
-      const deadline = calculateDeadline(condition.last_checked, condition.hours_threshold);
+      const hoursThreshold = condition.hours_threshold || 0;
+      const minutesThreshold = condition.minutes_threshold || 0;
+      
+      if (hoursThreshold === 0 && minutesThreshold === 0) {
+        console.log(`Skipping condition ${condition.id}: Zero threshold`);
+        continue;
+      }
+      
+      const deadline = calculateDeadline(condition.last_checked, hoursThreshold, minutesThreshold);
+      console.log(`Condition ${condition.id} deadline: ${deadline.toISOString()}, hours: ${hoursThreshold}, minutes: ${minutesThreshold}`);
       
       // Check if the deadline is approaching (within 24 hours)
       if (isDeadlineApproaching(deadline)) {
@@ -269,19 +297,20 @@ const handler = async (req: Request): Promise<Response> => {
         // Check if we have the user's email
         if (user?.email) {
           try {
-            // Check if a reminder has already been sent recently (in the last 12 hours)
+            // Check if a reminder has already been sent recently (in the last 6 hours)
+            // Reduced from 12 to 6 hours to increase reminder frequency
             const { data: sentReminders, error: reminderError } = await supabase
               .from("sent_reminders")
               .select("*")
               .eq("condition_id", condition.id)
-              .gte("sent_at", new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString());
+              .gte("sent_at", new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString());
               
             if (reminderError) {
               console.error(`Error checking sent reminders for condition ${condition.id}:`, reminderError);
               continue;
             }
             
-            // If no reminder was sent in the last 12 hours, send one
+            // If no reminder was sent in the last 6 hours, send one
             if (!sentReminders || sentReminders.length === 0) {
               // Send email reminder
               const emailResult = await sendReminderEmail(
@@ -330,7 +359,7 @@ const handler = async (req: Request): Promise<Response> => {
                 });
               }
             } else {
-              console.log(`Skipping reminder for condition ${condition.id}: Reminder already sent in the last 12 hours`);
+              console.log(`Skipping reminder for condition ${condition.id}: Reminder already sent in the last 6 hours`);
             }
           } catch (err) {
             console.error(`Error processing reminder for condition ${condition.id}:`, err);
