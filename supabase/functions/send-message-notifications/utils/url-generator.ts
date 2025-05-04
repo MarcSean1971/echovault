@@ -34,7 +34,8 @@ export function generateAccessUrl(messageId: string, recipientEmail: string, del
     
     // Generate the URL with required parameters including deliveryId
     // Make sure all parameters are properly URL-encoded
-    const accessUrl = `https://${domain}/secure-message?id=${encodeURIComponent(messageId)}&recipient=${encodeURIComponent(recipientEmail)}&delivery=${encodeURIComponent(deliveryId)}`;
+    const protocol = appDomain ? "https" : "https"; // Default to https for security
+    const accessUrl = `${protocol}://${domain}/secure-message?id=${encodeURIComponent(messageId)}&recipient=${encodeURIComponent(recipientEmail)}&delivery=${encodeURIComponent(deliveryId)}`;
     
     console.log(`[URL Generator] Generated URL for message ${messageId}: ${accessUrl}`);
     
