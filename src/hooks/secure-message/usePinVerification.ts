@@ -7,7 +7,7 @@ interface UsePinVerificationParams {
   recipient: string | null;
   deliveryId: string | null;
   fetchMessage: () => Promise<void>;
-  setPinProtected: (protected: boolean) => void;
+  setPinProtected: (isProtected: boolean) => void;
 }
 
 export function usePinVerification({ 
