@@ -150,23 +150,30 @@ serve(async (req) => {
         formData.append("To", formattedTo);
         formData.append("From", formattedFrom);
         
+        // FIX: Use Body parameter for both regular messages and templates
+        // Twilio's API expects Body for all message types including templates
         if (useTemplate && templateId) {
-          console.log(`Using template: ${templateId}`);
-          // Use content template for WhatsApp Business API
-          formData.append("ContentSid", templateId);
+          console.log(`Using template with ID: ${templateId}`);
+          // Instead of using ContentSid and ContentVariables, 
+          // we'll construct a proper template message using Body
           
-          // Add template parameters if provided
-          if (templateParams && templateParams.length > 0) {
-            // Format the parameters as JSON according to Twilio's requirements
-            const contentVariables = JSON.stringify(
-              templateParams.reduce((obj, val, idx) => {
-                obj[`${idx+1}`] = val; // Twilio uses 1-indexed parameters
-                return obj;
-              }, {})
-            );
-            formData.append("ContentVariables", contentVariables);
-            console.log(`Template variables: ${contentVariables}`);
+          // Start with template name prefixed with required format
+          let templateMessage = `Your emergency alert from ${templateParams[0] || 'Someone'}: `;
+          
+          // Add location information if available
+          if (templateParams[2]) {
+            templateMessage += `\nLocation: ${templateParams[2]}`;
           }
+          
+          // Add map URL if available
+          if (templateParams[3]) {
+            templateMessage += `\nMap: ${templateParams[3]}`;
+          }
+          
+          // Use the constructed message as the Body parameter
+          formData.append("Body", templateMessage);
+          
+          console.log(`Using constructed template message: ${templateMessage}`);
         } else {
           console.log(`Using standard message with length: ${completeMessage.length} characters`);
           // Use regular message body for standard messages
