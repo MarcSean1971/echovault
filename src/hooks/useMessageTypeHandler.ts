@@ -5,13 +5,48 @@ import { useMessageForm } from "@/components/message/MessageFormContext";
 
 export function useMessageTypeHandler() {
   const [messageType, setMessageType] = useState("text");
-  const { setContent } = useMessageForm();
+  const { content, setContent } = useMessageForm();
   
-  // Clear content when message type changes to prevent showing JSON in text inputs
+  // Store content separately for each message type
+  const [textContent, setTextContent] = useState("");
+  const [audioContent, setAudioContent] = useState("");
+  const [videoContent, setVideoContent] = useState("");
+  
+  // Save and restore content when message type changes
   useEffect(() => {
-    // Reset content when changing message type to prevent JSON leaking between types
-    setContent("");
-  }, [messageType, setContent]);
+    // First, save the current content to the appropriate state based on previous type
+    if (content) {
+      switch (messageType) {
+        case "text":
+          setTextContent(content);
+          break;
+        case "audio":
+          setAudioContent(content);
+          break;
+        case "video":
+          setVideoContent(content);
+          break;
+        default:
+          break;
+      }
+    }
+    
+    // Then restore content based on the new message type
+    switch (messageType) {
+      case "text":
+        setContent(textContent);
+        break;
+      case "audio":
+        setContent(audioContent);
+        break;
+      case "video":
+        setContent(videoContent);
+        break;
+      default:
+        setContent("");
+        break;
+    }
+  }, [messageType]);
   
   // Function to handle text type button click
   const handleTextTypeClick = () => {
