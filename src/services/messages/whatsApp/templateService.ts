@@ -36,39 +36,7 @@ export async function sendTestWhatsAppTemplate(messageId: string): Promise<boole
     // Format location information
     const { locationInfo, mapUrl } = formatLocationInfo(message);
     
-    // First, try using the dedicated alert function (more reliable)
-    try {
-      console.log("Trying direct template method with send-whatsapp-alert...");
-      const { data, error } = await supabase.functions.invoke("send-whatsapp-alert", {
-        body: {
-          to: recipient.phone,
-          languageCode: "en_US", // Explicitly set language code
-          params: [
-            senderName,            // Parameter 1: Sender name
-            recipient.name,        // Parameter 2: Recipient name
-            locationInfo,          // Parameter 3: Location
-            mapUrl                 // Parameter 4: Map URL
-          ],
-          messageId: messageId
-        }
-      });
-      
-      if (error) throw error;
-      
-      console.log("Template sent successfully via direct method:", data);
-      toast({
-        title: "Template Test Sent",
-        description: "A test WhatsApp template message has been sent to " + recipient.name,
-      });
-      
-      return true;
-    } catch (directError) {
-      // If direct method fails, log it but continue with fallback method
-      console.error("Direct template method failed:", directError);
-      console.log("Falling back to standard method...");
-    }
-    
-    // Fallback: Use the template ID - Correct Content Template SID for the Conversations API
+    // Correct template ID for the Conversations API
     const templateId = "HX4386568436c1f993dd47146448194dd8";
     
     // Prepare template parameters
@@ -81,13 +49,13 @@ export async function sendTestWhatsAppTemplate(messageId: string): Promise<boole
     
     console.log("Sending template test with params:", JSON.stringify(templateParams, null, 2));
     
-    // Call the WhatsApp notification function with template
+    // Call the WhatsApp notification function with template and explicit language code
     const { error } = await supabase.functions.invoke("send-whatsapp-notification", {
       body: {
         to: recipient.phone,
         useTemplate: true,
         templateId: templateId,
-        languageCode: "en_US", // Add explicit language code
+        languageCode: "en_US", // Explicitly set language code
         templateParams: templateParams,
         messageId: messageId,
         recipientName: recipient.name,

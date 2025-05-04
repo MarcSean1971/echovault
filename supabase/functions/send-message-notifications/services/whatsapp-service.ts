@@ -88,12 +88,13 @@ export async function sendWhatsAppNotification(
         console.log(`Template params: ${JSON.stringify(templateParams)}`);
       }
       
-      // Call the WhatsApp notification function with template information
+      // Call the WhatsApp notification function with template information and explicit language code
       const { data: whatsAppResult, error: whatsAppError } = await supabase.functions.invoke("send-whatsapp-notification", {
         body: {
           to: recipient.phone,
           useTemplate: true,
           templateId: emergencyTemplateId,
+          languageCode: "en_US", // Explicitly set language code
           templateParams: templateParams,
           messageId: message.id,
           recipientName: recipient.name,
