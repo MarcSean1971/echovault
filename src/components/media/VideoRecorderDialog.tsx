@@ -1,6 +1,6 @@
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { VideoRecorder } from "./VideoRecorder";
+import { SimpleVideoRecorder } from "./SimpleVideoRecorder";
 
 interface VideoRecorderDialogProps {
   open: boolean;
@@ -24,7 +24,7 @@ export function VideoRecorderDialog({ open, onOpenChange, onVideoReady }: VideoR
         <DialogHeader>
           <DialogTitle>Record Video Message</DialogTitle>
         </DialogHeader>
-        <VideoRecorder 
+        <SimpleVideoRecorder 
           onVideoReady={handleVideoReady} 
           onCancel={handleCancel} 
         />
