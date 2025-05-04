@@ -36,8 +36,8 @@ export async function sendTestWhatsAppTemplate(messageId: string): Promise<boole
     // Format location information
     const { locationInfo, mapUrl } = formatLocationInfo(message);
     
-    // Use the template ID
-    const templateId = "test_emergency_alert_hx4386568436c1f993dd47146448194dd8";
+    // Use the template ID - Updated to use the correct SID
+    const templateId = "HX4386568436c1f993dd47146448194dd8";
     
     // Prepare template parameters
     const templateParams = [

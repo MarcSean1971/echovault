@@ -67,7 +67,7 @@ export async function sendWhatsAppNotification(
     
     // Determine if we should use template or regular message
     const useTemplate = isEmergency; // For now, we only use templates for emergency messages
-    const emergencyTemplateId = "test_emergency_alert_hx4386568436c1f993dd47146448194dd8"; // This is the Facebook reference ID for the approved template
+    const emergencyTemplateId = "HX4386568436c1f993dd47146448194dd8"; // Updated to use the correct SID
     
     if (useTemplate && isEmergency) {
       if (debug) console.log(`Using WhatsApp template for emergency message: ${emergencyTemplateId}`);
