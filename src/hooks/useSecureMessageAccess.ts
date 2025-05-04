@@ -16,13 +16,19 @@ export function useSecureMessageAccess({ messageId, recipientEmail }: UseSecureM
     hasPinProtection
   } = useSecureMessageData({ messageId, recipientEmail });
   
+  const [pinProtected, setPinProtected] = useState(false);
+  
   const {
-    pinError,
-    verifyingPin,
-    pinProtected,
-    verifyPin,
+    verifyError: pinError,
+    verifying: verifyingPin,
+    verifyPin
+  } = usePinVerification({ 
+    messageId, 
+    recipient: recipientEmail, 
+    deliveryId: null,
+    fetchMessage: () => Promise.resolve(),
     setPinProtected
-  } = usePinVerification({ messageId, recipientEmail });
+  });
   
   // When data is loaded, set pin protection status
   useEffect(() => {
