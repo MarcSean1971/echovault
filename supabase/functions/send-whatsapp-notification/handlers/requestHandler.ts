@@ -99,8 +99,8 @@ export async function handleRequest(req: Request) {
   // Build message form data
   const formData = buildMessageFormData(requestData);
   
-  // Send the message
-  const responseData = await sendTwilioMessage(formData);
+  // Send the message - passing the useTemplate flag so the right API is used
+  const responseData = await sendTwilioMessage(formData, useTemplate);
   
   // Return success response
   return createSuccessResponse(responseData, Boolean(useTemplate), templateId);

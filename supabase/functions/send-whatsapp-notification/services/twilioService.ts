@@ -5,16 +5,24 @@ import { getTwilioCredentials } from "../utils/env.ts";
 /**
  * Send a message using the Twilio API with retry mechanism
  * @param formData The form data to send to Twilio
+ * @param useTemplate Whether to use a template
  * @returns Response data from Twilio
  */
-export async function sendTwilioMessage(formData: URLSearchParams) {
+export async function sendTwilioMessage(formData: URLSearchParams, useTemplate: boolean = false) {
   const { accountSid, authToken } = getTwilioCredentials();
-  
-  // Construct the request URL for Twilio API
-  const twilioApiUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
   
   // Create base64 encoded auth header
   const authHeader = btoa(`${accountSid}:${authToken}`);
+  
+  // Construct the request URL for Twilio API based on message type
+  let twilioApiUrl;
+  if (useTemplate) {
+    // For templates, use the Conversations API
+    twilioApiUrl = `https://conversations.twilio.com/v1/Conversations`;
+  } else {
+    // For regular messages, use the standard Messages API
+    twilioApiUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
+  }
   
   // Make the request to Twilio API with retry logic
   const maxRetries = 2;
@@ -24,7 +32,8 @@ export async function sendTwilioMessage(formData: URLSearchParams) {
   
   while (attempt <= maxRetries) {
     try {
-      console.log(`Attempt ${attempt + 1}: Sending to Twilio API`);
+      console.log(`Attempt ${attempt + 1}: Sending to Twilio API: ${twilioApiUrl}`);
+      console.log(`Using template: ${useTemplate ? "Yes" : "No"}`);
       
       response = await fetch(twilioApiUrl, {
         method: 'POST',
@@ -49,7 +58,7 @@ export async function sendTwilioMessage(formData: URLSearchParams) {
       }
       
       if (response.ok) {
-        console.log("WhatsApp message sent successfully:", responseData.sid);
+        console.log("WhatsApp message sent successfully:", useTemplate ? responseData.sid : responseData.sid);
         break; // Success, exit retry loop
       } else {
         throw new Error(`Twilio API error: ${responseData.message || "Unknown error"}`);
@@ -82,7 +91,7 @@ export function createSuccessResponse(responseData: any, useTemplate: boolean, t
     JSON.stringify({ 
       success: true,
       messageId: responseData.sid,
-      status: responseData.status,
+      status: useTemplate ? responseData.state : responseData.status,
       usingTemplate: useTemplate,
       templateId: useTemplate ? templateId : null,
       timestamp: new Date().toISOString()

@@ -1,37 +1,58 @@
 
-// Types and interfaces for WhatsApp notifications
+/**
+ * Format a phone number to WhatsApp format
+ * @param phoneNumber The raw phone number
+ * @returns Formatted WhatsApp number
+ */
+export function formatWhatsAppNumber(phoneNumber: string): string {
+  // Remove any non-digit characters from the phone number
+  const normalizedNumber = normalizePhoneNumber(phoneNumber);
+  
+  // Format for WhatsApp API: whatsapp:+{number}
+  return `whatsapp:${normalizedNumber}`;
+}
 
+/**
+ * Normalize a phone number to E.164 format
+ * @param phoneNumber The raw phone number
+ * @returns Normalized phone number
+ */
+export function normalizePhoneNumber(phoneNumber: string): string {
+  // Remove any non-digit characters
+  const digits = phoneNumber.replace(/\D/g, '');
+  
+  // Ensure the number starts with a +
+  return digits.startsWith('+') ? digits : `+${digits}`;
+}
+
+/**
+ * Interface for WhatsApp message request data
+ */
 export interface WhatsAppMessageRequest {
+  /** The recipient phone number */
   to: string;
-  message: string;
+  
+  /** The message text (for non-template messages) */
+  message?: string;
+  
+  /** The ID of the parent message */
   messageId?: string;
+  
+  /** The recipient's name */
   recipientName?: string;
+  
+  /** Flag indicating if this is an emergency message */
   isEmergency?: boolean;
-  triggerKeyword?: string; 
-  // Template-related fields
+  
+  /** Flag indicating if a template should be used */
   useTemplate?: boolean;
+  
+  /** The template ID to use */
   templateId?: string;
+  
+  /** Parameters for the template */
   templateParams?: string[];
-}
-
-/**
- * Normalize phone number format
- * @param phone Phone number to normalize
- * @returns Normalized phone number with proper formatting
- */
-export function normalizePhoneNumber(phone: string): string {
-  let normalizedPhoneNumber = phone.replace("whatsapp:", "").trim();
-  if (!normalizedPhoneNumber.startsWith("+")) {
-    normalizedPhoneNumber = "+" + normalizedPhoneNumber.replace(/^0/, ""); // Replace leading 0 with +
-  }
-  return normalizedPhoneNumber;
-}
-
-/**
- * Format phone number for WhatsApp
- * @param phone Phone number to format
- * @returns Phone number with WhatsApp prefix
- */
-export function formatWhatsAppNumber(phone: string): string {
-  return phone.startsWith('whatsapp:') ? phone : `whatsapp:${phone}`;
+  
+  /** Optional trigger keyword to include */
+  triggerKeyword?: string;
 }

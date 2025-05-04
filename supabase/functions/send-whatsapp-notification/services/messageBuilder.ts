@@ -27,30 +27,38 @@ export function buildMessageFormData(requestData: WhatsAppMessageRequest): URLSe
   
   // Create form data for the request
   const formData = new URLSearchParams();
-  formData.append("To", formattedTo);
-  formData.append("From", formattedFrom);
-  
-  console.log(`To: ${formattedTo}`);
-  console.log(`From: ${formattedFrom}`);
   
   if (useTemplate && templateId) {
-    console.log(`Using template with ID: ${templateId}`);
+    console.log(`Using Conversations API with template ID: ${templateId}`);
     
-    // Use ContentSid for the approved template ID
-    formData.append("ContentSid", templateId);
+    // For templates, we need to use the Conversations API with different parameters
+    formData.append("To", formattedTo);
+    formData.append("From", formattedFrom);
     
-    // Create template variables in the format Twilio expects
-    const variables: Record<string, string> = {};
+    // Use ContentTemplateSid for the approved template ID
+    formData.append("ContentTemplateSid", templateId);
+    
+    // Create template variables in the format Twilio Conversations API expects
+    // This is different from the Messages API format
+    const parameters: Record<string, string> = {};
     templateParams.forEach((param, index) => {
-      variables[`${index+1}`] = param;
+      parameters[`${index+1}`] = param;
     });
     
-    // Add ContentVariables as a JSON string
-    formData.append("ContentVariables", JSON.stringify(variables));
+    // Add parameters as a JSON string in the Attributes field
+    const attributes = JSON.stringify({
+      parameters: parameters
+    });
     
-    console.log(`Using ContentSid: ${templateId}`);
-    console.log(`Using ContentVariables: ${JSON.stringify(variables)}`);
+    formData.append("Attributes", attributes);
+    
+    console.log(`Using ContentTemplateSid: ${templateId}`);
+    console.log(`Using Attributes: ${attributes}`);
   } else {
+    // For standard messages using the Messages API
+    formData.append("To", formattedTo);
+    formData.append("From", formattedFrom);
+    
     // For standard messages
     const finalMessage = recipientName 
       ? `Hello ${recipientName}, ${message}`
