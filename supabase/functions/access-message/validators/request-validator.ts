@@ -1,6 +1,4 @@
 
-import { isAuthorizedRecipient } from "../security-service.ts";
-
 /**
  * Validate message access request parameters
  */
@@ -26,9 +24,16 @@ export async function validateMessageRequest(url: URL) {
   const recipientEmail = url.searchParams.get("recipient");
   const deliveryId = url.searchParams.get("delivery");
   
-  if (!recipientEmail || !deliveryId) {
-    throw new Error(`Missing recipient (${recipientEmail}) or delivery information (${deliveryId})`);
+  // Log the extracted parameters for debugging
+  console.log(`Extracted parameters: messageId=${messageId}, recipient=${recipientEmail || "not provided"}, delivery=${deliveryId || "not provided"}`);
+  
+  if (!recipientEmail) {
+    console.warn(`Missing recipient email for message ${messageId}`);
   }
   
-  return { messageId, recipientEmail, deliveryId };
+  if (!deliveryId) {
+    console.warn(`Missing delivery ID for message ${messageId}`);
+  }
+  
+  return { messageId, recipientEmail, deliveryId: deliveryId || null };
 }

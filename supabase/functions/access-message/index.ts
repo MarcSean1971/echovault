@@ -46,52 +46,15 @@ serve(async (req: Request) => {
     console.log("Request origin:", origin);
     
     // Check for Supabase auth headers, try to find them in various places
-    const authHeader = 
-      req.headers.get("authorization") || 
-      req.headers.get("Authorization") || 
-      req.headers.get("x-supabase-auth");
-      
-    const apiKey = 
-      req.headers.get("apikey") || 
-      req.headers.get("x-client-info") ||
-      req.headers.get("x-api-key");
+    const authHeader = req.headers.get("authorization") || req.headers.get("Authorization");
+    const apiKey = req.headers.get("apikey") || req.headers.get("x-client-info");
     
     console.log("Auth header present:", !!authHeader);
     console.log("API key present:", !!apiKey);
     
-    // Check if request is from custom domain
-    const host = req.headers.get('host') || '';
-    const isCustomDomain = !host.includes('supabase.co') && 
-                          !host.includes('localhost') &&
-                          !host.includes('127.0.0.1');
+    // JWT verification is disabled in config.toml, so we don't need to worry about auth headers
+    // All requests will be processed without JWT verification
     
-    console.log(`Request host: ${host}, Is custom domain: ${isCustomDomain}`);
-    
-    // For custom domain access, we don't need to worry about auth headers since JWT verification is disabled
-    if (isCustomDomain) {
-      console.log("Custom domain access detected - JWT verification disabled");
-      return await routeRequest(req);
-    }
-    
-    // Enhance the request with authorization header if possible but missing
-    if (!authHeader && apiKey) {
-      console.log("Adding missing authorization header from apikey");
-      // Create a modified request with the added authorization header
-      const newHeaders = new Headers(req.headers);
-      newHeaders.set("authorization", `Bearer ${apiKey}`);
-      
-      // Create a new request with the modified headers
-      const enhancedRequest = new Request(req.url, {
-        method: req.method,
-        headers: newHeaders,
-        body: req.body,
-        redirect: req.redirect
-      });
-      
-      return await routeRequest(enhancedRequest);
-    }
-    
-    // Process the request normally
     return await routeRequest(req);
   } catch (error: any) {
     console.error("Unhandled error in request processing:", error);
