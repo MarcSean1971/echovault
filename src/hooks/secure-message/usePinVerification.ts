@@ -35,8 +35,8 @@ export function usePinVerification({
       // Use hardcoded project ID instead of accessing protected supabaseUrl
       const projectId = "onwthrpgcnfydxzzmyot";
       
-      // Get the Supabase anon key from the client configuration
-      const SUPABASE_ANON_KEY = supabase.supabaseKey;
+      // Get the Supabase anon key from the environment constant
+      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ud3RocnBnY25meWR4enpteW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYxMDQzOTUsImV4cCI6MjA2MTY4MDM5NX0.v4tYEDukTlMERZ6GHqvnoDbyH-g9KQd8s3-UlIOPkDs";
       console.log("[SecureMessage] Using authorization key for PIN verification:", SUPABASE_ANON_KEY ? "Key available" : "Key missing");
       
       // Construct the edge function URL with the project ID
