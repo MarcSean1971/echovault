@@ -8,14 +8,14 @@
  */
 export function generateAccessUrl(messageId: string, recipientEmail: string, deliveryId: string): string {
   try {
-    // Get the Supabase URL from environment
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
     // Get the application domain (if configured) or fallback to Supabase domain
     const appDomain = Deno.env.get("APP_DOMAIN") || "";
+    // Get the Supabase URL from environment
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
     
-    if (!supabaseUrl) {
-      console.error("SUPABASE_URL environment variable is not set");
-      throw new Error("Missing Supabase URL configuration");
+    if (!supabaseUrl && !appDomain) {
+      console.error("Neither APP_DOMAIN nor SUPABASE_URL environment variable is set");
+      throw new Error("Missing domain configuration");
     }
     
     // Extract the domain to use for URL generation
@@ -32,17 +32,10 @@ export function generateAccessUrl(messageId: string, recipientEmail: string, del
       console.log(`[URL Generator] Using Supabase domain: ${domain}`);
     }
     
-    // Ensure we use HTTPS protocol
-    const protocol = "https";
+    // Generate a very simple access URL directly to the frontend route with just id and recipient
+    const accessUrl = `https://${domain}/secure-message?id=${messageId}&recipient=${encodeURIComponent(recipientEmail)}`;
     
-    // IMPORTANT: We must use the frontend route for secure message
-    // NOT the edge function path
-    const accessUrl = `${protocol}://${domain}/secure-message?id=${messageId}&recipient=${encodeURIComponent(recipientEmail)}&delivery=${deliveryId}`;
-    
-    console.log(`[URL Generator] Generated secure web access URL for message ${messageId}`);
-    console.log(`[URL Generator] Full URL: ${accessUrl}`);
-    console.log(`[URL Generator] Domain: ${domain}, Path: /secure-message`);
-    console.log(`[URL Generator] Parameters: id=${messageId}, recipient=${encodeURIComponent(recipientEmail)}, delivery=${deliveryId}`);
+    console.log(`[URL Generator] Generated simplified secure message URL: ${accessUrl}`);
     
     return accessUrl;
   } catch (error) {
