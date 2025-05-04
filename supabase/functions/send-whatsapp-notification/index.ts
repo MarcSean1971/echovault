@@ -33,15 +33,37 @@ serve(async (req) => {
     // Parse the request body
     let requestData: WhatsAppMessageRequest;
     try {
+      // Always handle the body as JSON first
       const contentType = req.headers.get("content-type") || "";
+      console.log(`Received request with content-type: ${contentType}`);
       
-      if (contentType.includes("application/json")) {
-        requestData = await req.json();
-      } else {
-        throw new Error("Unsupported content type. Expected application/json");
+      // Ensure we properly handle the incoming request
+      const bodyText = await req.text();
+      console.log(`Request body raw text: ${bodyText}`);
+      
+      try {
+        // Try to parse as JSON
+        requestData = JSON.parse(bodyText);
+        console.log("Successfully parsed request as JSON");
+      } catch (jsonError) {
+        // If not valid JSON, try to handle as URL-encoded form data
+        if (contentType.includes("application/x-www-form-urlencoded")) {
+          const formData = new URLSearchParams(bodyText);
+          requestData = {
+            to: formData.get("to") || "",
+            message: formData.get("message") || "",
+            messageId: formData.get("messageId") || undefined,
+            recipientName: formData.get("recipientName") || undefined,
+            isEmergency: formData.get("isEmergency") === "true",
+          };
+          console.log("Successfully parsed request as form data");
+        } else {
+          // Neither valid JSON nor valid form data
+          throw new Error(`Invalid request body format: ${jsonError.message}`);
+        }
       }
       
-      console.log("Received WhatsApp notification request:", JSON.stringify(requestData, null, 2));
+      console.log("Parsed WhatsApp notification request:", JSON.stringify(requestData, null, 2));
     } catch (e) {
       console.error("Failed to parse request body:", e);
       throw new Error("Invalid request body. Expected JSON object with 'to' and 'message' fields.");
@@ -54,6 +76,7 @@ serve(async (req) => {
     }
     
     console.log(`Sending WhatsApp message to: ${to}`);
+    console.log(`Is emergency: ${isEmergency ? "Yes" : "No"}`);
     
     // Process phone number to ensure consistency
     // Standardize phone number format - handle various formats and make sure it has + prefix
@@ -91,20 +114,40 @@ serve(async (req) => {
     
     while (attempt <= maxRetries) {
       try {
+        console.log(`Attempt ${attempt + 1}: Sending to Twilio API`);
+        console.log(`To: ${formattedTo}`);
+        console.log(`From: ${formattedFrom}`);
+        console.log(`Message length: ${completeMessage.length} characters`);
+        
+        const formData = new URLSearchParams({
+          To: formattedTo,
+          From: formattedFrom,
+          Body: completeMessage,
+        });
+        
+        console.log(`Request body: ${formData.toString()}`);
+        
         response = await fetch(twilioApiUrl, {
           method: 'POST',
           headers: {
             'Authorization': `Basic ${authHeader}`,
             'Content-Type': 'application/x-www-form-urlencoded',
           },
-          body: new URLSearchParams({
-            To: formattedTo,
-            From: formattedFrom,
-            Body: completeMessage,
-          }).toString(),
+          body: formData.toString(),
         });
         
-        responseData = await response.json();
+        // Get the response as text first for debugging
+        const responseText = await response.text();
+        console.log(`Response status: ${response.status}`);
+        console.log(`Response text: ${responseText}`);
+        
+        // Parse the response text as JSON if possible
+        try {
+          responseData = JSON.parse(responseText);
+        } catch (jsonError) {
+          console.error(`Error parsing response as JSON: ${jsonError.message}`);
+          responseData = { error: true, rawResponse: responseText };
+        }
         
         if (response.ok) {
           console.log("WhatsApp message sent successfully:", responseData.sid);
