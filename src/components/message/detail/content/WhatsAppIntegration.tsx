@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { 
   sendTestWhatsAppMessage, 
   sendTestWhatsAppTemplate 
-} from "@/services/messages/whatsAppService";
+} from "@/services/messages/whatsApp";
 
 interface WhatsAppIntegrationProps {
   messageId: string;

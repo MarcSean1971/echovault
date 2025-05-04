@@ -2,7 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { Recipient } from "@/types/message";
-import { sendTestWhatsAppMessage } from "./whatsAppService";
+import { sendTestWhatsAppMessage } from "./whatsApp";
 
 /**
  * Manually trigger message notifications for a specific message
@@ -107,7 +107,7 @@ export async function sendTestNotification(messageId: string) {
  * Send a test WhatsApp message to recipient
  * This is used for testing WhatsApp integration
  */
-export { sendTestWhatsAppMessage } from "./whatsAppService";
+export { sendTestWhatsAppMessage } from "./whatsApp";
 
 /**
  * Test sending a WhatsApp template message
