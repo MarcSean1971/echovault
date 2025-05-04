@@ -27,7 +27,7 @@ export function useMessageTypeHandler() {
   const [audioContent, setAudioContent] = useState("");
   const [videoContent, setVideoContent] = useState("");
 
-  // Combined effect to handle saving content
+  // Effect to save content when it changes
   useEffect(() => {
     // Save content from the current message type
     if (content) {
@@ -55,9 +55,9 @@ export function useMessageTypeHandler() {
     previousMessageTypeRef.current = messageType;
   }, [messageType]);
   
-  // Function to handle text type button click - immediately restore content
+  // Function to handle text type button click - Immediately restore content
   const handleTextTypeClick = () => {
-    setMessageType("text");
+    // Explicitly set content to textContent immediately for text type
     setContent(textContent);
   };
   
@@ -67,8 +67,7 @@ export function useMessageTypeHandler() {
     setShowRecorder: (show: boolean) => void, 
     mediaBlob: Blob | null
   ) => {
-    setMessageType(mediaType);
-    // Immediately set the appropriate content
+    // Immediately set the appropriate content based on media type
     if (mediaType === "audio") {
       setContent(audioContent);
     } else if (mediaType === "video") {

@@ -46,16 +46,22 @@ export function MessageDetails() {
     handleTextTypeClick, handleAudioTypeClick, handleVideoTypeClick
   } = useMessageTypeHandler();
   
+  // Wrapper functions for message type handling - UPDATED ORDER
+  const onTextTypeClick = () => {
+    // First restore the content (this function from useMessageTypeHandler fetches the saved text content)
+    handleTextTypeClick();
+    
+    // Wait a brief moment to ensure content is restored before changing the message type
+    // This small delay helps prevent the JSON flash
+    setTimeout(() => {
+      handleMessageTypeChange("text");
+    }, 10);
+  };
+  
   // Sync our local messageType with the context
   const handleMessageTypeChange = (type: string) => {
     setMessageType(type);
     setContextMessageType(type);
-  };
-  
-  // Wrapper functions for message type handling
-  const onTextTypeClick = () => {
-    handleTextTypeClick();
-    handleMessageTypeChange("text");
   };
   
   // Wrapper functions to handle content updates
@@ -79,14 +85,20 @@ export function MessageDetails() {
     setContent(emptyContent);
   };
   
-  // Handle type selection with our custom hooks
+  // Handle type selection with our custom hooks - UPDATED ORDER FOR MEDIA TYPES
   const onAudioTypeClick = () => {
+    // First set the media content
     handleAudioTypeClick(setShowAudioRecorder, audioBlob);
+    
+    // Then update the message type
     handleMessageTypeChange("audio");
   };
   
   const onVideoTypeClick = () => {
+    // First set the media content
     handleVideoTypeClick(setShowVideoRecorder, videoBlob);
+    
+    // Then update the message type
     handleMessageTypeChange("video");
   };
 
