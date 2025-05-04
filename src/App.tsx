@@ -63,44 +63,52 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <BrowserRouter>
-          <AuthProvider>
-            <Toaster />
-            <Sonner />
-            <Routes>
-              {/* Public routes */}
-              <Route path="/" element={<AppLayout />}>
-                <Route index element={<Home />} />
-                <Route path="login" element={<Login />} />
-                <Route path="register" element={<Register />} />
-              </Route>
+          {/* Secure message route outside of AuthProvider */}
+          <Routes>
+            {/* Secure message route with its own layout */}
+            <Route path="/secure-message" element={
+              <SecureMessageLayout>
+                <SecureMessage />
+              </SecureMessageLayout>
+            } />
               
-              {/* Secure message route with its own layout */}
-              <Route path="/" element={<SecureMessageLayout />}>
-                <Route path="secure-message" element={<SecureMessage />} />
-              </Route>
-              
-              {/* Protected routes */}
-              <Route path="/" element={<ProtectedLayout />}>
-                <Route path="dashboard" element={<Dashboard />} />
-                <Route path="create-message" element={<CreateMessage />} />
-                <Route path="messages" element={<Messages />} />
-                <Route path="message/:id" element={<MessageDetail />} />
-                <Route path="message/:id/edit" element={<MessageEdit />} />
-                <Route path="recipients" element={<Recipients />} />
-                <Route path="check-in" element={<CheckIn />} />
-                <Route path="check-ins" element={<CheckIns />} />
-                <Route path="profile" element={<Profile />} />
-                
-                {/* Admin routes - protected by AdminGuard */}
-                <Route element={<AdminGuard />}>
-                  <Route path="admin" element={<Admin />} />
-                </Route>
-              </Route>
-              
-              {/* Catch-all route */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </AuthProvider>
+            {/* All other routes wrapped in AuthProvider */}
+            <Route path="*" element={
+              <AuthProvider>
+                <Toaster />
+                <Sonner />
+                <Routes>
+                  {/* Public routes */}
+                  <Route path="/" element={<AppLayout />}>
+                    <Route index element={<Home />} />
+                    <Route path="login" element={<Login />} />
+                    <Route path="register" element={<Register />} />
+                  </Route>
+                  
+                  {/* Protected routes */}
+                  <Route path="/" element={<ProtectedLayout />}>
+                    <Route path="dashboard" element={<Dashboard />} />
+                    <Route path="create-message" element={<CreateMessage />} />
+                    <Route path="messages" element={<Messages />} />
+                    <Route path="message/:id" element={<MessageDetail />} />
+                    <Route path="message/:id/edit" element={<MessageEdit />} />
+                    <Route path="recipients" element={<Recipients />} />
+                    <Route path="check-in" element={<CheckIn />} />
+                    <Route path="check-ins" element={<CheckIns />} />
+                    <Route path="profile" element={<Profile />} />
+                    
+                    {/* Admin routes - protected by AdminGuard */}
+                    <Route element={<AdminGuard />}>
+                      <Route path="admin" element={<Admin />} />
+                    </Route>
+                  </Route>
+                  
+                  {/* Catch-all route */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </AuthProvider>
+            } />
+          </Routes>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
