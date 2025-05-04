@@ -5,10 +5,10 @@ import { toast } from "@/components/ui/use-toast";
 import { createMessage } from "@/services/messages";
 import { createMessageCondition } from "@/services/messages/conditionService";
 import { useMessageForm } from "@/components/message/MessageFormContext";
-import { useFormValidation } from "@/hooks/useFormValidation"; // Fixed import path
+import { useFormValidation } from "@/hooks/useFormValidation";
 import { simulateUploadProgress } from "@/utils/uploadProgress";
 import { fetchRecipients } from "@/services/messages/recipientService";
-import { TriggerType } from "@/types/message"; // Added this import
+import { TriggerType } from "@/types/message";
 
 export function useFormActions() {
   const navigate = useNavigate();
@@ -77,11 +77,15 @@ export function useFormActions() {
     }
     
     try {
+      // For non-text message types, content is already a stringified JSON
+      // For text messages, content is just a string
+      const messageContent = content;
+      
       // Create the basic message with location data if enabled
       const message = await createMessage(
         userId, 
         title, 
-        content, 
+        messageContent, 
         messageType, 
         files,
         // Location data

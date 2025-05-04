@@ -2,6 +2,7 @@
 import { Label } from "@/components/ui/label";
 import { useMessageForm } from "../../MessageFormContext";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { AIEnhancer } from "@/components/AIEnhancer";
 
 export function TextContent() {
   const { content, setContent } = useMessageForm();
@@ -16,6 +17,9 @@ export function TextContent() {
         className={`w-full p-2 border rounded-md min-h-[150px] ${HOVER_TRANSITION} focus:ring-2 focus:ring-primary/20 focus:border-primary hover:border-primary/50`}
         placeholder="Enter your message content"
       />
+      <div className="flex justify-end mt-2">
+        <AIEnhancer content={content} onChange={setContent} />
+      </div>
     </>
   );
 }

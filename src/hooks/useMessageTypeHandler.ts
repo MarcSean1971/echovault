@@ -1,9 +1,17 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { MediaType } from "./useMediaRecording";
+import { useMessageForm } from "@/components/message/MessageFormContext";
 
 export function useMessageTypeHandler() {
   const [messageType, setMessageType] = useState("text");
+  const { setContent } = useMessageForm();
+  
+  // Clear content when message type changes to prevent showing JSON in text inputs
+  useEffect(() => {
+    // Reset content when changing message type to prevent JSON leaking between types
+    setContent("");
+  }, [messageType, setContent]);
   
   // Function to handle the media type button click
   const handleMediaTypeClick = (

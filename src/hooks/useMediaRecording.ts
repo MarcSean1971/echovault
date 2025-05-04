@@ -33,6 +33,7 @@ export function useMediaRecording(mediaType: MediaType) {
       setTranscription(transcriptionText);
       
       // Store both media data and transcription in content as JSON
+      // But we don't want to display this JSON in text inputs
       const contentData = {
         [mediaDataKey]: base64,
         transcription: transcriptionText
