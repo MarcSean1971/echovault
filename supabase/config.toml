@@ -95,7 +95,6 @@ pg_net = true
 
 # Register edge functions
 [functions]
-access-message = { verify_jwt = false }
 enhance-message = {}
 get-mapbox-token = {}
 location-services = {}
