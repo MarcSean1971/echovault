@@ -33,5 +33,5 @@ checkSupabaseConnection()
   });
 
 // Log an additional startup message to ensure a change is detected
-console.log("Ready to handle requests... (Updated: 2025-05-03)");
+console.log("Ready to handle requests... (Updated: 2025-05-04)");
 serve(routeRequest);

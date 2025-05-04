@@ -63,7 +63,7 @@ export async function routeRequest(req: Request): Promise<Response> {
       return await handleRecordView(req);
     }
     
-    // Default to message access handler
+    // Default to message access handler - now accepting both path and query parameters
     console.log("[Router] Routing to message access handler");
     try {
       return await handleMessageAccess(req, url);

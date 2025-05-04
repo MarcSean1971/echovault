@@ -32,10 +32,11 @@ export function generateAccessUrl(messageId: string, recipientEmail: string, del
       console.log(`[URL Generator] Using Supabase domain: ${domain}`);
     }
     
-    // Generate a very simple access URL directly to the frontend route with just id and recipient
+    // Generate a simple access URL directly to the frontend route
+    // Make sure we're explicitly passing both id and recipient parameters consistently
     const accessUrl = `https://${domain}/secure-message?id=${messageId}&recipient=${encodeURIComponent(recipientEmail)}`;
     
-    console.log(`[URL Generator] Generated simplified secure message URL: ${accessUrl}`);
+    console.log(`[URL Generator] Generated secure message URL: ${accessUrl}`);
     
     return accessUrl;
   } catch (error) {
