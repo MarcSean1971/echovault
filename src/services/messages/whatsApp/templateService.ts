@@ -42,6 +42,7 @@ export async function sendTestWhatsAppTemplate(messageId: string): Promise<boole
       const { data, error } = await supabase.functions.invoke("send-whatsapp-alert", {
         body: {
           to: recipient.phone,
+          languageCode: "en_US", // Explicitly set language code
           params: [
             senderName,            // Parameter 1: Sender name
             recipient.name,        // Parameter 2: Recipient name
@@ -86,6 +87,7 @@ export async function sendTestWhatsAppTemplate(messageId: string): Promise<boole
         to: recipient.phone,
         useTemplate: true,
         templateId: templateId,
+        languageCode: "en_US", // Add explicit language code
         templateParams: templateParams,
         messageId: messageId,
         recipientName: recipient.name,

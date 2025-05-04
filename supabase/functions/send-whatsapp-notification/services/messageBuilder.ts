@@ -15,7 +15,8 @@ export function buildMessageFormData(requestData: WhatsAppMessageRequest): URLSe
     recipientName,
     useTemplate = false,
     templateId = '',
-    templateParams = [] 
+    templateParams = [],
+    languageCode = 'en_US' // Default language code for templates
   } = requestData;
   
   // Process phone number to ensure consistency
@@ -29,7 +30,7 @@ export function buildMessageFormData(requestData: WhatsAppMessageRequest): URLSe
   const formData = new URLSearchParams();
   
   if (useTemplate && templateId) {
-    console.log(`Using Conversations API with template ID: ${templateId}`);
+    console.log(`Using Conversations API with template ID: ${templateId}, language: ${languageCode}`);
     
     // For templates, we need to use the Conversations API with different parameters
     formData.append("To", formattedTo);
@@ -54,8 +55,10 @@ export function buildMessageFormData(requestData: WhatsAppMessageRequest): URLSe
     });
     
     // Add parameters as a JSON string in the Attributes field
+    // Include the language code
     const attributes = JSON.stringify({
-      parameters: parameters
+      parameters: parameters,
+      language: languageCode  // Add language code to attributes
     });
     
     formData.append("Attributes", attributes);

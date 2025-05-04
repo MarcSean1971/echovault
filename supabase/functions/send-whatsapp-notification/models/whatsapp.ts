@@ -50,6 +50,9 @@ export interface WhatsAppMessageRequest {
   /** The template ID to use */
   templateId?: string;
   
+  /** Language code for the template (e.g. en_US) */
+  languageCode?: string;
+  
   /** Parameters for the template */
   templateParams?: string[];
   

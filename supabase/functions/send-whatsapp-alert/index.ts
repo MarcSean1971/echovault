@@ -37,6 +37,7 @@ serve(async (req) => {
     // Get request parameters with defaults
     const to = body.to || ""; // e.g. whatsapp:+27796310601
     const templateSid = body.templateId || "HX4386568436c1f993dd47146448194dd8";
+    const languageCode = body.languageCode || "en_US"; // Add explicit language code
     const from = body.from || "whatsapp:+14155238886"; // Twilio WhatsApp sender
     
     // Extract template parameters or use defaults
@@ -45,7 +46,7 @@ serve(async (req) => {
     const param3 = body.params?.[2] || "Location Information";
     const param4 = body.params?.[3] || "https://maps.example.com";
     
-    console.log(`Sending template alert to ${to} using template ${templateSid}`);
+    console.log(`Sending template alert to ${to} using template ${templateSid} with language ${languageCode}`);
     console.log(`Parameters: [${param1}, ${param2}, ${param3}, ${param4}]`);
     
     // Validate required parameters
@@ -59,7 +60,7 @@ serve(async (req) => {
     // Format the recipient number if it doesn't have the whatsapp: prefix
     const formattedTo = to.startsWith("whatsapp:") ? to : `whatsapp:${to}`;
     
-    // Create the payload
+    // Create the payload with explicit language information
     const payload = new URLSearchParams({
       MessagingServiceSid: messagingServiceSid,
       To: formattedTo,
@@ -71,7 +72,8 @@ serve(async (req) => {
           "2": param2,
           "3": param3,
           "4": param4
-        }
+        },
+        language: languageCode // Add explicit language code in attributes
       })
     });
     
@@ -79,7 +81,7 @@ serve(async (req) => {
     console.log("Request parameters:");
     payload.forEach((value, key) => {
       if (key === "Attributes") {
-        console.log(`  ${key}: [JSON Object]`);
+        console.log(`  ${key}: ${value}`); // Log full attributes for debugging
       } else {
         console.log(`  ${key}: ${value}`);
       }
@@ -109,7 +111,56 @@ serve(async (req) => {
       responseData = { rawResponse: responseText };
     }
     
-    // Return success or error
+    // If template failed, try fallback to standard message
+    if (!response.ok && responseData?.message?.includes("template")) {
+      console.log("Template sending failed. Error:", responseData.message);
+      console.log("Attempting fallback to standard message...");
+      
+      // Prepare fallback message
+      const fallbackMessage = `EMERGENCY ALERT: ${param1} has sent you an emergency alert. They are at ${param3}. View on map: ${param4}`;
+      
+      // Create fallback payload for standard message
+      const fallbackPayload = new URLSearchParams({
+        To: formattedTo,
+        From: from,
+        Body: fallbackMessage
+      });
+      
+      // Send fallback message
+      const fallbackResponse = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
+        method: "POST",
+        headers: {
+          "Authorization": "Basic " + btoa(`${accountSid}:${authToken}`),
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: fallbackPayload
+      });
+      
+      const fallbackResponseText = await fallbackResponse.text();
+      console.log(`Fallback response status: ${fallbackResponse.status}`);
+      console.log(`Fallback response: ${fallbackResponseText}`);
+      
+      try {
+        const fallbackData = JSON.parse(fallbackResponseText);
+        if (fallbackResponse.ok) {
+          return new Response(
+            JSON.stringify({
+              success: true,
+              sid: fallbackData.sid,
+              status: fallbackData.status || "sent",
+              fallback: true,
+              originalError: responseData.message,
+              timestamp: new Date().toISOString()
+            }),
+            { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+          );
+        }
+      } catch (error) {
+        console.error("Error parsing fallback response:", error);
+      }
+    }
+    
+    // Return success or error from the original response
     if (response.ok) {
       return new Response(
         JSON.stringify({
