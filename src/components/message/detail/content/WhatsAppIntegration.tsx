@@ -6,6 +6,7 @@ import { toast } from "@/components/ui/use-toast";
 import { sendTestWhatsAppMessage } from "@/services/messages/notificationService";
 import { HOVER_TRANSITION, ICON_HOVER_EFFECTS } from "@/utils/hoverEffects";
 import { supabase } from "@/integrations/supabase/client";
+import { Recipient } from "@/types/message";
 
 interface WhatsAppIntegrationProps {
   messageId: string;
@@ -83,8 +84,19 @@ export function WhatsAppIntegration({ messageId, panicConfig }: WhatsAppIntegrat
       
       if (conditionError) throw conditionError;
       
-      const recipients = condition?.recipients || [];
-      const recipient = recipients.find((r: any) => r.phone);
+      // Properly type-check the recipients before using find()
+      const recipients = condition?.recipients;
+      if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
+        toast({
+          title: "No Recipients",
+          description: "Please add recipients to test the template.",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      // Now we can safely use find() since we've confirmed recipients is an array
+      const recipient = recipients.find((r: Recipient) => r.phone);
       
       if (!recipient || !recipient.phone) {
         toast({

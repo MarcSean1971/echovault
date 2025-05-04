@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
+import { Recipient } from "@/types/message";
 
 /**
  * Manually trigger message notifications for a specific message
@@ -123,7 +124,9 @@ export async function sendTestWhatsAppMessage(messageId: string) {
       return;
     }
     
-    if (!condition.recipients || !Array.isArray(condition.recipients) || condition.recipients.length === 0) {
+    // Type checking to ensure recipients is an array before using array methods
+    const recipients = condition.recipients;
+    if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
       toast({
         title: "No recipients",
         description: "Please add recipients to this message first",
@@ -132,10 +135,8 @@ export async function sendTestWhatsAppMessage(messageId: string) {
       return;
     }
     
-    const recipients = condition.recipients as any[];
-    
-    // Get the first recipient with a phone number
-    const recipient = recipients.find((r: any) => r.phone);
+    // Safely use find after confirming recipients is an array
+    const recipient = recipients.find((r: Recipient) => r.phone);
     
     if (!recipient || !recipient.phone) {
       toast({
