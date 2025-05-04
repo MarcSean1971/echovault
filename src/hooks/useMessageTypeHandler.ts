@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { MediaType } from "./useMediaRecording";
 import { useMessageForm } from "@/components/message/MessageFormContext";
@@ -34,6 +33,8 @@ export function useMessageTypeHandler() {
     // Then restore content based on the new message type
     switch (messageType) {
       case "text":
+        // When switching to text mode, check if there's already saved text content,
+        // otherwise set empty string to avoid JSON appearing in the text field
         setContent(textContent);
         break;
       case "audio":
