@@ -4,7 +4,7 @@ import { MessageLoader } from "@/components/secure-message/MessageLoader";
 import { ErrorDisplay } from "@/components/secure-message/ErrorDisplay";
 import { PinProtectedMessage } from "@/components/secure-message/PinProtectedMessage";
 import { MessageContent } from "@/components/secure-message/MessageContent";
-import { useSecureMessage } from "@/hooks/useSecureMessage";
+import { useSecureMessage } from "@/hooks/secure-message";
 import { toast } from "@/components/ui/use-toast";
 import { useEffect } from "react";
 
