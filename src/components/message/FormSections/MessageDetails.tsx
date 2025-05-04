@@ -5,7 +5,7 @@ import { useMessageForm } from "../MessageFormContext";
 import { FileUploader } from "@/components/FileUploader";
 import { AudioRecorderDialog } from "@/components/media/AudioRecorderDialog";
 import { VideoRecorderDialog } from "@/components/media/VideoRecorderDialog";
-import { transcribeVideo } from "@/services/messages/transcriptionService";
+import { transcribeVideo, transcribeAudio } from "@/services/messages/transcriptionService";
 import { toast } from "@/components/ui/use-toast";
 
 // Import our new components
@@ -28,6 +28,8 @@ export function MessageDetails() {
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [audioBase64, setAudioBase64] = useState<string | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [isTranscribingAudio, setIsTranscribingAudio] = useState(false);
+  const [audioTranscription, setAudioTranscription] = useState<string | null>(null);
 
   // Video recording states
   const [showVideoRecorder, setShowVideoRecorder] = useState(false);
@@ -54,11 +56,45 @@ export function MessageDetails() {
   };
 
   // Function to handle audio recording completion
-  const handleAudioReady = (audioBlob: Blob, audioBase64: string) => {
+  const handleAudioReady = async (audioBlob: Blob, audioBase64: string) => {
     setAudioBlob(audioBlob);
     setAudioBase64(audioBase64);
-    setContent(audioBase64); // Store the audio data in content
     setAudioUrl(URL.createObjectURL(audioBlob));
+    
+    // Start transcribing the audio
+    setIsTranscribingAudio(true);
+    try {
+      const transcription = await transcribeAudio(audioBase64, 'audio/webm');
+      setAudioTranscription(transcription);
+      
+      // Store both audio data and transcription in content as JSON
+      const contentData = {
+        audioData: audioBase64,
+        transcription: transcription
+      };
+      setContent(JSON.stringify(contentData));
+      
+      toast({
+        title: "Audio transcription complete",
+        description: "Your audio has been successfully transcribed.",
+      });
+    } catch (error) {
+      console.error("Error transcribing audio:", error);
+      toast({
+        title: "Transcription failed",
+        description: "Could not transcribe audio. Audio will be saved without transcription.",
+        variant: "destructive",
+      });
+      
+      // Still save the audio data in content even if transcription fails
+      const contentData = {
+        audioData: audioBase64,
+        transcription: null
+      };
+      setContent(JSON.stringify(contentData));
+    } finally {
+      setIsTranscribingAudio(false);
+    }
   };
 
   // Function to handle video recording completion
@@ -111,6 +147,7 @@ export function MessageDetails() {
     setAudioBlob(null);
     setAudioBase64(null);
     setAudioUrl(null);
+    setAudioTranscription(null);
     setContent("");
   };
 
@@ -144,6 +181,8 @@ export function MessageDetails() {
         ) : messageType === "audio" ? (
           <AudioContent 
             audioUrl={audioUrl}
+            audioTranscription={audioTranscription}
+            isTranscribingAudio={isTranscribingAudio}
             onRecordClick={() => setShowAudioRecorder(true)}
             onClearAudio={clearAudio}
           />

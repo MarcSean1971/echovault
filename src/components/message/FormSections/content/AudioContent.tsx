@@ -2,18 +2,43 @@
 import { Button } from "@/components/ui/button";
 import { AudioPlayer } from "@/components/media/AudioPlayer";
 import { BUTTON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { Spinner } from "@/components/ui/spinner";
 
 interface AudioContentProps {
   audioUrl: string | null;
+  audioTranscription?: string | null;
+  isTranscribingAudio?: boolean;
   onRecordClick: () => void;
   onClearAudio: () => void;
 }
 
-export function AudioContent({ audioUrl, onRecordClick, onClearAudio }: AudioContentProps) {
+export function AudioContent({ 
+  audioUrl, 
+  audioTranscription, 
+  isTranscribingAudio = false,
+  onRecordClick, 
+  onClearAudio 
+}: AudioContentProps) {
   if (audioUrl) {
     return (
       <div className="space-y-3">
         <AudioPlayer src={audioUrl} />
+        
+        {/* Transcription section */}
+        {isTranscribingAudio && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Spinner size="sm" className="h-4 w-4" />
+            <span>Transcribing audio...</span>
+          </div>
+        )}
+        
+        {audioTranscription && !isTranscribingAudio && (
+          <div className="bg-muted/30 p-3 rounded-md">
+            <p className="text-sm font-medium mb-1">Transcription:</p>
+            <p className="text-sm italic">{audioTranscription}</p>
+          </div>
+        )}
+        
         <div className="flex justify-end">
           <Button 
             size="sm" 
