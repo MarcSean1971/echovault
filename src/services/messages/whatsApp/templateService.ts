@@ -36,30 +36,17 @@ export async function sendTestWhatsAppTemplate(messageId: string): Promise<boole
     // Format location information
     const { locationInfo, mapUrl } = formatLocationInfo(message);
     
-    // Correct template ID for the Conversations API
-    const templateId = "HX4386568436c1f993dd47146448194dd8";
-    
-    // Prepare template parameters
-    const templateParams = [
-      senderName,            // Parameter 1: Sender name
-      recipient.name,        // Parameter 2: Recipient name
-      locationInfo,          // Parameter 3: Location
-      mapUrl                 // Parameter 4: Map URL
-    ];
-    
-    console.log("Sending template test with params:", JSON.stringify(templateParams, null, 2));
-    
-    // Call the WhatsApp notification function with template and explicit language code
+    // Use direct approach similar to the working example
     const { error } = await supabase.functions.invoke("send-whatsapp-notification", {
       body: {
-        to: recipient.phone,
-        useTemplate: true,
-        templateId: templateId,
-        languageCode: "en_US", // Explicitly set language code
-        templateParams: templateParams,
-        messageId: messageId,
+        recipientPhone: recipient.phone, // Using the same parameter name as the example
+        senderName: senderName,
         recipientName: recipient.name,
-        isEmergency: true
+        locationText: locationInfo,
+        locationLink: mapUrl,
+        messageId: messageId,
+        templateId: "HX4386568436c1f993dd47146448194dd8",
+        useTemplate: true
       }
     });
     

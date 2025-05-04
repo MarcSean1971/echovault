@@ -1,4 +1,3 @@
-
 import { supabaseClient } from "../supabase-client.ts";
 
 /**
@@ -14,7 +13,7 @@ export async function sendWhatsAppNotification(
     location_latitude?: number | null;
     location_longitude?: number | null;
     location_name?: string | null;
-    user_id: string;  // Add user_id to retrieve sender name
+    user_id: string;
   },
   debug: boolean = false,
   isEmergency: boolean = true
@@ -47,58 +46,30 @@ export async function sendWhatsAppNotification(
       console.log(`Could not retrieve sender name: ${senderError?.message || "Unknown error"}`);
     }
     
-    // Check if location should be included
-    const includeLocation = message.share_location === true && 
-                         message.location_latitude !== null && 
-                         message.location_longitude !== null;
-    
     // Format location information if available
-    let locationInfo = "";
-    let mapUrl = "";
+    let locationText = "";
+    let locationLink = "";
     
-    if (includeLocation) {
-      const locationName = message.location_name ? 
-        `${message.location_name}` : 
-        `${message.location_latitude}, ${message.location_longitude}`;
-        
-      locationInfo = locationName;
-      mapUrl = `https://maps.google.com/?q=${message.location_latitude},${message.location_longitude}`;
+    if (message.share_location && message.location_latitude && message.location_longitude) {
+      locationText = message.location_name || `${message.location_latitude}, ${message.location_longitude}`;
+      locationLink = `https://maps.google.com/?q=${message.location_latitude},${message.location_longitude}`;
     }
     
-    // Determine if we should use template or regular message
-    const useTemplate = isEmergency; // For now, we only use templates for emergency messages
-    const emergencyTemplateId = "HX4386568436c1f993dd47146448194dd8"; // Updated to use the correct SID
-    
-    if (useTemplate && isEmergency) {
-      if (debug) console.log(`Using WhatsApp template for emergency message: ${emergencyTemplateId}`);
+    // Use template for emergency messages with simplified approach
+    if (isEmergency) {
+      if (debug) console.log("Using WhatsApp template for emergency message");
       
-      // Prepare template parameters
-      // {{1}} - Sender name
-      // {{2}} - Recipient name
-      // {{3}} - Location
-      // {{4}} - Map URL
-      const templateParams = [
-        senderName,                   // Parameter 1: Sender name
-        recipient.name,               // Parameter 2: Recipient name
-        locationInfo || "Unknown",    // Parameter 3: Location info
-        mapUrl || "Not available"     // Parameter 4: Map URL
-      ];
-      
-      if (debug) {
-        console.log(`Template params: ${JSON.stringify(templateParams)}`);
-      }
-      
-      // Call the WhatsApp notification function with template information and explicit language code
+      // Call the WhatsApp notification function with simplified parameters
       const { data: whatsAppResult, error: whatsAppError } = await supabase.functions.invoke("send-whatsapp-notification", {
         body: {
-          to: recipient.phone,
-          useTemplate: true,
-          templateId: emergencyTemplateId,
-          languageCode: "en_US", // Explicitly set language code
-          templateParams: templateParams,
-          messageId: message.id,
+          recipientPhone: recipient.phone,
+          senderName: senderName,
           recipientName: recipient.name,
-          isEmergency: isEmergency
+          locationText: locationText || "Unknown location",
+          locationLink: locationLink || "No map link available",
+          messageId: message.id,
+          useTemplate: true,
+          templateId: "HX4386568436c1f993dd47146448194dd8"
         }
       });
       
@@ -109,13 +80,12 @@ export async function sendWhatsAppNotification(
       
       if (debug) console.log(`WhatsApp template message sent successfully to ${recipient.phone}`);
       return { success: true };
-      
     } else {
-      // Fallback to the original text-based message if not using templates
+      // For non-emergency messages, use standard text messages
       // Determine message content based on whether it's an emergency or reminder
       let whatsAppMessage = "";
       if (isEmergency) {
-        whatsAppMessage = `⚠️ EMERGENCY ALERT FROM ${senderName.toUpperCase()}: ${message.title}\n\n${message.content || "An emergency alert has been triggered."}\n${senderName} needs help!${locationInfo ? `\n\n📍 ${locationInfo}\n📲 Maps: ${mapUrl}` : ""}\n\nCheck your email for more information.`;
+        whatsAppMessage = `⚠️ EMERGENCY ALERT FROM ${senderName.toUpperCase()}: ${message.title}\n\n${message.content || "An emergency alert has been triggered."}\n${senderName} needs help!${locationText ? `\n\n📍 ${locationText}\n📲 Maps: ${locationLink}` : ""}\n\nCheck your email for more information.`;
       } else {
         whatsAppMessage = `🔔 REMINDER FROM ${senderName}: ${message.title}\n\n${message.content || "A reminder has been sent regarding your message."}\n\nPlease check your email or log in to the system to take action.`;
       }
