@@ -5,16 +5,19 @@
 export function getClientScripts(): string {
   return `
     <script>
-      // Get the current absolute URL base
-      const currentUrl = window.location.href;
-      const baseUrl = currentUrl.split('/access-message')[0];
+      // Use a fixed project ID for API calls instead of trying to parse from current URL
+      const projectId = 'onwthrpgcnfydxzzmyot';
+      const baseUrl = 'https://' + projectId + '.supabase.co';
       
-      console.log('Using base URL for API calls:', baseUrl);
+      console.log('Using fixed base URL for API calls:', baseUrl);
       
       // Record that this message was viewed
-      fetch(baseUrl + '/access-message/record-view', {
+      fetch(baseUrl + '/functions/v1/access-message/record-view', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Origin': window.location.origin
+        },
         body: JSON.stringify({ 
           messageId: '\${message.id}', 
           deliveryId: '\${deliveryId || ''}',
@@ -27,9 +30,12 @@ export function getClientScripts(): string {
         const downloadSpinner = document.getElementById('download-spinner-' + path.replace(/[^a-zA-Z0-9]/g, '-'));
         if (downloadSpinner) downloadSpinner.style.display = 'inline-block';
         
-        fetch(baseUrl + '/access-message/download-attachment', {
+        fetch(baseUrl + '/functions/v1/access-message/download-attachment', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            'Origin': window.location.origin
+          },
           body: JSON.stringify({
             messageId: '\${message.id}',
             deliveryId: '\${deliveryId || ''}',
