@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
-import { HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { AlertCircle, ArrowLeft } from "lucide-react";
+import { HOVER_TRANSITION, ICON_HOVER_EFFECTS } from "@/utils/hoverEffects";
 
 interface PinProtectedMessageProps {
   pinError: string | null;
@@ -59,6 +59,17 @@ export function PinProtectedMessage({
             Verify PIN
           </Button>
         </form>
+        
+        <div className="mt-6 flex justify-center">
+          <Button 
+            variant="outline" 
+            onClick={() => window.history.back()}
+            className={`flex items-center gap-2 ${HOVER_TRANSITION}`}
+          >
+            <ArrowLeft className={`h-4 w-4 ${ICON_HOVER_EFFECTS.default}`} />
+            Go Back
+          </Button>
+        </div>
       </Card>
     </div>
   );

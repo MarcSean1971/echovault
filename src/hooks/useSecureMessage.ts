@@ -110,13 +110,17 @@ export function useSecureMessage({ messageId, recipient, deliveryId }: UseSecure
         throw new Error("Received empty or invalid response from server");
       }
       
-      // Check if the response contains PIN form
-      if (html.includes("pin-form")) {
-        setPinProtected(true);
-        setHtmlContent(html);
-      } else {
-        setHtmlContent(html);
-      }
+      // Check if the response contains PIN form - with improved detection
+      // The improved logic makes sure we don't just detect the string anywhere in the content
+      // but specifically look for the PIN form structure
+      const isPinProtected = html.includes('<div class="pin-form">') || 
+                             html.includes('<form id="pin-form">') || 
+                             (html.includes("pin-form") && html.includes("PIN Protected Message"));
+                             
+      console.log("[SecureMessage] PIN protection detected:", isPinProtected);
+      
+      setPinProtected(isPinProtected);
+      setHtmlContent(html);
     } catch (err: any) {
       console.error("[SecureMessage] Error fetching message:", err);
       setError(err.message || "Failed to load the secure message");

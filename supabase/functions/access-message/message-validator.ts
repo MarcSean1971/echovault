@@ -71,7 +71,12 @@ export async function validateMessageAuthorization(messageId: string, recipientE
  * Check security conditions for message access
  */
 export function checkSecurityConditions(condition: any, deliveryRecord: any) {
-  const hasPinCode = !!condition.pin_code;
+  // Fix: Explicitly check for pin_code existence instead of assuming it exists
+  const hasPinCode = condition.pin_code && condition.pin_code.trim() !== '';
+  
+  // Log the PIN code status for debugging
+  console.log(`Message security check: hasPinCode=${hasPinCode}, actual pin_code=${condition.pin_code || 'null'}`);
+  
   const hasDelayedAccess = (condition.unlock_delay_hours || 0) > 0;
   const hasExpiry = (condition.expiry_hours || 0) > 0;
   

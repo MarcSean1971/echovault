@@ -1,3 +1,4 @@
+
 import { corsHeaders } from "../cors-headers.ts";
 import { renderMessagePage, renderErrorPage } from "../template.ts";
 import { validateMessageRequest, validateMessageAuthorization, checkSecurityConditions } from "../message-validator.ts";
@@ -70,6 +71,10 @@ export async function handleMessageAccess(req: Request, url: URL): Promise<Respo
       isExpired, 
       pinVerified 
     } = checkSecurityConditions(condition, deliveryResult);
+    
+    // Log security settings for debugging
+    console.log(`Security settings: hasPinCode=${hasPinCode}, pinVerified=${pinVerified}, hasDelayedAccess=${hasDelayedAccess}, hasExpiry=${hasExpiry}, isExpired=${isExpired}`);
+    console.log(`Message condition type: ${condition.condition_type}, PIN code exists: ${!!condition.pin_code}`);
     
     // Return the appropriate response based on security conditions
     return generateAppropriateResponse(
@@ -205,6 +210,7 @@ function generateAppropriateResponse(
   
   // If PIN protected and not yet verified, show PIN form
   if (hasPinCode && !pinVerified) {
+    console.log("Sending PIN protected message - PIN is required and not verified");
     const html = renderMessagePage(
       { id: message.id, title: "PIN Protected Message" },
       true,  // Is PIN protected
@@ -221,6 +227,7 @@ function generateAppropriateResponse(
   }
   
   // All security checks passed, show the message
+  console.log("Security checks passed, showing full message content");
   const html = renderMessagePage(
     message,
     false, // PIN already verified or not required

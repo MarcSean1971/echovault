@@ -4,11 +4,9 @@ import { MessageLoader } from "@/components/secure-message/MessageLoader";
 import { ErrorDisplay } from "@/components/secure-message/ErrorDisplay";
 import { PinProtectedMessage } from "@/components/secure-message/PinProtectedMessage";
 import { MessageContent } from "@/components/secure-message/MessageContent";
-import { useSecureMessageData } from "@/hooks/useSecureMessageData";
-import { usePinVerification } from "@/hooks/usePinVerification";
-import { useState, useEffect } from "react";
 import { useSecureMessage } from "@/hooks/useSecureMessage";
 import { toast } from "@/components/ui/use-toast";
+import { useEffect } from "react";
 
 export default function SecureMessage() {
   const [searchParams] = useSearchParams();
@@ -68,6 +66,7 @@ export default function SecureMessage() {
 
   // PIN protected message
   if (pinProtected) {
+    console.log("[SecureMessage] Rendering PIN protected message UI");
     return (
       <PinProtectedMessage
         pinError={verifyError}
@@ -81,6 +80,7 @@ export default function SecureMessage() {
   }
 
   // Display the message
+  console.log("[SecureMessage] Rendering full message content");
   return <MessageContent 
     message={htmlContent}
     deliveryId={deliveryId}
