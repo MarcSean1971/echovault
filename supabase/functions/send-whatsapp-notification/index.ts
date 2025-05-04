@@ -150,30 +150,23 @@ serve(async (req) => {
         formData.append("To", formattedTo);
         formData.append("From", formattedFrom);
         
-        // FIX: Use Body parameter for both regular messages and templates
-        // Twilio's API expects Body for all message types including templates
         if (useTemplate && templateId) {
           console.log(`Using template with ID: ${templateId}`);
-          // Instead of using ContentSid and ContentVariables, 
-          // we'll construct a proper template message using Body
           
-          // Start with template name prefixed with required format
-          let templateMessage = `Your emergency alert from ${templateParams[0] || 'Someone'}: `;
+          // Use ContentSid for the approved template ID
+          formData.append("ContentSid", templateId);
           
-          // Add location information if available
-          if (templateParams[2]) {
-            templateMessage += `\nLocation: ${templateParams[2]}`;
-          }
+          // Create template variables in the format Twilio expects
+          const variables = {};
+          templateParams.forEach((param, index) => {
+            variables[`${index+1}`] = param;
+          });
           
-          // Add map URL if available
-          if (templateParams[3]) {
-            templateMessage += `\nMap: ${templateParams[3]}`;
-          }
+          // Add ContentVariables as a JSON string
+          formData.append("ContentVariables", JSON.stringify(variables));
           
-          // Use the constructed message as the Body parameter
-          formData.append("Body", templateMessage);
-          
-          console.log(`Using constructed template message: ${templateMessage}`);
+          console.log(`Using ContentSid: ${templateId}`);
+          console.log(`Using ContentVariables: ${JSON.stringify(variables)}`);
         } else {
           console.log(`Using standard message with length: ${completeMessage.length} characters`);
           // Use regular message body for standard messages
