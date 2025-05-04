@@ -1,6 +1,5 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { supabaseClient } from "./supabase-client.ts";
+import { supabaseClient, publicWebhookClient } from "./supabase-client.ts";
 import { corsHeaders } from "./cors-headers.ts";
 
 // Core function to process an SOS message - simplified for reliability

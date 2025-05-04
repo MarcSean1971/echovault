@@ -12,3 +12,16 @@ export function supabaseClient() {
     }
   });
 }
+
+// Special client for public webhooks that doesn't require authentication
+export function publicWebhookClient() {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
+  
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false
+    }
+  });
+}
