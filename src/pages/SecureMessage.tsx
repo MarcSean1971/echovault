@@ -63,9 +63,15 @@ export default function SecureMessage() {
           
           // Check if recipient is authorized
           if (recipientEmail && condition.recipients) {
-            const isAuthorized = condition.recipients.some((r: any) => 
-              r.email && r.email.toLowerCase() === recipientEmail.toLowerCase()
-            );
+            // Fix: Check if recipients is an array before using .some()
+            const recipients = condition.recipients;
+            let isAuthorized = false;
+            
+            if (Array.isArray(recipients)) {
+              isAuthorized = recipients.some((r: any) => 
+                r.email && r.email.toLowerCase() === recipientEmail.toLowerCase()
+              );
+            }
             
             if (!isAuthorized) {
               throw new Error("You are not authorized to view this message");
@@ -259,7 +265,7 @@ export default function SecureMessage() {
               href={`https://maps.google.com/?q=${message.location_latitude},${message.location_longitude}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline"
+              className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline transition-colors ${HOVER_TRANSITION}"
             >
               View on Google Maps
             </a>
@@ -277,7 +283,7 @@ export default function SecureMessage() {
                     href={attachment.url} 
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="ml-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                    className="ml-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors ${HOVER_TRANSITION}"
                   >
                     Download
                   </a>
@@ -292,7 +298,7 @@ export default function SecureMessage() {
         <Button 
           variant="secondary" 
           onClick={() => window.history.back()}
-          className={`hover:bg-secondary/90 transition-colors ${HOVER_TRANSITION}`}
+          className={`hover:bg-secondary/90 ${HOVER_TRANSITION}`}
         >
           Go Back
         </Button>
