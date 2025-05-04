@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { supabaseClient } from "./supabase-client.ts";
 
@@ -18,22 +19,31 @@ interface WhatsAppMessage {
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log("Received OPTIONS request - handling CORS preflight");
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log("WhatsApp webhook called");
+    console.log("WhatsApp webhook called with method:", req.method);
+    console.log("Request headers:", JSON.stringify(Object.fromEntries(req.headers), null, 2));
     
     // Parse the incoming message (handle both JSON and form data)
     let messageData: WhatsAppMessage;
     
     const contentType = req.headers.get("content-type") || "";
+    console.log(`Received content type: "${contentType}"`);
     
     try {
       if (contentType.includes("application/json")) {
+        console.log("Parsing as JSON");
         messageData = await req.json();
-      } else if (contentType.includes("application/x-www-form-urlencoded")) {
+      } else if (contentType.includes("application/x-www-form-urlencoded") || contentType.includes("multipart/form-data")) {
+        console.log("Parsing as form data");
         const formData = await req.formData();
+        
+        // Log all form fields for debugging
+        console.log("Form data fields:", [...formData.entries()].map(([key, value]) => `${key}: ${value}`).join(", "));
+        
         messageData = {
           From: formData.get("From") as string,
           Body: formData.get("Body") as string,
@@ -43,16 +53,39 @@ serve(async (req) => {
           To: formData.get("To") as string,
         };
       } else {
-        throw new Error(`Unsupported content type: ${contentType}`);
+        // Fallback: try to parse as text and then JSON
+        console.log("Unrecognized content type, attempting fallback parsing");
+        const text = await req.text();
+        console.log("Raw request body:", text);
+        
+        try {
+          // Try to parse as JSON
+          messageData = JSON.parse(text);
+        } catch (jsonError) {
+          // If not valid JSON, try to parse as URL-encoded form data
+          console.log("Not valid JSON, attempting to parse as URL-encoded form data");
+          const params = new URLSearchParams(text);
+          messageData = {
+            From: params.get("From") || "",
+            Body: params.get("Body") || "",
+            SmsStatus: params.get("SmsStatus") || "",
+            MessageSid: params.get("MessageSid") || "",
+            AccountSid: params.get("AccountSid") || "",
+            To: params.get("To") || "",
+          };
+        }
       }
     } catch (e) {
       console.error("Failed to parse webhook payload:", e);
+      console.error("Error details:", e.stack);
       throw new Error("Failed to parse webhook payload. Check content type and payload format.");
     }
     
     console.log("Received WhatsApp message:", JSON.stringify(messageData, null, 2));
     
     if (!messageData.From || !messageData.Body) {
+      console.error("Missing required fields From or Body.");
+      console.error("Received data:", JSON.stringify(messageData, null, 2));
       throw new Error("Missing required message fields: From and Body are required");
     }
     
@@ -239,6 +272,8 @@ serve(async (req) => {
     }
 
     // If we get here, it was not a check-in code, proceed with looking for panic triggers
+    console.log("Not a check-in request, checking for panic triggers...");
+    
     const { data: recipients, error: recipientError } = await supabase
       .from("recipients")
       .select("id, user_id")
@@ -277,6 +312,8 @@ serve(async (req) => {
     console.log(`Found ${conditions?.length || 0} active panic trigger conditions`);
     
     let matched = false;
+    let matchedConfig = null;
+    let matchedMessageId = null;
     
     // Check each condition for matching keyword
     for (const condition of conditions || []) {
@@ -292,16 +329,20 @@ serve(async (req) => {
       if (messageBody.toLowerCase() === triggerKeyword.toLowerCase()) {
         console.log(`Keyword match found: "${messageBody}" matches configured keyword "${triggerKeyword}"`);
         matched = true;
+        matchedConfig = config;
+        matchedMessageId = condition.message_id;
         
         // Trigger the panic message
         try {
+          console.log(`Triggering emergency notification for message ID: ${condition.message_id}`);
+          
           // When invoking the send-message-notifications function, provide a properly structured request body
           const { data: triggerResult, error: triggerError } = await supabase.functions.invoke("send-message-notifications", {
-            body: JSON.stringify({ 
+            body: {
               messageId: condition.message_id,
               isEmergency: true,
               debug: true
-            })
+            }
           });
           
           if (triggerError) {
@@ -312,23 +353,23 @@ serve(async (req) => {
           console.log("Successfully triggered message:", triggerResult);
           
           // Send confirmation back to the user
-          const { error: responseError } = await supabase.functions.invoke("send-whatsapp-notification", {
-            body: JSON.stringify({
+          const confirmationResponse = await supabase.functions.invoke("send-whatsapp-notification", {
+            body: {
               to: fromNumber,
               message: "⚠️ EMERGENCY ALERT TRIGGERED. Your emergency messages have been sent to all recipients.",
               isEmergency: true
-            })
+            }
           });
           
-          if (responseError) {
-            console.error("Error sending confirmation message:", responseError);
-          }
+          console.log("Confirmation response:", confirmationResponse);
           
           break; // Stop after first match
         } catch (e) {
           console.error("Error in trigger flow:", e);
           throw e;
         }
+      } else {
+        console.log(`No match: "${messageBody}" doesn't match "${triggerKeyword}"`);
       }
     }
     
@@ -336,10 +377,10 @@ serve(async (req) => {
       console.log("No matching trigger keyword found");
       // Optionally send a message back saying no keyword matched
       await supabase.functions.invoke("send-whatsapp-notification", {
-        body: JSON.stringify({
+        body: {
           to: fromNumber,
           message: "No matching emergency trigger found. Please check the keyword and try again."
-        })
+        }
       });
     }
     
@@ -348,6 +389,11 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true,
         matched: matched,
+        messageId: matchedMessageId,
+        config: matchedConfig ? { 
+          trigger_keyword: matchedConfig.trigger_keyword,
+          methods: matchedConfig.methods
+        } : null,
         message: matched ? "Emergency alert triggered" : "No matching keyword found",
         timestamp: new Date().toISOString()
       }),
@@ -362,6 +408,7 @@ serve(async (req) => {
       JSON.stringify({ 
         success: false, 
         error: error.message || "Unknown error occurred",
+        stack: error.stack || "No stack trace available",
         timestamp: new Date().toISOString()
       }),
       {

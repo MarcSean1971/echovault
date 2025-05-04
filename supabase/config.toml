@@ -111,4 +111,5 @@ send-test-email = {}
 send-whatsapp-notification = {}
 send-whatsapp-alert = {}
 transcribe-audio = {}
-whatsapp-webhook = {}
+whatsapp-webhook = { verify_jwt = false }
+
