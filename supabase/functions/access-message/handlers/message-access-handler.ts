@@ -1,4 +1,3 @@
-
 import { corsHeaders } from "../cors-headers.ts";
 import { renderMessagePage, renderErrorPage } from "../template.ts";
 import { validateMessageRequest, validateMessageAuthorization, checkSecurityConditions } from "../message-validator.ts";
@@ -35,7 +34,7 @@ export async function handleMessageAccess(req: Request, url: URL): Promise<Respo
     
     console.log(`Access request for message ${messageId} by recipient ${recipientEmail} with delivery ID ${deliveryId}`);
     
-    // Validate message authorization
+    // Validate message authorization - this checks if the message exists and if the recipient is authorized
     let message, condition, authorizedRecipients;
     try {
       const authResult = await validateMessageAuthorization(messageId, recipientEmail);
@@ -51,8 +50,15 @@ export async function handleMessageAccess(req: Request, url: URL): Promise<Respo
       });
     }
     
-    // Process the delivery record
+    // Check for delivery record but continue even if not found
     const deliveryResult = await processDeliveryRecord(messageId, deliveryId, condition, authorizedRecipients, recipientEmail);
+    
+    // Log success or failure of delivery record retrieval
+    if (deliveryResult) {
+      console.log(`Found existing delivery record for message ${messageId} with delivery ID ${deliveryId}`);
+    } else {
+      console.log(`No delivery record found for message ${messageId} with delivery ID ${deliveryId}, but continuing with access check`);
+    }
     
     // Check security settings
     const { 
@@ -99,42 +105,53 @@ async function processDeliveryRecord(
   authorizedRecipients: any[], 
   recipientEmail: string
 ) {
-  // Check for message delivery record
-  const { data: deliveryRecord, error: deliveryError } = await getDeliveryRecord(messageId, deliveryId);
-    
-  if (deliveryError) {
-    console.error("Error checking delivery record:", deliveryError);
-  }
-  
-  if (!deliveryRecord) {
-    console.warn(`No delivery record found for message ${messageId} with delivery ID ${deliveryId}`);
-    // Try to create a delivery record if it doesn't exist
-    try {
-      // Find the recipient ID from the authorized recipients list
-      const recipient = findRecipientByEmail(authorizedRecipients, recipientEmail);
+  try {
+    // Check for message delivery record
+    const { data: deliveryRecord, error: deliveryError } = await getDeliveryRecord(messageId, deliveryId);
       
-      if (recipient && recipient.id) {
-        const { error: createError } = await createDeliveryRecord(
-          messageId,
-          condition.id,
-          recipient.id,
-          deliveryId
-        );
-          
-        if (createError) {
-          console.error("Error creating delivery record:", createError);
-          // Continue as the user is already authorized
-        } else {
-          console.log(`Created delivery record for message ${messageId} and recipient ${recipient.id}`);
-        }
-      }
-    } catch (recordError) {
-      console.error("Error creating delivery record:", recordError);
-      // Continue anyway as the recipient is authorized
+    if (deliveryError) {
+      console.error("Error checking delivery record:", deliveryError);
     }
+    
+    if (!deliveryRecord) {
+      console.warn(`No delivery record found for message ${messageId} with delivery ID ${deliveryId}`);
+      // Try to create a delivery record if it doesn't exist
+      try {
+        // Find the recipient ID from the authorized recipients list
+        const recipient = findRecipientByEmail(authorizedRecipients, recipientEmail);
+        
+        if (recipient && recipient.id) {
+          console.log(`Creating new delivery record for message ${messageId}, recipient ${recipient.id}, delivery ID ${deliveryId}`);
+          
+          const { error: createError } = await createDeliveryRecord(
+            messageId,
+            condition.id,
+            recipient.id,
+            deliveryId
+          );
+            
+          if (createError) {
+            console.error("Error creating delivery record:", createError);
+            console.error("Error details:", JSON.stringify(createError));
+            // Continue as the user is already authorized by email
+          } else {
+            console.log(`Created delivery record for message ${messageId} and recipient ${recipient.id}`);
+          }
+        } else {
+          console.warn(`Couldn't find recipient with email ${recipientEmail} in authorized recipients`);
+        }
+      } catch (recordError) {
+        console.error("Error creating delivery record:", recordError);
+        // Continue anyway as the recipient is authorized by email
+      }
+    }
+    
+    return deliveryRecord;
+  } catch (error) {
+    console.error("Error processing delivery record:", error);
+    // Return null but continue processing the request
+    return null;
   }
-  
-  return deliveryRecord;
 }
 
 /**

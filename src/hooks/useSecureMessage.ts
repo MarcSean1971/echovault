@@ -26,24 +26,41 @@ export function useSecureMessage({ messageId, recipient, deliveryId }: UseSecure
     
     try {
       // Validate required parameters
-      if (!messageId || !deliveryId) {
-        throw new Error("Invalid message link. Missing required parameters.");
+      if (!messageId) {
+        throw new Error("Invalid message link. Missing message ID parameter.");
+      }
+      
+      if (!deliveryId) {
+        console.warn("[SecureMessage] Missing delivery ID parameter, this may cause issues");
+        // Continue anyway, as the backend can potentially handle this
       }
       
       // Get the current hostname to use for diagnostic logging
       const currentHostname = window.location.hostname;
       console.log("[SecureMessage] Current hostname:", currentHostname);
+      console.log("[SecureMessage] Current URL:", window.location.href);
       
-      // Instead of directly accessing supabaseUrl, we know the structure of the URL
-      // from the SUPABASE_URL in src/integrations/supabase/client.ts
-      // We can construct it from the project reference in the same format
+      // Fixed project ID for Supabase
       const projectId = "onwthrpgcnfydxzzmyot";
       
       console.log("[SecureMessage] Using project ID:", projectId);
-      console.log("[SecureMessage] Access parameters:", { messageId, recipient, deliveryId });
+      console.log("[SecureMessage] Access parameters:", { 
+        messageId, 
+        recipient: recipient || "(not provided)", 
+        deliveryId: deliveryId || "(not provided)"
+      });
       
       // Construct the edge function URL with the project ID
-      const apiUrl = `https://${projectId}.supabase.co/functions/v1/access-message?id=${messageId}&recipient=${encodeURIComponent(recipient || "")}&delivery=${deliveryId || ""}`;
+      let apiUrl = `https://${projectId}.supabase.co/functions/v1/access-message?id=${encodeURIComponent(messageId)}`;
+      
+      // Add recipient and delivery parameters if available
+      if (recipient) {
+        apiUrl += `&recipient=${encodeURIComponent(recipient)}`;
+      }
+      
+      if (deliveryId) {
+        apiUrl += `&delivery=${encodeURIComponent(deliveryId)}`;
+      }
       
       console.log("[SecureMessage] Requesting message from:", apiUrl);
       
@@ -75,7 +92,7 @@ export function useSecureMessage({ messageId, recipient, deliveryId }: UseSecure
           }
           
           // Add diagnostics about URL and current location
-          technicalInfo += `\n\nDiagnostic Info:\n- Current host: ${window.location.host}\n- API endpoint: ${projectId}.supabase.co\n- Message ID: ${messageId}\n- Delivery ID: ${deliveryId}`;
+          technicalInfo += `\n\nDiagnostic Info:\n- Current URL: ${window.location.href}\n- Current host: ${window.location.host}\n- API endpoint: ${projectId}.supabase.co\n- Message ID: ${messageId}\n- Delivery ID: ${deliveryId || "(not provided)"}\n- Recipient: ${recipient || "(not provided)"}`;
           
         } catch (parseError) {
           console.error("[SecureMessage] Error parsing error response:", parseError);
@@ -133,6 +150,11 @@ export function useSecureMessage({ messageId, recipient, deliveryId }: UseSecure
       const apiUrl = `https://${projectId}.supabase.co/functions/v1/access-message/verify-pin`;
       
       console.log("[SecureMessage] Verifying PIN at:", apiUrl);
+      console.log("[SecureMessage] PIN verification parameters:", { 
+        messageId, 
+        deliveryId: deliveryId || "(not provided)",
+        recipientEmail: recipient || "(not provided)"
+      });
       
       const response = await fetch(apiUrl, {
         method: "POST",
@@ -175,21 +197,26 @@ export function useSecureMessage({ messageId, recipient, deliveryId }: UseSecure
     if (event.data.type === 'PIN_SUBMIT') {
       verifyPin(event.data.pin);
     }
-  }, [messageId, deliveryId, recipient]);
+  }, []);
   
   // Retry fetching the message
   const handleRetry = useCallback(() => {
+    console.log("[SecureMessage] Retrying message fetch, attempt:", retryCount + 1);
     setRetryCount(prev => prev + 1);
-  }, []);
+  }, [retryCount]);
   
   // Initial message fetch
   useEffect(() => {
-    if (messageId && (recipient || deliveryId)) {
-      console.log("[SecureMessage] Initializing with params:", { messageId, recipient, deliveryId });
+    if (messageId) {
+      console.log("[SecureMessage] Initializing with params:", { 
+        messageId, 
+        recipient: recipient || "(not provided)", 
+        deliveryId: deliveryId || "(not provided)" 
+      });
       fetchMessage();
     } else {
-      console.error("[SecureMessage] Missing required parameters", { messageId, recipient, deliveryId });
-      setError("Invalid message link. Missing required parameters.");
+      console.error("[SecureMessage] Missing required parameter: messageId");
+      setError("Invalid message link. Missing required messageId parameter.");
       setLoading(false);
     }
   }, [messageId, recipient, deliveryId, retryCount, fetchMessage]);

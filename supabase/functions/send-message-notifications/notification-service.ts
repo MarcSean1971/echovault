@@ -1,7 +1,8 @@
 import {
   trackMessageNotification,
   updateConditionStatus,
-  getPanicConfig
+  getPanicConfig,
+  recordMessageDelivery
 } from "./db-service.ts";
 import { Message, Condition } from "./types.ts";
 import { notifyRecipient } from "./services/recipient-notification-service.ts";
@@ -72,16 +73,37 @@ export async function sendMessageNotification(
     }
     
     // Send a notification to each recipient
-    const recipientResults = await Promise.all(condition.recipients.map(recipient => 
-      notifyRecipient(recipient, message, condition, {
+    const recipientResults = await Promise.all(condition.recipients.map(async recipient => {
+      // Create delivery record for each recipient BEFORE sending notification
+      // This ensures the delivery record exists when the recipient clicks the link
+      try {
+        const deliveryId = crypto.randomUUID();
+        console.log(`Creating delivery record for message ${message.id}, recipient ${recipient.id}, deliveryId ${deliveryId}`);
+        
+        // Record the delivery in the database
+        await recordMessageDelivery(
+          message.id,
+          condition.id,
+          recipient.id,
+          deliveryId
+        );
+        
+        // Attach the deliveryId to the recipient for use in notification
+        recipient.deliveryId = deliveryId;
+      } catch (deliveryError) {
+        console.error(`Error creating delivery record for recipient ${recipient.id}:`, deliveryError);
+        // Continue anyway to attempt notification delivery
+      }
+      
+      return notifyRecipient(recipient, message, condition, {
         isEmergency: isEmergencyMessage,
         debug,
         maxRetries,
         retryDelay,
         isWhatsAppEnabled,
         triggerKeyword
-      })
-    ));
+      });
+    }));
     
     const anySuccessful = recipientResults.some(r => r.success);
     const allFailed = recipientResults.every(r => !r.success);

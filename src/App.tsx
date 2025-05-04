@@ -55,10 +55,31 @@ const queryClient = new QueryClient({
 // Completely separate secure message app component
 // This ensures it doesn't share ANY context or providers with the main app
 const SecureMessageApp = () => {
+  // Log all URL parameters for debugging
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const messageId = urlParams.get('id');
+    const recipient = urlParams.get('recipient');
+    const delivery = urlParams.get('delivery');
+
+    console.log("[SecureMessageApp] URL parameters:", {
+      id: messageId,
+      recipient,
+      delivery
+    });
+    
+    // Log the full URL for debugging
+    console.log("[SecureMessageApp] Full URL:", window.location.href);
+  }, []);
+
   return (
-    <SecureMessageLayout>
-      <SecureMessage />
-    </SecureMessageLayout>
+    <>
+      <Toaster />
+      <Sonner />
+      <SecureMessageLayout>
+        <SecureMessage />
+      </SecureMessageLayout>
+    </>
   );
 };
 

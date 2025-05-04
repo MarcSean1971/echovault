@@ -24,16 +24,18 @@ export async function sendEmailNotification(
     name?: string | null;
   } = {},
   isEmergency: boolean = false,
-  appName: string = "EchoVault"
+  appName: string = "EchoVault",
+  deliveryId?: string  // Add deliveryId parameter with default of undefined
 ) {
   try {
     console.log(`Sending email to ${recipientEmail}`);
 
-    // Generate a unique delivery ID for tracking
-    const deliveryId = crypto.randomUUID();
+    // Generate a unique delivery ID for tracking if not provided
+    const finalDeliveryId = deliveryId || crypto.randomUUID();
+    console.log(`Using delivery ID: ${finalDeliveryId} for message ${messageId} to ${recipientEmail}`);
 
     // Generate access URL for this message and recipient
-    const accessUrl = generateAccessUrl(messageId, recipientEmail, deliveryId);
+    const accessUrl = generateAccessUrl(messageId, recipientEmail, finalDeliveryId);
     console.log(`Access URL for ${recipientEmail}: ${accessUrl}`);
     
     // Log environment variables (without values) to help diagnose URL issues
@@ -132,7 +134,7 @@ export async function sendEmailNotification(
     console.log("Email sent successfully:", emailResponse);
 
     // Return success
-    return { success: true, deliveryId };
+    return { success: true, deliveryId: finalDeliveryId };
   } catch (error: any) {
     console.error("Error sending email:", error);
     

@@ -8,6 +8,7 @@ import { useSecureMessageData } from "@/hooks/useSecureMessageData";
 import { usePinVerification } from "@/hooks/usePinVerification";
 import { useState, useEffect } from "react";
 import { useSecureMessage } from "@/hooks/useSecureMessage";
+import { toast } from "@/components/ui/use-toast";
 
 export default function SecureMessage() {
   const [searchParams] = useSearchParams();
@@ -16,6 +17,24 @@ export default function SecureMessage() {
   const deliveryId = searchParams.get("delivery");
   
   console.log("[SecureMessage] URL parameters:", { messageId, recipientEmail, deliveryId });
+  
+  // Show error toast if missing critical parameters
+  useEffect(() => {
+    if (!messageId) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Missing message ID in URL parameters"
+      });
+    }
+    if (!deliveryId) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Missing delivery ID in URL parameters"
+      });
+    }
+  }, [messageId, deliveryId]);
   
   // Use the secure message hook that handles rendering content from API
   const {
