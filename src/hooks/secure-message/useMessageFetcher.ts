@@ -1,6 +1,7 @@
 
 import { useState, useCallback } from "react";
 import { toast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface UseMessageFetcherParams {
   messageId: string | null;
@@ -46,6 +47,10 @@ export function useMessageFetcher({ messageId, recipient, deliveryId }: UseMessa
         deliveryId: deliveryId || "(not provided)"
       });
       
+      // Get the Supabase anon key from the client configuration
+      const SUPABASE_ANON_KEY = supabase.supabaseKey;
+      console.log("[SecureMessage] Using authorization key:", SUPABASE_ANON_KEY ? "Key available" : "Key missing");
+      
       // Construct the edge function URL with the project ID
       let apiUrl = `https://${projectId}.supabase.co/functions/v1/access-message?id=${encodeURIComponent(messageId)}`;
       
@@ -64,7 +69,10 @@ export function useMessageFetcher({ messageId, recipient, deliveryId }: UseMessa
         method: "GET",
         headers: {
           "Accept": "text/html,application/xhtml+xml",
-          "Content-Type": "text/html"
+          "Content-Type": "text/html",
+          // Add Supabase authentication headers
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
         }
       });
       
