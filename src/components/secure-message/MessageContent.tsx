@@ -1,61 +1,50 @@
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { TextMessageContent } from "./content/TextMessageContent";
+import { AudioMessageContent } from "./content/AudioMessageContent";
+import { VideoMessageContent } from "./content/VideoMessageContent";
+import { UnknownMessageContent } from "./content/UnknownMessageContent";
 
 interface MessageContentProps {
   message: any;
 }
 
 export function MessageContent({ message }: MessageContentProps) {
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [transcription, setTranscription] = useState<string | null>(null);
+  
+  // Parse content for audio and video messages
+  useEffect(() => {
+    if (message.message_type === "audio" || message.message_type === "video") {
+      try {
+        const contentData = JSON.parse(message.content);
+        setTranscription(contentData.transcription || null);
+        
+        if (message.message_type === "audio") {
+          setAudioUrl(contentData.audioUrl || contentData.audioData || null);
+        } else if (message.message_type === "video") {
+          setVideoUrl(contentData.videoUrl || contentData.videoData || null);
+        }
+      } catch (e) {
+        console.error("Error parsing message content:", e);
+      }
+    }
+  }, [message]);
+  
   const renderMessageContent = () => {
-    if (message.message_type === "text") {
-      return (
-        <div className="prose max-w-none">
-          {message.content}
-        </div>
-      );
-    } else if (message.message_type === "audio") {
-      const audioData = JSON.parse(message.content);
-      
-      return (
-        <div className="space-y-4">
-          <p className="text-lg">This message contains audio content.</p>
-          <audio controls className="w-full">
-            <source src={audioData.audioUrl} type="audio/mp4" />
-            Your browser does not support the audio element.
-          </audio>
-          
-          {audioData.transcription && (
-            <div className="mt-4 p-4 bg-muted rounded-md">
-              <p className="font-semibold mb-2">Transcription:</p>
-              <p>{audioData.transcription}</p>
-            </div>
-          )}
-        </div>
-      );
-    } else if (message.message_type === "video") {
-      const videoData = JSON.parse(message.content);
-      
-      return (
-        <div className="space-y-4">
-          <p className="text-lg">This message contains video content.</p>
-          <video controls className="w-full rounded-md">
-            <source src={videoData.videoUrl} type="video/mp4" />
-            Your browser does not support the video element.
-          </video>
-          
-          {videoData.transcription && (
-            <div className="mt-4 p-4 bg-muted rounded-md">
-              <p className="font-semibold mb-2">Transcription:</p>
-              <p>{videoData.transcription}</p>
-            </div>
-          )}
-        </div>
-      );
-    } else {
-      return <p>Unsupported message type.</p>;
+    switch (message.message_type) {
+      case "text":
+        return <TextMessageContent content={message.content} />;
+      case "audio":
+        return <AudioMessageContent audioUrl={audioUrl} transcription={transcription} />;
+      case "video":
+        return <VideoMessageContent videoUrl={videoUrl} transcription={transcription} />;
+      default:
+        return <UnknownMessageContent />;
     }
   };
   
@@ -109,7 +98,7 @@ export function MessageContent({ message }: MessageContentProps) {
     <div className="container mx-auto px-4 py-8">
       <Card className="w-full max-w-3xl mx-auto p-6 overflow-hidden">
         <div className="mb-6 border-b pb-4">
-          <h1 className="text-2xl font-bold mb-1">{message.title}</h1>
+          <h1 className="text-2xl font-bold mb-1">{message.title || 'Untitled Message'}</h1>
         </div>
         
         {renderMessageContent()}
