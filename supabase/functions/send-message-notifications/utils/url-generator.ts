@@ -32,15 +32,21 @@ export function generateAccessUrl(messageId: string, recipientEmail: string, del
       console.log(`[URL Generator] Using Supabase domain: ${domain}`);
     }
     
-    // Use a very simple URL format to avoid any routing issues
+    // Generate the URL with required parameters
     const accessUrl = `https://${domain}/secure-message?id=${messageId}&recipient=${encodeURIComponent(recipientEmail)}`;
     
-    console.log(`[URL Generator] Generated URL: ${accessUrl}`);
+    console.log(`[URL Generator] Generated URL for message ${messageId}: ${accessUrl}`);
     
     return accessUrl;
   } catch (error) {
     console.error("Error generating access URL:", error);
     console.error("Available environment variables:", Object.keys(Deno.env.toObject()).join(', '));
-    throw error;
+    
+    // Provide a fallback URL using the project ID as a last resort
+    const projectId = "onwthrpgcnfydxzzmyot";
+    const fallbackUrl = `https://${projectId}.supabase.co/secure-message?id=${messageId}&recipient=${encodeURIComponent(recipientEmail)}`;
+    console.log(`[URL Generator] Using fallback URL: ${fallbackUrl}`);
+    
+    return fallbackUrl;
   }
 }
