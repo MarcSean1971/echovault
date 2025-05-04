@@ -1,4 +1,3 @@
-
 import { corsHeaders } from "../utils/cors.ts";
 import { getTwilioCredentials } from "../utils/env.ts";
 
@@ -19,9 +18,11 @@ export async function sendTwilioMessage(formData: URLSearchParams, useTemplate: 
   if (useTemplate) {
     // For templates, use the Conversations API
     twilioApiUrl = `https://conversations.twilio.com/v1/Conversations`;
+    console.log("Using Twilio Conversations API for template message");
   } else {
     // For regular messages, use the standard Messages API
     twilioApiUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
+    console.log("Using Twilio Messages API for standard message");
   }
   
   // Make the request to Twilio API with retry logic
@@ -29,6 +30,17 @@ export async function sendTwilioMessage(formData: URLSearchParams, useTemplate: 
   let attempt = 0;
   let response;
   let responseData;
+  
+  // For debugging: log the full form data being sent
+  console.log("Form data being sent to Twilio:");
+  formData.forEach((value, key) => {
+    // Don't log the full Attributes JSON to keep logs cleaner
+    if (key === 'Attributes') {
+      console.log(`  ${key}: [JSON Object]`);
+    } else {
+      console.log(`  ${key}: ${value}`);
+    }
+  });
   
   while (attempt <= maxRetries) {
     try {
@@ -61,7 +73,19 @@ export async function sendTwilioMessage(formData: URLSearchParams, useTemplate: 
         console.log("WhatsApp message sent successfully:", useTemplate ? responseData.sid : responseData.sid);
         break; // Success, exit retry loop
       } else {
-        throw new Error(`Twilio API error: ${responseData.message || "Unknown error"}`);
+        // Show detailed error information
+        let errorMessage = "Unknown error";
+        if (responseData && responseData.message) {
+          errorMessage = responseData.message;
+        } else if (responseData && responseData.error_message) {
+          errorMessage = responseData.error_message;
+        }
+        
+        if (responseData && responseData.more_info) {
+          console.error(`More info: ${responseData.more_info}`);
+        }
+        
+        throw new Error(`Twilio API error: ${errorMessage}`);
       }
     } catch (error) {
       attempt++;

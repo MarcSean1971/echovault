@@ -8,7 +8,7 @@ import { getTwilioCredentials } from "../utils/env.ts";
  * @returns FormData ready to send to Twilio API
  */
 export function buildMessageFormData(requestData: WhatsAppMessageRequest): URLSearchParams {
-  const { twilioWhatsappNumber } = getTwilioCredentials();
+  const { twilioWhatsappNumber, messagingServiceSid } = getTwilioCredentials();
   const { 
     to, 
     message, 
@@ -34,6 +34,14 @@ export function buildMessageFormData(requestData: WhatsAppMessageRequest): URLSe
     // For templates, we need to use the Conversations API with different parameters
     formData.append("To", formattedTo);
     formData.append("From", formattedFrom);
+    
+    // Add MessagingServiceSid which is required for template messages
+    if (messagingServiceSid) {
+      formData.append("MessagingServiceSid", messagingServiceSid);
+      console.log(`Using MessagingServiceSid: ${messagingServiceSid}`);
+    } else {
+      console.warn("WARNING: MessagingServiceSid is missing - template may fail");
+    }
     
     // Use ContentTemplateSid for the approved template ID
     formData.append("ContentTemplateSid", templateId);
