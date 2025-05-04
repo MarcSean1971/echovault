@@ -52,6 +52,16 @@ const queryClient = new QueryClient({
   }
 });
 
+// Completely separate secure message app component
+// This ensures it doesn't share ANY context or providers with the main app
+const SecureMessageApp = () => {
+  return (
+    <SecureMessageLayout>
+      <SecureMessage />
+    </SecureMessageLayout>
+  );
+};
+
 const App = () => {
   // Clear any stale auth state on app load
   useEffect(() => {
@@ -60,20 +70,15 @@ const App = () => {
   }, []);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <BrowserRouter>
-          {/* Secure message route outside of AuthProvider */}
-          <Routes>
-            {/* Secure message route with its own layout */}
-            <Route path="/secure-message" element={
-              <SecureMessageLayout>
-                <SecureMessage />
-              </SecureMessageLayout>
-            } />
-              
-            {/* All other routes wrapped in AuthProvider */}
-            <Route path="*" element={
+    <BrowserRouter>
+      <Routes>
+        {/* Secure message route OUTSIDE of all providers */}
+        <Route path="/secure-message" element={<SecureMessageApp />} />
+          
+        {/* Main app with all providers */}
+        <Route path="*" element={
+          <QueryClientProvider client={queryClient}>
+            <TooltipProvider>
               <AuthProvider>
                 <Toaster />
                 <Sonner />
@@ -107,11 +112,11 @@ const App = () => {
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </AuthProvider>
-            } />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
+            </TooltipProvider>
+          </QueryClientProvider>
+        } />
+      </Routes>
+    </BrowserRouter>
   );
 };
 

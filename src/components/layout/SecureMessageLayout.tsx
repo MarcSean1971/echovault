@@ -10,14 +10,14 @@ interface SecureMessageLayoutProps {
 
 export default function SecureMessageLayout({ children }: SecureMessageLayoutProps) {
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <TooltipProvider>
+    <TooltipProvider>
+      <div className="min-h-screen bg-background flex flex-col">
         <Toaster />
         <Sonner />
         <main className="flex-1 w-full">
           {children}
         </main>
-      </TooltipProvider>
-    </div>
+      </div>
+    </TooltipProvider>
   );
 }
