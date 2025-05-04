@@ -102,7 +102,7 @@ export function MessageViewer({
           title="Secure Message Content"
           className="w-full border-0 overflow-hidden transition-all duration-300"
           style={{ minHeight: '400px', width: '100%' }}
-          sandbox="allow-same-origin allow-scripts"
+          sandbox="allow-same-origin allow-scripts allow-downloads"
         />
       </Card>
       
