@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { MediaType } from "./useMediaRecording";
 import { useMessageForm } from "@/components/message/MessageFormContext";
@@ -31,8 +32,10 @@ export function useMessageTypeHandler() {
     if (content) {
       switch (messageType) {
         case "text":
-          // For text content, just store as is - it shouldn't be JSON
-          setTextContent(content);
+          // Only save actual text content, not JSON
+          if (!isJsonMediaContent(content)) {
+            setTextContent(content);
+          }
           break;
         case "audio":
           setAudioContent(content);
