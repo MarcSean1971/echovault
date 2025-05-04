@@ -1,12 +1,10 @@
 
-import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { useMessageForm } from "../MessageFormContext";
 import { FileUploader } from "@/components/FileUploader";
 import { AudioRecorderDialog } from "@/components/media/AudioRecorderDialog";
 import { VideoRecorderDialog } from "@/components/media/VideoRecorderDialog";
-import { transcribeVideo, transcribeAudio } from "@/services/messages/transcriptionService";
-import { toast } from "@/components/ui/use-toast";
+import { BUTTON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 // Import our new components
 import { TitleInput } from "./TitleInput";
@@ -16,151 +14,74 @@ import { AudioContent } from "./content/AudioContent";
 import { VideoContent } from "./content/VideoContent";
 import { LocationSection } from "./LocationSection";
 
+// Import custom hooks
+import { useAudioRecordingHandler } from "@/hooks/useAudioRecordingHandler";
+import { useVideoRecordingHandler } from "@/hooks/useVideoRecordingHandler";
+import { useMessageTypeHandler } from "@/hooks/useMessageTypeHandler";
+
 export function MessageDetails() {
   const { 
     content, setContent, 
-    messageType, setMessageType,
+    setMessageType: setContextMessageType,
     files, setFiles
   } = useMessageForm();
   
-  // Audio recording states
-  const [showAudioRecorder, setShowAudioRecorder] = useState(false);
-  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
-  const [audioBase64, setAudioBase64] = useState<string | null>(null);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [isTranscribingAudio, setIsTranscribingAudio] = useState(false);
-  const [audioTranscription, setAudioTranscription] = useState<string | null>(null);
-
-  // Video recording states
-  const [showVideoRecorder, setShowVideoRecorder] = useState(false);
-  const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
-  const [videoBase64, setVideoBase64] = useState<string | null>(null);
-  const [videoUrl, setVideoUrl] = useState<string | null>(null);
-  const [isTranscribingVideo, setIsTranscribingVideo] = useState(false);
-  const [videoTranscription, setVideoTranscription] = useState<string | null>(null);
-
-  // Function to handle the audio type button click
-  const handleAudioTypeClick = () => {
-    setMessageType("audio");
-    if (!audioBlob) {
-      setShowAudioRecorder(true);
-    }
+  // Use our custom hooks
+  const {
+    showAudioRecorder, setShowAudioRecorder,
+    audioBlob, audioUrl,
+    isTranscribingAudio, audioTranscription,
+    handleAudioReady, clearAudio
+  } = useAudioRecordingHandler();
+  
+  const {
+    showVideoRecorder, setShowVideoRecorder,
+    videoBlob, videoUrl,
+    isTranscribingVideo, videoTranscription,
+    handleVideoReady, clearVideo
+  } = useVideoRecordingHandler();
+  
+  const {
+    messageType, setMessageType,
+    handleAudioTypeClick, handleVideoTypeClick
+  } = useMessageTypeHandler();
+  
+  // Sync our local messageType with the context
+  const handleMessageTypeChange = (type: string) => {
+    setMessageType(type);
+    setContextMessageType(type);
   };
-
-  // Function to handle the video type button click
-  const handleVideoTypeClick = () => {
-    setMessageType("video");
-    if (!videoBlob) {
-      setShowVideoRecorder(true);
-    }
+  
+  // Wrapper functions to handle content updates
+  const handleAudioContentUpdate = async (audioBlob: Blob, audioBase64: string) => {
+    const contentData = await handleAudioReady(audioBlob, audioBase64);
+    setContent(JSON.stringify(contentData));
   };
-
-  // Function to handle audio recording completion
-  const handleAudioReady = async (audioBlob: Blob, audioBase64: string) => {
-    setAudioBlob(audioBlob);
-    setAudioBase64(audioBase64);
-    setAudioUrl(URL.createObjectURL(audioBlob));
-    
-    // Start transcribing the audio
-    setIsTranscribingAudio(true);
-    try {
-      const transcription = await transcribeAudio(audioBase64, 'audio/webm');
-      setAudioTranscription(transcription);
-      
-      // Store both audio data and transcription in content as JSON
-      const contentData = {
-        audioData: audioBase64,
-        transcription: transcription
-      };
-      setContent(JSON.stringify(contentData));
-      
-      toast({
-        title: "Audio transcription complete",
-        description: "Your audio has been successfully transcribed.",
-      });
-    } catch (error) {
-      console.error("Error transcribing audio:", error);
-      toast({
-        title: "Transcription failed",
-        description: "Could not transcribe audio. Audio will be saved without transcription.",
-        variant: "destructive",
-      });
-      
-      // Still save the audio data in content even if transcription fails
-      const contentData = {
-        audioData: audioBase64,
-        transcription: null
-      };
-      setContent(JSON.stringify(contentData));
-    } finally {
-      setIsTranscribingAudio(false);
-    }
+  
+  const handleVideoContentUpdate = async (videoBlob: Blob, videoBase64: string) => {
+    const contentData = await handleVideoReady(videoBlob, videoBase64);
+    setContent(JSON.stringify(contentData));
   };
-
-  // Function to handle video recording completion
-  const handleVideoReady = async (videoBlob: Blob, videoBase64: string) => {
-    setVideoBlob(videoBlob);
-    setVideoBase64(videoBase64);
-    setVideoUrl(URL.createObjectURL(videoBlob));
-    
-    // Start transcribing the video
-    setIsTranscribingVideo(true);
-    try {
-      const transcription = await transcribeVideo(videoBase64, 'video/webm');
-      setVideoTranscription(transcription);
-      
-      // Store both video data and transcription in content as JSON
-      const contentData = {
-        videoData: videoBase64,
-        transcription: transcription
-      };
-      setContent(JSON.stringify(contentData));
-      
-      toast({
-        title: "Video transcription complete",
-        description: "Your video has been successfully transcribed.",
-      });
-    } catch (error) {
-      console.error("Error transcribing video:", error);
-      toast({
-        title: "Transcription failed",
-        description: "Could not transcribe video. Video will be saved without transcription.",
-        variant: "destructive",
-      });
-      
-      // Still save the video data in content even if transcription fails
-      const contentData = {
-        videoData: videoBase64,
-        transcription: null
-      };
-      setContent(JSON.stringify(contentData));
-    } finally {
-      setIsTranscribingVideo(false);
-    }
+  
+  const handleClearAudio = () => {
+    const emptyContent = clearAudio();
+    setContent(emptyContent);
   };
-
-  // Function to clear recorded audio
-  const clearAudio = () => {
-    if (audioUrl) {
-      URL.revokeObjectURL(audioUrl);
-    }
-    setAudioBlob(null);
-    setAudioBase64(null);
-    setAudioUrl(null);
-    setAudioTranscription(null);
-    setContent("");
+  
+  const handleClearVideo = () => {
+    const emptyContent = clearVideo();
+    setContent(emptyContent);
   };
-
-  // Function to clear recorded video
-  const clearVideo = () => {
-    if (videoUrl) {
-      URL.revokeObjectURL(videoUrl);
-    }
-    setVideoBlob(null);
-    setVideoBase64(null);
-    setVideoUrl(null);
-    setVideoTranscription(null);
-    setContent("");
+  
+  // Handle type selection with our custom hooks
+  const onAudioTypeClick = () => {
+    handleAudioTypeClick(setShowAudioRecorder, audioBlob);
+    handleMessageTypeChange("audio");
+  };
+  
+  const onVideoTypeClick = () => {
+    handleVideoTypeClick(setShowVideoRecorder, videoBlob);
+    handleMessageTypeChange("video");
   };
 
   return (
@@ -170,8 +91,8 @@ export function MessageDetails() {
 
       {/* Message type selector */}
       <MessageTypeSelector 
-        onAudioTypeClick={handleAudioTypeClick}
-        onVideoTypeClick={handleVideoTypeClick}
+        onAudioTypeClick={onAudioTypeClick}
+        onVideoTypeClick={onVideoTypeClick}
       />
 
       {/* Content field based on message type */}
@@ -184,7 +105,7 @@ export function MessageDetails() {
             audioTranscription={audioTranscription}
             isTranscribingAudio={isTranscribingAudio}
             onRecordClick={() => setShowAudioRecorder(true)}
-            onClearAudio={clearAudio}
+            onClearAudio={handleClearAudio}
           />
         ) : messageType === "video" ? (
           <VideoContent 
@@ -192,7 +113,7 @@ export function MessageDetails() {
             videoTranscription={videoTranscription}
             isTranscribingVideo={isTranscribingVideo}
             onRecordClick={() => setShowVideoRecorder(true)}
-            onClearVideo={clearVideo}
+            onClearVideo={handleClearVideo}
           />
         ) : (
           <div className="p-4 bg-muted rounded-md text-center">
@@ -217,14 +138,14 @@ export function MessageDetails() {
       <AudioRecorderDialog 
         open={showAudioRecorder} 
         onOpenChange={setShowAudioRecorder} 
-        onAudioReady={handleAudioReady}
+        onAudioReady={handleAudioContentUpdate}
       />
       
       {/* Video Recorder Dialog */}
       <VideoRecorderDialog 
         open={showVideoRecorder} 
         onOpenChange={setShowVideoRecorder} 
-        onVideoReady={handleVideoReady}
+        onVideoReady={handleVideoContentUpdate}
       />
     </div>
   );
