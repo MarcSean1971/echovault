@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { useSecureMessageData } from "./useSecureMessageData";
-import { usePinVerification } from "./usePinVerification";
+import { usePinVerification } from "./secure-message/usePinVerification";
 
 interface UseSecureMessageAccessParams {
   messageId: string | null;
