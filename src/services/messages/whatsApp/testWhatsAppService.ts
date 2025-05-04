@@ -1,59 +1,185 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
-import { Recipient } from "@/types/message";
-import { 
-  getMessageRecipients, 
-  getPhoneRecipient, 
-  getMessageDetails, 
-  handleWhatsAppError, 
-  showWhatsAppSuccess 
-} from './utils/whatsAppUtils';
+import {
+  getMessageRecipients,
+  getPhoneRecipient,
+  getMessageDetails,
+  getSenderInfo,
+  formatLocationInfo,
+  handleWhatsAppError,
+  showWhatsAppSuccess
+} from "./utils/whatsAppUtils";
 
 /**
- * Send a test WhatsApp message to a recipient
- * @param messageId ID of the message to send test for
- * @returns Promise resolving to boolean indicating success
+ * Send a test WhatsApp message
+ * @param messageId ID of the message to test
  */
-export async function sendTestWhatsAppMessage(messageId: string): Promise<boolean> {
+export async function sendTestWhatsAppMessage(messageId: string) {
   try {
-    // Get recipient details
-    const { recipients, panicConfig, error: recipientsError } = await getMessageRecipients(messageId);
-    if (recipientsError || !recipients) return false;
-    
-    // Find a recipient with a phone number
-    const recipient = getPhoneRecipient(recipients);
-    if (!recipient) return false;
-    
-    // Get message details
-    const { message, error: messageError } = await getMessageDetails(messageId);
-    if (messageError || !message) return false;
+    // Get necessary data
+    const { recipients, panicConfig, error } = await getMessageRecipients(messageId);
+    if (error || !recipients) return;
 
-    // Extract the panic config to get keyword
-    const triggerKeyword = panicConfig && 
-                          typeof panicConfig === 'object' && 
-                          panicConfig !== null ? 
-                          (panicConfig as any).trigger_keyword || "SOS" : 
-                          "SOS";
+    // Find first recipient with phone number
+    const recipient = getPhoneRecipient(recipients);
+    if (!recipient) return;
+
+    // Get message details
+    const { message } = await getMessageDetails(messageId);
+    if (!message) return;
     
-    // Send test WhatsApp message
-    const { error } = await supabase.functions.invoke("send-whatsapp-notification", {
+    // Get sender info
+    const { senderName } = await getSenderInfo();
+    
+    // Format message with test indicators
+    const testMessage = `🧪 TEST MESSAGE from ${senderName}: ${message.title || "Test Message"}\n\nThis is a test of the emergency notification system. No action is required.`;
+    
+    // Send test message
+    const { data, error: sendError } = await supabase.functions.invoke("send-whatsapp-notification", {
       body: {
         to: recipient.phone,
-        message: `[TEST] "${message?.title}": This is a test WhatsApp message. In an emergency, send "${triggerKeyword}" to trigger this alert.`,
-        recipientName: recipient.name,
-        messageId: messageId
+        message: testMessage
       }
     });
     
-    if (error) throw error;
+    if (sendError) {
+      handleWhatsAppError(sendError, "sending test WhatsApp message");
+      return;
+    }
     
-    // Show success message
+    console.log("Test WhatsApp message sent successfully:", data);
     showWhatsAppSuccess(recipient);
     
-    return true;
-  } catch (error: any) {
+  } catch (error) {
     handleWhatsAppError(error, "sending test WhatsApp message");
-    return false;
+  }
+}
+
+/**
+ * Send a test WhatsApp template message
+ * @param messageId ID of the message to test
+ */
+export async function sendTestWhatsAppTemplate(messageId: string) {
+  try {
+    // Get necessary data
+    const { recipients, panicConfig, error } = await getMessageRecipients(messageId);
+    if (error || !recipients) return;
+
+    // Find first recipient with phone number
+    const recipient = getPhoneRecipient(recipients);
+    if (!recipient) return;
+
+    // Get message details
+    const { message } = await getMessageDetails(messageId);
+    if (!message) return;
+    
+    // Get sender info 
+    const { senderName } = await getSenderInfo();
+    
+    // Format location info for template
+    const { locationInfo, mapUrl } = formatLocationInfo(message);
+    
+    // Send test template
+    const { data, error: sendError } = await supabase.functions.invoke("send-whatsapp-alert", {
+      body: {
+        recipientPhone: recipient.phone,
+        senderName: `🧪 TEST - ${senderName}`,
+        recipientName: recipient.name,
+        locationText: locationInfo || "Test location",
+        locationLink: mapUrl || "https://maps.example.com"
+      }
+    });
+    
+    if (sendError) {
+      handleWhatsAppError(sendError, "sending test WhatsApp template");
+      return;
+    }
+    
+    console.log("Test WhatsApp template sent successfully:", data);
+    toast({
+      title: "WhatsApp template sent",
+      description: `Test template sent to ${recipient.phone}`
+    });
+    
+  } catch (error) {
+    handleWhatsAppError(error, "sending test WhatsApp template");
+  }
+}
+
+/**
+ * Send a test WhatsApp SOS trigger
+ * @param keyword The SOS keyword to test
+ */
+export async function testWhatsAppTrigger(keyword: string = "SOS") {
+  try {
+    // Get current user profile to get their phone number
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !userData?.user) {
+      toast({
+        title: "Authentication required",
+        description: "You must be logged in to test the WhatsApp trigger",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Get user's phone number from profile
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("whatsapp_number")
+      .eq("id", userData.user.id)
+      .single();
+      
+    if (profileError || !profile?.whatsapp_number) {
+      toast({
+        title: "No WhatsApp number",
+        description: "Please add your WhatsApp number to your profile first",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Directly call the webhook endpoint with a simulated message
+    const { data, error: webhookError } = await supabase.functions.invoke("whatsapp-webhook", {
+      body: {
+        From: profile.whatsapp_number,
+        Body: keyword
+      }
+    });
+    
+    if (webhookError) {
+      console.error("Error testing WhatsApp trigger:", webhookError);
+      toast({
+        title: "Test failed",
+        description: webhookError.message || "Could not test WhatsApp trigger",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (data?.matched) {
+      toast({
+        title: "SOS trigger test successful! ✅",
+        description: "The emergency message trigger was recognized and processed",
+      });
+    } else {
+      toast({
+        title: "Test completed but no trigger matched",
+        description: "The message was processed but no active panic messages were found",
+        variant: "destructive"
+      });
+    }
+    
+    console.log("WhatsApp trigger test result:", data);
+    
+  } catch (error: any) {
+    console.error("Error testing WhatsApp trigger:", error);
+    toast({
+      title: "Error",
+      description: error.message || "Failed to test WhatsApp trigger",
+      variant: "destructive"
+    });
   }
 }

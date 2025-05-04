@@ -1,342 +1,115 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { supabaseClient } from "./supabase-client.ts";
+import { corsHeaders } from "./cors-headers.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-interface WhatsAppMessage {
-  From: string;  // Format: whatsapp:+1234567890
-  Body: string;  // Message content
-  SmsStatus?: string;
-  MessageSid?: string;
-  AccountSid?: string;
-  To?: string;    // Format: whatsapp:+1234567890
-}
-
-serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    console.log("Received OPTIONS request - handling CORS preflight");
-    return new Response(null, { headers: corsHeaders });
-  }
-
+// Core function to process an SOS message - simplified for reliability
+async function processPanicTrigger(fromNumber: string, messageBody: string) {
   try {
-    console.log("WhatsApp webhook called with method:", req.method);
-    console.log("Request headers:", JSON.stringify(Object.fromEntries(req.headers), null, 2));
+    console.log(`[EMERGENCY] Processing potential panic trigger from ${fromNumber}: "${messageBody}"`);
     
-    // Parse the incoming message (handle both JSON and form data)
-    let messageData: WhatsAppMessage;
-    
-    const contentType = req.headers.get("content-type") || "";
-    console.log(`Received content type: "${contentType}"`);
-    
-    try {
-      if (contentType.includes("application/json")) {
-        console.log("Parsing as JSON");
-        messageData = await req.json();
-      } else if (contentType.includes("application/x-www-form-urlencoded") || contentType.includes("multipart/form-data")) {
-        console.log("Parsing as form data");
-        const formData = await req.formData();
-        
-        // Log all form fields for debugging
-        console.log("Form data fields:", [...formData.entries()].map(([key, value]) => `${key}: ${value}`).join(", "));
-        
-        messageData = {
-          From: formData.get("From") as string,
-          Body: formData.get("Body") as string,
-          SmsStatus: formData.get("SmsStatus") as string,
-          MessageSid: formData.get("MessageSid") as string,
-          AccountSid: formData.get("AccountSid") as string,
-          To: formData.get("To") as string,
-        };
-      } else {
-        // Fallback: try to parse as text and then JSON
-        console.log("Unrecognized content type, attempting fallback parsing");
-        const text = await req.text();
-        console.log("Raw request body:", text);
-        
-        try {
-          // Try to parse as JSON
-          messageData = JSON.parse(text);
-        } catch (jsonError) {
-          // If not valid JSON, try to parse as URL-encoded form data
-          console.log("Not valid JSON, attempting to parse as URL-encoded form data");
-          const params = new URLSearchParams(text);
-          messageData = {
-            From: params.get("From") || "",
-            Body: params.get("Body") || "",
-            SmsStatus: params.get("SmsStatus") || "",
-            MessageSid: params.get("MessageSid") || "",
-            AccountSid: params.get("AccountSid") || "",
-            To: params.get("To") || "",
-          };
-        }
-      }
-    } catch (e) {
-      console.error("Failed to parse webhook payload:", e);
-      console.error("Error details:", e.stack);
-      throw new Error("Failed to parse webhook payload. Check content type and payload format.");
-    }
-    
-    console.log("Received WhatsApp message:", JSON.stringify(messageData, null, 2));
-    
-    if (!messageData.From || !messageData.Body) {
-      console.error("Missing required fields From or Body.");
-      console.error("Received data:", JSON.stringify(messageData, null, 2));
-      throw new Error("Missing required message fields: From and Body are required");
-    }
-    
-    // Extract the phone number from the From field (remove the 'whatsapp:' prefix)
-    const fromNumber = messageData.From.replace("whatsapp:", "");
-    const messageBody = messageData.Body.trim();
-    
-    console.log(`Processing message from ${fromNumber}: "${messageBody}"`);
-
-    // Find a user by this phone number
+    // Initialize Supabase client
     const supabase = supabaseClient();
     
-    // First, check for custom check-in codes
-    const { data: customCodeConditions, error: customCodeError } = await supabase
-      .from("message_conditions")
-      .select("id, message_id, check_in_code, messages!inner(user_id)")
-      .not("check_in_code", "is", null)
-      .eq("active", true);
-      
-    if (customCodeError) {
-      console.error("Error looking up custom check-in codes:", customCodeError);
-    }
+    // 1. STEP ONE: Look for the user with this phone number (check both profiles and recipients tables)
+    let userId = null;
     
-    // Check if the message body matches any custom check-in codes
-    let customCodeMatch = false;
-    let customCodeUserId = null;
-    
-    if (customCodeConditions && customCodeConditions.length > 0) {
-      console.log(`Found ${customCodeConditions.length} active conditions with custom check-in codes`);
-      
-      for (const condition of customCodeConditions) {
-        if (condition.check_in_code && 
-            messageBody.toUpperCase() === condition.check_in_code.toUpperCase()) {
-          console.log(`Found matching custom check-in code: ${condition.check_in_code}`);
-          customCodeMatch = true;
-          customCodeUserId = condition.messages.user_id;
-          break;
-        }
-      }
-    }
-    
-    // Then check if this is a standard CHECK-IN code message
-    if (customCodeMatch || messageBody.toUpperCase() === "CHECKIN" || messageBody.toUpperCase() === "CODE") {
-      if (!customCodeMatch) {
-        console.log("Standard check-in code detected, processing check-in request");
-      } else {
-        console.log("Custom check-in code detected, processing check-in request");
-      }
-      
-      // First try to get user ID from custom code match
-      let userId = customCodeUserId;
-      
-      // If no match from custom code, look in profiles table for the user with this WhatsApp number
-      if (!userId) {
-        const { data: profiles, error: profilesError } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("whatsapp_number", fromNumber)
-          .limit(1);
-        
-        if (profilesError) {
-          console.error("Error looking up profile by WhatsApp number:", profilesError);
-          console.log(`No profile found with WhatsApp number: ${fromNumber}`);
-        }
-        
-        if (profiles && profiles.length > 0) {
-          userId = profiles[0].id;
-          console.log(`Found user via profile: ${userId}`);
-        }
-      }
-      
-      // If still no user ID, check recipients table as fallback
-      if (!userId) {
-        console.log("No profile found with WhatsApp number, checking recipients table...");
-        
-        // As a fallback, check recipients table which also has phone numbers
-        const { data: recipients, error: recipientError } = await supabase
-          .from("recipients")
-          .select("user_id")
-          .eq("phone", fromNumber)
-          .limit(1);
-        
-        if (recipientError) {
-          console.error("Error looking up recipient:", recipientError);
-        }
-        
-        if (recipients && recipients.length > 0) {
-          userId = recipients[0].user_id;
-          console.log(`Found user via recipients table: ${userId}`);
-        }
-      }
-      
-      if (!userId) {
-        console.log("No user found with this WhatsApp number");
-        
-        // Send a response indicating no user was found
-        try {
-          const whatsAppResult = await supabase.functions.invoke("send-whatsapp-notification", {
-            body: {
-              to: fromNumber,
-              message: "Your WhatsApp number is not registered with any account. Please update your profile or add this number as a recipient in the app."
-            }
-          });
-          
-          console.log("Sent not-found message response:", whatsAppResult);
-        } catch (err) {
-          console.error("Error sending not-found response:", err);
-        }
-        
-        return new Response(
-          JSON.stringify({ 
-            success: false, 
-            message: "No user found with this WhatsApp number",
-            timestamp: new Date().toISOString()
-          }),
-          {
-            status: 404,
-            headers: { "Content-Type": "application/json", ...corsHeaders },
-          }
-        );
-      }
-      
-      // We have a user ID, now perform the check-in
-      try {
-        console.log(`Performing check-in for user ${userId}`);
-        const { data: checkInResult, error: checkInError } = await supabase.functions.invoke("perform-whatsapp-check-in", {
-          body: {
-            userId: userId,
-            phoneNumber: fromNumber,
-            method: "whatsapp"
-          }
-        });
-        
-        if (checkInError) {
-          console.error("Error performing check-in:", checkInError);
-          throw checkInError;
-        }
-        
-        console.log("Check-in successful:", checkInResult);
-        
-        // Send confirmation back to the user
-        try {
-          const confirmResult = await supabase.functions.invoke("send-whatsapp-notification", {
-            body: {
-              to: fromNumber,
-              message: "✅ CHECK-IN SUCCESSFUL. Your Dead Man's Switch has been reset."
-            }
-          });
-          
-          console.log("Sent confirmation message:", confirmResult);
-        } catch (confirmError) {
-          console.error("Failed to send confirmation message:", confirmError);
-        }
-        
-        return new Response(
-          JSON.stringify({ 
-            success: true, 
-            type: "check-in",
-            message: "Check-in processed successfully",
-            timestamp: new Date().toISOString()
-          }),
-          {
-            status: 200,
-            headers: { "Content-Type": "application/json", ...corsHeaders },
-          }
-        );
-      } catch (e) {
-        console.error("Error in check-in flow:", e);
-        
-        // Send error message back to the user
-        try {
-          await supabase.functions.invoke("send-whatsapp-notification", {
-            body: {
-              to: fromNumber,
-              message: "❌ CHECK-IN FAILED. Please try again later or log in to the app."
-            }
-          });
-        } catch (notifyError) {
-          console.error("Failed to send error notification:", notifyError);
-        }
-        
-        throw e;
-      }
-    }
-
-    // If we get here, it was not a check-in code, proceed with looking for panic triggers
-    console.log("Not a check-in request, checking for panic triggers...");
-    
-    const { data: recipients, error: recipientError } = await supabase
-      .from("recipients")
-      .select("id, user_id")
-      .eq("phone", fromNumber)
+    // First check profiles table
+    const { data: profiles, error: profilesError } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("whatsapp_number", fromNumber)
       .limit(1);
-    
-    if (recipientError) {
-      console.error("Error looking up recipient:", recipientError);
-      throw recipientError;
+      
+    if (profilesError) {
+      console.error("[EMERGENCY] Error looking up profile by WhatsApp number:", profilesError);
     }
     
-    if (!recipients || recipients.length === 0) {
-      console.log("No recipient found with phone number:", fromNumber);
-      return new Response(
-        JSON.stringify({ status: "error", message: "No recipient found with this phone number" }),
-        { headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+    if (profiles && profiles.length > 0) {
+      userId = profiles[0].id;
+      console.log(`[EMERGENCY] Found user via profiles table: ${userId}`);
+    } else {
+      // As a fallback, check recipients table
+      console.log("[EMERGENCY] No profile found, checking recipients table...");
+      
+      const { data: recipients, error: recipientError } = await supabase
+        .from("recipients")
+        .select("user_id")
+        .eq("phone", fromNumber)
+        .limit(1);
+      
+      if (recipientError) {
+        console.error("[EMERGENCY] Error looking up recipient:", recipientError);
+      }
+      
+      if (recipients && recipients.length > 0) {
+        userId = recipients[0].user_id;
+        console.log(`[EMERGENCY] Found user via recipients table: ${userId}`);
+      }
     }
     
-    const recipient = recipients[0];
-    console.log(`Found recipient with ID: ${recipient.id}, user ID: ${recipient.user_id}`);
+    if (!userId) {
+      console.log(`[EMERGENCY] No user found with WhatsApp number: ${fromNumber}`);
+      return {
+        success: false,
+        error: "No user found with this WhatsApp number"
+      };
+    }
     
-    // Look for panic messages with this trigger keyword
-    // Updated to only reference panic_config which exists in the database
-    const { data: conditions, error: conditionsError } = await supabase
+    // 2. STEP TWO: Find active panic message conditions for this user
+    console.log(`[EMERGENCY] Looking for panic trigger conditions for user ${userId}`);
+    
+    const { data: panicConditions, error: conditionsError } = await supabase
       .from("message_conditions")
-      .select("id, message_id, panic_config")
+      .select("id, message_id, panic_config, panic_trigger_config")
       .eq("condition_type", "panic_trigger")
       .eq("active", true);
-
+    
     if (conditionsError) {
-      console.error("Error finding panic conditions:", conditionsError);
+      console.error("[EMERGENCY] Error finding panic conditions:", conditionsError);
       throw conditionsError;
     }
     
-    console.log(`Found ${conditions?.length || 0} active panic trigger conditions`);
+    console.log(`[EMERGENCY] Found ${panicConditions?.length || 0} active panic trigger conditions`);
     
-    let matched = false;
-    let matchedConfig = null;
+    // Exit early if no conditions found
+    if (!panicConditions || panicConditions.length === 0) {
+      console.log("[EMERGENCY] No active panic conditions found for this user");
+      return {
+        success: false,
+        error: "No active panic messages configured"
+      };
+    }
+    
+    // 3. STEP THREE: Check if message matches any trigger keywords
+    // Simplify the message matching - just check if the content matches any configured trigger word
+    // or default to "SOS" if none configured
+    let matchFound = false;
     let matchedMessageId = null;
     
-    // Check each condition for matching keyword
-    for (const condition of conditions || []) {
-      // Updated to only use panic_config as the source of configuration
-      const config = condition.panic_config;
+    for (const condition of panicConditions) {
+      // Get the configuration (could be in panic_config or panic_trigger_config)
+      const config = condition.panic_config || condition.panic_trigger_config || {};
       
-      if (!config || !config.methods || !config.methods.includes('whatsapp')) {
-        continue; // Skip if not configured for WhatsApp
+      // Get trigger keyword, default to "SOS"
+      let triggerKeyword = "SOS";
+      
+      if (config && typeof config === 'object') {
+        triggerKeyword = config.trigger_keyword || "SOS";
       }
       
-      const triggerKeyword = (config.trigger_keyword || "SOS").toLowerCase();
+      console.log(`[EMERGENCY] Checking if "${messageBody}" matches trigger word "${triggerKeyword}"`);
       
+      // Simple direct case-insensitive match
       if (messageBody.toLowerCase() === triggerKeyword.toLowerCase()) {
-        console.log(`Keyword match found: "${messageBody}" matches configured keyword "${triggerKeyword}"`);
-        matched = true;
-        matchedConfig = config;
+        console.log(`[EMERGENCY] MATCH FOUND! "${messageBody}" matches "${triggerKeyword}"`);
+        matchFound = true;
         matchedMessageId = condition.message_id;
         
-        // Trigger the panic message
+        // 4. STEP FOUR: Trigger the emergency message
         try {
-          console.log(`Triggering emergency notification for message ID: ${condition.message_id}`);
+          console.log(`[EMERGENCY] Triggering emergency notification for message ID: ${condition.message_id}`);
           
-          // When invoking the send-message-notifications function, provide a properly structured request body
           const { data: triggerResult, error: triggerError } = await supabase.functions.invoke("send-message-notifications", {
             body: {
               messageId: condition.message_id,
@@ -346,74 +119,310 @@ serve(async (req) => {
           });
           
           if (triggerError) {
-            console.error("Error triggering message:", triggerError);
+            console.error("[EMERGENCY] Error triggering notification:", triggerError);
             throw triggerError;
           }
           
-          console.log("Successfully triggered message:", triggerResult);
+          console.log("[EMERGENCY] Successfully triggered emergency notification:", triggerResult);
           
-          // Send confirmation back to the user
-          const confirmationResponse = await supabase.functions.invoke("send-whatsapp-notification", {
-            body: {
-              to: fromNumber,
-              message: "⚠️ EMERGENCY ALERT TRIGGERED. Your emergency messages have been sent to all recipients.",
-              isEmergency: true
-            }
-          });
-          
-          console.log("Confirmation response:", confirmationResponse);
+          // 5. STEP FIVE: Send confirmation to user
+          try {
+            await supabase.functions.invoke("send-whatsapp-notification", {
+              body: {
+                to: fromNumber,
+                message: "⚠️ EMERGENCY ALERT TRIGGERED. Your emergency messages have been sent to all recipients.",
+                isEmergency: true
+              }
+            });
+            console.log("[EMERGENCY] Sent confirmation back to user");
+          } catch (confirmError) {
+            console.error("[EMERGENCY] Failed to send confirmation:", confirmError);
+          }
           
           break; // Stop after first match
-        } catch (e) {
-          console.error("Error in trigger flow:", e);
-          throw e;
+        } catch (triggerError) {
+          console.error("[EMERGENCY] Failed to trigger emergency:", triggerError);
+          throw triggerError;
         }
-      } else {
-        console.log(`No match: "${messageBody}" doesn't match "${triggerKeyword}"`);
       }
     }
     
-    if (!matched) {
-      console.log("No matching trigger keyword found");
-      // Optionally send a message back saying no keyword matched
+    // If no match found, send a helpful message
+    if (!matchFound) {
+      console.log("[EMERGENCY] No matching trigger keyword found");
+      
+      try {
+        await supabase.functions.invoke("send-whatsapp-notification", {
+          body: {
+            to: fromNumber,
+            message: "No matching emergency trigger found. Please send 'SOS' to trigger your emergency message."
+          }
+        });
+        console.log("[EMERGENCY] Sent help message to user");
+      } catch (helpError) {
+        console.error("[EMERGENCY] Failed to send help message:", helpError);
+      }
+    }
+    
+    return {
+      success: true,
+      matched: matchFound,
+      messageId: matchedMessageId
+    };
+  } catch (error) {
+    console.error("[EMERGENCY] Major error processing panic trigger:", error);
+    return {
+      success: false,
+      error: `Error processing emergency trigger: ${error.message || "Unknown error"}`
+    };
+  }
+}
+
+// Core function to handle check-in requests
+async function processCheckIn(fromNumber: string) {
+  try {
+    console.log(`[CHECK-IN] Processing check-in request from ${fromNumber}`);
+    
+    // Initialize Supabase client
+    const supabase = supabaseClient();
+    
+    // Find the user by phone number
+    let userId = null;
+    
+    // Check profiles table
+    const { data: profiles, error: profilesError } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("whatsapp_number", fromNumber)
+      .limit(1);
+      
+    if (profilesError) {
+      console.error("[CHECK-IN] Error looking up profile:", profilesError);
+    }
+    
+    if (profiles && profiles.length > 0) {
+      userId = profiles[0].id;
+      console.log(`[CHECK-IN] Found user via profile: ${userId}`);
+    } else {
+      // Check recipients table as fallback
+      const { data: recipients, error: recipientError } = await supabase
+        .from("recipients")
+        .select("user_id")
+        .eq("phone", fromNumber)
+        .limit(1);
+      
+      if (recipientError) {
+        console.error("[CHECK-IN] Error looking up recipient:", recipientError);
+      }
+      
+      if (recipients && recipients.length > 0) {
+        userId = recipients[0].user_id;
+        console.log(`[CHECK-IN] Found user via recipients: ${userId}`);
+      }
+    }
+    
+    if (!userId) {
+      console.log(`[CHECK-IN] No user found with phone number ${fromNumber}`);
+      return {
+        success: false, 
+        error: "No user found with this phone number"
+      };
+    }
+    
+    // Perform the check-in
+    const { data: checkInResult, error: checkInError } = await supabase.functions.invoke("perform-whatsapp-check-in", {
+      body: {
+        userId: userId,
+        phoneNumber: fromNumber,
+        method: "whatsapp"
+      }
+    });
+    
+    if (checkInError) {
+      console.error("[CHECK-IN] Error performing check-in:", checkInError);
+      throw checkInError;
+    }
+    
+    console.log("[CHECK-IN] Check-in successful:", checkInResult);
+    
+    // Send confirmation
+    try {
       await supabase.functions.invoke("send-whatsapp-notification", {
         body: {
           to: fromNumber,
-          message: "No matching emergency trigger found. Please check the keyword and try again."
+          message: "✅ CHECK-IN SUCCESSFUL. Your Dead Man's Switch has been reset."
         }
       });
+      console.log("[CHECK-IN] Sent confirmation message");
+    } catch (confirmError) {
+      console.error("[CHECK-IN] Error sending confirmation:", confirmError);
     }
     
-    // Return success response to Twilio
+    return {
+      success: true,
+      type: "check-in",
+      userId: userId
+    };
+  } catch (error) {
+    console.error("[CHECK-IN] Error processing check-in:", error);
+    
+    try {
+      // Send error notification to user
+      const supabase = supabaseClient();
+      await supabase.functions.invoke("send-whatsapp-notification", {
+        body: {
+          to: fromNumber,
+          message: "❌ CHECK-IN FAILED. Please try again or log in to the app."
+        }
+      });
+    } catch (notifyError) {
+      console.error("[CHECK-IN] Failed to send error notification:", notifyError);
+    }
+    
+    return {
+      success: false,
+      error: `Check-in error: ${error.message || "Unknown error"}`
+    };
+  }
+}
+
+// Main webhook handler
+serve(async (req) => {
+  console.log(`[WEBHOOK] WhatsApp webhook received ${req.method} request`);
+  
+  // CORS handling
+  if (req.method === 'OPTIONS') {
+    console.log("[WEBHOOK] Handling CORS preflight request");
+    return new Response(null, { headers: corsHeaders });
+  }
+  
+  try {
+    console.log("[WEBHOOK] Request headers:", 
+      Object.fromEntries(req.headers.entries()));
+    
+    // Parse the incoming message - handle multiple formats
+    let fromNumber = "";
+    let messageBody = "";
+    
+    // Get content type
+    const contentType = req.headers.get("content-type") || "";
+    console.log(`[WEBHOOK] Content-Type: ${contentType}`);
+    
+    // Parse based on content type
+    if (contentType.includes("application/json")) {
+      console.log("[WEBHOOK] Parsing JSON body");
+      const jsonData = await req.json();
+      console.log("[WEBHOOK] JSON data:", jsonData);
+      
+      // Try to extract data from JSON
+      fromNumber = jsonData.From || jsonData.from || "";
+      messageBody = jsonData.Body || jsonData.body || "";
+      
+    } else if (contentType.includes("application/x-www-form-urlencoded") || 
+               contentType.includes("multipart/form-data")) {
+      console.log("[WEBHOOK] Parsing form data");
+      try {
+        const formData = await req.formData();
+        console.log("[WEBHOOK] Form fields:", 
+          [...formData.entries()].map(([k, v]) => `${k}: ${v}`).join(", "));
+          
+        fromNumber = formData.get("From") || "";
+        messageBody = formData.get("Body") || "";
+        
+      } catch (formError) {
+        console.error("[WEBHOOK] Error parsing form data:", formError);
+      }
+    } else {
+      // Last resort: try to parse as text
+      console.log("[WEBHOOK] Parsing as plain text");
+      try {
+        const rawText = await req.text();
+        console.log("[WEBHOOK] Raw text:", rawText);
+        
+        // Try to extract key-value pairs or parse as JSON
+        try {
+          const maybeJson = JSON.parse(rawText);
+          fromNumber = maybeJson.From || maybeJson.from || "";
+          messageBody = maybeJson.Body || maybeJson.body || "";
+        } catch {
+          // If not JSON, try URL params
+          const params = new URLSearchParams(rawText);
+          fromNumber = params.get("From") || "";
+          messageBody = params.get("Body") || "";
+        }
+        
+      } catch (textError) {
+        console.error("[WEBHOOK] Error parsing text:", textError);
+      }
+    }
+    
+    // Clean up phone number
+    fromNumber = fromNumber.replace("whatsapp:", "");
+    
+    console.log(`[WEBHOOK] Extracted from: "${fromNumber}", body: "${messageBody}"`);
+    
+    if (!fromNumber || !messageBody) {
+      console.error("[WEBHOOK] Missing required data - from or body");
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Missing required data: From and Body are required",
+          timestamp: new Date().toISOString()
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders }
+        }
+      );
+    }
+    
+    // SIMPLE COMMAND PROCESSING:
+    
+    // 1. Check for CHECK-IN requests
+    if (messageBody.toUpperCase() === "CHECKIN" || 
+        messageBody.toUpperCase() === "CHECK-IN" || 
+        messageBody.toUpperCase() === "CODE") {
+      console.log("[WEBHOOK] Identified check-in request");
+      const result = await processCheckIn(fromNumber);
+      return new Response(
+        JSON.stringify({
+          ...result,
+          timestamp: new Date().toISOString()
+        }),
+        {
+          status: result.success ? 200 : 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders }
+        }
+      );
+    }
+    
+    // 2. Check for SOS/emergency trigger
+    console.log("[WEBHOOK] Checking for emergency triggers");
+    const result = await processPanicTrigger(fromNumber, messageBody);
+    
     return new Response(
-      JSON.stringify({ 
-        success: true,
-        matched: matched,
-        messageId: matchedMessageId,
-        config: matchedConfig ? { 
-          trigger_keyword: matchedConfig.trigger_keyword,
-          methods: matchedConfig.methods
-        } : null,
-        message: matched ? "Emergency alert triggered" : "No matching keyword found",
+      JSON.stringify({
+        ...result,
         timestamp: new Date().toISOString()
       }),
       {
-        status: 200,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+        status: 200, // Always return 200 so Twilio doesn't retry
+        headers: { "Content-Type": "application/json", ...corsHeaders }
       }
     );
-  } catch (error: any) {
-    console.error("Error in WhatsApp webhook:", error);
+    
+  } catch (error) {
+    // Log error but still return 200 to Twilio
+    console.error("[WEBHOOK] Unhandled error:", error);
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message || "Unknown error occurred",
-        stack: error.stack || "No stack trace available",
+        error: `Webhook error: ${error.message || "Unknown error"}`,
         timestamp: new Date().toISOString()
       }),
       {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+        status: 200, // Return 200 even for errors so Twilio doesn't retry
+        headers: { "Content-Type": "application/json", ...corsHeaders }
       }
     );
   }
