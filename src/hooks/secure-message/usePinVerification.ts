@@ -1,5 +1,6 @@
 
 import { useState, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 
 interface UsePinVerificationParams {
@@ -29,68 +30,78 @@ export function usePinVerification({
     try {
       console.log("[SecureMessage] Verifying PIN for message:", messageId);
       
-      // Fixed project ID for Supabase
-      const projectId = "onwthrpgcnfydxzzmyot";
-      
-      // Get the Supabase anon key
-      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ud3RocnBnY25meWR4enpteW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYxMDQzOTUsImV4cCI6MjA2MTY4MDM5NX0.v4tYEDukTlMERZ6GHqvnoDbyH-g9KQd8s3-UlIOPkDs";
-      
-      // Always use direct Supabase URL for API requests
-      const apiUrl = `https://${projectId}.supabase.co/functions/v1/access-message/verify-pin`;
-      console.log("[SecureMessage] PIN verification endpoint:", apiUrl);
-      
-      // Prepare the verification payload
-      const verifyPayload = {
-        messageId,
-        pin,
-        ...(recipient ? { recipient } : {}),
-        ...(deliveryId ? { deliveryId } : {})
-      };
-      
-      console.log("[SecureMessage] Sending verification payload:", verifyPayload);
-      
-      // Try the verification request
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "apikey": SUPABASE_ANON_KEY,
-          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-          // Add origin header to help with CORS
-          "Origin": window.location.origin
-        },
-        body: JSON.stringify(verifyPayload)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error("[SecureMessage] PIN verification failed:", errorData);
-        throw new Error(`PIN verification failed: ${response.status} ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        console.log("[SecureMessage] PIN verified successfully");
-        toast({
-          title: "PIN verified",
-          description: "Viewing secure message content"
-        });
+      // Get the message condition to verify the PIN
+      const { data: condition, error: conditionError } = await supabase
+        .from("message_conditions")
+        .select("pin_code")
+        .eq("message_id", messageId)
+        .single();
         
-        // Refresh the message content
-        setPinProtected(false);
-        fetchMessage();
-      } else {
-        console.error("[SecureMessage] PIN verification returned error:", data.message || "Invalid PIN");
-        setVerifyError(data.message || "Invalid PIN. Please try again.");
+      if (conditionError) {
+        console.error("[SecureMessage] Error getting message condition:", conditionError);
+        setVerifyError("Error verifying PIN: couldn't find message security settings");
+        setVerifying(false);
+        return;
       }
+      
+      if (!condition || !condition.pin_code) {
+        console.error("[SecureMessage] No PIN condition found for message");
+        setVerifyError("Error verifying PIN: message doesn't have PIN protection");
+        setVerifying(false);
+        return;
+      }
+      
+      // Compare the PINs
+      if (condition.pin_code !== pin) {
+        console.error("[SecureMessage] Incorrect PIN provided");
+        setVerifyError("Incorrect PIN. Please try again.");
+        setVerifying(false);
+        return;
+      }
+      
+      console.log("[SecureMessage] PIN verified successfully");
+      
+      // Track message view if deliveryId is provided
+      if (deliveryId) {
+        try {
+          const { error: trackError } = await supabase
+            .from("delivered_messages")
+            .update({ 
+              viewed_at: new Date().toISOString(),
+              viewed_count: 1,
+              device_info: navigator.userAgent
+            })
+            .eq("delivery_id", deliveryId)
+            .eq("message_id", messageId);
+            
+          if (trackError) {
+            console.error("[SecureMessage] Error updating view status:", trackError);
+            // Continue anyway
+          } else {
+            console.log("[SecureMessage] Message view status updated");
+          }
+        } catch (e) {
+          console.error("[SecureMessage] Error updating view status:", e);
+          // Continue anyway
+        }
+      }
+      
+      toast({
+        title: "PIN verified",
+        description: "Viewing secure message content"
+      });
+      
+      // Unlock the message
+      setPinProtected(false);
+      fetchMessage();
+      
     } catch (err: any) {
       console.error("[SecureMessage] PIN verification error:", err);
       setVerifyError(err.message || "Error verifying PIN");
     } finally {
       setVerifying(false);
     }
-  }, [messageId, recipient, deliveryId, fetchMessage, setPinProtected]);
+  }, [messageId, deliveryId, fetchMessage, setPinProtected]);
 
   return {
     verifying,

@@ -1,7 +1,7 @@
 
 import { useState, useCallback } from "react";
-import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/components/ui/use-toast";
 
 interface UseMessageFetcherParams {
   messageId: string | null;
@@ -9,120 +9,144 @@ interface UseMessageFetcherParams {
   deliveryId: string | null;
 }
 
-export function useMessageFetcher({ messageId, recipient, deliveryId }: UseMessageFetcherParams) {
+export function useMessageFetcher({ 
+  messageId, 
+  recipient, 
+  deliveryId 
+}: UseMessageFetcherParams) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [technicalDetails, setTechnicalDetails] = useState<string | null>(null);
-  const [htmlContent, setHtmlContent] = useState<string | null>(null);
+  const [htmlContent, setHtmlContent] = useState<any>(null);
   const [pinProtected, setPinProtected] = useState(false);
-
+  const [messageData, setMessageData] = useState<any>(null);
+  const [condition, setCondition] = useState<any>(null);
+  
   const fetchMessage = useCallback(async () => {
+    if (!messageId) {
+      console.error("[useMessageFetcher] No message ID provided");
+      setError("Message ID is required");
+      setTechnicalDetails("Missing messageId parameter");
+      setLoading(false);
+      return;
+    }
+    
     setLoading(true);
     setError(null);
     setTechnicalDetails(null);
+    setMessageData(null);
+    setCondition(null);
     
     try {
-      // Validate required parameters
-      if (!messageId) {
-        throw new Error("Invalid message link. Missing message ID parameter.");
-      }
+      console.log("[useMessageFetcher] Fetching message:", messageId);
+      console.log("[useMessageFetcher] Recipient:", recipient || "not provided");
+      console.log("[useMessageFetcher] Delivery ID:", deliveryId || "not provided");
       
-      if (!deliveryId) {
-        console.warn("[SecureMessage] Missing delivery ID parameter, this may cause issues");
-        // Continue anyway, as the backend can potentially handle this
-      }
-      
-      // Fixed project ID for Supabase
-      const projectId = "onwthrpgcnfydxzzmyot";
-      
-      // Get the Supabase anon key 
-      const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ud3RocnBnY25meWR4enpteW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYxMDQzOTUsImV4cCI6MjA2MTY4MDM5NX0.v4tYEDukTlMERZ6GHqvnoDbyH-g9KQd8s3-UlIOPkDs";
-      
-      console.log("[SecureMessage] Access parameters:", { 
-        messageId, 
-        recipient: recipient || "(not provided)", 
-        deliveryId: deliveryId || "(not provided)"
-      });
-      
-      // Always use direct Supabase URL for API requests
-      const apiUrl = `https://${projectId}.supabase.co/functions/v1/access-message?id=${encodeURIComponent(messageId)}`;
-      
-      // Add recipient and delivery parameters if available
-      const fullUrl = `${apiUrl}${recipient ? `&recipient=${encodeURIComponent(recipient)}` : ''}${deliveryId ? `&delivery=${encodeURIComponent(deliveryId)}` : ''}`;
-      
-      console.log("[SecureMessage] Requesting message from:", fullUrl);
-      
-      const response = await fetch(fullUrl, {
-        method: "GET",
-        headers: {
-          "Accept": "text/html,application/xhtml+xml",
-          "Content-Type": "text/html",
-          // Add Supabase authentication headers
-          "apikey": SUPABASE_ANON_KEY,
-          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-          // Add origin header to help with CORS
-          "Origin": window.location.origin
-        }
-      });
-      
-      console.log("[SecureMessage] Response status:", response.status);
-      console.log("[SecureMessage] Response content type:", response.headers.get("Content-Type"));
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("[SecureMessage] Error response:", errorText);
+      // First get the message
+      const { data: message, error: messageError } = await supabase
+        .from("messages")
+        .select("*")
+        .eq("id", messageId)
+        .single();
         
-        // Attempt to extract more detailed error info
-        let technicalInfo = "";
-        try {
-          // Check if the error response is HTML
-          if (errorText.includes('<html') || errorText.includes('<body')) {
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = errorText;
-            technicalInfo = tempDiv.textContent || errorText;
-          } else {
-            technicalInfo = errorText;
+      if (messageError) {
+        console.error("[useMessageFetcher] Message not found:", messageError);
+        setError("Message not found");
+        setTechnicalDetails(messageError.message);
+        setLoading(false);
+        return;
+      }
+      
+      if (!message) {
+        console.error("[useMessageFetcher] No message data returned");
+        setError("Message not found");
+        setTechnicalDetails("Database returned empty result");
+        setLoading(false);
+        return;
+      }
+
+      console.log("[useMessageFetcher] Message found:", message.id, message.title);
+      setMessageData(message);
+      
+      // Next, check if this message has security conditions
+      const { data: condition, error: conditionError } = await supabase
+        .from("message_conditions")
+        .select("*")
+        .eq("message_id", messageId)
+        .single();
+        
+      if (conditionError && conditionError.code !== 'PGRST116') { // Not found error
+        console.error("[useMessageFetcher] Error fetching condition:", conditionError);
+        // Continue without condition info
+      } 
+      
+      if (condition) {
+        console.log("[useMessageFetcher] Found message condition:", condition.condition_type);
+        setCondition(condition);
+        
+        // Check if pin protected
+        if (condition.pin_code) {
+          console.log("[useMessageFetcher] PIN protection detected");
+          setPinProtected(true);
+          setLoading(false);
+          return; // Don't return content yet, need PIN verification
+        }
+        
+        // Check if recipient is authorized
+        if (recipient && condition.recipients) {
+          // Check if recipients is an array before using .some()
+          const recipients = condition.recipients;
+          let isAuthorized = false;
+          
+          if (Array.isArray(recipients)) {
+            isAuthorized = recipients.some((r: any) => 
+              r.email && r.email.toLowerCase() === recipient.toLowerCase()
+            );
           }
           
-          // Add diagnostics about URL and current location
-          technicalInfo += `\n\nDiagnostic Info:\n- Current URL: ${window.location.href}\n- Current host: ${window.location.host}\n- API endpoint: ${projectId}.supabase.co\n- Message ID: ${messageId}\n- Delivery ID: ${deliveryId || "(not provided)"}\n- Recipient: ${recipient || "(not provided)"}`;
+          console.log("[useMessageFetcher] Recipient authorized:", isAuthorized);
           
-        } catch (parseError) {
-          console.error("[SecureMessage] Error parsing error response:", parseError);
-          technicalInfo = errorText.substring(0, 500); // Limit length
+          if (!isAuthorized) {
+            setError("Unauthorized recipient");
+            setTechnicalDetails(`The recipient ${recipient} is not authorized to view this message`);
+            setLoading(false);
+            return;
+          }
         }
         
-        setTechnicalDetails(technicalInfo);
-        throw new Error(`Server returned ${response.status} ${response.statusText}`);
+        // Track message view if delivery ID is provided
+        if (deliveryId) {
+          try {
+            const { error: viewError } = await supabase
+              .from("delivered_messages")
+              .update({ 
+                viewed_at: new Date().toISOString(),
+                viewed_count: 1,
+                device_info: navigator.userAgent
+              })
+              .eq("delivery_id", deliveryId)
+              .eq("message_id", messageId);
+              
+            if (viewError) {
+              console.error("[useMessageFetcher] Error tracking message view:", viewError);
+              // Continue anyway
+            } else {
+              console.log("[useMessageFetcher] Message view tracked");
+            }
+          } catch (trackError) {
+            console.error("[useMessageFetcher] Error tracking view:", trackError);
+            // Continue anyway
+          }
+        }
       }
       
-      const html = await response.text();
-      console.log("[SecureMessage] Response HTML length:", html.length);
-      
-      if (html.length < 10) {
-        throw new Error("Received empty or invalid response from server");
-      }
-      
-      // Check if the response contains PIN form - with improved detection
-      const isPinProtected = html.includes('<div class="pin-form">') || 
-                            html.includes('<form id="pin-form">') || 
-                            (html.includes("pin-form") && html.includes("PIN Protected Message"));
-                            
-      console.log("[SecureMessage] PIN protection detected:", isPinProtected);
-      
-      setHtmlContent(html);
-      setPinProtected(isPinProtected);
+      // Set the message content
+      setHtmlContent(message);
+      setLoading(false);
     } catch (err: any) {
-      console.error("[SecureMessage] Error fetching message:", err);
-      setError(err.message || "Failed to load the secure message");
-      
-      // Show toast for error
-      toast({
-        variant: "destructive",
-        title: "Error loading message",
-        description: err.message || "Failed to load the secure message"
-      });
-    } finally {
+      console.error("[useMessageFetcher] Error fetching message:", err.message);
+      setError("Error loading message");
+      setTechnicalDetails(err.message);
       setLoading(false);
     }
   }, [messageId, recipient, deliveryId]);
@@ -132,6 +156,8 @@ export function useMessageFetcher({ messageId, recipient, deliveryId }: UseMessa
     error,
     technicalDetails,
     htmlContent,
+    messageData,
+    condition,
     pinProtected,
     setPinProtected,
     fetchMessage

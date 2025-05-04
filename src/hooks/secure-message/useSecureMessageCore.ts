@@ -16,12 +16,21 @@ export function useSecureMessageCore({
 }: UseSecureMessageCoreParams) {
   const [retryCount, setRetryCount] = useState(0);
   
+  // Log all parameters for debugging
+  console.log("[SecureMessageCore] Initializing with params:", {
+    messageId,
+    recipient: recipient || "(not provided)",
+    deliveryId: deliveryId || "(not provided)"
+  });
+  
   // Use the message fetcher hook
   const {
     loading,
     error,
     technicalDetails,
     htmlContent,
+    messageData,
+    condition,
     pinProtected,
     setPinProtected,
     fetchMessage
@@ -42,7 +51,7 @@ export function useSecureMessageCore({
   
   // Handle iframe messages
   const handleIframeMessage = useCallback((event: MessageEvent) => {
-    if (event.data.type === 'PIN_SUBMIT') {
+    if (event.data?.type === 'PIN_SUBMIT') {
       verifyPin(event.data.pin);
     }
   }, [verifyPin]);
@@ -72,6 +81,8 @@ export function useSecureMessageCore({
     error,
     technicalDetails,
     htmlContent,
+    messageData,
+    condition,
     pinProtected,
     verifying,
     verifyError,

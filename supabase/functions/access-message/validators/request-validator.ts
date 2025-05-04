@@ -16,7 +16,12 @@ export async function validateMessageRequest(url: URL) {
     }
   }
   
+  // Log the debugging info even if ID is missing (to help troubleshoot)
+  console.log(`Request parameters: query=${JSON.stringify(Object.fromEntries(url.searchParams))}, path=${url.pathname}`);
+  
+  // Be more lenient with validation
   if (!messageId) {
+    console.warn("Missing message ID in both query parameters and URL path");
     throw new Error("Missing message ID in both query parameters and URL path");
   }
   
@@ -24,16 +29,7 @@ export async function validateMessageRequest(url: URL) {
   const recipientEmail = url.searchParams.get("recipient");
   const deliveryId = url.searchParams.get("delivery");
   
-  // Log the extracted parameters for debugging
   console.log(`Extracted parameters: messageId=${messageId}, recipient=${recipientEmail || "not provided"}, delivery=${deliveryId || "not provided"}`);
-  
-  if (!recipientEmail) {
-    console.warn(`Missing recipient email for message ${messageId}`);
-  }
-  
-  if (!deliveryId) {
-    console.warn(`Missing delivery ID for message ${messageId}`);
-  }
   
   return { messageId, recipientEmail, deliveryId: deliveryId || null };
 }

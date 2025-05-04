@@ -45,7 +45,7 @@ export function generateAccessUrl(messageId: string, recipientEmail: string, del
     console.error("Error generating access URL:", error);
     console.error("Available environment variables:", Object.keys(Deno.env.toObject()).join(', '));
     
-    // Provide a fallback URL using the project ID as a last resort
+    // Provide a more reliable fallback URL using the project ID
     const projectId = "onwthrpgcnfydxzzmyot";
     const fallbackUrl = `https://${projectId}.supabase.co/secure-message?id=${encodeURIComponent(messageId)}&recipient=${encodeURIComponent(recipientEmail)}&delivery=${encodeURIComponent(deliveryId)}`;
     console.log(`[URL Generator] Using fallback URL: ${fallbackUrl}`);

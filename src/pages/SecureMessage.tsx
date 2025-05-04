@@ -16,7 +16,7 @@ export default function SecureMessage() {
   
   console.log("[SecureMessage] URL parameters:", { messageId, recipientEmail, deliveryId });
   
-  // Show error toast if missing critical parameters
+  // Show warning if missing critical parameters
   useEffect(() => {
     if (!messageId) {
       toast({
@@ -25,14 +25,7 @@ export default function SecureMessage() {
         description: "Missing message ID in URL parameters"
       });
     }
-    if (!deliveryId) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Missing delivery ID in URL parameters"
-      });
-    }
-  }, [messageId, deliveryId]);
+  }, [messageId]);
   
   // Use the secure message hook that handles rendering content from API
   const {
