@@ -112,6 +112,10 @@ function MessageEditForm({ message, onCancel }: EditMessageFormProps) {
           if (messageCondition.panic_trigger_config) {
             console.log("Loading panic trigger config:", messageCondition.panic_trigger_config);
             setPanicTriggerConfig(messageCondition.panic_trigger_config);
+          } else if (messageCondition.panic_config) {
+            // Fallback to panic_config if panic_trigger_config doesn't exist
+            console.log("Loading panic config:", messageCondition.panic_config);
+            setPanicTriggerConfig(messageCondition.panic_config);
           }
           
           // Set security options if they exist
