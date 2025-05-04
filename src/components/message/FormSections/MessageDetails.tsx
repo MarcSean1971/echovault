@@ -43,13 +43,19 @@ export function MessageDetails() {
   
   const {
     messageType, setMessageType,
-    handleAudioTypeClick, handleVideoTypeClick
+    handleTextTypeClick, handleAudioTypeClick, handleVideoTypeClick
   } = useMessageTypeHandler();
   
   // Sync our local messageType with the context
   const handleMessageTypeChange = (type: string) => {
     setMessageType(type);
     setContextMessageType(type);
+  };
+  
+  // Wrapper functions for message type handling
+  const onTextTypeClick = () => {
+    handleTextTypeClick();
+    handleMessageTypeChange("text");
   };
   
   // Wrapper functions to handle content updates
@@ -91,6 +97,7 @@ export function MessageDetails() {
 
       {/* Message type selector */}
       <MessageTypeSelector 
+        onTextTypeClick={onTextTypeClick}
         onAudioTypeClick={onAudioTypeClick}
         onVideoTypeClick={onVideoTypeClick}
       />

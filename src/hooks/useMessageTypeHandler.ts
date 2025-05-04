@@ -13,6 +13,11 @@ export function useMessageTypeHandler() {
     setContent("");
   }, [messageType, setContent]);
   
+  // Function to handle text type button click
+  const handleTextTypeClick = () => {
+    setMessageType("text");
+  };
+  
   // Function to handle the media type button click
   const handleMediaTypeClick = (
     mediaType: MediaType,
@@ -37,6 +42,7 @@ export function useMessageTypeHandler() {
   return {
     messageType,
     setMessageType,
+    handleTextTypeClick,
     handleAudioTypeClick,
     handleVideoTypeClick,
     handleMediaTypeClick

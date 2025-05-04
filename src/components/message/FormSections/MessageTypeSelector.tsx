@@ -5,12 +5,13 @@ import { BUTTON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { useMessageForm } from "../MessageFormContext";
 
 interface MessageTypeSelectorProps {
+  onTextTypeClick: () => void;
   onAudioTypeClick: () => void;
   onVideoTypeClick: () => void;
 }
 
-export function MessageTypeSelector({ onAudioTypeClick, onVideoTypeClick }: MessageTypeSelectorProps) {
-  const { messageType, setMessageType } = useMessageForm();
+export function MessageTypeSelector({ onTextTypeClick, onAudioTypeClick, onVideoTypeClick }: MessageTypeSelectorProps) {
+  const { messageType } = useMessageForm();
   
   return (
     <div className="space-y-2">
@@ -19,7 +20,7 @@ export function MessageTypeSelector({ onAudioTypeClick, onVideoTypeClick }: Mess
         <Button
           type="button"
           variant={messageType === "text" ? "default" : "outline"}
-          onClick={() => setMessageType("text")}
+          onClick={onTextTypeClick}
           className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
         >
           Text
