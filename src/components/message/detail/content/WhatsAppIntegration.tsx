@@ -95,8 +95,11 @@ export function WhatsAppIntegration({ messageId, panicConfig }: WhatsAppIntegrat
         return;
       }
       
-      // Now we can safely use find() since we've confirmed recipients is an array
-      const recipient = recipients.find((r: Recipient) => r.phone);
+      // Cast the recipients array to the Recipient type to ensure type safety
+      const typedRecipients = recipients as Recipient[];
+      
+      // Now we can safely use find() since we've confirmed recipients is an array and cast the type
+      const recipient = typedRecipients.find(r => r.phone);
       
       if (!recipient || !recipient.phone) {
         toast({

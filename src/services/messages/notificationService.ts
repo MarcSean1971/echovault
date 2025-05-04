@@ -62,7 +62,7 @@ export async function sendTestNotification(messageId: string) {
       return;
     }
     
-    const recipients = condition.recipients as any[];
+    const recipients = condition.recipients as Recipient[];
     
     // Get the message details
     const { data: message, error: messageError } = await supabase
@@ -135,8 +135,11 @@ export async function sendTestWhatsAppMessage(messageId: string) {
       return;
     }
     
+    // Cast to proper type for type safety
+    const typedRecipients = recipients as Recipient[];
+    
     // Safely use find after confirming recipients is an array
-    const recipient = recipients.find((r: Recipient) => r.phone);
+    const recipient = typedRecipients.find(r => r.phone);
     
     if (!recipient || !recipient.phone) {
       toast({
