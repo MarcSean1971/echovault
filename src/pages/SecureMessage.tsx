@@ -7,6 +7,7 @@ import { MessageContent } from "@/components/secure-message/MessageContent";
 import { useSecureMessageData } from "@/hooks/useSecureMessageData";
 import { usePinVerification } from "@/hooks/usePinVerification";
 import { useState, useEffect } from "react";
+import { useSecureMessage } from "@/hooks/useSecureMessage";
 
 export default function SecureMessage() {
   const [searchParams] = useSearchParams();
@@ -14,34 +15,21 @@ export default function SecureMessage() {
   const recipientEmail = searchParams.get("recipient");
   const deliveryId = searchParams.get("delivery");
   
-  const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState<any>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [pinProtected, setPinProtected] = useState(false);
-  const [hasPinProtection, setHasPinProtection] = useState(false);
+  console.log("[SecureMessage] URL parameters:", { messageId, recipientEmail, deliveryId });
   
-  // Use the secure message data hook
+  // Use the secure message hook that handles rendering content from API
   const {
-    loading: dataLoading,
-    message: messageData,
-    error: dataError,
-    hasPinProtection: messagePinProtected
-  } = useSecureMessageData({ messageId, recipientEmail });
-  
-  const {
-    pinError,
-    verifyingPin,
+    loading,
+    error,
+    technicalDetails,
+    htmlContent,
+    pinProtected,
+    verifying,
+    verifyError,
+    handleIframeMessage,
+    handleRetry,
     verifyPin
-  } = usePinVerification({ messageId, recipientEmail });
-  
-  // Sync state from the hooks
-  useEffect(() => {
-    setLoading(dataLoading);
-    setMessage(messageData);
-    setError(dataError);
-    setHasPinProtection(messagePinProtected);
-    setPinProtected(messagePinProtected);
-  }, [dataLoading, messageData, dataError, messagePinProtected]);
+  } = useSecureMessage({ messageId, recipient: recipientEmail, deliveryId });
 
   // Loading state
   if (loading) {
@@ -53,8 +41,8 @@ export default function SecureMessage() {
     return (
       <ErrorDisplay 
         error={error} 
-        technicalDetails={null} 
-        onRetry={() => window.location.reload()} 
+        technicalDetails={technicalDetails} 
+        onRetry={handleRetry} 
       />
     );
   }
@@ -63,12 +51,11 @@ export default function SecureMessage() {
   if (pinProtected) {
     return (
       <PinProtectedMessage
-        pinError={pinError}
-        verifyingPin={verifyingPin}
+        pinError={verifyError}
+        verifyingPin={verifying}
         onVerifyPin={(e, pin) => {
           e.preventDefault();
-          verifyPin(e, pin);
-          if (!pinError) setPinProtected(false);
+          verifyPin(pin);
         }}
       />
     );
@@ -76,8 +63,9 @@ export default function SecureMessage() {
 
   // Display the message
   return <MessageContent 
-    message={message}
+    message={htmlContent}
     deliveryId={deliveryId}
     recipientEmail={recipientEmail}
+    handleIframeMessage={handleIframeMessage}
   />;
 }

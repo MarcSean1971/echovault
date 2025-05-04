@@ -21,8 +21,12 @@ export function useSecureMessageData({ messageId, recipientEmail }: UseSecureMes
     
     try {
       if (!messageId) {
+        console.error("[useSecureMessageData] No message ID provided");
         throw new Error("No message ID provided");
       }
+      
+      console.log("[useSecureMessageData] Fetching message:", messageId);
+      console.log("[useSecureMessageData] Recipient:", recipientEmail);
       
       // First get the message
       const { data: message, error: messageError } = await supabase
@@ -32,8 +36,16 @@ export function useSecureMessageData({ messageId, recipientEmail }: UseSecureMes
         .single();
         
       if (messageError) {
+        console.error("[useSecureMessageData] Message not found:", messageError);
         throw new Error("Message not found");
       }
+      
+      if (!message) {
+        console.error("[useSecureMessageData] No message data returned");
+        throw new Error("Message not found");
+      }
+
+      console.log("[useSecureMessageData] Message found:", message.id, message.title);
       
       // Next, check if this message has security conditions
       const { data: condition, error: conditionError } = await supabase
@@ -43,11 +55,12 @@ export function useSecureMessageData({ messageId, recipientEmail }: UseSecureMes
         .single();
         
       if (conditionError) {
-        console.error("Error fetching condition:", conditionError);
+        console.error("[useSecureMessageData] Error fetching condition:", conditionError);
         // Continue without condition info
       } else {
         // Check if pin protected
         if (condition.pin_code) {
+          console.log("[useSecureMessageData] PIN protection detected");
           setHasPinProtection(true);
         }
         
@@ -63,6 +76,8 @@ export function useSecureMessageData({ messageId, recipientEmail }: UseSecureMes
             );
           }
           
+          console.log("[useSecureMessageData] Recipient authorized:", isAuthorized);
+          
           if (!isAuthorized) {
             throw new Error("You are not authorized to view this message");
           }
@@ -71,7 +86,7 @@ export function useSecureMessageData({ messageId, recipientEmail }: UseSecureMes
       
       setMessage(message);
     } catch (err: any) {
-      console.error("Error fetching message:", err);
+      console.error("[useSecureMessageData] Error fetching message:", err.message);
       setError(err.message || "Failed to load the message");
       toast({
         variant: "destructive",
@@ -92,6 +107,7 @@ export function useSecureMessageData({ messageId, recipientEmail }: UseSecureMes
     loading,
     message,
     error,
-    hasPinProtection
+    hasPinProtection,
+    refetch: fetchMessage
   };
 }

@@ -72,7 +72,7 @@ const App = () => {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Secure message route OUTSIDE of all providers */}
+        {/* Secure message route OUTSIDE of all providers - Special handling to ensure all URL parameters are preserved */}
         <Route path="/secure-message" element={<SecureMessageApp />} />
           
         {/* Main app with all providers */}
