@@ -1,5 +1,5 @@
 
 // Re-export all WhatsApp service functions for easy imports
-export * from './testWhatsAppService';
-export * from './templateService';
+export { sendTestWhatsAppMessage, testWhatsAppTrigger } from './testWhatsAppService';
+export { sendTestWhatsAppTemplate } from './templateService'; 
 export * from './utils/whatsAppUtils';

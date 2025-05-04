@@ -57,57 +57,6 @@ export async function sendTestWhatsAppMessage(messageId: string) {
 }
 
 /**
- * Send a test WhatsApp template message
- * @param messageId ID of the message to test
- */
-export async function sendTestWhatsAppTemplate(messageId: string) {
-  try {
-    // Get necessary data
-    const { recipients, panicConfig, error } = await getMessageRecipients(messageId);
-    if (error || !recipients) return;
-
-    // Find first recipient with phone number
-    const recipient = getPhoneRecipient(recipients);
-    if (!recipient) return;
-
-    // Get message details
-    const { message } = await getMessageDetails(messageId);
-    if (!message) return;
-    
-    // Get sender info 
-    const { senderName } = await getSenderInfo();
-    
-    // Format location info for template
-    const { locationInfo, mapUrl } = formatLocationInfo(message);
-    
-    // Send test template
-    const { data, error: sendError } = await supabase.functions.invoke("send-whatsapp-alert", {
-      body: {
-        recipientPhone: recipient.phone,
-        senderName: `🧪 TEST - ${senderName}`,
-        recipientName: recipient.name,
-        locationText: locationInfo || "Test location",
-        locationLink: mapUrl || "https://maps.example.com"
-      }
-    });
-    
-    if (sendError) {
-      handleWhatsAppError(sendError, "sending test WhatsApp template");
-      return;
-    }
-    
-    console.log("Test WhatsApp template sent successfully:", data);
-    toast({
-      title: "WhatsApp template sent",
-      description: `Test template sent to ${recipient.phone}`
-    });
-    
-  } catch (error) {
-    handleWhatsAppError(error, "sending test WhatsApp template");
-  }
-}
-
-/**
  * Send a test WhatsApp SOS trigger
  * @param keyword The SOS keyword to test
  */
