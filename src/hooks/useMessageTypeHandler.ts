@@ -27,9 +27,9 @@ export function useMessageTypeHandler() {
   const [audioContent, setAudioContent] = useState("");
   const [videoContent, setVideoContent] = useState("");
 
-  // Combined effect to handle both saving and restoring content
+  // Combined effect to handle saving content
   useEffect(() => {
-    // First, save content from the previous message type
+    // Save content from the current message type
     if (content) {
       switch (previousMessageTypeRef.current) {
         case "text":
@@ -48,33 +48,17 @@ export function useMessageTypeHandler() {
           break;
       }
     }
-    
-    // If the message type has changed, restore the appropriate content
-    if (messageType !== previousMessageTypeRef.current) {
-      // Restore content based on the new message type
-      switch (messageType) {
-        case "text":
-          setContent(textContent);
-          break;
-        case "audio":
-          setContent(audioContent);
-          break;
-        case "video":
-          setContent(videoContent);
-          break;
-        default:
-          setContent("");
-          break;
-      }
-      
-      // Update the ref to track the message type change
-      previousMessageTypeRef.current = messageType;
-    }
-  }, [messageType, content, setContent, textContent, audioContent, videoContent]);
+  }, [content]);
   
-  // Function to handle text type button click
+  // Update the previous message type ref when message type changes
+  useEffect(() => {
+    previousMessageTypeRef.current = messageType;
+  }, [messageType]);
+  
+  // Function to handle text type button click - immediately restore content
   const handleTextTypeClick = () => {
     setMessageType("text");
+    setContent(textContent);
   };
   
   // Function to handle the media type button click
@@ -84,6 +68,13 @@ export function useMessageTypeHandler() {
     mediaBlob: Blob | null
   ) => {
     setMessageType(mediaType);
+    // Immediately set the appropriate content
+    if (mediaType === "audio") {
+      setContent(audioContent);
+    } else if (mediaType === "video") {
+      setContent(videoContent);
+    }
+    
     if (!mediaBlob) {
       setShowRecorder(true);
     }
