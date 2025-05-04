@@ -43,7 +43,7 @@ export async function sendTestWhatsAppTemplate(messageId: string): Promise<boole
       recipient.phone : 
       `+${recipient.phone.replace(/\D/g, '')}`;
     
-    // Use direct approach similar to the working example
+    // Use direct approach with simplified parameters
     const { data, error } = await supabase.functions.invoke("send-whatsapp-alert", {
       body: {
         recipientPhone: formattedPhone,

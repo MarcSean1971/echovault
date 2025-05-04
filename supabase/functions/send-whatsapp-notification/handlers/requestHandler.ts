@@ -1,4 +1,4 @@
-import { WhatsAppMessageRequest } from "../models/whatsapp.ts";
+
 import { corsHeaders } from "../utils/cors.ts";
 import { getTwilioCredentials } from "../utils/env.ts";
 
@@ -119,35 +119,71 @@ export async function handleRequest(req: Request) {
       );
     }
     
-    // For non-template messages, use the original implementation
-    const { to, message, messageId, recipientName, isEmergency, useTemplate, templateId, templateParams } = requestData;
+    // For non-template messages, use a simplified approach
+    const { to, message } = requestData;
   
-    console.log(`Sending WhatsApp message to: ${to}`);
-    console.log(`Is emergency: ${isEmergency ? "Yes" : "No"}`);
-    console.log(`Using template: ${useTemplate ? "Yes" : "No"}`);
-  
-    if (useTemplate) {
-      console.log(`Template ID: ${templateId}`);
-      console.log(`Template params: ${JSON.stringify(templateParams)}`);
+    console.log(`Sending regular WhatsApp message to: ${to}`);
+    
+    // Ensure proper phone formatting
+    const formattedTo = to.startsWith("whatsapp:") ? 
+      to : 
+      `whatsapp:${to.startsWith("+") ? to : "+" + to.replace(/\D/g, '')}`;
+    
+    // Send using standard Messages API
+    const { twilioWhatsappNumber } = getTwilioCredentials();
+    const formattedFrom = `whatsapp:${twilioWhatsappNumber.replace('whatsapp:', '')}`;
+    
+    const messagePayload = new URLSearchParams({
+      To: formattedTo,
+      From: formattedFrom,
+      Body: message || "Test message from your app"
+    });
+    
+    console.log(`Sending message from ${formattedFrom} to ${formattedTo}`);
+    
+    const messageResponse = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`, {
+      method: "POST",
+      headers: {
+        "Authorization": "Basic " + btoa(`${accountSid}:${authToken}`),
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: messagePayload
+    });
+    
+    const messageResponseText = await messageResponse.text();
+    console.log(`Message response status: ${messageResponse.status}`);
+    console.log(`Message response: ${messageResponseText}`);
+    
+    let messageResponseData;
+    try {
+      messageResponseData = JSON.parse(messageResponseText);
+    } catch {
+      messageResponseData = { rawResponse: messageResponseText };
     }
-  
-    // Build message form data
-    // const formData = buildMessageFormData(requestData);
-  
-    // Send the message - passing the useTemplate flag so the right API is used
-    // const responseData = await sendTwilioMessage(formData, useTemplate);
-  
-    // Return success response
-    // return createSuccessResponse(responseData, Boolean(useTemplate), templateId);
-  
+    
+    if (!messageResponse.ok) {
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `Twilio error: ${messageResponseData.message || messageResponseText}`,
+          timestamp: new Date().toISOString() 
+        }),
+        { 
+          status: 500, 
+          headers: { "Content-Type": "application/json", ...corsHeaders } 
+        }
+      );
+    }
+    
     return new Response(
       JSON.stringify({
-        success: false,
-        error: "Non-template messages not supported in this simplified version",
+        success: true,
+        sid: messageResponseData.sid,
+        status: messageResponseData.status || "sent",
         timestamp: new Date().toISOString()
       }),
       {
-        status: 500,
+        status: 200,
         headers: { "Content-Type": "application/json", ...corsHeaders }
       }
     );
