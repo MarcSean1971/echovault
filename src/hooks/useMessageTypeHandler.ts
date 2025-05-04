@@ -2,6 +2,20 @@ import { useState, useEffect } from "react";
 import { MediaType } from "./useMediaRecording";
 import { useMessageForm } from "@/components/message/MessageFormContext";
 
+// Helper to check if a string is JSON from media content
+const isJsonMediaContent = (content: string): boolean => {
+  try {
+    const parsed = JSON.parse(content);
+    // Check if it has audioData or videoData properties (which indicates it's from media)
+    return (
+      typeof parsed === "object" && 
+      (parsed.audioData !== undefined || parsed.videoData !== undefined)
+    );
+  } catch (e) {
+    return false;
+  }
+};
+
 export function useMessageTypeHandler() {
   const [messageType, setMessageType] = useState("text");
   const { content, setContent } = useMessageForm();
@@ -17,6 +31,7 @@ export function useMessageTypeHandler() {
     if (content) {
       switch (messageType) {
         case "text":
+          // For text content, just store as is - it shouldn't be JSON
           setTextContent(content);
           break;
         case "audio":
@@ -33,9 +48,9 @@ export function useMessageTypeHandler() {
     // Then restore content based on the new message type
     switch (messageType) {
       case "text":
-        // When switching to text mode, check if there's already saved text content,
-        // otherwise set empty string to avoid JSON appearing in the text field
-        setContent(textContent);
+        // When switching to text mode, if we have saved text content, use that
+        // otherwise use an empty string to prevent JSON from appearing
+        setContent(textContent || "");
         break;
       case "audio":
         setContent(audioContent);
