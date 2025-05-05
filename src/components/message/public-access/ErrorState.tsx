@@ -1,21 +1,33 @@
 
-import { AlertCircle, HelpCircle, ArrowLeft } from "lucide-react";
+import { AlertCircle, HelpCircle, ArrowLeft, RefreshCw } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { HOVER_TRANSITION, BUTTON_HOVER_EFFECTS } from "@/utils/hoverEffects";
+import { useEffect } from "react";
 
 interface ErrorStateProps {
   error: string;
 }
 
 export const ErrorState = ({ error }: ErrorStateProps) => {
+  // Log error for debugging
+  useEffect(() => {
+    console.error("Message access error:", error);
+    console.log("Current URL:", window.location.href);
+  }, [error]);
+
   return (
     <div className="container mx-auto max-w-3xl px-4 py-8">
       <Card className="p-6 border-red-200">
         <div className="flex flex-col items-center justify-center text-center space-y-4 py-8">
           <AlertCircle className="h-12 w-12 text-red-500" />
           <h2 className="text-xl font-semibold">Access Error</h2>
-          <p className="text-muted-foreground">{error}</p>
+          
+          <Alert variant="destructive" className="mb-4">
+            <AlertTitle>Error accessing message</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
           
           <div className="bg-amber-50 border border-amber-100 rounded-md p-4 mt-4 w-full max-w-md">
             <div className="flex items-start">
@@ -23,10 +35,10 @@ export const ErrorState = ({ error }: ErrorStateProps) => {
               <div className="text-sm text-amber-700 text-left">
                 <p className="font-medium mb-1">Common issues:</p>
                 <ul className="list-disc pl-5 space-y-1">
-                  <li>The URL may have been copied incorrectly</li>
+                  <li>The URL may have been copied incorrectly from your email</li>
                   <li>The link may be missing required parameters</li>
-                  <li>The message may have expired</li>
-                  <li>The message may have been deleted by the sender</li>
+                  <li>The message may have expired or been deleted</li>
+                  <li>The message delivery may not have been recorded properly</li>
                 </ul>
               </div>
             </div>
@@ -38,30 +50,32 @@ export const ErrorState = ({ error }: ErrorStateProps) => {
               <div className="text-sm text-blue-700 text-left">
                 <p className="font-medium mb-1">Troubleshooting steps:</p>
                 <ul className="list-disc pl-5 space-y-1">
+                  <li>Open the original email and click the link directly</li>
                   <li>Check if the full URL was copied from your email</li>
-                  <li>Try accessing the link from the original email again</li>
-                  <li>Clear your browser cache and try again</li>
-                  <li>Try a different web browser</li>
+                  <li>Try clearing your browser cache and try again</li>
+                  <li>Try using a different web browser</li>
+                  <li>Ask the sender to resend the message</li>
                 </ul>
               </div>
             </div>
           </div>
           
           <p className="text-sm text-muted-foreground mt-4">
-            If you continue to experience issues, please contact the sender of this message.
+            If you continue to experience issues, please contact the sender of this message and let them know about the error.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-3 mt-2">
             <Button 
               onClick={() => window.location.reload()} 
-              className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
+              className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default} flex items-center gap-2`}
             >
+              <RefreshCw className="h-4 w-4" />
               Try Again
             </Button>
             <Button 
               variant="outline"
               onClick={() => window.history.back()}
-              className={`${HOVER_TRANSITION} flex items-center gap-1`}
+              className={`${HOVER_TRANSITION} flex items-center gap-2`}
             >
               <ArrowLeft className="h-4 w-4" />
               Go Back

@@ -22,36 +22,33 @@ export default function PublicMessageAccess() {
     console.log("==== PublicMessageAccess.tsx ====");
     console.log("Path parameters:");
     console.log("messageId:", messageId);
-    console.log("Query parameters:");
-    console.log("deliveryId:", deliveryId);
-    console.log("recipientEmail:", recipientEmail);
+    console.log("Query parameters (raw):");
+    console.log("deliveryId (raw):", deliveryId);
+    console.log("recipientEmail (raw):", recipientEmail);
+
+    // Properly decode parameters to ensure correct comparison
+    const decodedEmail = recipientEmail ? decodeURIComponent(recipientEmail) : null;
+    const decodedDeliveryId = deliveryId ? decodeURIComponent(deliveryId) : null;
+    
+    console.log("Decoded parameters:");
+    console.log("decodedDeliveryId:", decodedDeliveryId);
+    console.log("decodedEmail:", decodedEmail);
     console.log("Current URL:", window.location.href);
     
-    // Check if parameters are properly formatted/encoded
-    if (messageId) {
-      try {
-        console.log("Decoded messageId:", decodeURIComponent(messageId));
-      } catch (e) {
-        console.error("Failed to decode messageId:", e);
-      }
-    }
-    
-    if (deliveryId) {
-      try {
-        console.log("Decoded deliveryId:", decodeURIComponent(deliveryId));
-      } catch (e) {
-        console.error("Failed to decode deliveryId:", e);
-      }
-    }
-    
-    if (recipientEmail) {
-      try {
-        console.log("Decoded recipientEmail:", decodeURIComponent(recipientEmail));
-      } catch (e) {
-        console.error("Failed to decode recipientEmail:", e);
-      }
+    // Validate the parameters
+    if (!messageId || !deliveryId || !recipientEmail) {
+      console.error("Missing required parameters for message access!");
+      const missingParams = [];
+      if (!messageId) missingParams.push("messageId");
+      if (!deliveryId) missingParams.push("deliveryId");
+      if (!recipientEmail) missingParams.push("recipientEmail");
+      console.error(`Missing parameters: ${missingParams.join(', ')}`);
     }
   }, [messageId, deliveryId, recipientEmail]);
+  
+  // Properly decode parameters before passing to hook
+  const decodedEmail = recipientEmail ? decodeURIComponent(recipientEmail) : null;
+  const decodedDeliveryId = deliveryId ? decodeURIComponent(deliveryId) : null;
   
   const { 
     message,
@@ -63,7 +60,11 @@ export default function PublicMessageAccess() {
     isVerified,
     verifyPin,
     handleUnlockExpired
-  } = usePublicMessageAccess({ messageId, deliveryId, recipientEmail });
+  } = usePublicMessageAccess({ 
+    messageId, 
+    deliveryId: decodedDeliveryId, 
+    recipientEmail: decodedEmail
+  });
   
   // Handle PIN submission
   const handlePinSubmit = async (pinCode: string) => {

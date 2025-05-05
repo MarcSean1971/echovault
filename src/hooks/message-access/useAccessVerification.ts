@@ -30,20 +30,28 @@ export const useAccessVerification = ({
 
   useEffect(() => {
     const verifyAccess = async () => {
+      // Parameter validation
       if (!messageId || !deliveryId || !recipientEmail) {
         const missingParams = [];
         if (!messageId) missingParams.push('messageId');
         if (!deliveryId) missingParams.push('deliveryId');
         if (!recipientEmail) missingParams.push('recipientEmail');
         
-        console.error('Missing required parameters:', { messageId, deliveryId, recipientEmail });
+        console.error('Missing required parameters:', { 
+          messageId: messageId || 'missing', 
+          deliveryId: deliveryId || 'missing', 
+          recipientEmail: recipientEmail || 'missing' 
+        });
         setError(`Invalid access link. Missing parameters: ${missingParams.join(', ')}. Please check your email for the correct link.`);
         setIsLoading(false);
         return;
       }
       
       try {
-        console.log(`Verifying access for message: ${messageId}, delivery: ${deliveryId}, recipient: ${recipientEmail}`);
+        console.log(`Verifying access with params:`);
+        console.log(`- messageId: ${messageId}`);
+        console.log(`- deliveryId: ${deliveryId}`);
+        console.log(`- recipientEmail: ${recipientEmail}`);
         
         // First, verify the delivery record with additional logging
         console.log(`Querying delivered_messages for delivery_id: ${deliveryId} and message_id: ${messageId}`);
@@ -73,6 +81,7 @@ export const useAccessVerification = ({
         
         if (!deliveryData || deliveryData.length === 0) {
           console.error('No delivery record found for the provided parameters');
+          console.error(`Checked with: delivery_id=${deliveryId}, message_id=${messageId}`);
           setError('This message link is invalid or has expired. No delivery record found.');
           setIsLoading(false);
           return;
@@ -100,16 +109,25 @@ export const useAccessVerification = ({
         
         if (!recipientData || recipientData.length === 0) {
           console.error('No recipient found with the provided ID');
+          console.error(`Checked with recipient_id=${deliveryRecord.recipient_id}`);
           setError('Recipient not found. This message might have been sent to a different recipient.');
           setIsLoading(false);
           return;
         }
         
         const recipientRecord = recipientData[0];
+        console.log('Recipient record found:', recipientRecord);
         
-        // Compare emails with case-insensitive matching
-        if (recipientRecord.email.toLowerCase() !== recipientEmail.toLowerCase()) {
-          console.error('Recipient email mismatch:', recipientRecord.email, recipientEmail);
+        // Compare emails with case-insensitive matching and careful debugging
+        const dbEmail = recipientRecord.email.toLowerCase();
+        const urlEmail = recipientEmail.toLowerCase();
+        
+        console.log(`Comparing emails - DB: '${dbEmail}', URL: '${urlEmail}'`);
+        
+        if (dbEmail !== urlEmail) {
+          console.error('Recipient email mismatch:');
+          console.error(`- DB email: ${dbEmail}`);
+          console.error(`- URL email: ${urlEmail}`);
           setError('Unauthorized access. This message is intended for a different recipient.');
           setIsLoading(false);
           return;
@@ -135,6 +153,7 @@ export const useAccessVerification = ({
         
         if (!conditionData || conditionData.length === 0) {
           console.error('No conditions found for the provided condition ID');
+          console.error(`Checked with condition_id=${deliveryRecord.condition_id}`);
           setError('Message security conditions not found.');
           setIsLoading(false);
           return;
