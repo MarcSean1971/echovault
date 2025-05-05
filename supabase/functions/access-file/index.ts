@@ -38,9 +38,22 @@ serve(async (req: Request): Promise<Response> => {
   const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
   
   try {
-    // Extract file path from URL if present
-    if (pathParts.length >= 2 && pathParts[0] === 'file') {
-      let filePath = pathParts.slice(1).join('/');
+    // Check if the path includes "access-file" in the URL and handle accordingly
+    // This is to ensure compatibility with both URL formats
+    // Our client might be calling with /access-file/file/... or /file/...
+    let filePathIndex = 1; // Default assuming /file/...
+    
+    if (pathParts.length >= 2) {
+      if (pathParts[0] === 'access-file' && pathParts[1] === 'file') {
+        filePathIndex = 2; // Path format: /access-file/file/...
+        console.log("[FileAccess] Detected /access-file/file/ path format");
+      } else if (pathParts[0] === 'file') {
+        filePathIndex = 1; // Path format: /file/...
+        console.log("[FileAccess] Detected /file/ path format");
+      }
+      
+      // Extract file path from URL based on the detected format
+      let filePath = pathParts.slice(filePathIndex).join('/');
       
       console.log(`[FileAccess] Requested file path: ${filePath}`);
       
