@@ -11,6 +11,7 @@ import { Suspense, lazy } from "react";
 import { PageLoader } from "@/components/ui/page-loader";
 import ProtectedLayout from "@/components/layout/ProtectedLayout";
 import { MainLayout } from "@/components/layout/MainLayout";
+import AppLayout from "@/components/layout/AppLayout";
 
 // Create a client for React Query
 const queryClient = new QueryClient({
@@ -54,7 +55,11 @@ export default function App() {
                 <Route index element={<HomePage />} />
                 <Route path="login" element={<LoginPage />} />
                 <Route path="register" element={<RegisterPage />} />
-                <Route path="access/message/:id" element={<PublicMessageAccess />} />
+              </Route>
+              
+              {/* Public message access route - moved to AppLayout for proper navigation */}
+              <Route path="/access/message/:id" element={<AppLayout isLoggedIn={false} />}>
+                <Route index element={<PublicMessageAccess />} />
               </Route>
               
               {/* Protected routes */}
