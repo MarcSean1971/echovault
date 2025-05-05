@@ -52,6 +52,38 @@ export const useAccessVerification = ({
         console.log(`- messageId: ${messageId}`);
         console.log(`- deliveryId: ${deliveryId}`);
         console.log(`- recipientEmail: ${recipientEmail}`);
+
+        // Try using the edge function first (preferred method) - but fall back to direct DB query
+        try {
+          console.log("Attempting to use edge function for access verification...");
+          const { data: edgeFnResult, error: edgeFnError } = await supabase.functions.invoke("access-message", {
+            body: { 
+              messageId, 
+              deliveryId,
+              recipientEmail: decodeURIComponent(recipientEmail)
+            }
+          });
+          
+          if (edgeFnError) {
+            console.error("Edge function error:", edgeFnError);
+            throw new Error(`Edge function failed: ${edgeFnError.message}`);
+          }
+          
+          if (edgeFnResult && edgeFnResult.success) {
+            console.log("Edge function verification successful!");
+            setDeliveryData(edgeFnResult.delivery);
+            setConditionData(edgeFnResult.conditions);
+            setIsLoading(false);
+            return;
+          } else if (edgeFnResult && edgeFnResult.error) {
+            console.error("Edge function returned error:", edgeFnResult.error);
+            throw new Error(`Access verification failed: ${edgeFnResult.error}`);
+          }
+        } catch (edgeFnCallError) {
+          console.error("Error calling edge function:", edgeFnCallError);
+          console.log("Falling back to direct database verification...");
+          // Continue to direct DB verification as fallback
+        }
         
         // First, verify the delivery record with additional logging
         console.log(`Querying delivered_messages for delivery_id: ${deliveryId} and message_id: ${messageId}`);
@@ -82,6 +114,17 @@ export const useAccessVerification = ({
         if (!deliveryData || deliveryData.length === 0) {
           console.error('No delivery record found for the provided parameters');
           console.error(`Checked with: delivery_id=${deliveryId}, message_id=${messageId}`);
+          
+          // Additional diagnostic query to check for similar records
+          const { data: similarRecords } = await supabase
+            .from('delivered_messages')
+            .select('delivery_id, message_id')
+            .or(`delivery_id.eq.${deliveryId},message_id.eq.${messageId}`);
+            
+          if (similarRecords && similarRecords.length > 0) {
+            console.log("Found similar records:", similarRecords);
+          }
+          
           setError('This message link is invalid or has expired. No delivery record found.');
           setIsLoading(false);
           return;
@@ -164,7 +207,7 @@ export const useAccessVerification = ({
         setIsLoading(false);
       } catch (err: any) {
         console.error('Error verifying access:', err);
-        setError('An error occurred while verifying access to this message. Please try again later.');
+        setError(`An error occurred while verifying access to this message: ${err.message}. Please try again later.`);
         setIsLoading(false);
       }
     };

@@ -1,12 +1,14 @@
 
-import { AlertCircle, HelpCircle, ArrowLeft, RefreshCw, FileText } from "lucide-react";
+import { AlertCircle, HelpCircle, ArrowLeft, RefreshCw, FileText, Bug } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { HOVER_TRANSITION, BUTTON_HOVER_EFFECTS } from "@/utils/hoverEffects";
 import { useEffect, useState } from "react";
 import { Separator } from "@/components/ui/separator";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { toast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ErrorStateProps {
   error: string;
@@ -16,12 +18,22 @@ export const ErrorState = ({ error }: ErrorStateProps) => {
   const [isAttachmentError, setIsAttachmentError] = useState(false);
   const [messageId, setMessageId] = useState<string | null>(null);
   const [technicalDetails, setTechnicalDetails] = useState<string | null>(null);
+  const [showDebug, setShowDebug] = useState(false);
+  const [deliveryData, setDeliveryData] = useState<any>(null);
+  const [isLoadingData, setIsLoadingData] = useState(false);
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const deliveryId = searchParams.get('delivery');
+  const recipientEmail = searchParams.get('recipient');
   
   // Log error for debugging and determine error type
   useEffect(() => {
     console.error("Message access error:", error);
     console.log("Current URL:", window.location.href);
+    console.log("Message ID from params:", id);
+    console.log("Delivery ID from query:", deliveryId);
+    console.log("Recipient email from query:", recipientEmail);
     
     // Extract technical details if available
     if (error && error.includes(":")) {
@@ -38,9 +50,9 @@ export const ErrorState = ({ error }: ErrorStateProps) => {
     setIsAttachmentError(isAttachmentError);
     
     // Extract messageId from URL if present
-    const messageIdFromUrl = getMessageIdFromUrl();
+    const messageIdFromUrl = id || getMessageIdFromUrl();
     setMessageId(messageIdFromUrl);
-  }, [error]);
+  }, [error, id, deliveryId, recipientEmail]);
 
   // Extract messageId from URL if present
   const getMessageIdFromUrl = () => {
@@ -50,6 +62,57 @@ export const ErrorState = ({ error }: ErrorStateProps) => {
       return matches ? matches[1] : null;
     } catch (e) {
       return null;
+    }
+  };
+
+  // Check delivery record in database for diagnostic purposes
+  const checkDeliveryData = async () => {
+    if (!messageId || !deliveryId) {
+      toast({
+        title: "Missing parameters",
+        description: "Message ID or Delivery ID is missing",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsLoadingData(true);
+    try {
+      const { data, error } = await supabase
+        .from('delivered_messages')
+        .select('*')
+        .eq('delivery_id', deliveryId)
+        .eq('message_id', messageId);
+      
+      if (error) {
+        console.error("Error fetching delivery data:", error);
+        toast({
+          title: "Database Error",
+          description: error.message,
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      setDeliveryData(data);
+      console.log("Delivery data from database:", data);
+      
+      if (data && data.length > 0) {
+        toast({
+          title: "Delivery record found",
+          description: "The delivery record exists in the database",
+        });
+      } else {
+        toast({
+          title: "No delivery record",
+          description: "The delivery record was not found in the database",
+          variant: "destructive"
+        });
+      }
+    } catch (e) {
+      console.error("Error in checkDeliveryData:", e);
+    } finally {
+      setIsLoadingData(false);
     }
   };
 
@@ -77,7 +140,14 @@ export const ErrorState = ({ error }: ErrorStateProps) => {
 
   // Generate regenerate access link (would normally connect to backend)
   const regenerateAccess = () => {
-    alert("This would typically connect to a backend to regenerate your access link. Please contact the sender to resend the message link.");
+    toast({
+      title: "Access link regeneration",
+      description: "This would typically connect to a backend to regenerate your access link. Please contact the sender to resend the message link."
+    });
+  };
+
+  const toggleDebug = () => {
+    setShowDebug(prev => !prev);
   };
 
   return (
@@ -98,6 +168,49 @@ export const ErrorState = ({ error }: ErrorStateProps) => {
               )}
             </AlertDescription>
           </Alert>
+          
+          <div className="flex space-x-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={toggleDebug} 
+              className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default} flex items-center gap-2`}
+            >
+              <Bug className={`h-4 w-4 ${HOVER_TRANSITION}`} />
+              {showDebug ? 'Hide Diagnostics' : 'Show Diagnostics'}
+            </Button>
+            
+            {messageId && deliveryId && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={checkDeliveryData}
+                disabled={isLoadingData}
+                className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default} flex items-center gap-2`}
+              >
+                <RefreshCw className={`h-4 w-4 ${isLoadingData ? 'animate-spin' : ''} ${HOVER_TRANSITION}`} />
+                Check Delivery
+              </Button>
+            )}
+          </div>
+          
+          {showDebug && (
+            <div className="bg-slate-50 border rounded p-4 text-left w-full overflow-auto">
+              <h3 className="font-semibold mb-2">Debug Information:</h3>
+              <p className="text-sm"><strong>Message ID:</strong> {messageId || '(not found)'}</p>
+              <p className="text-sm"><strong>Delivery ID:</strong> {deliveryId || '(not found)'}</p>
+              <p className="text-sm"><strong>Recipient:</strong> {recipientEmail || '(not found)'}</p>
+              <p className="text-sm"><strong>Current URL:</strong> {window.location.href}</p>
+              {deliveryData && (
+                <>
+                  <h4 className="font-medium mt-3 mb-1">Database Records:</h4>
+                  <div className="text-xs overflow-auto max-h-48 bg-slate-100 p-2">
+                    <pre>{JSON.stringify(deliveryData, null, 2)}</pre>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
           
           {isAttachmentError ? (
             <div className="bg-amber-50 border border-amber-100 rounded-md p-4 mt-2 w-full max-w-md">

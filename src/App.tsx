@@ -37,6 +37,7 @@ const RecipientsPage = lazy(() => import("@/pages/Recipients"));
 const CheckInPage = lazy(() => import("@/pages/CheckIn"));
 const AdminPage = lazy(() => import("@/pages/Admin"));
 const PublicMessageAccess = lazy(() => import("@/pages/PublicMessageAccess"));
+const DiagnosticAccess = lazy(() => import("@/pages/DiagnosticAccess"));
 
 export default function App() {
   useErrorHandler();
@@ -60,6 +61,14 @@ export default function App() {
               {/* Public message access route - ensure correct path with leading slash */}
               <Route path="/access/message/:id" element={<AppLayout isLoggedIn={false} />}>
                 <Route index element={<PublicMessageAccess />} />
+              </Route>
+              
+              {/* Diagnostic route for troubleshooting */}
+              <Route path="/diagnostic/message/:id" element={<AppLayout isLoggedIn={false} />}>
+                <Route index element={<DiagnosticAccess />} />
+              </Route>
+              <Route path="/diagnostic" element={<AppLayout isLoggedIn={false} />}>
+                <Route index element={<DiagnosticAccess />} />
               </Route>
               
               {/* Protected routes */}

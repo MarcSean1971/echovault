@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { FileIcon, Download, ExternalLink, AlertCircle, RefreshCw, Link } from "lucide-react";
+import { FileIcon, Download, ExternalLink, AlertCircle, RefreshCw, Link, Bug } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/components/ui/use-toast";
@@ -22,6 +22,8 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
   const [isLoading, setIsLoading] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const [showDebug, setShowDebug] = useState(false);
+  const [accessUrl, setAccessUrl] = useState<string | null>(null);
 
   // Get direct public URL (for testing only)
   const directUrl = getDirectPublicUrl(attachment.path);
@@ -41,6 +43,7 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
         console.log(`Using public access with deliveryId: ${deliveryId}, recipient: ${recipientEmail}`);
         const url = await getPublicFileUrl(attachment.path, deliveryId, recipientEmail);
         console.log("Generated public URL:", url);
+        setAccessUrl(url);
         
         if (!url) {
           throw new Error("Could not generate public access URL");
@@ -52,6 +55,7 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
         console.log("Using authenticated access");
         const url = await getAuthenticatedFileUrl(attachment.path);
         console.log("Generated authenticated URL:", url);
+        setAccessUrl(url);
         
         if (!url) {
           throw new Error("Could not generate authenticated access URL");
@@ -170,6 +174,10 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
   const tryDirectAccess = () => {
     if (directUrl) {
       window.open(directUrl, '_blank');
+      toast({
+        title: "Direct URL Test",
+        description: "Opening direct URL without security checks"
+      });
     } else {
       toast({
         title: "Error",
@@ -177,6 +185,10 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
         variant: "destructive"
       });
     }
+  };
+  
+  const toggleDebug = () => {
+    setShowDebug(prev => !prev);
   };
   
   return (
@@ -195,6 +207,25 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
         </div>
         
         <div className="flex space-x-2">
+          {/* Debug toggle */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={toggleDebug}
+                  className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
+                >
+                  <Bug className={`h-4 w-4 ${HOVER_TRANSITION}`} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Toggle debug info</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
           {/* Test button for direct URL access */}
           <TooltipProvider>
             <Tooltip>
@@ -290,11 +321,20 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
         </div>
       )}
 
-      {/* Show the path for debugging */}
-      <div className="mt-2 text-xs text-gray-500 border-t pt-2">
-        Path: {attachment.path}
-        {directUrl && <div className="truncate">Direct URL: {directUrl}</div>}
-      </div>
+      {(showDebug || hasError) && (
+        <div className="mt-2 text-xs text-gray-500 border-t pt-2">
+          <div className="font-semibold mb-1">Debug Information:</div>
+          <div>Path: {attachment.path}</div>
+          {accessUrl && <div className="truncate">Last generated URL: {accessUrl}</div>}
+          {directUrl && <div className="truncate">Direct URL: {directUrl}</div>}
+          <div className="mt-1">
+            <span className="font-semibold">Delivery ID:</span> {deliveryId || "(none)"}
+          </div>
+          <div>
+            <span className="font-semibold">Recipient:</span> {recipientEmail || "(none)"}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
