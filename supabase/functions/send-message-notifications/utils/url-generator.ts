@@ -17,7 +17,7 @@ export function generateAccessUrl(messageId: string, recipientEmail: string, del
   
   try {
     // Build the URL with the required parameters
-    const url = new URL(`${domainWithProtocol}/message/${messageId}`);
+    const url = new URL(`${domainWithProtocol}/access/message/${messageId}`);
     url.searchParams.append("delivery", deliveryId);
     url.searchParams.append("recipient", recipientEmail);
     
@@ -25,6 +25,6 @@ export function generateAccessUrl(messageId: string, recipientEmail: string, del
   } catch (error) {
     console.error(`Error generating access URL: ${error}`);
     // Fallback URL construction if URL constructor fails
-    return `https://${appDomain}/message/${messageId}?delivery=${deliveryId}&recipient=${encodeURIComponent(recipientEmail)}`;
+    return `https://${appDomain}/access/message/${messageId}?delivery=${deliveryId}&recipient=${encodeURIComponent(recipientEmail)}`;
   }
 }

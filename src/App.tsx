@@ -35,6 +35,7 @@ const ProfilePage = lazy(() => import("@/pages/Profile"));
 const RecipientsPage = lazy(() => import("@/pages/Recipients"));
 const CheckInPage = lazy(() => import("@/pages/CheckIn"));
 const AdminPage = lazy(() => import("@/pages/Admin"));
+const PublicMessageAccess = lazy(() => import("@/pages/PublicMessageAccess"));
 
 export default function App() {
   useErrorHandler();
@@ -53,6 +54,7 @@ export default function App() {
                 <Route index element={<HomePage />} />
                 <Route path="login" element={<LoginPage />} />
                 <Route path="register" element={<RegisterPage />} />
+                <Route path="access/message/:id" element={<PublicMessageAccess />} />
               </Route>
               
               {/* Protected routes */}
