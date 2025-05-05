@@ -325,7 +325,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      message_has_delivery: {
+        Args: { msg_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

@@ -1,4 +1,3 @@
-
 import { getAuthClient } from "@/lib/supabaseClient";
 import { MessageCondition, RecurringPattern } from "@/types/message";
 import { CreateConditionOptions } from "./types";
@@ -82,38 +81,47 @@ export async function createConditionInDb(
 export async function fetchConditionsFromDb(userId: string): Promise<MessageCondition[]> {
   const client = await getAuthClient();
   
-  // Modified query to correctly fetch conditions without triggering recursion
-  // We'll first get all conditions associated with the user's messages
-  const { data: messageData, error: messageError } = await client
-    .from("messages")
-    .select("id")
-    .eq("user_id", userId);
-  
-  if (messageError) {
-    console.error("Error fetching messages:", messageError);
-    throw new Error(messageError.message || "Failed to fetch messages");
-  }
-  
-  // If no messages found, return empty array
-  if (!messageData || messageData.length === 0) {
-    return [];
-  }
-  
-  // Extract message IDs
-  const messageIds = messageData.map(msg => msg.id);
-  
-  // Now fetch conditions based on these message IDs
-  const { data, error } = await client
-    .from("message_conditions")
-    .select("*")
-    .in("message_id", messageIds);
+  try {
+    console.log(`[fetchConditionsFromDb] Fetching conditions for user: ${userId}`);
+    
+    // First, get all message IDs for this user
+    const { data: messageData, error: messageError } = await client
+      .from("messages")
+      .select("id")
+      .eq("user_id", userId);
+    
+    if (messageError) {
+      console.error("[fetchConditionsFromDb] Error fetching messages:", messageError);
+      throw new Error(messageError.message || "Failed to fetch messages");
+    }
+    
+    // If no messages found, return empty array
+    if (!messageData || messageData.length === 0) {
+      console.log("[fetchConditionsFromDb] No messages found for user");
+      return [];
+    }
+    
+    // Extract message IDs
+    const messageIds = messageData.map(msg => msg.id);
+    console.log(`[fetchConditionsFromDb] Found ${messageIds.length} message IDs`);
+    
+    // Now fetch conditions based on these message IDs
+    const { data, error } = await client
+      .from("message_conditions")
+      .select("*")
+      .in("message_id", messageIds);
 
-  if (error) {
-    console.error("Error fetching message conditions:", error);
-    throw new Error(error.message || "Failed to fetch message conditions");
-  }
+    if (error) {
+      console.error("[fetchConditionsFromDb] Error fetching message conditions:", error);
+      throw new Error(error.message || "Failed to fetch message conditions");
+    }
 
-  return data.map(mapDbConditionToMessageCondition);
+    console.log(`[fetchConditionsFromDb] Successfully fetched ${data?.length || 0} conditions`);
+    return (data || []).map(mapDbConditionToMessageCondition);
+  } catch (error) {
+    console.error("[fetchConditionsFromDb] Error:", error);
+    throw error;
+  }
 }
 
 export async function updateConditionInDb(

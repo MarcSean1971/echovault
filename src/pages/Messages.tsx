@@ -30,43 +30,67 @@ export default function Messages() {
       try {
         console.log("Fetching messages and conditions for user:", userId);
         
-        // Fetch both messages and conditions
-        const messageData = await fetchMessages(messageType);
-        console.log("Messages fetched:", messageData?.length || 0);
-        
-        const conditionsData = await fetchMessageConditions(userId);
-        console.log("Conditions fetched:", conditionsData?.length || 0);
-        
-        setMessages(messageData);
-        setConditions(conditionsData);
-        
-        // Categorize messages based on their condition types
-        const panic: Message[] = [];
-        const regular: Message[] = [];
-        
-        messageData.forEach(message => {
-          // Find the condition for this message
-          const condition = conditionsData.find(c => c.message_id === message.id);
+        // Try to fetch messages first, then conditions if successful
+        try {
+          const messageData = await fetchMessages(messageType);
+          console.log("Messages fetched:", messageData?.length || 0);
+          setMessages(messageData);
           
-          if (condition && condition.condition_type === 'panic_trigger') {
-            panic.push(message);
-          } else {
-            regular.push(message);
+          // Once messages are fetched successfully, get conditions
+          try {
+            const conditionsData = await fetchMessageConditions(userId);
+            console.log("Conditions fetched:", conditionsData?.length || 0);
+            setConditions(conditionsData);
+            
+            // Categorize messages based on their condition types
+            const panic: Message[] = [];
+            const regular: Message[] = [];
+            
+            messageData.forEach(message => {
+              // Find the condition for this message
+              const condition = conditionsData.find(c => c.message_id === message.id);
+              
+              if (condition && condition.condition_type === 'panic_trigger') {
+                panic.push(message);
+              } else {
+                regular.push(message);
+              }
+            });
+            
+            console.log("Panic messages:", panic.length);
+            console.log("Regular messages:", regular.length);
+            
+            setPanicMessages(panic);
+            setRegularMessages(regular);
+          } catch (conditionsError: any) {
+            console.error("Error fetching conditions:", conditionsError);
+            // Still show messages even if conditions fail
+            toast({
+              title: "Warning",
+              description: "Failed to load message conditions, some features may be limited",
+              variant: "warning"
+            });
+            
+            // If conditions fail, show all messages as regular
+            setPanicMessages([]);
+            setRegularMessages(messageData);
           }
-        });
-        
-        console.log("Panic messages:", panic.length);
-        console.log("Regular messages:", regular.length);
-        
-        setPanicMessages(panic);
-        setRegularMessages(regular);
+        } catch (messagesError: any) {
+          console.error("Error fetching messages:", messagesError);
+          throw messagesError; // Re-throw to the outer catch
+        }
       } catch (error: any) {
-        console.error("Error fetching messages:", error);
+        console.error("Error in loadMessages:", error);
         toast({
           title: "Error",
           description: "Failed to load your messages: " + (error?.message || "Unknown error"),
           variant: "destructive"
         });
+        
+        // Clear all message states on error
+        setMessages([]);
+        setPanicMessages([]);
+        setRegularMessages([]);
       } finally {
         setIsLoading(false);
       }
