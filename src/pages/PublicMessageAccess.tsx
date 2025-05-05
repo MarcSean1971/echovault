@@ -52,7 +52,8 @@ export default function PublicMessageAccess() {
             delivery_id,
             viewed_at,
             viewed_count,
-            condition_id
+            condition_id,
+            delivered_at
           `)
           .eq('delivery_id', deliveryId)
           .eq('message_id', messageId)
@@ -100,10 +101,11 @@ export default function PublicMessageAccess() {
         
         // Check if unlock delay is required
         if (conditionData?.unlock_delay_hours && conditionData.unlock_delay_hours > 0) {
-          // Calculate unlock time based on delivery record
-          const deliveredAt = new Date(deliveryData.delivered_at || new Date());
+          // Calculate unlock time based on delivery record creation timestamp
+          // Use current time as fallback if delivered_at is not available
+          const deliveryTime = deliveryData.delivered_at ? new Date(deliveryData.delivered_at) : new Date();
           const unlockDelayMs = conditionData.unlock_delay_hours * 60 * 60 * 1000;
-          const calculatedUnlockTime = new Date(deliveredAt.getTime() + unlockDelayMs);
+          const calculatedUnlockTime = new Date(deliveryTime.getTime() + unlockDelayMs);
           
           if (calculatedUnlockTime > new Date()) {
             setIsUnlockDelayed(true);
