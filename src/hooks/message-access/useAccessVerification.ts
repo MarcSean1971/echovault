@@ -37,6 +37,8 @@ export const useAccessVerification = ({
       }
       
       try {
+        console.log(`Verifying access for message: ${messageId}, delivery: ${deliveryId}`);
+        
         // First, verify the delivery record
         const { data: deliveryData, error: deliveryError } = await supabase
           .from('delivered_messages')
@@ -61,6 +63,7 @@ export const useAccessVerification = ({
           return;
         }
         
+        console.log('Delivery data found:', deliveryData);
         setDeliveryData(deliveryData);
         
         // Verify the recipient email
@@ -77,6 +80,7 @@ export const useAccessVerification = ({
           return;
         }
         
+        console.log('Recipient verified:', recipientData);
         setRecipientData(recipientData);
         
         // Check if there are any security constraints
@@ -93,6 +97,7 @@ export const useAccessVerification = ({
           return;
         }
         
+        console.log('Security conditions retrieved:', conditionData);
         setConditionData(conditionData);
         setIsLoading(false);
       } catch (err: any) {

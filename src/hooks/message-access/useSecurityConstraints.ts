@@ -41,10 +41,14 @@ export const useSecurityConstraints = ({
         return;
       }
       
+      console.log('Processing security constraints');
+      
       // Check PIN requirement
       if (conditionData?.pin_code) {
+        console.log('PIN code is required');
         setIsPinRequired(true);
       } else {
+        console.log('No PIN required, automatically verifying');
         setIsVerified(true);
       }
       
@@ -57,17 +61,28 @@ export const useSecurityConstraints = ({
         const calculatedUnlockTime = new Date(deliveryTime.getTime() + unlockDelayMs);
         
         if (calculatedUnlockTime > new Date()) {
+          console.log(`Unlock delayed until ${calculatedUnlockTime.toISOString()}`);
           setIsUnlockDelayed(true);
           setUnlockTime(calculatedUnlockTime);
           setIsVerified(false);
+        } else {
+          console.log('Delay period has already passed');
         }
       }
 
       // Fetch message if no security constraints or if previously viewed
       if ((deliveryData.viewed_count && deliveryData.viewed_count > 0) || 
           (isVerified && !isUnlockDelayed)) {
-        const message = await loadMessage(messageId);
-        setMessage(message);
+        console.log('Loading message content');
+        const messageData = await loadMessage(messageId);
+        if (!messageData) {
+          console.error('Failed to load message data');
+        } else {
+          console.log('Message loaded successfully');
+        }
+        setMessage(messageData);
+      } else {
+        console.log('Security constraints prevent loading message at this time');
       }
       
       // Update view count for valid access
@@ -82,13 +97,24 @@ export const useSecurityConstraints = ({
     if (!msgId) return null;
     
     try {
+      console.log(`Loading message with ID: ${msgId}`);
       const { data, error } = await supabase
         .from('messages')
         .select('*')
         .eq('id', msgId)
         .single();
         
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching message:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load message content. Please try again later.",
+          variant: "destructive"
+        });
+        throw error;
+      }
+
+      console.log('Message found:', data ? 'yes' : 'no');
       return data as Message;
     } catch (err: any) {
       console.error('Error loading message:', err);
@@ -102,6 +128,7 @@ export const useSecurityConstraints = ({
     
     try {
       if (!deliveryData.viewed_at) {
+        console.log('First view, updating viewed_at timestamp');
         await supabase
           .from('delivered_messages')
           .update({
@@ -111,6 +138,7 @@ export const useSecurityConstraints = ({
           .eq('delivery_id', deliveryData.delivery_id);
       } else {
         // Increment view count
+        console.log('Incrementing view count');
         await supabase
           .from('delivered_messages')
           .update({
@@ -128,12 +156,15 @@ export const useSecurityConstraints = ({
     if (!messageId || !conditionData) return false;
     
     try {
+      console.log('Verifying PIN code');
       if (conditionData.pin_code === pinCode) {
-        const message = await loadMessage(messageId);
-        setMessage(message);
+        console.log('PIN code verified successfully');
+        const messageData = await loadMessage(messageId);
+        setMessage(messageData);
         setIsVerified(true);
         return true;
       } else {
+        console.log('Invalid PIN code entered');
         toast({
           title: "Invalid PIN code",
           description: "The PIN code you entered is incorrect.",
@@ -156,8 +187,9 @@ export const useSecurityConstraints = ({
   const handleUnlockExpired = async (): Promise<void> => {
     if (!messageId) return;
     
-    const message = await loadMessage(messageId);
-    setMessage(message);
+    console.log('Unlock time expired, loading message');
+    const messageData = await loadMessage(messageId);
+    setMessage(messageData);
     setIsUnlockDelayed(false);
     setIsVerified(true);
   };

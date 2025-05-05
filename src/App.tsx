@@ -57,8 +57,8 @@ export default function App() {
                 <Route path="register" element={<RegisterPage />} />
               </Route>
               
-              {/* Public message access route - moved to AppLayout for proper navigation */}
-              <Route path="access/message/:id" element={<AppLayout isLoggedIn={false} />}>
+              {/* Public message access route - ensure correct path with leading slash */}
+              <Route path="/access/message/:id" element={<AppLayout isLoggedIn={false} />}>
                 <Route index element={<PublicMessageAccess />} />
               </Route>
               
