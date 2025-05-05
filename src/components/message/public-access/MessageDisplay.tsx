@@ -5,12 +5,18 @@ import { Separator } from "@/components/ui/separator";
 import { Message } from "@/types/message";
 import { MessageContent } from "@/components/message/detail/MessageContent";
 import { MessageAttachments } from "@/components/message/detail/MessageAttachments";
+import { useSearchParams } from "react-router-dom";
 
 interface MessageDisplayProps {
   message: Message | null;
 }
 
 export const MessageDisplay = ({ message }: MessageDisplayProps) => {
+  // Get delivery ID and recipient email from URL for attachment access
+  const [searchParams] = useSearchParams();
+  const deliveryId = searchParams.get('delivery');
+  const recipientEmail = searchParams.get('recipient');
+
   if (!message) {
     return (
       <div className="container mx-auto max-w-3xl px-4 py-8">
@@ -48,7 +54,11 @@ export const MessageDisplay = ({ message }: MessageDisplayProps) => {
           {message.attachments && message.attachments.length > 0 && (
             <div className="pt-4">
               <h3 className="text-lg font-medium mb-2">Attachments</h3>
-              <MessageAttachments message={message} />
+              <MessageAttachments 
+                message={message} 
+                deliveryId={deliveryId || undefined}
+                recipientEmail={recipientEmail || undefined}
+              />
             </div>
           )}
         </div>

@@ -53,9 +53,50 @@ export function generateAccessUrl(messageId: string, recipientEmail: string, del
   }
 }
 
+/**
+ * Generate a file access URL that uses our secure edge function
+ */
+export function generateFileAccessUrl(filePath: string, recipientEmail: string, deliveryId: string) {
+  // Get the app domain from environment variable
+  const appDomain = Deno.env.get("APP_DOMAIN") || "http://localhost:3000";
+  
+  // Ensure the domain has the protocol prefix
+  const domainWithProtocol = appDomain.startsWith('http://') || appDomain.startsWith('https://') 
+    ? appDomain 
+    : `https://${appDomain}`;
+  
+  try {
+    // First properly encode parameters to avoid double encoding issues  
+    const encodedFilePath = encodeURIComponent(filePath);
+    const encodedDeliveryId = encodeURIComponent(deliveryId);
+    const encodedEmail = encodeURIComponent(recipientEmail);
+    
+    // Build the file access URL using our edge function
+    const url = new URL(`${domainWithProtocol}/functions/v1/access-file/file/${encodedFilePath}`);
+    
+    // Add necessary query parameters
+    url.searchParams.append("delivery", encodedDeliveryId);
+    url.searchParams.append("recipient", encodedEmail);
+    
+    const fileAccessUrl = url.toString();
+    console.log(`Generated file access URL: ${fileAccessUrl}`);
+    
+    return fileAccessUrl;
+  } catch (error) {
+    console.error(`Error generating file access URL: ${error}`);
+    
+    // Fallback URL construction with careful encoding
+    const encodedFilePath = encodeURIComponent(filePath);
+    const encodedDeliveryId = encodeURIComponent(deliveryId);
+    const encodedEmail = encodeURIComponent(recipientEmail);
+    
+    return `${domainWithProtocol}/functions/v1/access-file/file/${encodedFilePath}?delivery=${encodedDeliveryId}&recipient=${encodedEmail}`;
+  }
+}
+
 // This function is intentionally kept for backward compatibility
-// but now simply returns the main message access URL
+// but now uses our new file access endpoint
 export function generateAttachmentUrl(messageId: string, recipientEmail: string, deliveryId: string, attachmentPath: string, attachmentName: string) {
-  // Simply return the message access URL - attachments will be handled in the UI
-  return generateAccessUrl(messageId, recipientEmail, deliveryId);
+  // Use the new file access function
+  return generateFileAccessUrl(attachmentPath, recipientEmail, deliveryId);
 }

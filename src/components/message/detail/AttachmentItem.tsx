@@ -3,9 +3,9 @@ import React, { useState } from "react";
 import { FileIcon, Download, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { getFileUrl } from "@/services/messages/fileService";
 import { toast } from "@/components/ui/use-toast";
 import { HOVER_TRANSITION, BUTTON_HOVER_EFFECTS } from "@/utils/hoverEffects";
+import { getPublicFileUrl, getAuthenticatedFileUrl } from "@/services/messages/fileAccessService";
 
 interface AttachmentItemProps {
   attachment: {
@@ -14,15 +14,32 @@ interface AttachmentItemProps {
     type: string;
     path: string;
   };
+  deliveryId?: string;
+  recipientEmail?: string;
 }
 
-export function AttachmentItem({ attachment }: AttachmentItemProps) {
+export function AttachmentItem({ attachment, deliveryId, recipientEmail }: AttachmentItemProps) {
   const [isLoading, setIsLoading] = useState(false);
+
+  const getFileAccessUrl = async () => {
+    try {
+      // If we're in public view mode with delivery ID and recipient email 
+      if (deliveryId && recipientEmail) {
+        return getPublicFileUrl(attachment.path, deliveryId, recipientEmail);
+      } else {
+        // Default to the standard Supabase storage URL generation
+        return getAuthenticatedFileUrl(attachment.path);
+      }
+    } catch (error) {
+      console.error("Error generating URL:", error);
+      return null;
+    }
+  };
 
   const downloadFile = async () => {
     try {
       setIsLoading(true);
-      const url = await getFileUrl(attachment.path);
+      const url = await getFileAccessUrl();
       
       if (url) {
         // Create an invisible anchor element and trigger the download
@@ -60,7 +77,7 @@ export function AttachmentItem({ attachment }: AttachmentItemProps) {
   const openFile = async () => {
     try {
       setIsLoading(true);
-      const url = await getFileUrl(attachment.path);
+      const url = await getFileAccessUrl();
       
       if (url) {
         window.open(url, '_blank');

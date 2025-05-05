@@ -51,6 +51,8 @@ enabled = true
 port = 54328
 [functions.access-message]
 verify_jwt = false
+[functions.access-file]
+verify_jwt = false
 
 [vector]
 enabled = false

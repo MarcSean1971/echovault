@@ -5,9 +5,11 @@ import { Paperclip } from "lucide-react";
 
 interface MessageAttachmentsProps {
   message: Message;
+  deliveryId?: string;
+  recipientEmail?: string;
 }
 
-export function MessageAttachments({ message }: MessageAttachmentsProps) {
+export function MessageAttachments({ message, deliveryId, recipientEmail }: MessageAttachmentsProps) {
   if (!message.attachments || message.attachments.length === 0) {
     return null;
   }
@@ -23,6 +25,8 @@ export function MessageAttachments({ message }: MessageAttachmentsProps) {
           <AttachmentItem
             key={index}
             attachment={attachment}
+            deliveryId={deliveryId}
+            recipientEmail={recipientEmail}
           />
         ))}
       </div>

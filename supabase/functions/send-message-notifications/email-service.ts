@@ -84,9 +84,9 @@ export async function sendEmailNotification(
     if (attachments && attachments.length > 0) {
       attachmentsHtml = `
         <div style="background-color: #f5f5f5; border-left: 4px solid #555; padding: 15px; margin: 20px 0; border-radius: 4px;">
-          <p style="margin: 0; font-weight: bold;">📁 The message includes ${attachments.length} attachment${attachments.length > 1 ? 's' : ''}</p>
+          <p style="margin: 0; font-weight: bold;">📁 This message includes ${attachments.length} attachment${attachments.length > 1 ? 's' : ''}</p>
           <p style="margin: 10px 0 0 0; font-style: italic; font-size: 13px;">
-            Access the secure message to view and download attachments.
+            Click the button below to access the secure message and view attachments.
           </p>
         </div>
       `;
