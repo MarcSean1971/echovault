@@ -16,7 +16,11 @@ export async function getPublicFileUrl(
   recipientEmail: string
 ) {
   if (!filePath || !deliveryId || !recipientEmail) {
-    console.error("Missing required parameters for file access");
+    console.error("Missing required parameters for file access", { 
+      filePath: filePath || "missing", 
+      deliveryId: deliveryId || "missing", 
+      recipientEmail: recipientEmail || "missing" 
+    });
     toast({
       title: "File Access Error",
       description: "Missing required information for file access",
@@ -26,7 +30,10 @@ export async function getPublicFileUrl(
   }
 
   try {
+    // Get the origin dynamically with a fallback
     const baseUrl = window.location.origin;
+    
+    // Clean and encode path components
     const encodedPath = encodeURIComponent(filePath);
     const encodedDelivery = encodeURIComponent(deliveryId);
     const encodedRecipient = encodeURIComponent(recipientEmail);
@@ -35,9 +42,24 @@ export async function getPublicFileUrl(
     const accessUrl = `${baseUrl}/functions/v1/access-file/file/${encodedPath}?delivery=${encodedDelivery}&recipient=${encodedRecipient}`;
     
     console.log(`Generated public file access URL: ${accessUrl}`);
+    
     return accessUrl;
   } catch (error) {
     console.error("Error generating public file URL:", error);
+    
+    // If edge function approach fails, try direct signed URL as fallback
+    try {
+      console.log("Attempting fallback to signed URL approach");
+      const signedUrl = await getAuthenticatedFileUrl(filePath, true);
+      
+      if (signedUrl) {
+        console.log("Successfully generated fallback signed URL");
+        return signedUrl;
+      }
+    } catch (fallbackError) {
+      console.error("Fallback mechanism also failed:", fallbackError);
+    }
+    
     toast({
       title: "File Access Error",
       description: "Failed to generate secure access link for the file",
@@ -51,9 +73,10 @@ export async function getPublicFileUrl(
  * Get a signed URL for authenticated access to a file
  * 
  * @param filePath The file path in storage
+ * @param skipAuth Whether to skip authentication check (for fallback)
  * @returns The signed URL for the file
  */
-export async function getAuthenticatedFileUrl(filePath: string) {
+export async function getAuthenticatedFileUrl(filePath: string, skipAuth = false) {
   if (!filePath) {
     console.error("No file path provided");
     return null;
@@ -110,11 +133,13 @@ export async function getAuthenticatedFileUrl(filePath: string) {
     return data.signedUrl;
   } catch (error) {
     console.error("Error getting file URL:", error);
-    toast({
-      title: "File Access Error",
-      description: "Could not access the file. It may have been deleted or you don't have permission to view it.",
-      variant: "destructive"
-    });
+    if (!skipAuth) {
+      toast({
+        title: "File Access Error",
+        description: "Could not access the file. It may have been deleted or you don't have permission to view it.",
+        variant: "destructive"
+      });
+    }
     return null;
   }
 }

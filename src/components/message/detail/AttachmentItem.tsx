@@ -23,12 +23,21 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
 
   const getFileAccessUrl = async () => {
     try {
+      console.log("Getting file access URL for:", attachment.path);
+      console.log("Public access mode:", !!deliveryId && !!recipientEmail);
+      
       // If we're in public view mode with delivery ID and recipient email 
       if (deliveryId && recipientEmail) {
-        return getPublicFileUrl(attachment.path, deliveryId, recipientEmail);
+        console.log(`Using public access with deliveryId: ${deliveryId}, recipient: ${recipientEmail}`);
+        const url = await getPublicFileUrl(attachment.path, deliveryId, recipientEmail);
+        console.log("Generated public URL:", url);
+        return url;
       } else {
-        // Default to the standard Supabase storage URL generation
-        return getAuthenticatedFileUrl(attachment.path);
+        // Default to the standard Supabase storage URL generation for authenticated users
+        console.log("Using authenticated access");
+        const url = await getAuthenticatedFileUrl(attachment.path);
+        console.log("Generated authenticated URL:", url);
+        return url;
       }
     } catch (error) {
       console.error("Error generating URL:", error);
@@ -58,7 +67,7 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
       } else {
         toast({
           title: "Error",
-          description: "Could not access the file. It may have been deleted or you don't have permission to view it.",
+          description: "Could not access the file. Please try again or contact support if the issue persists.",
           variant: "destructive"
         });
       }
@@ -84,7 +93,7 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
       } else {
         toast({
           title: "Error",
-          description: "Could not access the file. It may have been deleted or you don't have permission to view it.",
+          description: "Could not access the file. Please try again or contact support if the issue persists.",
           variant: "destructive"
         });
       }
@@ -107,7 +116,7 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
   };
   
   return (
-    <div className="border rounded-md p-3">
+    <div className="border rounded-md p-3 hover:border-primary/20 transition-all duration-200">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3 overflow-hidden">
           <FileIcon className="h-4 w-4 flex-shrink-0" />

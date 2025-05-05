@@ -49,10 +49,14 @@ enable_signup = true
 [functions]
 enabled = true
 port = 54328
-[functions.access-message]
-verify_jwt = false
+
 [functions.access-file]
 verify_jwt = false
+path = "supabase/functions/access-file"
+
+[functions.access-message]
+verify_jwt = false
+path = "supabase/functions/access-message"
 
 [vector]
 enabled = false
