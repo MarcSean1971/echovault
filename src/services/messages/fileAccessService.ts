@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 
@@ -81,7 +82,8 @@ export async function getPublicFileUrl(
     // Set a longer expiration for the URL (3 hours = 10800 seconds)
     const expiresIn = 10800;
     
-    // Construct the URL to our edge function with the correct path structure
+    // FIXED: Corrected path structure by removing '/access-file' prefix
+    // The edge function is registered at '/functions/v1/access-file' but the path should be '/file'
     const accessUrl = `${baseUrl}/functions/v1/access-file/file/${encodedPath}?delivery=${encodedDeliveryId}&recipient=${encodedEmail}&expires=${Date.now() + (expiresIn * 1000)}`;
     
     console.log(`Generated public file access URL: ${accessUrl}`);

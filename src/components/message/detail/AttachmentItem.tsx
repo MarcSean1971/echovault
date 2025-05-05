@@ -192,7 +192,7 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
   };
   
   return (
-    <div className={`border rounded-md p-3 transition-all duration-200 ${hasError ? 'border-red-300 bg-red-50' : 'hover:border-primary/20'}`}>
+    <div className={`border rounded-md p-3 transition-all duration-200 hover:shadow-md ${hasError ? 'border-red-300 bg-red-50' : 'hover:border-primary/20'}`}>
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3 overflow-hidden">
           {hasError ? (
