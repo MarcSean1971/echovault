@@ -28,11 +28,14 @@ export default function Messages() {
       setIsLoading(true);
       
       try {
+        console.log("Fetching messages and conditions for user:", userId);
+        
         // Fetch both messages and conditions
-        const [messageData, conditionsData] = await Promise.all([
-          fetchMessages(messageType),
-          fetchMessageConditions(userId)
-        ]);
+        const messageData = await fetchMessages(messageType);
+        console.log("Messages fetched:", messageData?.length || 0);
+        
+        const conditionsData = await fetchMessageConditions(userId);
+        console.log("Conditions fetched:", conditionsData?.length || 0);
         
         setMessages(messageData);
         setConditions(conditionsData);
@@ -52,13 +55,16 @@ export default function Messages() {
           }
         });
         
+        console.log("Panic messages:", panic.length);
+        console.log("Regular messages:", regular.length);
+        
         setPanicMessages(panic);
         setRegularMessages(regular);
       } catch (error: any) {
         console.error("Error fetching messages:", error);
         toast({
           title: "Error",
-          description: "Failed to load your messages",
+          description: "Failed to load your messages: " + (error?.message || "Unknown error"),
           variant: "destructive"
         });
       } finally {

@@ -82,11 +82,31 @@ export async function createConditionInDb(
 export async function fetchConditionsFromDb(userId: string): Promise<MessageCondition[]> {
   const client = await getAuthClient();
   
-  // Modified query to avoid recursive policy issues
+  // Modified query to correctly fetch conditions without triggering recursion
+  // We'll first get all conditions associated with the user's messages
+  const { data: messageData, error: messageError } = await client
+    .from("messages")
+    .select("id")
+    .eq("user_id", userId);
+  
+  if (messageError) {
+    console.error("Error fetching messages:", messageError);
+    throw new Error(messageError.message || "Failed to fetch messages");
+  }
+  
+  // If no messages found, return empty array
+  if (!messageData || messageData.length === 0) {
+    return [];
+  }
+  
+  // Extract message IDs
+  const messageIds = messageData.map(msg => msg.id);
+  
+  // Now fetch conditions based on these message IDs
   const { data, error } = await client
     .from("message_conditions")
     .select("*")
-    .eq("messages.user_id", userId);
+    .in("message_id", messageIds);
 
   if (error) {
     console.error("Error fetching message conditions:", error);

@@ -8,6 +8,8 @@ export async function fetchMessages(messageType: string | null = null) {
   try {
     const client = await getAuthClient();
     
+    console.log("Fetching messages", messageType ? `with type: ${messageType}` : "all types");
+    
     let query = client
       .from('messages')
       .select('*')
@@ -19,7 +21,12 @@ export async function fetchMessages(messageType: string | null = null) {
     
     const { data, error } = await query;
     
-    if (error) throw error;
+    if (error) {
+      console.error("Error in fetchMessages:", error);
+      throw error;
+    }
+    
+    console.log(`Successfully retrieved ${data?.length || 0} messages`);
     
     // Transform the JSON attachments to match our Message type
     return (data || []).map(msg => ({
