@@ -1,6 +1,36 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
+
+/**
+ * Simple direct public URL for a file in storage (no security checks)
+ * For testing purposes only - DO NOT use in production
+ * 
+ * @param filePath The file path in storage
+ * @returns Direct public URL to the file
+ */
+export function getDirectPublicUrl(filePath: string) {
+  if (!filePath) {
+    return null;
+  }
+  
+  // Standardize on the message-attachments bucket
+  const bucketName = "message-attachments";
+  
+  // Clean up the file path if it contains bucket name
+  let cleanFilePath = filePath;
+  if (filePath.startsWith('message-attachments/') || filePath.startsWith('message_attachments/')) {
+    cleanFilePath = filePath.includes('/') ? filePath.substring(filePath.indexOf('/') + 1) : filePath;
+  }
+  
+  console.log(`Generating direct public URL for: ${cleanFilePath} from bucket: ${bucketName}`);
+  
+  // Use the Supabase Storage public URL pattern
+  const baseUrl = "https://onwthrpgcnfydxzzmyot.supabase.co";
+  const publicUrl = `${baseUrl}/storage/v1/object/public/${bucketName}/${cleanFilePath}`;
+  
+  console.log(`Direct public URL: ${publicUrl}`);
+  return publicUrl;
+}
 
 /**
  * Access a file using our secure edge function for public access

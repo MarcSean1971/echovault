@@ -1,11 +1,11 @@
 
 import React, { useState } from "react";
-import { FileIcon, Download, ExternalLink, AlertCircle, RefreshCw } from "lucide-react";
+import { FileIcon, Download, ExternalLink, AlertCircle, RefreshCw, Link } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/components/ui/use-toast";
 import { HOVER_TRANSITION, BUTTON_HOVER_EFFECTS } from "@/utils/hoverEffects";
-import { getPublicFileUrl, getAuthenticatedFileUrl } from "@/services/messages/fileAccessService";
+import { getPublicFileUrl, getAuthenticatedFileUrl, getDirectPublicUrl } from "@/services/messages/fileAccessService";
 
 interface AttachmentItemProps {
   attachment: {
@@ -22,6 +22,9 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
   const [isLoading, setIsLoading] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+
+  // Get direct public URL (for testing only)
+  const directUrl = getDirectPublicUrl(attachment.path);
 
   const getFileAccessUrl = async () => {
     try {
@@ -162,6 +165,19 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
     else if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + " KB";
     else return (bytes / (1024 * 1024)).toFixed(2) + " MB";
   };
+
+  // Test function to try direct URL access
+  const tryDirectAccess = () => {
+    if (directUrl) {
+      window.open(directUrl, '_blank');
+    } else {
+      toast({
+        title: "Error",
+        description: "Could not generate direct URL",
+        variant: "destructive"
+      });
+    }
+  };
   
   return (
     <div className={`border rounded-md p-3 transition-all duration-200 ${hasError ? 'border-red-300 bg-red-50' : 'hover:border-primary/20'}`}>
@@ -179,6 +195,25 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
         </div>
         
         <div className="flex space-x-2">
+          {/* Test button for direct URL access */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={tryDirectAccess}
+                  className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default} bg-amber-100 hover:bg-amber-200`}
+                >
+                  <Link className={`h-4 w-4 ${HOVER_TRANSITION}`} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Test direct URL</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
           {hasError ? (
             <TooltipProvider>
               <Tooltip>
@@ -254,6 +289,12 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
           )}
         </div>
       )}
+
+      {/* Show the path for debugging */}
+      <div className="mt-2 text-xs text-gray-500 border-t pt-2">
+        Path: {attachment.path}
+        {directUrl && <div className="truncate">Direct URL: {directUrl}</div>}
+      </div>
     </div>
   );
 }

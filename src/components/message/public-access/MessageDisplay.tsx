@@ -22,12 +22,22 @@ export const MessageDisplay = ({ message }: MessageDisplayProps) => {
   // Log parameters for debugging
   useEffect(() => {
     if (message) {
-      console.log("Message display - Message ID:", message.id);
-      console.log("Message display - Delivery ID:", deliveryId);
-      console.log("Message display - Recipient email:", recipientEmail);
+      console.log("===== Message Display Debug Info =====");
+      console.log("Message ID:", message.id);
+      console.log("Delivery ID:", deliveryId);
+      console.log("Recipient email:", recipientEmail);
+      console.log("Current URL:", window.location.href);
       
       if (message.attachments && message.attachments.length > 0) {
-        console.log("Message display - Attachments:", message.attachments);
+        console.log("Message attachments:", message.attachments);
+        message.attachments.forEach((att, index) => {
+          console.log(`Attachment ${index + 1}:`, {
+            name: att.name,
+            size: att.size,
+            type: att.type,
+            path: att.path
+          });
+        });
       }
     }
   }, [message, deliveryId, recipientEmail]);
@@ -80,4 +90,4 @@ export const MessageDisplay = ({ message }: MessageDisplayProps) => {
       </Card>
     </div>
   );
-};
+}
