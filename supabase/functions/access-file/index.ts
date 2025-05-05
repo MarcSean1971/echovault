@@ -55,6 +55,15 @@ serve(async (req: Request): Promise<Response> => {
       // Extract file path from URL based on the detected format
       let filePath = pathParts.slice(filePathIndex).join('/');
       
+      // Properly decode the URL-encoded path
+      try {
+        filePath = decodeURIComponent(filePath);
+        console.log(`[FileAccess] Decoded file path: ${filePath}`);
+      } catch (decodeError) {
+        console.error(`[FileAccess] Error decoding file path: ${decodeError.message}`);
+        // Continue with the encoded path as fallback
+      }
+      
       console.log(`[FileAccess] Requested file path: ${filePath}`);
       
       // Get query parameters for security validation
@@ -73,7 +82,9 @@ serve(async (req: Request): Promise<Response> => {
         );
       }
       
-      console.log(`[FileAccess] Validating access for delivery: ${deliveryId}, recipient: ${recipientEmail}`);
+      // Decode the recipient email to ensure proper comparison
+      const decodedRecipientEmail = decodeURIComponent(recipientEmail);
+      console.log(`[FileAccess] Validating access for delivery: ${deliveryId}, recipient: ${decodedRecipientEmail}`);
       
       try {
         // Validate that the delivery exists and matches the recipient
@@ -116,7 +127,7 @@ serve(async (req: Request): Promise<Response> => {
         
         // Compare emails with case-insensitive matching
         const dbEmail = recipientData.email.toLowerCase();
-        const requestEmail = decodeURIComponent(recipientEmail).toLowerCase();
+        const requestEmail = decodedRecipientEmail.toLowerCase();
         
         console.log(`[FileAccess] Comparing emails - DB: '${dbEmail}', Request: '${requestEmail}'`);
         
@@ -150,26 +161,44 @@ serve(async (req: Request): Promise<Response> => {
         const bucketName = "message-attachments";
         
         // Fix path if it doesn't include the bucket name
-        if (!filePath.startsWith('message-attachments/') && !filePath.startsWith('message_attachments/')) {
-          filePath = `${bucketName}/${filePath}`;
-          console.log(`[FileAccess] Adjusted file path to: ${filePath}`);
+        let normalizedFilePath = filePath;
+        if (!normalizedFilePath.startsWith('message-attachments/') && !normalizedFilePath.startsWith('message_attachments/')) {
+          normalizedFilePath = `${bucketName}/${normalizedFilePath}`;
+          console.log(`[FileAccess] Adjusted file path to: ${normalizedFilePath}`);
         }
         
         // Validate the requested file path exists in the message attachments
         const attachments = messageData.attachments || [];
         
+        // Function to normalize paths for comparison
+        const normalizePath = (path: string): string => {
+          // Remove bucket prefix if present
+          let normalized = path;
+          if (normalized.startsWith(bucketName + '/')) {
+            normalized = normalized.substring(bucketName.length + 1);
+          } else if (normalized.startsWith('message_attachments/')) {
+            normalized = normalized.substring('message_attachments/'.length);
+          }
+          
+          // Replace URL-encoded characters with their actual values
+          try {
+            normalized = decodeURIComponent(normalized);
+          } catch (e) {
+            // If decoding fails, continue with the path as-is
+          }
+          
+          return normalized.toLowerCase();
+        };
+        
+        // Get the normalized requested path
+        const normalizedRequestPath = normalizePath(normalizedFilePath);
+        console.log(`[FileAccess] Normalized request path for comparison: '${normalizedRequestPath}'`);
+        
         // Check if the attachment is in the message
         const requestedAttachment = attachments.find((att: any) => {
-          // Normalize the paths for comparison by removing the bucket prefix if present
-          const normalizedAttPath = att.path.startsWith(bucketName + '/') ? 
-            att.path : `${bucketName}/${att.path}`;
-          const normalizedFilePath = filePath.startsWith(bucketName + '/') ?
-            filePath : `${bucketName}/${filePath.replace('message_attachments/', '')}`;
-            
-          console.log(`[FileAccess] Comparing attachment paths: '${normalizedAttPath}' vs '${normalizedFilePath}'`);
-          
-          return normalizedAttPath === normalizedFilePath ||
-                 normalizedAttPath === normalizedFilePath.replace('message-attachments', 'message_attachments');
+          const normalizedAttPath = normalizePath(att.path);
+          console.log(`[FileAccess] Comparing normalized paths: '${normalizedAttPath}' vs '${normalizedRequestPath}'`);
+          return normalizedAttPath === normalizedRequestPath;
         });
         
         if (!requestedAttachment) {

@@ -82,7 +82,6 @@ export async function getPublicFileUrl(
     // Set a longer expiration for the URL (3 hours = 10800 seconds)
     const expiresIn = 10800;
     
-    // FIXED: Corrected path structure for the edge function URL
     // The edge function is registered at '/functions/v1/access-file' and expects just 'file/' 
     // without the duplicate 'access-file' in the path
     const accessUrl = `${baseUrl}/functions/v1/access-file/file/${encodedPath}?delivery=${encodedDeliveryId}&recipient=${encodedEmail}&expires=${Date.now() + (expiresIn * 1000)}`;
@@ -104,6 +103,19 @@ export async function getPublicFileUrl(
       }
     } catch (fallbackError) {
       console.error("Fallback mechanism also failed:", fallbackError);
+    }
+    
+    // If all attempts fail, try the direct public URL as a last resort
+    try {
+      console.log("Attempting fallback to direct public URL");
+      const directUrl = getDirectPublicUrl(filePath);
+      
+      if (directUrl) {
+        console.log("Generated direct public URL as last resort fallback");
+        return directUrl;
+      }
+    } catch (directUrlError) {
+      console.error("Direct URL fallback also failed:", directUrlError);
     }
     
     toast({
@@ -164,6 +176,14 @@ export async function getAuthenticatedFileUrl(filePath: string, skipAuth = false
           
         if (alternativeResult.error) {
           console.error("Error with alternative bucket:", alternativeResult.error);
+          
+          // Last resort - try direct public URL
+          const directUrl = getDirectPublicUrl(filePath);
+          if (directUrl) {
+            console.log("Using direct public URL as last resort");
+            return directUrl;
+          }
+          
           throw new Error(`File access error: ${alternativeResult.error.message}`);
         }
         
@@ -171,11 +191,26 @@ export async function getAuthenticatedFileUrl(filePath: string, skipAuth = false
         return alternativeResult.data.signedUrl;
       }
       
+      // Last resort - try direct public URL
+      const directUrl = getDirectPublicUrl(filePath);
+      if (directUrl) {
+        console.log("Using direct public URL as last resort");
+        return directUrl;
+      }
+      
       throw new Error(`File access error: ${error.message}`);
     }
     
     if (!data?.signedUrl) {
       console.error("No signed URL returned from Supabase");
+      
+      // Last resort - try direct public URL
+      const directUrl = getDirectPublicUrl(filePath);
+      if (directUrl) {
+        console.log("Using direct public URL as last resort");
+        return directUrl;
+      }
+      
       throw new Error("No URL generated for the file");
     }
     

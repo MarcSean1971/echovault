@@ -1,11 +1,12 @@
 
 import React, { useState } from "react";
-import { FileIcon, Download, ExternalLink, AlertCircle, RefreshCw, Link, Bug } from "lucide-react";
+import { FileIcon, Download, ExternalLink, AlertCircle, RefreshCw, Link, Bug, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/components/ui/use-toast";
 import { HOVER_TRANSITION, BUTTON_HOVER_EFFECTS } from "@/utils/hoverEffects";
 import { getPublicFileUrl, getAuthenticatedFileUrl, getDirectPublicUrl } from "@/services/messages/fileAccessService";
+import { Badge } from "@/components/ui/badge";
 
 interface AttachmentItemProps {
   attachment: {
@@ -24,33 +25,43 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
   const [retryCount, setRetryCount] = useState(0);
   const [showDebug, setShowDebug] = useState(false);
   const [accessUrl, setAccessUrl] = useState<string | null>(null);
+  const [downloadMethod, setDownloadMethod] = useState<'secure' | 'direct'>('secure');
+  const [lastSuccessMethod, setLastSuccessMethod] = useState<'secure' | 'direct' | null>(null);
 
-  // Get direct public URL (for testing only)
+  // Get direct public URL (for direct access option)
   const directUrl = getDirectPublicUrl(attachment.path);
 
-  const getFileAccessUrl = async () => {
+  const getFileAccessUrl = async (method: 'secure' | 'direct' = 'secure') => {
     try {
       setHasError(false);
-      console.log("Getting file access URL for:", attachment.path);
-      console.log("Public access mode:", !!deliveryId && !!recipientEmail);
+      console.log(`Getting file access URL for: ${attachment.path} using method: ${method}`);
       
       if (!attachment.path) {
         throw new Error("File path is missing");
       }
+
+      // For direct access, return the direct URL immediately
+      if (method === 'direct' && directUrl) {
+        console.log("Using direct public URL access");
+        setAccessUrl(directUrl);
+        setLastSuccessMethod('direct');
+        return directUrl;
+      }
       
       // If we're in public view mode with delivery ID and recipient email 
-      if (deliveryId && recipientEmail) {
-        console.log(`Using public access with deliveryId: ${deliveryId}, recipient: ${recipientEmail}`);
+      if (method === 'secure' && deliveryId && recipientEmail) {
+        console.log(`Using secure public access with deliveryId: ${deliveryId}, recipient: ${recipientEmail}`);
         const url = await getPublicFileUrl(attachment.path, deliveryId, recipientEmail);
-        console.log("Generated public URL:", url);
+        console.log("Generated secure public URL:", url);
         setAccessUrl(url);
         
         if (!url) {
-          throw new Error("Could not generate public access URL");
+          throw new Error("Could not generate secure access URL");
         }
         
+        setLastSuccessMethod('secure');
         return url;
-      } else {
+      } else if (method === 'secure') {
         // Default to the standard Supabase storage URL generation for authenticated users
         console.log("Using authenticated access");
         const url = await getAuthenticatedFileUrl(attachment.path);
@@ -61,11 +72,30 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
           throw new Error("Could not generate authenticated access URL");
         }
         
+        setLastSuccessMethod('secure');
         return url;
       }
+      
+      // Fallback to direct URL if all else fails
+      if (directUrl) {
+        console.log("Falling back to direct URL access");
+        setAccessUrl(directUrl);
+        setLastSuccessMethod('direct');
+        return directUrl;
+      }
+      
+      throw new Error("No suitable access method found for this file");
     } catch (error) {
       console.error("Error generating URL:", error);
       setHasError(true);
+      
+      // If secure method fails, try direct as fallback
+      if (method === 'secure' && directUrl) {
+        console.log("Secure access failed, automatically falling back to direct URL");
+        setDownloadMethod('direct');
+        return directUrl;
+      }
+      
       return null;
     }
   };
@@ -75,19 +105,33 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
     setRetryCount(prev => prev + 1);
     
     try {
-      const url = await getFileAccessUrl();
+      // Try the opposite of the current method first as a retry strategy
+      const methodToTry = downloadMethod === 'secure' ? 'direct' : 'secure';
+      const url = await getFileAccessUrl(methodToTry);
+      
       if (url) {
         setHasError(false);
+        setDownloadMethod(methodToTry);
         toast({
           title: "Retry successful",
-          description: "Access to the file has been restored",
+          description: `Access restored using ${methodToTry === 'secure' ? 'secure' : 'direct'} method`,
         });
       } else {
-        toast({
-          title: "Retry failed",
-          description: "Still unable to access the file",
-          variant: "destructive"
-        });
+        // If the opposite method failed, try the current method again
+        const fallbackUrl = await getFileAccessUrl(downloadMethod);
+        if (fallbackUrl) {
+          setHasError(false);
+          toast({
+            title: "Retry successful",
+            description: "Access to the file has been restored",
+          });
+        } else {
+          toast({
+            title: "Retry failed",
+            description: "Still unable to access the file. Try the direct link option.",
+            variant: "destructive"
+          });
+        }
       }
     } catch (error) {
       console.error("Error retrying file access:", error);
@@ -96,12 +140,20 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
     }
   };
 
+  const toggleDownloadMethod = () => {
+    setDownloadMethod(prev => prev === 'secure' ? 'direct' : 'secure');
+    toast({
+      title: `Switched to ${downloadMethod === 'secure' ? 'direct' : 'secure'} download`,
+      description: `Now using ${downloadMethod === 'secure' ? 'direct' : 'secure'} method for file access`,
+    });
+  };
+
   const downloadFile = async () => {
     if (isLoading) return;
     
     try {
       setIsLoading(true);
-      const url = await getFileAccessUrl();
+      const url = await getFileAccessUrl(downloadMethod);
       
       if (url) {
         // Create an invisible anchor element and trigger the download
@@ -115,14 +167,34 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
         
         toast({
           title: "Download started",
-          description: `${attachment.name} is being downloaded`,
+          description: `${attachment.name} is being downloaded using ${downloadMethod} access`,
         });
       } else {
-        toast({
-          title: "Error",
-          description: "Could not access the file. Please try again or contact support if the issue persists.",
-          variant: "destructive"
-        });
+        // Try the alternative method if the primary method fails
+        const alternativeMethod = downloadMethod === 'secure' ? 'direct' : 'secure';
+        const alternativeUrl = await getFileAccessUrl(alternativeMethod);
+        
+        if (alternativeUrl) {
+          setDownloadMethod(alternativeMethod);
+          const a = document.createElement('a');
+          a.href = alternativeUrl;
+          a.download = attachment.name;
+          a.target = "_blank";
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          
+          toast({
+            title: "Download started (alternative method)",
+            description: `Automatically switched to ${alternativeMethod} access`,
+          });
+        } else {
+          toast({
+            title: "Download Error",
+            description: "Could not access the file using either method. Please try again or contact support.",
+            variant: "destructive"
+          });
+        }
       }
     } catch (error) {
       console.error("Error downloading attachment:", error);
@@ -141,16 +213,30 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
     
     try {
       setIsLoading(true);
-      const url = await getFileAccessUrl();
+      const url = await getFileAccessUrl(downloadMethod);
       
       if (url) {
         window.open(url, '_blank');
       } else {
-        toast({
-          title: "Error",
-          description: "Could not access the file. Please try again or contact support if the issue persists.",
-          variant: "destructive"
-        });
+        // Try the alternative method if the primary method fails
+        const alternativeMethod = downloadMethod === 'secure' ? 'direct' : 'secure';
+        const alternativeUrl = await getFileAccessUrl(alternativeMethod);
+        
+        if (alternativeUrl) {
+          setDownloadMethod(alternativeMethod);
+          window.open(alternativeUrl, '_blank');
+          
+          toast({
+            title: "Using alternative method",
+            description: `Automatically switched to ${alternativeMethod} access`,
+          });
+        } else {
+          toast({
+            title: "Access Error",
+            description: "Could not access the file using either method. Please try again or contact support.",
+            variant: "destructive"
+          });
+        }
       }
     } catch (error) {
       console.error("Error opening attachment:", error);
@@ -174,6 +260,8 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
   const tryDirectAccess = () => {
     if (directUrl) {
       window.open(directUrl, '_blank');
+      setDownloadMethod('direct');
+      setLastSuccessMethod('direct');
       toast({
         title: "Direct URL Test",
         description: "Opening direct URL without security checks"
@@ -201,12 +289,44 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
             <FileIcon className={`h-4 w-4 flex-shrink-0 ${HOVER_TRANSITION}`} />
           )}
           <div className="truncate">
-            <span className="block truncate">{attachment.name}</span>
+            <div className="flex items-center gap-2">
+              <span className="block truncate">{attachment.name}</span>
+              <Badge 
+                variant={downloadMethod === 'secure' ? "outline" : "secondary"} 
+                className="text-xs py-0 h-5"
+              >
+                {downloadMethod === 'secure' ? 'Secure' : 'Direct'}
+              </Badge>
+            </div>
             <span className="text-xs text-muted-foreground">{formatFileSize(attachment.size)}</span>
           </div>
         </div>
         
         <div className="flex space-x-2">
+          {/* Toggle download method */}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant={downloadMethod === 'secure' ? "outline" : "secondary"}
+                  size="sm" 
+                  onClick={toggleDownloadMethod}
+                  disabled={isLoading}
+                  className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
+                >
+                  {downloadMethod === 'secure' ? (
+                    <Check className={`h-4 w-4 ${HOVER_TRANSITION}`} />
+                  ) : (
+                    <Link className={`h-4 w-4 ${HOVER_TRANSITION}`} />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Switch to {downloadMethod === 'secure' ? 'direct' : 'secure'} access</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
           {/* Debug toggle */}
           <TooltipProvider>
             <Tooltip>
@@ -226,7 +346,7 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
             </Tooltip>
           </TooltipProvider>
           
-          {/* Test button for direct URL access */}
+          {/* Direct access button (always available) */}
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -240,7 +360,7 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Test direct URL</p>
+                <p>Use direct URL</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -312,7 +432,7 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
       
       {hasError && (
         <div className="mt-2 text-xs text-red-600">
-          There was an error accessing this file. Please try again or contact the sender.
+          There was an error accessing this file. Please try the direct URL option or contact the sender.
           {retryCount > 0 && (
             <span className="block mt-1">
               Retried {retryCount} time{retryCount !== 1 ? 's' : ''} without success.
@@ -325,6 +445,8 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
         <div className="mt-2 text-xs text-gray-500 border-t pt-2">
           <div className="font-semibold mb-1">Debug Information:</div>
           <div>Path: {attachment.path}</div>
+          <div>Current mode: {downloadMethod === 'secure' ? 'Secure access (edge function)' : 'Direct public URL'}</div>
+          <div>Last successful method: {lastSuccessMethod || 'none'}</div>
           {accessUrl && <div className="truncate">Last generated URL: {accessUrl}</div>}
           {directUrl && <div className="truncate">Direct URL: {directUrl}</div>}
           <div className="mt-1">
