@@ -58,11 +58,16 @@ export function PanicMessageSelector({
             const condition = messages.find(c => c.message_id === message.id);
             const recipientCount = condition?.recipients?.length || 0;
             
+            // Ensure attachments is always treated as an array
+            const attachments = Array.isArray(message.attachments) 
+              ? message.attachments 
+              : message.attachments ? [message.attachments] : [];
+            
             details[message.id] = {
               id: message.id,
               title: message.title,
               content: message.content,
-              attachments: message.attachments,
+              attachments,
               recipientCount
             };
           });
