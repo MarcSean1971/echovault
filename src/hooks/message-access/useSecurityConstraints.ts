@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from 'react';
-import { Message } from '@/types/message';
 import { supabase } from "@/integrations/supabase/client";
+import { Message } from '@/types/message';
 import { toast } from "@/components/ui/use-toast";
 
 interface UseSecurityConstraintsProps {
@@ -34,166 +33,161 @@ export const useSecurityConstraints = ({
   const [unlockTime, setUnlockTime] = useState<Date | null>(null);
   const [isVerified, setIsVerified] = useState(false);
   const [message, setMessage] = useState<Message | null>(null);
-
+  
+  // Load message content once verified
   useEffect(() => {
-    const processSecurityConstraints = async () => {
-      if (isLoading || error || !deliveryData) {
+    const loadMessage = async () => {
+      if (!messageId || isLoading || error || !deliveryData) {
         return;
       }
-      
-      console.log('Processing security constraints');
-      
-      // Check PIN requirement
-      if (conditionData?.pin_code) {
-        console.log('PIN code is required');
-        setIsPinRequired(true);
-      } else {
-        console.log('No PIN required, automatically verifying');
-        setIsVerified(true);
-      }
-      
-      // Check if unlock delay is required
-      if (conditionData?.unlock_delay_hours && conditionData.unlock_delay_hours > 0) {
-        // Calculate unlock time based on delivery record creation timestamp
-        // Use current time as fallback if delivered_at is not available
-        const deliveryTime = deliveryData.delivered_at ? new Date(deliveryData.delivered_at) : new Date();
-        const unlockDelayMs = conditionData.unlock_delay_hours * 60 * 60 * 1000;
-        const calculatedUnlockTime = new Date(deliveryTime.getTime() + unlockDelayMs);
-        
-        if (calculatedUnlockTime > new Date()) {
-          console.log(`Unlock delayed until ${calculatedUnlockTime.toISOString()}`);
-          setIsUnlockDelayed(true);
-          setUnlockTime(calculatedUnlockTime);
-          setIsVerified(false);
-        } else {
-          console.log('Delay period has already passed');
-        }
-      }
 
-      // Fetch message if no security constraints or if previously viewed
-      if ((deliveryData.viewed_count && deliveryData.viewed_count > 0) || 
-          (isVerified && !isUnlockDelayed)) {
-        console.log('Loading message content');
-        const messageData = await loadMessage(messageId);
-        if (!messageData) {
-          console.error('Failed to load message data');
-        } else {
-          console.log('Message loaded successfully');
+      try {
+        // If we have the message from the edge function response, we can use that
+        if (deliveryData.message) {
+          console.log("Using message from edge function response");
+          // Transform the message to ensure it conforms to our expected Message type
+          const transformedMessage: Message = {
+            ...deliveryData.message,
+            attachments: Array.isArray(deliveryData.message.attachments)
+              ? deliveryData.message.attachments.map((att: any) => ({
+                  path: att.path || '',
+                  name: att.name || '',
+                  size: att.size || 0,
+                  type: att.type || ''
+                }))
+              : null
+          };
+          setMessage(transformedMessage);
+          setIsVerified(true);
+          return;
         }
-        setMessage(messageData);
-      } else {
-        console.log('Security constraints prevent loading message at this time');
+
+        // Otherwise fetch the message from the database
+        const { data, error: messageError } = await supabase
+          .from('messages')
+          .select('*')
+          .eq('id', messageId)
+          .maybeSingle();
+          
+        if (messageError) {
+          console.error("Error loading message:", messageError);
+          toast({
+            title: "Error",
+            description: "Failed to load message content",
+            variant: "destructive"
+          });
+          return;
+        }
+        
+        if (!data) {
+          console.error("Message not found");
+          return;
+        }
+        
+        // Transform the message to ensure it conforms to our expected Message type
+        const transformedMessage: Message = {
+          ...data,
+          attachments: Array.isArray(data.attachments)
+            ? data.attachments.map((att: any) => ({
+                path: att.path || '',
+                name: att.name || '',
+                size: att.size || 0,
+                type: att.type || ''
+              }))
+            : null
+        };
+        
+        setMessage(transformedMessage);
+        setIsVerified(true);
+        
+        // Update view count in the delivered_messages table
+        if (deliveryData.id && !deliveryData.viewed_at) {
+          await supabase
+            .from('delivered_messages')
+            .update({
+              viewed_at: new Date().toISOString(),
+              viewed_count: 1
+            })
+            .eq('id', deliveryData.id);
+        } else if (deliveryData.id) {
+          // Increment view count if already viewed
+          await supabase
+            .from('delivered_messages')
+            .update({
+              viewed_count: (deliveryData.viewed_count || 0) + 1
+            })
+            .eq('id', deliveryData.id);
+        }
+      } catch (e) {
+        console.error("Error in loadMessage:", e);
       }
-      
-      // Update view count for valid access
-      await updateViewCount(deliveryData);
     };
     
-    processSecurityConstraints();
-  }, [isLoading, error, conditionData, deliveryData, messageId]);
-
-  // Load message content
-  const loadMessage = async (msgId: string | undefined) => {
-    if (!msgId) return null;
-    
-    try {
-      console.log(`Loading message with ID: ${msgId}`);
-      const { data, error } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('id', msgId)
-        .maybeSingle(); // Changed from .single() to .maybeSingle() for better error handling
-        
-      if (error) {
-        console.error('Error fetching message:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load message content. Please try again later.",
-          variant: "destructive"
-        });
-        throw error;
-      }
-
-      console.log('Message found:', data ? 'yes' : 'no');
-      return data as Message;
-    } catch (err: any) {
-      console.error('Error loading message:', err);
-      return null;
-    }
-  };
-
-  // Update view count
-  const updateViewCount = async (deliveryData: any) => {
-    if (!deliveryData) return;
-    
-    try {
-      if (!deliveryData.viewed_at) {
-        console.log('First view, updating viewed_at timestamp');
-        await supabase
-          .from('delivered_messages')
-          .update({
-            viewed_at: new Date().toISOString(),
-            viewed_count: (deliveryData.viewed_count || 0) + 1
-          })
-          .eq('delivery_id', deliveryData.delivery_id);
-      } else {
-        // Increment view count
-        console.log('Incrementing view count');
-        await supabase
-          .from('delivered_messages')
-          .update({
-            viewed_count: (deliveryData.viewed_count || 0) + 1
-          })
-          .eq('delivery_id', deliveryData.delivery_id);
-      }
-    } catch (err) {
-      console.error('Error updating view count:', err);
-    }
-  };
+    loadMessage();
+  }, [messageId, isLoading, error, deliveryData]);
   
-  // Handle PIN verification
-  const verifyPin = async (pinCode: string): Promise<boolean> => {
-    if (!messageId || !conditionData) return false;
+  // Check if security constraints apply (PIN, delayed unlock)
+  useEffect(() => {
+    if (!conditionData) {
+      return;
+    }
     
-    try {
-      console.log('Verifying PIN code');
-      if (conditionData.pin_code === pinCode) {
-        console.log('PIN code verified successfully');
-        const messageData = await loadMessage(messageId);
-        setMessage(messageData);
-        setIsVerified(true);
-        return true;
-      } else {
-        console.log('Invalid PIN code entered');
-        toast({
-          title: "Invalid PIN code",
-          description: "The PIN code you entered is incorrect.",
-          variant: "destructive"
-        });
-        return false;
+    // Check if PIN protection is enabled
+    if (conditionData.pin_code) {
+      setIsPinRequired(true);
+    }
+    
+    // Check if delayed unlock is enabled
+    if (conditionData.unlock_delay_hours && conditionData.unlock_delay_hours > 0) {
+      setIsUnlockDelayed(true);
+      
+      // Check if delivered_at + unlock_delay_hours is in the future
+      if (deliveryData && deliveryData.delivered_at) {
+        const deliveredAt = new Date(deliveryData.delivered_at);
+        const unlockAt = new Date(deliveredAt.getTime() + (conditionData.unlock_delay_hours * 60 * 60 * 1000));
+        
+        setUnlockTime(unlockAt);
+        
+        // If unlock time is in the future, don't show content yet
+        if (unlockAt > new Date()) {
+          setIsVerified(false);
+        }
       }
-    } catch (err: any) {
-      console.error('Error verifying PIN:', err);
-      toast({
-        title: "Error",
-        description: "Failed to verify PIN code.",
-        variant: "destructive"
-      });
+    }
+  }, [conditionData, deliveryData]);
+  
+  // Function to verify PIN code
+  const verifyPin = async (enteredPin: string): Promise<boolean> => {
+    if (!conditionData || !conditionData.pin_code) {
       return false;
     }
-  };
-
-  // Handle unlock delay expiration
-  const handleUnlockExpired = async (): Promise<void> => {
-    if (!messageId) return;
     
-    console.log('Unlock time expired, loading message');
-    const messageData = await loadMessage(messageId);
-    setMessage(messageData);
-    setIsUnlockDelayed(false);
-    setIsVerified(true);
+    if (enteredPin === conditionData.pin_code) {
+      setIsVerified(true);
+      toast({
+        title: "PIN Accepted",
+        description: "Message unlocked successfully"
+      });
+      return true;
+    }
+    
+    toast({
+      title: "Invalid PIN",
+      description: "The PIN you entered is incorrect",
+      variant: "destructive"
+    });
+    return false;
   };
-
+  
+  // Function to handle when unlock time has expired
+  const handleUnlockExpired = async (): Promise<void> => {
+    setIsVerified(true);
+    toast({
+      title: "Message Unlocked",
+      description: "The delayed access period has ended"
+    });
+  };
+  
   return {
     isPinRequired,
     isUnlockDelayed,

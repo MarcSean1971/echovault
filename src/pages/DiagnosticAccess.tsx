@@ -122,7 +122,19 @@ export default function DiagnosticAccess() {
         setError("Message not found");
         addLog('Message not found');
       } else {
-        setMessage(data);
+        // Transform the raw data to match the Message type format
+        const transformedMessage: Message = {
+          ...data,
+          attachments: Array.isArray(data.attachments) 
+            ? data.attachments.map((att: any) => ({
+                path: att.path || '',
+                name: att.name || '',
+                size: att.size || 0,
+                type: att.type || '',
+              }))
+            : null
+        };
+        setMessage(transformedMessage);
         addLog(`Success! Loaded message: "${data.title}"`);
       }
     } catch (e) {
@@ -166,7 +178,19 @@ export default function DiagnosticAccess() {
         addLog(`Access verification failed: ${edgeFnResult.error}`);
         setError(edgeFnResult.error);
       } else if (edgeFnResult.success) {
-        setMessage(edgeFnResult.message);
+        // Transform the message to ensure it conforms to our expected Message type
+        const transformedMessage: Message = {
+          ...edgeFnResult.message,
+          attachments: Array.isArray(edgeFnResult.message.attachments)
+            ? edgeFnResult.message.attachments.map((att: any) => ({
+                path: att.path || '',
+                name: att.name || '',
+                size: att.size || 0,
+                type: att.type || ''
+              }))
+            : null
+        };
+        setMessage(transformedMessage);
         addLog(`Success! Edge function loaded message: "${edgeFnResult.message.title}"`);
       }
     } catch (e) {
@@ -206,7 +230,19 @@ export default function DiagnosticAccess() {
         addLog(`Access verification failed: ${edgeFnResult.error}`);
         setError(edgeFnResult.error);
       } else if (edgeFnResult.success) {
-        setMessage(edgeFnResult.message);
+        // Transform the message to ensure it conforms to our expected Message type
+        const transformedMessage: Message = {
+          ...edgeFnResult.message,
+          attachments: Array.isArray(edgeFnResult.message.attachments)
+            ? edgeFnResult.message.attachments.map((att: any) => ({
+                path: att.path || '',
+                name: att.name || '',
+                size: att.size || 0,
+                type: att.type || ''
+              }))
+            : null
+        };
+        setMessage(transformedMessage);
         addLog(`Success! Bypass mode loaded message: "${edgeFnResult.message.title}"`);
       }
     } catch (e) {
