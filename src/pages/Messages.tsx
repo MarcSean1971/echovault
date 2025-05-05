@@ -68,7 +68,7 @@ export default function Messages() {
             toast({
               title: "Warning",
               description: "Failed to load message conditions, some features may be limited",
-              variant: "warning"
+              variant: "destructive" // Changed from "warning" to "destructive" as it's one of the allowed variants
             });
             
             // If conditions fail, show all messages as regular
