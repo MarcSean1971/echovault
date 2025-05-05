@@ -84,7 +84,7 @@ export const ErrorState = ({ error }: ErrorStateProps) => {
     <div className="container mx-auto max-w-3xl px-4 py-8">
       <Card className="p-6 border-red-200">
         <div className="flex flex-col items-center justify-center text-center space-y-4 py-6">
-          <AlertCircle className="h-12 w-12 text-red-500" />
+          <AlertCircle className={`h-12 w-12 text-red-500 ${HOVER_TRANSITION}`} />
           <h2 className="text-xl font-semibold">Access Error</h2>
           
           <Alert variant="destructive" className="mb-2">
@@ -102,7 +102,7 @@ export const ErrorState = ({ error }: ErrorStateProps) => {
           {isAttachmentError ? (
             <div className="bg-amber-50 border border-amber-100 rounded-md p-4 mt-2 w-full max-w-md">
               <div className="flex items-start">
-                <HelpCircle className="h-5 w-5 text-amber-500 mr-2 mt-0.5 flex-shrink-0" />
+                <HelpCircle className={`h-5 w-5 text-amber-500 mr-2 mt-0.5 flex-shrink-0 ${HOVER_TRANSITION}`} />
                 <div className="text-sm text-amber-700 text-left">
                   <p className="font-medium mb-1">Attachment access issues:</p>
                   <ul className="list-disc pl-5 space-y-1">
@@ -120,7 +120,7 @@ export const ErrorState = ({ error }: ErrorStateProps) => {
                   variant="outline"
                   className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default} flex items-center gap-2`}
                 >
-                  <FileText className="h-4 w-4" />
+                  <FileText className={`h-4 w-4 ${HOVER_TRANSITION}`} />
                   Access Message Only
                 </Button>
               </div>
@@ -128,7 +128,7 @@ export const ErrorState = ({ error }: ErrorStateProps) => {
           ) : (
             <div className="bg-amber-50 border border-amber-100 rounded-md p-4 mt-2 w-full max-w-md">
               <div className="flex items-start">
-                <HelpCircle className="h-5 w-5 text-amber-500 mr-2 mt-0.5 flex-shrink-0" />
+                <HelpCircle className={`h-5 w-5 text-amber-500 mr-2 mt-0.5 flex-shrink-0 ${HOVER_TRANSITION}`} />
                 <div className="text-sm text-amber-700 text-left">
                   <p className="font-medium mb-1">Possible issues:</p>
                   <ul className="list-disc pl-5 space-y-1">
@@ -147,7 +147,7 @@ export const ErrorState = ({ error }: ErrorStateProps) => {
           
           <div className="bg-blue-50 border border-blue-100 rounded-md p-4 w-full max-w-md">
             <div className="flex items-start">
-              <HelpCircle className="h-5 w-5 text-blue-500 mr-2 mt-0.5 flex-shrink-0" />
+              <HelpCircle className={`h-5 w-5 text-blue-500 mr-2 mt-0.5 flex-shrink-0 ${HOVER_TRANSITION}`} />
               <div className="text-sm text-blue-700 text-left">
                 <p className="font-medium mb-1">Troubleshooting steps:</p>
                 <ul className="list-disc pl-5 space-y-1">
@@ -170,23 +170,23 @@ export const ErrorState = ({ error }: ErrorStateProps) => {
               onClick={retryAccess} 
               className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default} flex items-center gap-2`}
             >
-              <RefreshCw className="h-4 w-4" />
+              <RefreshCw className={`h-4 w-4 ${HOVER_TRANSITION}`} />
               Try Again
             </Button>
             <Button 
               variant="outline"
               onClick={goBack}
-              className={`${HOVER_TRANSITION} flex items-center gap-2`}
+              className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default} flex items-center gap-2`}
             >
-              <ArrowLeft className="h-4 w-4" />
+              <ArrowLeft className={`h-4 w-4 ${HOVER_TRANSITION}`} />
               Go Back
             </Button>
             <Button 
               variant="secondary"
               onClick={regenerateAccess}
-              className={`${HOVER_TRANSITION} flex items-center gap-2 mt-2 sm:mt-0`}
+              className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default} flex items-center gap-2 mt-2 sm:mt-0`}
             >
-              <FileText className="h-4 w-4" />
+              <FileText className={`h-4 w-4 ${HOVER_TRANSITION}`} />
               Request New Link
             </Button>
           </div>
@@ -194,4 +194,4 @@ export const ErrorState = ({ error }: ErrorStateProps) => {
       </Card>
     </div>
   );
-};
+}

@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { FileIcon, Download, ExternalLink, AlertCircle } from "lucide-react";
+import { FileIcon, Download, ExternalLink, AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/components/ui/use-toast";
@@ -21,6 +21,7 @@ interface AttachmentItemProps {
 export function AttachmentItem({ attachment, deliveryId, recipientEmail }: AttachmentItemProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   const getFileAccessUrl = async () => {
     try {
@@ -59,6 +60,32 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
       console.error("Error generating URL:", error);
       setHasError(true);
       return null;
+    }
+  };
+
+  const retryAccess = async () => {
+    setIsLoading(true);
+    setRetryCount(prev => prev + 1);
+    
+    try {
+      const url = await getFileAccessUrl();
+      if (url) {
+        setHasError(false);
+        toast({
+          title: "Retry successful",
+          description: "Access to the file has been restored",
+        });
+      } else {
+        toast({
+          title: "Retry failed",
+          description: "Still unable to access the file",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Error retrying file access:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -141,9 +168,9 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3 overflow-hidden">
           {hasError ? (
-            <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
+            <AlertCircle className={`h-4 w-4 text-red-500 flex-shrink-0 ${HOVER_TRANSITION}`} />
           ) : (
-            <FileIcon className="h-4 w-4 flex-shrink-0" />
+            <FileIcon className={`h-4 w-4 flex-shrink-0 ${HOVER_TRANSITION}`} />
           )}
           <div className="truncate">
             <span className="block truncate">{attachment.name}</span>
@@ -152,24 +179,45 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
         </div>
         
         <div className="flex space-x-2">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={downloadFile}
-                  disabled={isLoading}
-                  className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
-                >
-                  <Download className={`h-4 w-4 ${isLoading ? 'animate-pulse' : ''}`} />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Download file</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          {hasError ? (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={retryAccess}
+                    disabled={isLoading}
+                    className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
+                  >
+                    <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''} ${HOVER_TRANSITION}`} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Retry access</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          ) : (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={downloadFile}
+                    disabled={isLoading}
+                    className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
+                  >
+                    <Download className={`h-4 w-4 ${isLoading ? 'animate-pulse' : ''} ${HOVER_TRANSITION}`} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Download file</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
           
           <TooltipProvider>
             <Tooltip>
@@ -177,15 +225,19 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  onClick={openFile}
+                  onClick={hasError ? retryAccess : openFile}
                   disabled={isLoading}
                   className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
                 >
-                  <ExternalLink className={`h-4 w-4 ${isLoading ? 'animate-pulse' : ''}`} />
+                  {hasError ? (
+                    <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''} ${HOVER_TRANSITION}`} />
+                  ) : (
+                    <ExternalLink className={`h-4 w-4 ${isLoading ? 'animate-pulse' : ''} ${HOVER_TRANSITION}`} />
+                  )}
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Open in new tab</p>
+                <p>{hasError ? 'Retry access' : 'Open in new tab'}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -195,6 +247,11 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
       {hasError && (
         <div className="mt-2 text-xs text-red-600">
           There was an error accessing this file. Please try again or contact the sender.
+          {retryCount > 0 && (
+            <span className="block mt-1">
+              Retried {retryCount} time{retryCount !== 1 ? 's' : ''} without success.
+            </span>
+          )}
         </div>
       )}
     </div>

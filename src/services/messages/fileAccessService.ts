@@ -48,8 +48,11 @@ export async function getPublicFileUrl(
       encodedEmail
     });
     
+    // Set a longer expiration for the URL (3 hours = 10800 seconds)
+    const expiresIn = 10800;
+    
     // Construct the URL to our edge function with the correct path structure
-    const accessUrl = `${baseUrl}/functions/v1/access-file/file/${encodedPath}?delivery=${encodedDeliveryId}&recipient=${encodedEmail}`;
+    const accessUrl = `${baseUrl}/functions/v1/access-file/file/${encodedPath}?delivery=${encodedDeliveryId}&recipient=${encodedEmail}&expires=${Date.now() + (expiresIn * 1000)}`;
     
     console.log(`Generated public file access URL: ${accessUrl}`);
     
@@ -104,10 +107,13 @@ export async function getAuthenticatedFileUrl(filePath: string, skipAuth = false
     
     console.log(`Generating signed URL for file: ${cleanFilePath} from bucket: ${bucketName}`);
     
+    // Extended to 24 hours (86400 seconds)
+    const expiresIn = 86400; 
+    
     // Try with the standard bucket name
     const { data, error } = await supabase.storage
       .from(bucketName)
-      .createSignedUrl(cleanFilePath, 86400); // Extended to 24 hours (86400 seconds)
+      .createSignedUrl(cleanFilePath, expiresIn); 
     
     if (error) {
       console.error("Error generating signed URL:", error);
@@ -121,7 +127,7 @@ export async function getAuthenticatedFileUrl(filePath: string, skipAuth = false
         
         const alternativeResult = await supabase.storage
           .from(alternativeBucket)
-          .createSignedUrl(cleanFilePath, 86400); // Also 24 hours
+          .createSignedUrl(cleanFilePath, expiresIn);
           
         if (alternativeResult.error) {
           console.error("Error with alternative bucket:", alternativeResult.error);
