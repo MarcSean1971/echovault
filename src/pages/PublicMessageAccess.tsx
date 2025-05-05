@@ -19,11 +19,38 @@ export default function PublicMessageAccess() {
   
   // For debugging purposes - log the parameters
   useEffect(() => {
-    console.log("PublicMessageAccess parameters:", {
-      messageId,
-      deliveryId,
-      recipientEmail
-    });
+    console.log("==== PublicMessageAccess.tsx ====");
+    console.log("Path parameters:");
+    console.log("messageId:", messageId);
+    console.log("Query parameters:");
+    console.log("deliveryId:", deliveryId);
+    console.log("recipientEmail:", recipientEmail);
+    console.log("Current URL:", window.location.href);
+    
+    // Check if parameters are properly formatted/encoded
+    if (messageId) {
+      try {
+        console.log("Decoded messageId:", decodeURIComponent(messageId));
+      } catch (e) {
+        console.error("Failed to decode messageId:", e);
+      }
+    }
+    
+    if (deliveryId) {
+      try {
+        console.log("Decoded deliveryId:", decodeURIComponent(deliveryId));
+      } catch (e) {
+        console.error("Failed to decode deliveryId:", e);
+      }
+    }
+    
+    if (recipientEmail) {
+      try {
+        console.log("Decoded recipientEmail:", decodeURIComponent(recipientEmail));
+      } catch (e) {
+        console.error("Failed to decode recipientEmail:", e);
+      }
+    }
   }, [messageId, deliveryId, recipientEmail]);
   
   const { 

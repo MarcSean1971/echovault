@@ -16,19 +16,28 @@ export function generateAccessUrl(messageId: string, recipientEmail: string, del
     : `https://${appDomain}`;
   
   try {
-    // Build the URL with the required parameters - using proper path structure
-    // Change from query parameters to path parameters for messageId
-    const url = new URL(`${domainWithProtocol}/access/message/${messageId}`);
+    // Build the URL with the required parameters using proper path structure
+    const url = new URL(`${domainWithProtocol}/access/message/${encodeURIComponent(messageId)}`);
     
-    // Add necessary query parameters
-    url.searchParams.append("delivery", deliveryId);
-    url.searchParams.append("recipient", recipientEmail);
+    // Add necessary query parameters with proper encoding
+    url.searchParams.append("delivery", encodeURIComponent(deliveryId));
+    url.searchParams.append("recipient", encodeURIComponent(recipientEmail));
     
-    console.log(`Generated access URL: ${url.toString()}`);
-    return url.toString();
+    const accessUrl = url.toString();
+    console.log(`Generated access URL: ${accessUrl}`);
+    
+    // Verify URL components
+    try {
+      const parsedUrl = new URL(accessUrl);
+      console.log(`URL verification - Path: ${parsedUrl.pathname}, Delivery: ${parsedUrl.searchParams.get('delivery')}, Recipient: ${parsedUrl.searchParams.get('recipient')}`);
+    } catch (verifyError) {
+      console.error(`URL verification error: ${verifyError}`);
+    }
+    
+    return accessUrl;
   } catch (error) {
     console.error(`Error generating access URL: ${error}`);
-    // Fallback URL construction if URL constructor fails
-    return `${domainWithProtocol}/access/message/${messageId}?delivery=${deliveryId}&recipient=${encodeURIComponent(recipientEmail)}`;
+    // Fallback URL construction with encoding
+    return `${domainWithProtocol}/access/message/${encodeURIComponent(messageId)}?delivery=${encodeURIComponent(deliveryId)}&recipient=${encodeURIComponent(recipientEmail)}`;
   }
 }

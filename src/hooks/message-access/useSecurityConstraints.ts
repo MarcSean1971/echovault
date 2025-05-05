@@ -37,7 +37,7 @@ export const useSecurityConstraints = ({
 
   useEffect(() => {
     const processSecurityConstraints = async () => {
-      if (isLoading || error || !conditionData || !deliveryData) {
+      if (isLoading || error || !deliveryData) {
         return;
       }
       
@@ -102,7 +102,7 @@ export const useSecurityConstraints = ({
         .from('messages')
         .select('*')
         .eq('id', msgId)
-        .single();
+        .maybeSingle(); // Changed from .single() to .maybeSingle() for better error handling
         
       if (error) {
         console.error('Error fetching message:', error);

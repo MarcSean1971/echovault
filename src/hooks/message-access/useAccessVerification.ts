@@ -31,8 +31,13 @@ export const useAccessVerification = ({
   useEffect(() => {
     const verifyAccess = async () => {
       if (!messageId || !deliveryId || !recipientEmail) {
+        const missingParams = [];
+        if (!messageId) missingParams.push('messageId');
+        if (!deliveryId) missingParams.push('deliveryId');
+        if (!recipientEmail) missingParams.push('recipientEmail');
+        
         console.error('Missing required parameters:', { messageId, deliveryId, recipientEmail });
-        setError('Invalid access link. Please check your email for the correct link.');
+        setError(`Invalid access link. Missing parameters: ${missingParams.join(', ')}. Please check your email for the correct link.`);
         setIsLoading(false);
         return;
       }
@@ -40,7 +45,8 @@ export const useAccessVerification = ({
       try {
         console.log(`Verifying access for message: ${messageId}, delivery: ${deliveryId}, recipient: ${recipientEmail}`);
         
-        // First, verify the delivery record
+        // First, verify the delivery record with additional logging
+        console.log(`Querying delivered_messages for delivery_id: ${deliveryId} and message_id: ${messageId}`);
         const { data: deliveryData, error: deliveryError } = await supabase
           .from('delivered_messages')
           .select(`
@@ -54,57 +60,92 @@ export const useAccessVerification = ({
             delivered_at
           `)
           .eq('delivery_id', deliveryId)
-          .eq('message_id', messageId)
-          .single();
+          .eq('message_id', messageId);
         
-        if (deliveryError || !deliveryData) {
+        // Handle no results or error
+        if (deliveryError) {
           console.error('Error verifying delivery:', deliveryError);
-          setError('This message link is invalid or has expired.');
+          console.error('Error details:', deliveryError.message);
+          setError('Failed to verify message delivery. Database error.');
           setIsLoading(false);
           return;
         }
         
-        console.log('Delivery data found:', deliveryData);
-        setDeliveryData(deliveryData);
+        if (!deliveryData || deliveryData.length === 0) {
+          console.error('No delivery record found for the provided parameters');
+          setError('This message link is invalid or has expired. No delivery record found.');
+          setIsLoading(false);
+          return;
+        }
+        
+        // Since we're not using .single(), handle the array result
+        const deliveryRecord = deliveryData[0];
+        console.log('Delivery data found:', deliveryRecord);
+        setDeliveryData(deliveryRecord);
         
         // Verify the recipient email
+        console.log(`Querying recipients with ID: ${deliveryRecord.recipient_id} to match email: ${recipientEmail}`);
         const { data: recipientData, error: recipientError } = await supabase
           .from('recipients')
           .select('id, email')
-          .eq('id', deliveryData.recipient_id)
-          .single();
+          .eq('id', deliveryRecord.recipient_id);
           
-        if (recipientError || !recipientData || recipientData.email !== recipientEmail) {
+        if (recipientError) {
           console.error('Error verifying recipient:', recipientError);
-          console.error('Recipient match check:', recipientData?.email, recipientEmail);
+          console.error('Error details:', recipientError.message);
+          setError('Failed to verify recipient. Database error.');
+          setIsLoading(false);
+          return;
+        }
+        
+        if (!recipientData || recipientData.length === 0) {
+          console.error('No recipient found with the provided ID');
+          setError('Recipient not found. This message might have been sent to a different recipient.');
+          setIsLoading(false);
+          return;
+        }
+        
+        const recipientRecord = recipientData[0];
+        
+        // Compare emails with case-insensitive matching
+        if (recipientRecord.email.toLowerCase() !== recipientEmail.toLowerCase()) {
+          console.error('Recipient email mismatch:', recipientRecord.email, recipientEmail);
           setError('Unauthorized access. This message is intended for a different recipient.');
           setIsLoading(false);
           return;
         }
         
-        console.log('Recipient verified:', recipientData);
-        setRecipientData(recipientData);
+        console.log('Recipient verified:', recipientRecord);
+        setRecipientData(recipientRecord);
         
         // Check if there are any security constraints
+        console.log(`Querying message_conditions with ID: ${deliveryRecord.condition_id}`);
         const { data: conditionData, error: conditionError } = await supabase
           .from('message_conditions')
           .select('pin_code, unlock_delay_hours')
-          .eq('id', deliveryData.condition_id)
-          .single();
+          .eq('id', deliveryRecord.condition_id);
         
         if (conditionError) {
           console.error('Error fetching message conditions:', conditionError);
+          console.error('Error details:', conditionError.message);
           setError('Unable to verify message access conditions.');
           setIsLoading(false);
           return;
         }
         
-        console.log('Security conditions retrieved:', conditionData);
-        setConditionData(conditionData);
+        if (!conditionData || conditionData.length === 0) {
+          console.error('No conditions found for the provided condition ID');
+          setError('Message security conditions not found.');
+          setIsLoading(false);
+          return;
+        }
+        
+        console.log('Security conditions retrieved:', conditionData[0]);
+        setConditionData(conditionData[0]);
         setIsLoading(false);
       } catch (err: any) {
         console.error('Error verifying access:', err);
-        setError('An error occurred while verifying access to this message.');
+        setError('An error occurred while verifying access to this message. Please try again later.');
         setIsLoading(false);
       }
     };
