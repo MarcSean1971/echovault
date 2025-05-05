@@ -16,15 +16,19 @@ export function generateAccessUrl(messageId: string, recipientEmail: string, del
     : `https://${appDomain}`;
   
   try {
-    // Build the URL with the required parameters
+    // Build the URL with the required parameters - using proper path structure
+    // Change from query parameters to path parameters for messageId
     const url = new URL(`${domainWithProtocol}/access/message/${messageId}`);
+    
+    // Add necessary query parameters
     url.searchParams.append("delivery", deliveryId);
     url.searchParams.append("recipient", recipientEmail);
     
+    console.log(`Generated access URL: ${url.toString()}`);
     return url.toString();
   } catch (error) {
     console.error(`Error generating access URL: ${error}`);
     // Fallback URL construction if URL constructor fails
-    return `https://${appDomain}/access/message/${messageId}?delivery=${deliveryId}&recipient=${encodeURIComponent(recipientEmail)}`;
+    return `${domainWithProtocol}/access/message/${messageId}?delivery=${deliveryId}&recipient=${encodeURIComponent(recipientEmail)}`;
   }
 }

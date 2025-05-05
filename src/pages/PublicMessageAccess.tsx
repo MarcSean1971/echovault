@@ -6,12 +6,25 @@ import { ErrorState } from '@/components/message/public-access/ErrorState';
 import { PinEntry } from '@/components/message/public-access/PinEntry';
 import { DelayedUnlock } from '@/components/message/public-access/DelayedUnlock';
 import { MessageDisplay } from '@/components/message/public-access/MessageDisplay';
+import { useEffect } from 'react';
 
 export default function PublicMessageAccess() {
+  // Get message ID from URL path parameter
   const { id: messageId } = useParams<{ id: string }>();
+  
+  // Get delivery ID and recipient email from query parameters
   const [searchParams] = useSearchParams();
   const deliveryId = searchParams.get('delivery');
   const recipientEmail = searchParams.get('recipient');
+  
+  // For debugging purposes - log the parameters
+  useEffect(() => {
+    console.log("PublicMessageAccess parameters:", {
+      messageId,
+      deliveryId,
+      recipientEmail
+    });
+  }, [messageId, deliveryId, recipientEmail]);
   
   const { 
     message,

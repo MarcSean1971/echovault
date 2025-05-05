@@ -31,13 +31,14 @@ export const useAccessVerification = ({
   useEffect(() => {
     const verifyAccess = async () => {
       if (!messageId || !deliveryId || !recipientEmail) {
+        console.error('Missing required parameters:', { messageId, deliveryId, recipientEmail });
         setError('Invalid access link. Please check your email for the correct link.');
         setIsLoading(false);
         return;
       }
       
       try {
-        console.log(`Verifying access for message: ${messageId}, delivery: ${deliveryId}`);
+        console.log(`Verifying access for message: ${messageId}, delivery: ${deliveryId}, recipient: ${recipientEmail}`);
         
         // First, verify the delivery record
         const { data: deliveryData, error: deliveryError } = await supabase
@@ -75,6 +76,7 @@ export const useAccessVerification = ({
           
         if (recipientError || !recipientData || recipientData.email !== recipientEmail) {
           console.error('Error verifying recipient:', recipientError);
+          console.error('Recipient match check:', recipientData?.email, recipientEmail);
           setError('Unauthorized access. This message is intended for a different recipient.');
           setIsLoading(false);
           return;
