@@ -1,0 +1,136 @@
+
+import { useState } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { MessageCondition } from "@/types/message";
+import { AlertCircle, FileText, Video, Headphones } from "lucide-react";
+import { HOVER_TRANSITION, BUTTON_HOVER_EFFECTS } from "@/utils/hoverEffects";
+
+interface PanicMessageSelectorProps {
+  messages: MessageCondition[];
+  isOpen: boolean;
+  onClose: () => void;
+  onSelect: (messageId: string) => void;
+}
+
+export function PanicMessageSelector({ 
+  messages, 
+  isOpen, 
+  onClose, 
+  onSelect 
+}: PanicMessageSelectorProps) {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+
+  const handleSelect = () => {
+    if (selectedId) {
+      onSelect(selectedId);
+      onClose();
+    }
+  };
+
+  // Find message details for each message condition
+  const getAttachmentInfo = (message: MessageCondition) => {
+    // This is simplified - in a real implementation you'd need to get this from the message
+    const hasAttachments = message.message?.attachments && message.message.attachments.length > 0;
+    
+    if (!hasAttachments) return null;
+    
+    const attachments = message.message?.attachments || [];
+    const counts = {
+      text: 0,
+      video: 0,
+      audio: 0,
+      other: 0
+    };
+    
+    attachments.forEach(attachment => {
+      if (attachment.type?.includes('text')) counts.text++;
+      else if (attachment.type?.includes('video')) counts.video++;
+      else if (attachment.type?.includes('audio')) counts.audio++;
+      else counts.other++;
+    });
+    
+    return { counts, total: attachments.length };
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center text-red-500">
+            <AlertCircle className="h-5 w-5 mr-2" />
+            Select Emergency Message
+          </DialogTitle>
+          <DialogDescription>
+            Choose which emergency message to send immediately to all recipients.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="max-h-[60vh] overflow-y-auto py-4 space-y-2">
+          {messages.map((message) => {
+            const attachmentInfo = getAttachmentInfo(message);
+            
+            return (
+              <div 
+                key={message.message_id} 
+                className={`p-4 border rounded-md cursor-pointer transition-all ${
+                  selectedId === message.message_id 
+                    ? "border-red-500 bg-red-50" 
+                    : "border-gray-200 hover:border-red-200"
+                }`}
+                onClick={() => setSelectedId(message.message_id)}
+              >
+                <div className="font-medium">{message.message?.title || "Emergency Message"}</div>
+                {message.message?.content && (
+                  <div className="text-sm text-gray-500 line-clamp-2 mt-1">
+                    {message.message.content}
+                  </div>
+                )}
+                
+                {attachmentInfo && attachmentInfo.total > 0 && (
+                  <div className="flex gap-3 mt-2 text-xs text-gray-500">
+                    {attachmentInfo.counts.text > 0 && (
+                      <span className="flex items-center gap-1">
+                        <FileText className="h-3 w-3" />
+                        {attachmentInfo.counts.text}
+                      </span>
+                    )}
+                    {attachmentInfo.counts.video > 0 && (
+                      <span className="flex items-center gap-1">
+                        <Video className="h-3 w-3" />
+                        {attachmentInfo.counts.video}
+                      </span>
+                    )}
+                    {attachmentInfo.counts.audio > 0 && (
+                      <span className="flex items-center gap-1">
+                        <Headphones className="h-3 w-3" />
+                        {attachmentInfo.counts.audio}
+                      </span>
+                    )}
+                  </div>
+                )}
+                
+                <div className="text-xs text-gray-400 mt-1">
+                  Recipients: {(message.recipients?.length || 0)}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        
+        <div className="flex justify-end gap-2 mt-4">
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button 
+            variant="destructive" 
+            onClick={handleSelect} 
+            disabled={!selectedId}
+            className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.destructive}`}
+          >
+            <AlertCircle className="h-4 w-4 mr-2" />
+            Trigger Emergency
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}

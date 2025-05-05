@@ -1,3 +1,4 @@
+
 import { sendEmailNotification } from "../email-service.ts";
 import { sendWhatsAppNotification } from "./whatsapp-service.ts";
 import { supabaseClient } from "../supabase-client.ts";
@@ -64,7 +65,7 @@ export async function notifyRecipient(
           console.log(`Using pre-generated delivery ID ${deliveryId} for ${recipient.email}`);
         }
         
-        // Send email with location data if available
+        // Send email with location data and attachments if available
         const emailResult = await sendEmailNotification(
           message.id,
           recipient.email,
@@ -80,7 +81,8 @@ export async function notifyRecipient(
           },
           isEmergency,
           "EchoVault",  // App name
-          deliveryId    // Pass the deliveryId to the email service
+          deliveryId,   // Pass the deliveryId to the email service
+          message.attachments // Pass message attachments to email service
         );
         
         if (emailResult.success) {

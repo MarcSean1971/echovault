@@ -8,15 +8,17 @@ import { EmergencyButton } from "./panic-button/EmergencyButton";
 import { CreateMessageButton } from "./panic-button/CreateMessageButton";
 import { StatusMessages } from "./panic-button/StatusMessages";
 import { hasActivePanicMessages } from "@/services/messages/conditions/panicTriggerService";
+import { PanicMessageSelector } from "./panic-button/PanicMessageSelector";
 
 interface PanicButtonCardProps {
   userId: string | undefined;
   panicMessage: MessageCondition | null;
+  panicMessages: MessageCondition[]; // New prop for all panic messages
   isChecking: boolean;
   isLoading: boolean;
 }
 
-export function PanicButtonCard({ userId, panicMessage, isChecking, isLoading }: PanicButtonCardProps) {
+export function PanicButtonCard({ userId, panicMessage, panicMessages, isChecking, isLoading }: PanicButtonCardProps) {
   // Use the panic button hook
   const {
     panicMode,
@@ -25,9 +27,12 @@ export function PanicButtonCard({ userId, panicMessage, isChecking, isLoading }:
     countDown,
     locationPermission,
     handlePanicButtonClick,
+    handlePanicMessageSelect,
     handleCreatePanicMessage,
-    getKeepArmedValue
-  } = usePanicButton(userId, panicMessage);
+    getKeepArmedValue,
+    isSelectorOpen,
+    setIsSelectorOpen
+  } = usePanicButton(userId, panicMessage, panicMessages);
   
   // State for checking if user has any panic messages (even if not loaded in this component)
   const [hasPanicMessages, setHasPanicMessages] = useState(false);
@@ -45,10 +50,10 @@ export function PanicButtonCard({ userId, panicMessage, isChecking, isLoading }:
       }
     };
     
-    if (!panicMessage && !isLoading && userId) {
+    if (panicMessages.length === 0 && !isLoading && userId) {
       checkPanicMessages();
     }
-  }, [userId, panicMessage, isLoading]);
+  }, [userId, panicMessages, isLoading]);
 
   // Debug info
   useEffect(() => {
@@ -61,7 +66,13 @@ export function PanicButtonCard({ userId, panicMessage, isChecking, isLoading }:
         console.log("Panic config (panic_config):", panicMessage.panic_config);
       }
     }
-  }, [panicMessage]);
+    
+    if (panicMessages.length > 0) {
+      console.log(`Found ${panicMessages.length} panic messages available`);
+    }
+  }, [panicMessage, panicMessages]);
+
+  const hasMultipleMessages = panicMessages.length > 1;
 
   return (
     <Card className={panicMode ? "border-red-500" : ""}>
@@ -75,9 +86,14 @@ export function PanicButtonCard({ userId, panicMessage, isChecking, isLoading }:
         <p>
           Press this button in emergency situations to immediately trigger your 
           configured emergency messages with your current location.
+          {hasMultipleMessages && (
+            <span className="ml-1 text-sm text-blue-600">
+              ({panicMessages.length} messages available)
+            </span>
+          )}
         </p>
         
-        {panicMessage ? (
+        {panicMessages.length > 0 ? (
           <EmergencyButton 
             isPanicMode={panicMode}
             isConfirming={isConfirming}
@@ -95,11 +111,21 @@ export function PanicButtonCard({ userId, panicMessage, isChecking, isLoading }:
         <StatusMessages
           isConfirming={isConfirming}
           locationPermission={locationPermission}
-          hasPanicMessage={!!panicMessage}
+          hasPanicMessage={panicMessages.length > 0}
           hasPanicMessages={hasPanicMessages}
           isLoading={isLoading}
           keepArmed={!!panicMessage && getKeepArmedValue()}
         />
+        
+        {/* Message selection dialog */}
+        {hasMultipleMessages && (
+          <PanicMessageSelector 
+            messages={panicMessages}
+            isOpen={isSelectorOpen}
+            onClose={() => setIsSelectorOpen(false)}
+            onSelect={handlePanicMessageSelect}
+          />
+        )}
       </CardContent>
     </Card>
   );

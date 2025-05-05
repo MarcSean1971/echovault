@@ -25,7 +25,13 @@ export async function sendEmailNotification(
   } = {},
   isEmergency: boolean = false,
   appName: string = "EchoVault",
-  deliveryId?: string  // Add deliveryId parameter with default of undefined
+  deliveryId?: string,  // Add deliveryId parameter with default of undefined
+  attachments: Array<{
+    path: string;
+    name: string;
+    size: number;
+    type: string;
+  }> | null = null // Add attachments parameter
 ) {
   try {
     console.log(`Sending email to ${recipientEmail}`);
@@ -73,6 +79,50 @@ export async function sendEmailNotification(
       `;
     }
 
+    // Add attachments information if available
+    let attachmentsHtml = "";
+    if (attachments && attachments.length > 0) {
+      const fileIcons = {
+        image: "🖼️",
+        video: "🎬",
+        audio: "🎵",
+        pdf: "📄",
+        text: "📝",
+        default: "📎"
+      };
+      
+      const getFileIcon = (fileType: string) => {
+        if (fileType.includes("image")) return fileIcons.image;
+        if (fileType.includes("video")) return fileIcons.video;
+        if (fileType.includes("audio")) return fileIcons.audio;
+        if (fileType.includes("pdf")) return fileIcons.pdf;
+        if (fileType.includes("text")) return fileIcons.text;
+        return fileIcons.default;
+      };
+      
+      const formatFileSize = (bytes: number) => {
+        if (bytes < 1024) return `${bytes} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+      };
+      
+      attachmentsHtml = `
+        <div style="background-color: #f5f5f5; border-left: 4px solid #555; padding: 15px; margin: 20px 0; border-radius: 4px;">
+          <p style="margin: 0; font-weight: bold;">📁 Attachments (${attachments.length})</p>
+          <ul style="margin-top: 10px; padding-left: 20px;">
+            ${attachments.map(file => `
+              <li style="margin-bottom: 8px;">
+                <span>${getFileIcon(file.type)} ${file.name} (${formatFileSize(file.size)})</span>
+              </li>
+            `).join("")}
+          </ul>
+          <p style="margin: 10px 0 0 0; font-style: italic; font-size: 13px;">
+            Open the secure message to access all attachments.
+          </p>
+        </div>
+      `;
+    }
+
     // Send the email
     const emailResponse = await resend.emails.send({
       from: `${appName} <notifications@echo-vault.app>`,
@@ -99,6 +149,8 @@ export async function sendEmailNotification(
           ` : ''}
           
           ${locationHtml}
+          
+          ${attachmentsHtml}
           
           <p style="font-size: 16px; line-height: 1.5; margin-bottom: 30px;">
             This message has been secured and can only be accessed through the link below.
@@ -167,6 +219,9 @@ export const sendEmailToRecipient = (
       longitude: data.locationLongitude,
       name: data.locationName
     },
-    data.isEmergency || false
+    data.isEmergency || false,
+    undefined, // Use default app name
+    undefined, // No delivery ID for this legacy function
+    data.attachments // Pass attachments
   );
 };

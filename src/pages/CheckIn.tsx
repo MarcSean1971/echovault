@@ -74,10 +74,11 @@ export default function CheckIn() {
           isLoading={isLoading} 
         />
 
-        {/* Panic Button Card */}
+        {/* Panic Button Card - now with all panic messages */}
         <PanicButtonCard 
           userId={userId} 
-          panicMessage={panicMessage} 
+          panicMessage={panicMessage}
+          panicMessages={panicMessages}
           isChecking={isChecking} 
           isLoading={isLoading} 
         />

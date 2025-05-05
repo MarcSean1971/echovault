@@ -8,13 +8,19 @@ import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 /**
  * Hook to handle panic button functionality
  */
-export function usePanicButton(userId: string | null | undefined, panicMessage: MessageCondition | null) {
+export function usePanicButton(
+  userId: string | null | undefined, 
+  panicMessage: MessageCondition | null,
+  panicMessages: MessageCondition[] = []
+) {
   const navigate = useNavigate();
   const [panicMode, setPanicMode] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
   const [triggerInProgress, setTriggerInProgress] = useState(false);
   const [countDown, setCountDown] = useState(0);
   const [locationPermission, setLocationPermission] = useState<string>("unknown");
+  const [isSelectorOpen, setIsSelectorOpen] = useState(false);
+  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
 
   // Check location permissions
   useEffect(() => {
@@ -48,7 +54,13 @@ export function usePanicButton(userId: string | null | undefined, panicMessage: 
       navigator.geolocation.getCurrentPosition(
         () => {
           setLocationPermission("granted");
-          handlePanicTrigger();
+          
+          // If we have multiple messages, show selector instead of immediately triggering
+          if (panicMessages.length > 1) {
+            setIsSelectorOpen(true);
+          } else {
+            handlePanicTrigger();
+          }
         },
         (error) => {
           console.error("Location permission denied:", error);
@@ -58,8 +70,14 @@ export function usePanicButton(userId: string | null | undefined, panicMessage: 
             description: "Your current location won't be included in the emergency message. Consider enabling location access for better assistance.",
             variant: "destructive"
           });
+          
           // Continue with panic trigger even without location
-          handlePanicTrigger();
+          // If we have multiple messages, show selector instead of immediately triggering
+          if (panicMessages.length > 1) {
+            setIsSelectorOpen(true);
+          } else {
+            handlePanicTrigger();
+          }
         }
       );
     } else {
@@ -68,29 +86,55 @@ export function usePanicButton(userId: string | null | undefined, panicMessage: 
         description: "Your device doesn't support location services. The emergency message will be sent without your location.",
         variant: "destructive"
       });
+      
       // Continue with panic trigger even without location
-      handlePanicTrigger();
+      // If we have multiple messages, show selector instead of immediately triggering
+      if (panicMessages.length > 1) {
+        setIsSelectorOpen(true);
+      } else {
+        handlePanicTrigger();
+      }
     }
   };
 
   // Get keep_armed value from config
   const getKeepArmedValue = () => {
+    const message = selectedMessageId 
+      ? panicMessages.find(m => m.message_id === selectedMessageId) 
+      : panicMessage;
+    
+    if (!message) return true;
+    
     // First check panic_trigger_config
-    if (panicMessage?.panic_trigger_config) {
-      return panicMessage.panic_trigger_config.keep_armed;
+    if (message.panic_trigger_config) {
+      return message.panic_trigger_config.keep_armed;
     }
     
     // Fall back to panic_config if panic_trigger_config is not available
-    if (panicMessage?.panic_config) {
-      return panicMessage.panic_config.keep_armed;
+    if (message.panic_config) {
+      return message.panic_config.keep_armed;
     }
     
     return true; // Default value for safety
   };
 
-  // Handle panic trigger
+  // Handle panic trigger - now with message selection
   const handlePanicTrigger = async () => {
-    if (!userId || !panicMessage) {
+    if (!userId) {
+      toast({
+        title: "Error",
+        description: "User not logged in",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Determine which message to use
+    const messageToUse = selectedMessageId 
+      ? panicMessages.find(m => m.message_id === selectedMessageId)
+      : (panicMessage || (panicMessages.length > 0 ? panicMessages[0] : null));
+    
+    if (!messageToUse) {
       toast({
         title: "Error",
         description: "No panic message is configured",
@@ -104,25 +148,25 @@ export function usePanicButton(userId: string | null | undefined, panicMessage: 
       setPanicMode(true);
       
       try {
-        console.log(`Triggering panic message: ${panicMessage.message_id}`);
+        console.log(`Triggering panic message: ${messageToUse.message_id}`);
         
         // Log config to help with debugging
-        if (panicMessage.panic_trigger_config) {
-          console.log("Using panic_trigger_config:", panicMessage.panic_trigger_config);
+        if (messageToUse.panic_trigger_config) {
+          console.log("Using panic_trigger_config:", messageToUse.panic_trigger_config);
         }
-        if (panicMessage.panic_config) {
-          console.log("Found panic_config as well:", panicMessage.panic_config);
+        if (messageToUse.panic_config) {
+          console.log("Found panic_config as well:", messageToUse.panic_config);
         }
         
         // Try triggering the panic message
-        const result = await triggerPanicMessage(userId, panicMessage.message_id);
+        const result = await triggerPanicMessage(userId, messageToUse.message_id);
         
         console.log("Panic trigger result:", result);
         
         if (result.success) {
           toast({
             title: "EMERGENCY ALERT TRIGGERED",
-            description: "Your emergency messages with your current location are being sent immediately.",
+            description: "Your emergency message with your current location and attachments is being sent immediately.",
             variant: "destructive"
           });
           
@@ -136,7 +180,7 @@ export function usePanicButton(userId: string | null | undefined, panicMessage: 
               updatedAt: new Date().toISOString(),
               triggerValue: Date.now(),
               panicTrigger: true,
-              panicMessageId: panicMessage.message_id
+              panicMessageId: messageToUse.message_id
             }
           }));
           
@@ -149,6 +193,7 @@ export function usePanicButton(userId: string | null | undefined, panicMessage: 
               setPanicMode(false);
               setIsConfirming(false);
               setTriggerInProgress(false);
+              setSelectedMessageId(null);
               
               // If the message is still armed (keepArmed=true), refresh to show it's still active
               // Otherwise navigate to messages
@@ -194,18 +239,38 @@ export function usePanicButton(userId: string | null | undefined, panicMessage: 
       }, 3000);
     }
   };
+  
+  // Handle message selection from the selector dialog
+  const handlePanicMessageSelect = (messageId: string) => {
+    console.log(`Selected panic message: ${messageId}`);
+    setSelectedMessageId(messageId);
+    
+    // After selecting a message, proceed with triggering it
+    setIsConfirming(true);
+    handlePanicTrigger();
+  };
 
   // Handle panic button click with location permission check
   const handlePanicButtonClick = () => {
     if (isConfirming) {
       // If already confirming, check/request location permission
       if (locationPermission === "granted") {
-        handlePanicTrigger();
+        // If we have multiple messages, show selector instead of immediately triggering
+        if (panicMessages.length > 1) {
+          setIsSelectorOpen(true);
+        } else {
+          handlePanicTrigger();
+        }
       } else if (locationPermission === "prompt" || locationPermission === "unknown") {
         requestLocationPermission();
       } else {
         // Location permission denied but still allow triggering
-        handlePanicTrigger();
+        // If we have multiple messages, show selector instead of immediately triggering
+        if (panicMessages.length > 1) {
+          setIsSelectorOpen(true);
+        } else {
+          handlePanicTrigger();
+        }
       }
     } else {
       // Just show confirmation first time
@@ -233,7 +298,12 @@ export function usePanicButton(userId: string | null | undefined, panicMessage: 
     locationPermission,
     checkLocationPermission,
     handlePanicButtonClick,
+    handlePanicMessageSelect,
     handleCreatePanicMessage,
-    getKeepArmedValue
+    getKeepArmedValue,
+    isSelectorOpen,
+    setIsSelectorOpen,
+    selectedMessageId,
+    setSelectedMessageId
   };
 }
