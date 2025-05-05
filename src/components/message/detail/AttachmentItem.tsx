@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { FileIcon, Download, ExternalLink } from "lucide-react";
+import { FileIcon, Download, ExternalLink, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/components/ui/use-toast";
@@ -20,32 +20,51 @@ interface AttachmentItemProps {
 
 export function AttachmentItem({ attachment, deliveryId, recipientEmail }: AttachmentItemProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [hasError, setHasError] = useState(false);
 
   const getFileAccessUrl = async () => {
     try {
+      setHasError(false);
       console.log("Getting file access URL for:", attachment.path);
       console.log("Public access mode:", !!deliveryId && !!recipientEmail);
+      
+      if (!attachment.path) {
+        throw new Error("File path is missing");
+      }
       
       // If we're in public view mode with delivery ID and recipient email 
       if (deliveryId && recipientEmail) {
         console.log(`Using public access with deliveryId: ${deliveryId}, recipient: ${recipientEmail}`);
         const url = await getPublicFileUrl(attachment.path, deliveryId, recipientEmail);
         console.log("Generated public URL:", url);
+        
+        if (!url) {
+          throw new Error("Could not generate public access URL");
+        }
+        
         return url;
       } else {
         // Default to the standard Supabase storage URL generation for authenticated users
         console.log("Using authenticated access");
         const url = await getAuthenticatedFileUrl(attachment.path);
         console.log("Generated authenticated URL:", url);
+        
+        if (!url) {
+          throw new Error("Could not generate authenticated access URL");
+        }
+        
         return url;
       }
     } catch (error) {
       console.error("Error generating URL:", error);
+      setHasError(true);
       return null;
     }
   };
 
   const downloadFile = async () => {
+    if (isLoading) return;
+    
     try {
       setIsLoading(true);
       const url = await getFileAccessUrl();
@@ -84,6 +103,8 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
   };
 
   const openFile = async () => {
+    if (isLoading) return;
+    
     try {
       setIsLoading(true);
       const url = await getFileAccessUrl();
@@ -116,10 +137,14 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
   };
   
   return (
-    <div className="border rounded-md p-3 hover:border-primary/20 transition-all duration-200">
+    <div className={`border rounded-md p-3 transition-all duration-200 ${hasError ? 'border-red-300 bg-red-50' : 'hover:border-primary/20'}`}>
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3 overflow-hidden">
-          <FileIcon className="h-4 w-4 flex-shrink-0" />
+          {hasError ? (
+            <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0" />
+          ) : (
+            <FileIcon className="h-4 w-4 flex-shrink-0" />
+          )}
           <div className="truncate">
             <span className="block truncate">{attachment.name}</span>
             <span className="text-xs text-muted-foreground">{formatFileSize(attachment.size)}</span>
@@ -137,7 +162,7 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
                   disabled={isLoading}
                   className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
                 >
-                  <Download className="h-4 w-4" />
+                  <Download className={`h-4 w-4 ${isLoading ? 'animate-pulse' : ''}`} />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
@@ -156,7 +181,7 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
                   disabled={isLoading}
                   className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
                 >
-                  <ExternalLink className="h-4 w-4" />
+                  <ExternalLink className={`h-4 w-4 ${isLoading ? 'animate-pulse' : ''}`} />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
@@ -166,6 +191,12 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
           </TooltipProvider>
         </div>
       </div>
+      
+      {hasError && (
+        <div className="mt-2 text-xs text-red-600">
+          There was an error accessing this file. Please try again or contact the sender.
+        </div>
+      )}
     </div>
   );
 }

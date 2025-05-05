@@ -6,6 +6,7 @@ import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { HOVER_TRANSITION, BUTTON_HOVER_EFFECTS } from "@/utils/hoverEffects";
 import { useEffect, useState } from "react";
 import { Separator } from "@/components/ui/separator";
+import { useNavigate } from "react-router-dom";
 
 interface ErrorStateProps {
   error: string;
@@ -15,6 +16,7 @@ export const ErrorState = ({ error }: ErrorStateProps) => {
   const [isAttachmentError, setIsAttachmentError] = useState(false);
   const [messageId, setMessageId] = useState<string | null>(null);
   const [technicalDetails, setTechnicalDetails] = useState<string | null>(null);
+  const navigate = useNavigate();
   
   // Log error for debugging and determine error type
   useEffect(() => {
@@ -51,12 +53,31 @@ export const ErrorState = ({ error }: ErrorStateProps) => {
     }
   };
 
+  // Retry the same URL (will force a reload)
+  const retryAccess = () => {
+    window.location.reload();
+  };
+
   // Retry without attachment parameter
   const retryWithoutAttachment = () => {
     const url = new URL(window.location.href);
     url.hash = ''; // Remove any hash part containing attachment
     url.searchParams.delete('attachment'); // Remove attachment param if present
     window.location.href = url.toString();
+  };
+
+  // Go back to previous page
+  const goBack = () => {
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      navigate("/"); // Fallback to home if no history
+    }
+  };
+
+  // Generate regenerate access link (would normally connect to backend)
+  const regenerateAccess = () => {
+    alert("This would typically connect to a backend to regenerate your access link. Please contact the sender to resend the message link.");
   };
 
   return (
@@ -115,6 +136,7 @@ export const ErrorState = ({ error }: ErrorStateProps) => {
                     <li>The link may be missing required parameters</li>
                     <li>The message may have expired or been deleted</li>
                     <li>The delivery ID may be invalid</li>
+                    <li>The link may have been clicked multiple times</li>
                   </ul>
                 </div>
               </div>
@@ -143,9 +165,9 @@ export const ErrorState = ({ error }: ErrorStateProps) => {
             If you continue to experience issues, please contact the sender of this message and let them know about the error.
           </p>
           
-          <div className="flex flex-col sm:flex-row gap-3 mt-2">
+          <div className="flex flex-wrap gap-3 mt-2 justify-center">
             <Button 
-              onClick={() => window.location.reload()} 
+              onClick={retryAccess} 
               className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default} flex items-center gap-2`}
             >
               <RefreshCw className="h-4 w-4" />
@@ -153,15 +175,23 @@ export const ErrorState = ({ error }: ErrorStateProps) => {
             </Button>
             <Button 
               variant="outline"
-              onClick={() => window.history.back()}
+              onClick={goBack}
               className={`${HOVER_TRANSITION} flex items-center gap-2`}
             >
               <ArrowLeft className="h-4 w-4" />
               Go Back
+            </Button>
+            <Button 
+              variant="secondary"
+              onClick={regenerateAccess}
+              className={`${HOVER_TRANSITION} flex items-center gap-2 mt-2 sm:mt-0`}
+            >
+              <FileText className="h-4 w-4" />
+              Request New Link
             </Button>
           </div>
         </div>
       </Card>
     </div>
   );
-}
+};

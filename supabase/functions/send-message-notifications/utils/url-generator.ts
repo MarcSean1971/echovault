@@ -16,40 +16,28 @@ export function generateAccessUrl(messageId: string, recipientEmail: string, del
     : `https://${appDomain}`;
   
   try {
-    // First properly encode parameters to avoid double encoding issues
-    const encodedMessageId = encodeURIComponent(messageId);
-    const encodedDeliveryId = encodeURIComponent(deliveryId);
-    const encodedEmail = encodeURIComponent(recipientEmail);
+    // Base URL with properly formatted path
+    const baseUrl = `${domainWithProtocol}/access/message/${encodeURIComponent(messageId)}`;
     
-    // Build the URL with the required parameters using proper path structure
-    const url = new URL(`${domainWithProtocol}/access/message/${encodedMessageId}`);
-    
-    // Add necessary query parameters
-    url.searchParams.append("delivery", encodedDeliveryId);
-    url.searchParams.append("recipient", encodedEmail);
+    // Add query parameters with proper encoding
+    const url = new URL(baseUrl);
+    url.searchParams.append("delivery", deliveryId);
+    url.searchParams.append("recipient", recipientEmail);
     
     const accessUrl = url.toString();
-    console.log(`Generated access URL: ${accessUrl}`);
     
-    // Verify URL components
-    try {
-      const parsedUrl = new URL(accessUrl);
-      console.log(`URL verification - Path: ${parsedUrl.pathname}`);
-      console.log(`URL verification - Parameters - Delivery: ${parsedUrl.searchParams.get('delivery')}`);
-      console.log(`URL verification - Parameters - Recipient: ${parsedUrl.searchParams.get('recipient')}`);
-    } catch (verifyError) {
-      console.error(`URL verification error: ${verifyError}`);
-    }
+    // Debug logging
+    console.log(`Generated access URL: ${accessUrl}`);
+    console.log(`URL verification - Original messageId: ${messageId}`);
+    console.log(`URL verification - Original deliveryId: ${deliveryId}`);
+    console.log(`URL verification - Original recipientEmail: ${recipientEmail}`);
     
     return accessUrl;
   } catch (error) {
     console.error(`Error generating access URL: ${error}`);
-    // Fallback URL construction with careful encoding
-    const encodedMessageId = encodeURIComponent(messageId);
-    const encodedDeliveryId = encodeURIComponent(deliveryId);
-    const encodedEmail = encodeURIComponent(recipientEmail);
     
-    return `${domainWithProtocol}/access/message/${encodedMessageId}?delivery=${encodedDeliveryId}&recipient=${encodedEmail}`;
+    // Fallback with direct string concatenation, being careful with encoding
+    return `${domainWithProtocol}/access/message/${encodeURIComponent(messageId)}?delivery=${encodeURIComponent(deliveryId)}&recipient=${encodeURIComponent(recipientEmail)}`;
   }
 }
 
@@ -61,31 +49,31 @@ export function generateFileAccessUrl(filePath: string, recipientEmail: string, 
   const supabaseUrl = Deno.env.get('SUPABASE_URL') || "https://onwthrpgcnfydxzzmyot.supabase.co";
   
   try {
-    // First properly encode parameters to avoid double encoding issues  
+    // Make sure the filePath is properly encoded
     const encodedFilePath = encodeURIComponent(filePath);
-    const encodedDeliveryId = encodeURIComponent(deliveryId);
-    const encodedEmail = encodeURIComponent(recipientEmail);
     
-    // Build the file access URL using our edge function with the correct Supabase URL
-    const url = new URL(`${supabaseUrl}/functions/v1/access-file/file/${encodedFilePath}`);
+    // Build the base URL
+    const baseUrl = `${supabaseUrl}/functions/v1/access-file/file/${encodedFilePath}`;
     
-    // Add necessary query parameters
-    url.searchParams.append("delivery", encodedDeliveryId);
-    url.searchParams.append("recipient", encodedEmail);
+    // Build complete URL with query parameters
+    const url = new URL(baseUrl);
+    url.searchParams.append("delivery", deliveryId);
+    url.searchParams.append("recipient", recipientEmail);
     
     const fileAccessUrl = url.toString();
+    
+    // Debug logging
     console.log(`Generated file access URL: ${fileAccessUrl}`);
+    console.log(`URL verification - Original filePath: ${filePath}`);
+    console.log(`URL verification - Original deliveryId: ${deliveryId}`);
+    console.log(`URL verification - Original recipientEmail: ${recipientEmail}`);
     
     return fileAccessUrl;
   } catch (error) {
     console.error(`Error generating file access URL: ${error}`);
     
-    // Fallback URL construction with careful encoding
-    const encodedFilePath = encodeURIComponent(filePath);
-    const encodedDeliveryId = encodeURIComponent(deliveryId);
-    const encodedEmail = encodeURIComponent(recipientEmail);
-    
-    return `${supabaseUrl}/functions/v1/access-file/file/${encodedFilePath}?delivery=${encodedDeliveryId}&recipient=${encodedEmail}`;
+    // Fallback with direct string concatenation
+    return `${supabaseUrl}/functions/v1/access-file/file/${encodeURIComponent(filePath)}?delivery=${encodeURIComponent(deliveryId)}&recipient=${encodeURIComponent(recipientEmail)}`;
   }
 }
 

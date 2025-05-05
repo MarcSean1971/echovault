@@ -30,13 +30,23 @@ export async function getPublicFileUrl(
   }
 
   try {
-    // Use the Supabase project URL directly instead of window.location.origin
+    // Hard-coded Supabase project URL to ensure consistency
     const baseUrl = "https://onwthrpgcnfydxzzmyot.supabase.co";
     
-    // Clean and encode path components
+    // Clean and encode path components - ensure we're very careful with encoding
     const encodedPath = encodeURIComponent(filePath);
     const encodedDeliveryId = encodeURIComponent(deliveryId);
     const encodedEmail = encodeURIComponent(recipientEmail);
+    
+    console.log("File access parameters:", {
+      baseUrl,
+      filePath,
+      encodedPath,
+      deliveryId,
+      encodedDeliveryId,
+      recipientEmail,
+      encodedEmail
+    });
     
     // Construct the URL to our edge function with the correct path structure
     const accessUrl = `${baseUrl}/functions/v1/access-file/file/${encodedPath}?delivery=${encodedDeliveryId}&recipient=${encodedEmail}`;
@@ -97,7 +107,7 @@ export async function getAuthenticatedFileUrl(filePath: string, skipAuth = false
     // Try with the standard bucket name
     const { data, error } = await supabase.storage
       .from(bucketName)
-      .createSignedUrl(cleanFilePath, 3600);
+      .createSignedUrl(cleanFilePath, 86400); // Extended to 24 hours (86400 seconds)
     
     if (error) {
       console.error("Error generating signed URL:", error);
@@ -111,7 +121,7 @@ export async function getAuthenticatedFileUrl(filePath: string, skipAuth = false
         
         const alternativeResult = await supabase.storage
           .from(alternativeBucket)
-          .createSignedUrl(cleanFilePath, 3600);
+          .createSignedUrl(cleanFilePath, 86400); // Also 24 hours
           
         if (alternativeResult.error) {
           console.error("Error with alternative bucket:", alternativeResult.error);

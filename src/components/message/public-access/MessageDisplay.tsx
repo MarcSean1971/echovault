@@ -6,6 +6,7 @@ import { Message } from "@/types/message";
 import { MessageContent } from "@/components/message/detail/MessageContent";
 import { MessageAttachments } from "@/components/message/detail/MessageAttachments";
 import { useSearchParams } from "react-router-dom";
+import { useEffect } from "react";
 
 interface MessageDisplayProps {
   message: Message | null;
@@ -16,6 +17,19 @@ export const MessageDisplay = ({ message }: MessageDisplayProps) => {
   const [searchParams] = useSearchParams();
   const deliveryId = searchParams.get('delivery');
   const recipientEmail = searchParams.get('recipient');
+
+  // Log parameters for debugging
+  useEffect(() => {
+    if (message) {
+      console.log("Message display - Message ID:", message.id);
+      console.log("Message display - Delivery ID:", deliveryId);
+      console.log("Message display - Recipient email:", recipientEmail);
+      
+      if (message.attachments && message.attachments.length > 0) {
+        console.log("Message display - Attachments:", message.attachments);
+      }
+    }
+  }, [message, deliveryId, recipientEmail]);
 
   if (!message) {
     return (
