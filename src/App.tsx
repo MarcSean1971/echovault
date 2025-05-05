@@ -58,7 +58,7 @@ export default function App() {
               </Route>
               
               {/* Public message access route - moved to AppLayout for proper navigation */}
-              <Route path="/access/message/:id" element={<AppLayout isLoggedIn={false} />}>
+              <Route path="access/message/:id" element={<AppLayout isLoggedIn={false} />}>
                 <Route index element={<PublicMessageAccess />} />
               </Route>
               
