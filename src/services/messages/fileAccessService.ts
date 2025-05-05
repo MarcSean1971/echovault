@@ -30,16 +30,16 @@ export async function getPublicFileUrl(
   }
 
   try {
-    // Get the origin dynamically with a fallback
-    const baseUrl = window.location.origin;
+    // Use the Supabase project URL directly instead of window.location.origin
+    const baseUrl = "https://onwthrpgcnfydxzzmyot.supabase.co";
     
     // Clean and encode path components
     const encodedPath = encodeURIComponent(filePath);
-    const encodedDelivery = encodeURIComponent(deliveryId);
-    const encodedRecipient = encodeURIComponent(recipientEmail);
+    const encodedDeliveryId = encodeURIComponent(deliveryId);
+    const encodedEmail = encodeURIComponent(recipientEmail);
     
-    // Construct the URL to our edge function
-    const accessUrl = `${baseUrl}/functions/v1/access-file/file/${encodedPath}?delivery=${encodedDelivery}&recipient=${encodedRecipient}`;
+    // Construct the URL to our edge function with the correct path structure
+    const accessUrl = `${baseUrl}/functions/v1/access-file/file/${encodedPath}?delivery=${encodedDeliveryId}&recipient=${encodedEmail}`;
     
     console.log(`Generated public file access URL: ${accessUrl}`);
     
@@ -83,53 +83,54 @@ export async function getAuthenticatedFileUrl(filePath: string, skipAuth = false
   }
 
   try {
-    // Determine the bucket name from the path or use default
-    let bucketName = "message-attachments";
+    // Standardize on the message-attachments bucket
+    const bucketName = "message-attachments";
     
-    // Try to extract bucket from path
-    if (filePath.includes('/')) {
-      const pathParts = filePath.split('/');
-      if (pathParts[0] === "message-attachments" || pathParts[0] === "message_attachments") {
-        bucketName = pathParts[0];
-        // Adjust filePath if bucket is included
-        filePath = pathParts.slice(1).join('/');
-      }
+    // Clean up the file path if it contains bucket name
+    let cleanFilePath = filePath;
+    if (filePath.startsWith('message-attachments/') || filePath.startsWith('message_attachments/')) {
+      cleanFilePath = filePath.includes('/') ? filePath.substring(filePath.indexOf('/') + 1) : filePath;
     }
     
-    console.log(`Generating signed URL for file: ${filePath} from bucket: ${bucketName}`);
+    console.log(`Generating signed URL for file: ${cleanFilePath} from bucket: ${bucketName}`);
     
-    // Try with the given bucket
+    // Try with the standard bucket name
     const { data, error } = await supabase.storage
       .from(bucketName)
-      .createSignedUrl(filePath, 3600);
+      .createSignedUrl(cleanFilePath, 3600);
     
     if (error) {
       console.error("Error generating signed URL:", error);
       
-      // Try with the alternative bucket name as fallback
-      const alternativeBucket = bucketName === "message-attachments" ? "message_attachments" : "message-attachments";
-      
-      console.log(`Trying alternative bucket: ${alternativeBucket}`);
-      
-      const alternativeResult = await supabase.storage
-        .from(alternativeBucket)
-        .createSignedUrl(filePath, 3600);
+      // Only try alternative bucket if there's an error with the standard bucket
+      if (error.message.includes("does not exist") || error.message.includes("not found")) {
+        console.log("File not found in primary bucket, trying alternative bucket name");
         
-      if (alternativeResult.error) {
-        console.error("Error with alternative bucket:", alternativeResult.error);
-        return null;
+        // Try the alternative bucket naming format as fallback
+        const alternativeBucket = "message_attachments";
+        
+        const alternativeResult = await supabase.storage
+          .from(alternativeBucket)
+          .createSignedUrl(cleanFilePath, 3600);
+          
+        if (alternativeResult.error) {
+          console.error("Error with alternative bucket:", alternativeResult.error);
+          throw new Error(`File access error: ${alternativeResult.error.message}`);
+        }
+        
+        console.log("Successfully generated URL with alternative bucket");
+        return alternativeResult.data.signedUrl;
       }
       
-      console.log("Successfully generated URL with alternative bucket");
-      return alternativeResult.data.signedUrl;
+      throw new Error(`File access error: ${error.message}`);
     }
     
     if (!data?.signedUrl) {
       console.error("No signed URL returned from Supabase");
-      return null;
+      throw new Error("No URL generated for the file");
     }
     
-    console.log(`Successfully generated signed URL for ${filePath}`);
+    console.log(`Successfully generated signed URL for ${cleanFilePath}`);
     return data.signedUrl;
   } catch (error) {
     console.error("Error getting file URL:", error);

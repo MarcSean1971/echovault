@@ -8,7 +8,7 @@
  */
 export function generateAccessUrl(messageId: string, recipientEmail: string, deliveryId: string) {
   // Get the app domain from environment variable
-  const appDomain = Deno.env.get("APP_DOMAIN") || "http://localhost:3000";
+  const appDomain = Deno.env.get("APP_DOMAIN") || "echo-vault.app";
   
   // Ensure the domain has the protocol prefix
   const domainWithProtocol = appDomain.startsWith('http://') || appDomain.startsWith('https://') 
@@ -57,13 +57,8 @@ export function generateAccessUrl(messageId: string, recipientEmail: string, del
  * Generate a file access URL that uses our secure edge function
  */
 export function generateFileAccessUrl(filePath: string, recipientEmail: string, deliveryId: string) {
-  // Get the app domain from environment variable
-  const appDomain = Deno.env.get("APP_DOMAIN") || "http://localhost:3000";
-  
-  // Ensure the domain has the protocol prefix
-  const domainWithProtocol = appDomain.startsWith('http://') || appDomain.startsWith('https://') 
-    ? appDomain 
-    : `https://${appDomain}`;
+  // Use the Supabase URL for edge functions
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') || "https://onwthrpgcnfydxzzmyot.supabase.co";
   
   try {
     // First properly encode parameters to avoid double encoding issues  
@@ -71,8 +66,8 @@ export function generateFileAccessUrl(filePath: string, recipientEmail: string, 
     const encodedDeliveryId = encodeURIComponent(deliveryId);
     const encodedEmail = encodeURIComponent(recipientEmail);
     
-    // Build the file access URL using our edge function
-    const url = new URL(`${domainWithProtocol}/functions/v1/access-file/file/${encodedFilePath}`);
+    // Build the file access URL using our edge function with the correct Supabase URL
+    const url = new URL(`${supabaseUrl}/functions/v1/access-file/file/${encodedFilePath}`);
     
     // Add necessary query parameters
     url.searchParams.append("delivery", encodedDeliveryId);
@@ -90,7 +85,7 @@ export function generateFileAccessUrl(filePath: string, recipientEmail: string, 
     const encodedDeliveryId = encodeURIComponent(deliveryId);
     const encodedEmail = encodeURIComponent(recipientEmail);
     
-    return `${domainWithProtocol}/functions/v1/access-file/file/${encodedFilePath}?delivery=${encodedDeliveryId}&recipient=${encodedEmail}`;
+    return `${supabaseUrl}/functions/v1/access-file/file/${encodedFilePath}?delivery=${encodedDeliveryId}&recipient=${encodedEmail}`;
   }
 }
 

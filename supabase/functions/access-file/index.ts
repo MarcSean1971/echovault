@@ -1,27 +1,22 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-
-// CORS headers for cross-origin requests
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-requested-with',
-  'Access-Control-Max-Age': '86400',
-};
+import { corsHeaders } from "./cors-headers.ts";
 
 serve(async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log("[FileAccess] Handling OPTIONS preflight request");
     return new Response(null, { headers: corsHeaders });
   }
 
   const url = new URL(req.url);
   const pathParts = url.pathname.split('/').filter(Boolean);
   
-  console.log(`[FileAccess] Path: ${url.pathname}`);
-  console.log(`[FileAccess] Method: ${req.method}`);
-  console.log(`[FileAccess] URL: ${req.url}`);
+  console.log(`[FileAccess] Received request: ${req.method} ${url.pathname}`);
+  console.log(`[FileAccess] Full URL: ${req.url}`);
+  console.log(`[FileAccess] Path parts: ${JSON.stringify(pathParts)}`);
+  console.log(`[FileAccess] Query parameters: ${url.search}`);
   
   // Initialize Supabase client with service role key for admin access
   const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
@@ -37,6 +32,8 @@ serve(async (req: Request): Promise<Response> => {
       }
     );
   }
+  
+  console.log(`[FileAccess] Supabase URL: ${supabaseUrl}`);
   
   const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
   
@@ -136,9 +133,12 @@ serve(async (req: Request): Promise<Response> => {
         
         console.log(`[FileAccess] Found message with attachments: ${JSON.stringify(messageData.attachments || [])}`);
         
+        // Standardize bucket name to message-attachments
+        const bucketName = "message-attachments";
+        
         // Fix path if it doesn't include the bucket name
         if (!filePath.startsWith('message-attachments/') && !filePath.startsWith('message_attachments/')) {
-          filePath = `message-attachments/${filePath}`;
+          filePath = `${bucketName}/${filePath}`;
           console.log(`[FileAccess] Adjusted file path to: ${filePath}`);
         }
         
@@ -147,112 +147,101 @@ serve(async (req: Request): Promise<Response> => {
         
         // Check if the attachment is in the message
         const requestedAttachment = attachments.find((att: any) => {
-          // Check for exact match or match with/without bucket prefix
-          return att.path === filePath || 
-                 `message-attachments/${att.path}` === filePath ||
-                 att.path === filePath.replace('message-attachments/', '');
+          // Normalize the paths for comparison by removing the bucket prefix if present
+          const normalizedAttPath = att.path.startsWith(bucketName + '/') ? 
+            att.path : `${bucketName}/${att.path}`;
+          const normalizedFilePath = filePath.startsWith(bucketName + '/') ?
+            filePath : `${bucketName}/${filePath.replace('message_attachments/', '')}`;
+            
+          console.log(`[FileAccess] Comparing attachment paths: '${normalizedAttPath}' vs '${normalizedFilePath}'`);
+          
+          return normalizedAttPath === normalizedFilePath ||
+                 normalizedAttPath === normalizedFilePath.replace('message-attachments', 'message_attachments');
         });
         
         if (!requestedAttachment) {
           console.error(`[FileAccess] Attachment not found in message attachments: ${filePath}`);
+          console.error(`[FileAccess] Available attachments: ${JSON.stringify(attachments)}`);
           throw new Error("Attachment not found in message");
         }
         
         console.log(`[FileAccess] Found matching attachment: ${JSON.stringify(requestedAttachment)}`);
         
-        // Determine which bucket to use and extract the correct path
-        let bucketName = "message-attachments";
-        let finalFilePath = filePath;
-        
-        // Extract bucket from path if present
-        if (filePath.startsWith("message-attachments/")) {
-          bucketName = "message-attachments";
-          finalFilePath = filePath.substring("message-attachments/".length);
-        } else if (filePath.startsWith("message_attachments/")) {
-          bucketName = "message_attachments";
-          finalFilePath = filePath.substring("message_attachments/".length);
+        // Extract the correct path without the bucket prefix
+        let finalFilePath = requestedAttachment.path;
+        if (finalFilePath.startsWith(`${bucketName}/`)) {
+          finalFilePath = finalFilePath.substring(bucketName.length + 1);
+        } else if (finalFilePath.startsWith('message_attachments/')) {
+          finalFilePath = finalFilePath.substring('message_attachments/'.length);
         }
         
-        console.log(`[FileAccess] Using bucket: ${bucketName}`);
-        console.log(`[FileAccess] Using file path: ${finalFilePath}`);
+        console.log(`[FileAccess] Using final file path: ${finalFilePath}`);
         
         try {
-          // Get the file data directly using service role permissions
-          const { data: fileData, error: fileError } = await supabase.storage
+          // Check if we can directly serve from the storage bucket using signed URL
+          console.log(`[FileAccess] Attempting to generate direct signed URL from ${bucketName}/${finalFilePath}`);
+          
+          const { data: signedUrlData, error: signedUrlError } = await supabase.storage
             .from(bucketName)
-            .download(finalFilePath);
-          
-          if (fileError) {
-            console.error(`[FileAccess] Storage error: ${fileError.message}`);
+            .createSignedUrl(finalFilePath, 60);
             
-            // Try alternative bucket as fallback
-            const altBucketName = bucketName === "message-attachments" ? "message_attachments" : "message-attachments";
-            console.log(`[FileAccess] Trying alternative bucket: ${altBucketName}`);
-            
-            const altResult = await supabase.storage
-              .from(altBucketName)
-              .download(finalFilePath);
-              
-            if (altResult.error) {
-              console.error(`[FileAccess] Alternative bucket also failed: ${altResult.error.message}`);
-              throw new Error(`File access error: ${fileError.message}`);
-            }
-            
-            console.log(`[FileAccess] Successfully accessed file from alternative bucket`);
-            
-            // Success with alternative bucket - return the file
-            const headers = {
-              ...corsHeaders,
-              "Content-Type": requestedAttachment.type || "application/octet-stream",
-              "Content-Disposition": `attachment; filename="${requestedAttachment.name}"`,
-            };
-            
-            return new Response(altResult.data, { headers });
+          if (signedUrlError) {
+            console.error(`[FileAccess] Error creating signed URL: ${signedUrlError.message}`);
+            throw signedUrlError;
           }
           
-          if (!fileData) {
-            console.error(`[FileAccess] No file data returned from storage`);
-            throw new Error("File data not available");
+          if (signedUrlData?.signedUrl) {
+            console.log(`[FileAccess] Successfully created signed URL: ${signedUrlData.signedUrl}`);
+            
+            // Redirect to the signed URL
+            return new Response(null, { 
+              status: 302, 
+              headers: { 
+                ...corsHeaders, 
+                "Location": signedUrlData.signedUrl,
+                "Cache-Control": "no-cache" 
+              }
+            });
           }
           
-          // Success - return the file with proper Content-Type
-          const headers = {
-            ...corsHeaders,
-            "Content-Type": requestedAttachment.type || "application/octet-stream",
-            "Content-Disposition": `attachment; filename="${requestedAttachment.name}"`,
-          };
-          
-          console.log(`[FileAccess] Successfully serving file: ${filePath}`);
-          
-          return new Response(fileData, { headers });
+          throw new Error("No signed URL was generated");
           
         } catch (storageError) {
           console.error(`[FileAccess] Storage access error: ${storageError.message}`);
           
-          // As a last resort, try to create a signed URL with service role permissions
+          // Try to serve the file directly as a last resort
           try {
-            console.log(`[FileAccess] Attempting fallback to signed URL`);
-            const { data: signedUrlData } = await supabase.storage
+            console.log(`[FileAccess] Attempting to download file directly`);
+            
+            const { data: fileData, error: fileError } = await supabase.storage
               .from(bucketName)
-              .createSignedUrl(finalFilePath, 60);
+              .download(finalFilePath);
               
-            if (signedUrlData?.signedUrl) {
-              console.log(`[FileAccess] Successfully created signed URL: ${signedUrlData.signedUrl}`);
-              
-              // Redirect to the signed URL
-              return new Response(null, { 
-                status: 302, 
-                headers: { 
-                  ...corsHeaders, 
-                  "Location": signedUrlData.signedUrl 
-                }
-              });
+            if (fileError) {
+              console.error(`[FileAccess] Download error: ${fileError.message}`);
+              throw fileError;
             }
-          } catch (signedUrlError) {
-            console.error(`[FileAccess] Signed URL fallback failed: ${signedUrlError}`);
+            
+            if (!fileData) {
+              console.error(`[FileAccess] No file data returned from download`);
+              throw new Error("File data not available");
+            }
+            
+            // Success - return the file with proper Content-Type
+            const headers = {
+              ...corsHeaders,
+              "Content-Type": requestedAttachment.type || "application/octet-stream",
+              "Content-Disposition": `attachment; filename="${requestedAttachment.name}"`,
+              "Cache-Control": "no-store"
+            };
+            
+            console.log(`[FileAccess] Successfully serving file as direct download: ${finalFilePath}`);
+            
+            return new Response(fileData, { headers });
+          } catch (downloadError) {
+            console.error(`[FileAccess] Direct download failed: ${downloadError.message}`);
+            throw downloadError;
           }
-          
-          throw storageError;
         }
         
       } catch (validationError) {
@@ -268,6 +257,7 @@ serve(async (req: Request): Promise<Response> => {
     }
     
     // Default handler - not found
+    console.error(`[FileAccess] No matching route found for path: ${url.pathname}`);
     return new Response(
       JSON.stringify({ error: "Not found", path: url.pathname }),
       { 

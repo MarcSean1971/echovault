@@ -4,8 +4,11 @@ import { corsHeaders } from "./cors-headers.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 serve(async (req: Request): Promise<Response> => {
+  console.log("[AccessMessage] Request received:", req.url);
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log("[AccessMessage] Handling OPTIONS request");
     return new Response(null, { headers: corsHeaders });
   }
 
@@ -14,11 +17,29 @@ serve(async (req: Request): Promise<Response> => {
   
   console.log(`[AccessMessage] Path: ${url.pathname}`);
   console.log(`[AccessMessage] Method: ${req.method}`);
+  console.log(`[AccessMessage] Path parts: ${JSON.stringify(path)}`);
+  console.log(`[AccessMessage] Query parameters: ${url.search}`);
   
   // Initialize Supabase client with service role key for admin access
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+  const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+  
+  if (!supabaseUrl || !supabaseServiceRoleKey) {
+    console.error('[AccessMessage] Missing required environment variables');
+    return new Response(
+      JSON.stringify({ error: "Server configuration error" }),
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
+      }
+    );
+  }
+  
+  console.log(`[AccessMessage] Supabase URL: ${supabaseUrl}`);
+  
   const supabase = createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    supabaseUrl,
+    supabaseServiceRoleKey,
   );
   
   try {
@@ -28,7 +49,10 @@ serve(async (req: Request): Promise<Response> => {
       const deliveryId = url.searchParams.get('delivery');
       const recipientEmail = url.searchParams.get('recipient');
       
+      console.log(`[AccessMessage] Message request - ID: ${messageId}, DeliveryID: ${deliveryId}, Recipient: ${recipientEmail}`);
+      
       if (!messageId || !deliveryId || !recipientEmail) {
+        console.error("[AccessMessage] Missing required parameters");
         return new Response(
           JSON.stringify({ error: "Missing required parameters" }),
           { 
@@ -48,16 +72,29 @@ serve(async (req: Request): Promise<Response> => {
         .eq('message_id', messageId)
         .maybeSingle();
         
-      if (deliveryError || !deliveryData) {
-        console.error(`[AccessMessage] Invalid delivery record: ${deliveryError?.message || "Not found"}`);
+      if (deliveryError) {
+        console.error(`[AccessMessage] Error querying delivery: ${deliveryError.message}`);
         return new Response(
-          JSON.stringify({ error: "Invalid or expired access link" }),
+          JSON.stringify({ error: `Invalid or expired access link: ${deliveryError.message}` }),
+          { 
+            status: 403, 
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          }
+        );
+      } 
+      
+      if (!deliveryData) {
+        console.error(`[AccessMessage] No delivery record found for: delivery=${deliveryId}, message=${messageId}`);
+        return new Response(
+          JSON.stringify({ error: "Invalid or expired access link. Delivery record not found." }),
           { 
             status: 403, 
             headers: { ...corsHeaders, "Content-Type": "application/json" }
           }
         );
       }
+      
+      console.log(`[AccessMessage] Found delivery record: ${JSON.stringify(deliveryData)}`);
       
       // Verify recipient matches
       const { data: recipientData, error: recipientError } = await supabase
@@ -66,31 +103,48 @@ serve(async (req: Request): Promise<Response> => {
         .eq('id', deliveryData.recipient_id)
         .maybeSingle();
         
-      if (recipientError || !recipientData) {
-        console.error(`[AccessMessage] Recipient not found: ${recipientError?.message || "Not found"}`);
+      if (recipientError) {
+        console.error(`[AccessMessage] Recipient lookup error: ${recipientError.message}`);
         return new Response(
-          JSON.stringify({ error: "Invalid recipient" }),
+          JSON.stringify({ error: `Invalid recipient: ${recipientError.message}` }),
           { 
             status: 403, 
             headers: { ...corsHeaders, "Content-Type": "application/json" }
           }
         );
       }
+      
+      if (!recipientData) {
+        console.error(`[AccessMessage] No recipient found with ID: ${deliveryData.recipient_id}`);
+        return new Response(
+          JSON.stringify({ error: "Invalid recipient. Recipient record not found." }),
+          { 
+            status: 403, 
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          }
+        );
+      }
+      
+      console.log(`[AccessMessage] Found recipient: ${JSON.stringify(recipientData)}`);
       
       // Compare emails with case-insensitive matching
       const dbEmail = recipientData.email.toLowerCase();
       const providedEmail = decodeURIComponent(recipientEmail).toLowerCase();
       
+      console.log(`[AccessMessage] Comparing emails - DB: '${dbEmail}', Request: '${providedEmail}'`);
+      
       if (dbEmail !== providedEmail) {
         console.error(`[AccessMessage] Email mismatch: DB=${dbEmail}, Request=${providedEmail}`);
         return new Response(
-          JSON.stringify({ error: "Unauthorized access attempt" }),
+          JSON.stringify({ error: "Unauthorized access attempt. Email does not match." }),
           { 
             status: 403, 
             headers: { ...corsHeaders, "Content-Type": "application/json" }
           }
         );
       }
+      
+      console.log(`[AccessMessage] Email verification successful`);
       
       // Get message conditions if any
       const { data: conditionData, error: conditionError } = await supabase
@@ -101,24 +155,63 @@ serve(async (req: Request): Promise<Response> => {
         
       if (conditionError) {
         console.error(`[AccessMessage] Error fetching conditions: ${conditionError.message}`);
+      } else {
+        console.log(`[AccessMessage] Found message conditions: ${JSON.stringify(conditionData || {})}`);
       }
       
       // Update delivery record with view info
       const viewTime = new Date().toISOString();
       const viewCount = (deliveryData.viewed_count || 0) + 1;
       
-      await supabase
+      const { error: updateError } = await supabase
         .from('delivered_messages')
         .update({ 
           viewed_at: deliveryData.viewed_at || viewTime,
           viewed_count: viewCount
         })
         .eq('delivery_id', deliveryId);
+        
+      if (updateError) {
+        console.error(`[AccessMessage] Error updating view count: ${updateError.message}`);
+      } else {
+        console.log(`[AccessMessage] Updated view count to ${viewCount}`);
+      }
       
-      // Return success with conditions data
+      // Get the message content
+      const { data: messageData, error: messageError } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('id', messageId)
+        .maybeSingle();
+        
+      if (messageError) {
+        console.error(`[AccessMessage] Error fetching message: ${messageError.message}`);
+        return new Response(
+          JSON.stringify({ error: `Error fetching message: ${messageError.message}` }),
+          { 
+            status: 500, 
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          }
+        );
+      }
+        
+      if (!messageData) {
+        console.error(`[AccessMessage] Message not found: ${messageId}`);
+        return new Response(
+          JSON.stringify({ error: "Message not found" }),
+          { 
+            status: 404, 
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          }
+        );
+      }
+      
+      // Return success with all necessary data
+      console.log(`[AccessMessage] Successfully verified access to message: ${messageId}`);
       return new Response(
         JSON.stringify({
           success: true,
+          message: messageData,
           delivery: {
             ...deliveryData,
             viewed_count: viewCount
@@ -133,7 +226,7 @@ serve(async (req: Request): Promise<Response> => {
     }
 
     // Default handler - not found
-    console.log("[AccessMessage] No matching route found");
+    console.log(`[AccessMessage] No matching route found for path: ${url.pathname}`);
     return new Response(
       JSON.stringify({ error: "Not found", path: path.join('/') }),
       { 
@@ -142,7 +235,8 @@ serve(async (req: Request): Promise<Response> => {
       }
     );
   } catch (error) {
-    console.error("Error in access-message function:", error);
+    console.error(`[AccessMessage] Unhandled error: ${error.message}`);
+    console.error(error.stack);
     
     return new Response(
       JSON.stringify({ 
