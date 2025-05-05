@@ -138,32 +138,45 @@ export async function getFileUrl(path: string) {
 
   try {
     const client = await getAuthClient();
-    // Try both message-attachments and message_attachments buckets
-    let mediaData;
+    const bucket = await getAvailableBucketName();
     
-    try {
-      // Try with hyphen first
-      mediaData = await client.storage
-        .from('message-attachments')
-        .createSignedUrl(path, 3600);
-    } catch (error) {
-      console.log("Error with message-attachments bucket, trying message_attachments:", error);
+    console.log(`Generating signed URL for file: ${path} from bucket: ${bucket}`);
+    
+    // Create a signed URL with a longer expiration time (1 hour)
+    const { data, error } = await client.storage
+      .from(bucket)
+      .createSignedUrl(path, 3600);
+    
+    if (error) {
+      console.error("Error generating signed URL:", error);
       
-      // Try with underscore
-      mediaData = await client.storage
-        .from('message_attachments')
+      // Try with the alternative bucket name as fallback
+      const alternativeBucket = bucket.includes('-') 
+        ? bucket.replace('-', '_') 
+        : bucket.replace('_', '-');
+      
+      console.log(`Trying alternative bucket: ${alternativeBucket}`);
+      
+      const alternativeResult = await client.storage
+        .from(alternativeBucket)
         .createSignedUrl(path, 3600);
+        
+      if (alternativeResult.error) {
+        console.error("Error with alternative bucket:", alternativeResult.error);
+        return null;
+      }
+      
+      console.log("Successfully generated URL with alternative bucket");
+      return alternativeResult.data.signedUrl;
     }
     
-    if (mediaData.error) {
-      throw mediaData.error;
-    }
-
-    if (!mediaData.data?.signedUrl) {
-      throw new Error("No signed URL returned");
+    if (!data?.signedUrl) {
+      console.error("No signed URL returned from Supabase");
+      return null;
     }
     
-    return mediaData.data.signedUrl;
+    console.log(`Successfully generated signed URL for ${path}`);
+    return data.signedUrl;
   } catch (error) {
     console.error("Error getting file URL:", error);
     toast({

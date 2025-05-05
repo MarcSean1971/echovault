@@ -79,7 +79,7 @@ export async function sendEmailNotification(
       `;
     }
 
-    // Add attachments information if available
+    // Add attachments information if available - UPDATED TO USE DIRECT LINKS WITH NO JAVASCRIPT
     let attachmentsHtml = "";
     if (attachments && attachments.length > 0) {
       const fileIcons = {
@@ -108,6 +108,7 @@ export async function sendEmailNotification(
       
       // Generate direct download links for attachments
       const attachmentLinks = attachments.map(file => {
+        // Generate a direct attachment URL for the email
         const attachmentUrl = generateAttachmentUrl(
           messageId,
           recipientEmail,
@@ -120,57 +121,14 @@ export async function sendEmailNotification(
           <li style="margin-bottom: 12px;">
             <span>${getFileIcon(file.type)} ${file.name} (${formatFileSize(file.size)})</span>
             <div style="margin-top: 5px;">
-              <a href="#" onclick="downloadAttachment('${messageId}', '${finalDeliveryId}', '${recipientEmail}', '${file.path}', '${file.name}'); return false;" 
-                style="background-color: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; padding: 4px 8px; font-size: 12px; color: #333; text-decoration: none; margin-right: 8px;">
-                Download (requires browser)
+              <a href="${accessUrl}#attachment=${encodeURIComponent(file.path)}" 
+                style="background-color: #2563eb; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; display: inline-block; margin-right: 8px;">
+                Download
               </a>
             </div>
           </li>
         `;
       }).join("");
-      
-      // Add download script
-      const downloadScript = `
-        <script>
-          function downloadAttachment(messageId, deliveryId, recipientEmail, attachmentPath, attachmentName) {
-            const url = "${appDomain}/functions/v1/access-message/download";
-            
-            fetch(url, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                messageId,
-                deliveryId,
-                recipientEmail,
-                attachmentPath,
-                attachmentName
-              })
-            })
-            .then(response => {
-              if (response.ok) {
-                return response.blob();
-              }
-              throw new Error('Network response was not ok');
-            })
-            .then(blob => {
-              const url = window.URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.style.display = 'none';
-              a.href = url;
-              a.download = attachmentName;
-              document.body.appendChild(a);
-              a.click();
-              window.URL.revokeObjectURL(url);
-            })
-            .catch(error => {
-              console.error('Error downloading file:', error);
-              alert('Error downloading file: ' + error.message);
-            });
-          }
-        </script>
-      `;
       
       attachmentsHtml = `
         <div style="background-color: #f5f5f5; border-left: 4px solid #555; padding: 15px; margin: 20px 0; border-radius: 4px;">
@@ -179,10 +137,9 @@ export async function sendEmailNotification(
             ${attachmentLinks}
           </ul>
           <p style="margin: 10px 0 0 0; font-style: italic; font-size: 13px;">
-            For security reasons, you may need to access the secure message to download attachments if the download links don't work directly.
+            You can access attachments by clicking the secure message link at the bottom of this email.
           </p>
         </div>
-        ${downloadScript}
       `;
     }
 

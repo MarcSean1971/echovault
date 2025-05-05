@@ -55,20 +55,12 @@ export function generateAccessUrl(messageId: string, recipientEmail: string, del
 
 /**
  * Generate a direct download URL for attachments
+ * We're now using the main message access URL with a hash parameter for the attachment
  */
 export function generateAttachmentUrl(messageId: string, recipientEmail: string, deliveryId: string, attachmentPath: string, attachmentName: string) {
-  // Get the app domain from environment variable
-  const appDomain = Deno.env.get("APP_DOMAIN") || "http://localhost:3000";
+  const accessUrl = generateAccessUrl(messageId, recipientEmail, deliveryId);
   
-  // Ensure the domain has the protocol prefix
-  const domainWithProtocol = appDomain.startsWith('http://') || appDomain.startsWith('https://') 
-    ? appDomain 
-    : `https://${appDomain}`;
+  console.log(`Generated attachment URL for ${attachmentName} with path ${attachmentPath}`);
   
-  const functionUrl = `${domainWithProtocol}/functions/v1/access-message/download`;
-  
-  console.log(`Generated function URL for attachment: ${functionUrl}`);
-  console.log(`Attachment parameters: ${messageId}, ${recipientEmail}, ${deliveryId}, ${attachmentPath}, ${attachmentName}`);
-  
-  return functionUrl;
+  return accessUrl + `#attachment=${encodeURIComponent(attachmentPath)}`;
 }

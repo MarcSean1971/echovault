@@ -4,18 +4,35 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { HOVER_TRANSITION, BUTTON_HOVER_EFFECTS } from "@/utils/hoverEffects";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 interface ErrorStateProps {
   error: string;
 }
 
 export const ErrorState = ({ error }: ErrorStateProps) => {
+  const [isAttachmentError, setIsAttachmentError] = useState(false);
+  
   // Log error for debugging
   useEffect(() => {
     console.error("Message access error:", error);
     console.log("Current URL:", window.location.href);
+    
+    // Check if this is an attachment access error
+    const isAttachment = window.location.hash.includes('attachment=');
+    setIsAttachmentError(isAttachment);
   }, [error]);
+
+  // Extract messageId from URL if present
+  const getMessageIdFromUrl = () => {
+    try {
+      const pathname = window.location.pathname;
+      const matches = pathname.match(/\/access\/message\/([a-zA-Z0-9-]+)/);
+      return matches ? matches[1] : null;
+    } catch (e) {
+      return null;
+    }
+  };
 
   return (
     <div className="container mx-auto max-w-3xl px-4 py-8">
@@ -25,24 +42,40 @@ export const ErrorState = ({ error }: ErrorStateProps) => {
           <h2 className="text-xl font-semibold">Access Error</h2>
           
           <Alert variant="destructive" className="mb-4">
-            <AlertTitle>Error accessing message</AlertTitle>
+            <AlertTitle>Error accessing {isAttachmentError ? 'attachment' : 'message'}</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
           
-          <div className="bg-amber-50 border border-amber-100 rounded-md p-4 mt-4 w-full max-w-md">
-            <div className="flex items-start">
-              <HelpCircle className="h-5 w-5 text-amber-500 mr-2 mt-0.5 flex-shrink-0" />
-              <div className="text-sm text-amber-700 text-left">
-                <p className="font-medium mb-1">Common issues:</p>
-                <ul className="list-disc pl-5 space-y-1">
-                  <li>The URL may have been copied incorrectly from your email</li>
-                  <li>The link may be missing required parameters</li>
-                  <li>The message may have expired or been deleted</li>
-                  <li>The message delivery may not have been recorded properly</li>
-                </ul>
+          {isAttachmentError ? (
+            <div className="bg-amber-50 border border-amber-100 rounded-md p-4 mt-4 w-full max-w-md">
+              <div className="flex items-start">
+                <HelpCircle className="h-5 w-5 text-amber-500 mr-2 mt-0.5 flex-shrink-0" />
+                <div className="text-sm text-amber-700 text-left">
+                  <p className="font-medium mb-1">Attachment access issues:</p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>The attachment link may have expired</li>
+                    <li>You might need to access the message first before viewing attachments</li>
+                    <li>Try accessing the main message link from your email</li>
+                  </ul>
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="bg-amber-50 border border-amber-100 rounded-md p-4 mt-4 w-full max-w-md">
+              <div className="flex items-start">
+                <HelpCircle className="h-5 w-5 text-amber-500 mr-2 mt-0.5 flex-shrink-0" />
+                <div className="text-sm text-amber-700 text-left">
+                  <p className="font-medium mb-1">Common issues:</p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>The URL may have been copied incorrectly from your email</li>
+                    <li>The link may be missing required parameters</li>
+                    <li>The message may have expired or been deleted</li>
+                    <li>The message delivery may not have been recorded properly</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
           
           <div className="bg-blue-50 border border-blue-100 rounded-md p-4 mt-2 w-full max-w-md">
             <div className="flex items-start">

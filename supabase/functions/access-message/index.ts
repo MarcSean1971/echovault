@@ -14,16 +14,19 @@ serve(async (req: Request): Promise<Response> => {
   const path = url.pathname.split('/').filter(Boolean);
   
   console.log(`[AccessMessage] Path: ${url.pathname}`);
+  console.log(`[AccessMessage] Method: ${req.method}`);
   
   try {
     // Route for downloading attachments
-    if (path[1] === "download" && path.length >= 3) {
+    if (path[1] === "download") {
+      console.log("[AccessMessage] Processing download request");
       return await handleDownloadAttachment(req);
     }
 
     // Default handler - not found
+    console.log("[AccessMessage] No matching route found");
     return new Response(
-      JSON.stringify({ error: "Not found" }),
+      JSON.stringify({ error: "Not found", path: path.join('/') }),
       { 
         status: 404, 
         headers: { ...corsHeaders, "Content-Type": "application/json" }
@@ -33,7 +36,11 @@ serve(async (req: Request): Promise<Response> => {
     console.error("Error in access-message function:", error);
     
     return new Response(
-      JSON.stringify({ error: error.message || "Internal server error" }),
+      JSON.stringify({ 
+        error: error.message || "Internal server error", 
+        stack: error.stack,
+        path: url.pathname
+      }),
       { 
         status: 500, 
         headers: { ...corsHeaders, "Content-Type": "application/json" }

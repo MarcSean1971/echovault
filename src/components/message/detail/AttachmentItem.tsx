@@ -1,10 +1,11 @@
 
-import React from "react";
-import { FileIcon } from "lucide-react";
+import React, { useState } from "react";
+import { FileIcon, Download, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getFileUrl } from "@/services/messages/fileService";
 import { toast } from "@/components/ui/use-toast";
+import { HOVER_TRANSITION, BUTTON_HOVER_EFFECTS } from "@/utils/hoverEffects";
 
 interface AttachmentItemProps {
   attachment: {
@@ -16,9 +17,51 @@ interface AttachmentItemProps {
 }
 
 export function AttachmentItem({ attachment }: AttachmentItemProps) {
+  const [isLoading, setIsLoading] = useState(false);
+
   const downloadFile = async () => {
     try {
+      setIsLoading(true);
       const url = await getFileUrl(attachment.path);
+      
+      if (url) {
+        // Create an invisible anchor element and trigger the download
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = attachment.name;
+        a.target = "_blank";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        toast({
+          title: "Download started",
+          description: `${attachment.name} is being downloaded`,
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Could not access the file. It may have been deleted or you don't have permission to view it.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Error downloading attachment:", error);
+      toast({
+        title: "Error",
+        description: "An error occurred while trying to access the attachment",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const openFile = async () => {
+    try {
+      setIsLoading(true);
+      const url = await getFileUrl(attachment.path);
+      
       if (url) {
         window.open(url, '_blank');
       } else {
@@ -35,6 +78,8 @@ export function AttachmentItem({ attachment }: AttachmentItemProps) {
         description: "An error occurred while trying to access the attachment",
         variant: "destructive"
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -45,25 +90,56 @@ export function AttachmentItem({ attachment }: AttachmentItemProps) {
   };
   
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button 
-            variant="outline" 
-            className="flex items-center justify-start w-full text-left p-2 h-auto" 
-            onClick={downloadFile}
-          >
-            <FileIcon className="h-4 w-4 mr-2 flex-shrink-0" />
-            <div className="truncate">
-              <span className="block truncate">{attachment.name}</span>
-              <span className="text-xs text-muted-foreground">{formatFileSize(attachment.size)}</span>
-            </div>
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>Click to download</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <div className="border rounded-md p-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-3 overflow-hidden">
+          <FileIcon className="h-4 w-4 flex-shrink-0" />
+          <div className="truncate">
+            <span className="block truncate">{attachment.name}</span>
+            <span className="text-xs text-muted-foreground">{formatFileSize(attachment.size)}</span>
+          </div>
+        </div>
+        
+        <div className="flex space-x-2">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={downloadFile}
+                  disabled={isLoading}
+                  className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Download file</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={openFile}
+                  disabled={isLoading}
+                  className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Open in new tab</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      </div>
+    </div>
   );
 }
