@@ -82,9 +82,10 @@ export async function createConditionInDb(
 export async function fetchConditionsFromDb(userId: string): Promise<MessageCondition[]> {
   const client = await getAuthClient();
   
+  // Modified query to avoid recursive policy issues
   const { data, error } = await client
     .from("message_conditions")
-    .select("*, messages!inner(*)")
+    .select("*")
     .eq("messages.user_id", userId);
 
   if (error) {
@@ -147,7 +148,7 @@ export async function getConditionByMessageId(messageId: string): Promise<any> {
   
   const { data, error } = await client
     .from("message_conditions")
-    .select("*, messages!inner(*)")
+    .select("*")
     .eq("message_id", messageId)
     .single();
     
