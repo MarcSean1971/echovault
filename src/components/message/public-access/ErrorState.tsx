@@ -118,4 +118,4 @@ export const ErrorState = ({ error }: ErrorStateProps) => {
       </Card>
     </div>
   );
-};
+}

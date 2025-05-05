@@ -55,12 +55,16 @@ export function generateAccessUrl(messageId: string, recipientEmail: string, del
 
 /**
  * Generate a direct download URL for attachments
- * We're now using the main message access URL with a hash parameter for the attachment
+ * We now use Supabase's storage.createSignedUrl directly instead of the edge function
  */
 export function generateAttachmentUrl(messageId: string, recipientEmail: string, deliveryId: string, attachmentPath: string, attachmentName: string) {
+  // We still include the base access URL for users who might want to see the message first
   const accessUrl = generateAccessUrl(messageId, recipientEmail, deliveryId);
   
+  // For email links, we'll add the attachment path as a hash fragment
+  // This allows the message viewer to extract the attachment path and generate a direct download link
   console.log(`Generated attachment URL for ${attachmentName} with path ${attachmentPath}`);
   
+  // The hash parameter will be used by the frontend to know which attachment to download
   return accessUrl + `#attachment=${encodeURIComponent(attachmentPath)}`;
 }
