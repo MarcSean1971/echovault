@@ -52,3 +52,23 @@ export function generateAccessUrl(messageId: string, recipientEmail: string, del
     return `${domainWithProtocol}/access/message/${encodedMessageId}?delivery=${encodedDeliveryId}&recipient=${encodedEmail}`;
   }
 }
+
+/**
+ * Generate a direct download URL for attachments
+ */
+export function generateAttachmentUrl(messageId: string, recipientEmail: string, deliveryId: string, attachmentPath: string, attachmentName: string) {
+  // Get the app domain from environment variable
+  const appDomain = Deno.env.get("APP_DOMAIN") || "http://localhost:3000";
+  
+  // Ensure the domain has the protocol prefix
+  const domainWithProtocol = appDomain.startsWith('http://') || appDomain.startsWith('https://') 
+    ? appDomain 
+    : `https://${appDomain}`;
+  
+  const functionUrl = `${domainWithProtocol}/functions/v1/access-message/download`;
+  
+  console.log(`Generated function URL for attachment: ${functionUrl}`);
+  console.log(`Attachment parameters: ${messageId}, ${recipientEmail}, ${deliveryId}, ${attachmentPath}, ${attachmentName}`);
+  
+  return functionUrl;
+}

@@ -1,7 +1,7 @@
 
 // Import necessary modules
 import { Resend } from "npm:resend@2.0.0";
-import { generateAccessUrl } from "./utils/url-generator.ts";
+import { generateAccessUrl, generateAttachmentUrl } from "./utils/url-generator.ts";
 import { EmailTemplateData } from "./types.ts";
 
 // Create Resend client with API key
@@ -106,20 +106,83 @@ export async function sendEmailNotification(
         return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
       };
       
+      // Generate direct download links for attachments
+      const attachmentLinks = attachments.map(file => {
+        const attachmentUrl = generateAttachmentUrl(
+          messageId,
+          recipientEmail,
+          finalDeliveryId,
+          file.path,
+          file.name
+        );
+        
+        return `
+          <li style="margin-bottom: 12px;">
+            <span>${getFileIcon(file.type)} ${file.name} (${formatFileSize(file.size)})</span>
+            <div style="margin-top: 5px;">
+              <a href="#" onclick="downloadAttachment('${messageId}', '${finalDeliveryId}', '${recipientEmail}', '${file.path}', '${file.name}'); return false;" 
+                style="background-color: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; padding: 4px 8px; font-size: 12px; color: #333; text-decoration: none; margin-right: 8px;">
+                Download (requires browser)
+              </a>
+            </div>
+          </li>
+        `;
+      }).join("");
+      
+      // Add download script
+      const downloadScript = `
+        <script>
+          function downloadAttachment(messageId, deliveryId, recipientEmail, attachmentPath, attachmentName) {
+            const url = "${appDomain}/functions/v1/access-message/download";
+            
+            fetch(url, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                messageId,
+                deliveryId,
+                recipientEmail,
+                attachmentPath,
+                attachmentName
+              })
+            })
+            .then(response => {
+              if (response.ok) {
+                return response.blob();
+              }
+              throw new Error('Network response was not ok');
+            })
+            .then(blob => {
+              const url = window.URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.style.display = 'none';
+              a.href = url;
+              a.download = attachmentName;
+              document.body.appendChild(a);
+              a.click();
+              window.URL.revokeObjectURL(url);
+            })
+            .catch(error => {
+              console.error('Error downloading file:', error);
+              alert('Error downloading file: ' + error.message);
+            });
+          }
+        </script>
+      `;
+      
       attachmentsHtml = `
         <div style="background-color: #f5f5f5; border-left: 4px solid #555; padding: 15px; margin: 20px 0; border-radius: 4px;">
           <p style="margin: 0; font-weight: bold;">📁 Attachments (${attachments.length})</p>
           <ul style="margin-top: 10px; padding-left: 20px;">
-            ${attachments.map(file => `
-              <li style="margin-bottom: 8px;">
-                <span>${getFileIcon(file.type)} ${file.name} (${formatFileSize(file.size)})</span>
-              </li>
-            `).join("")}
+            ${attachmentLinks}
           </ul>
           <p style="margin: 10px 0 0 0; font-style: italic; font-size: 13px;">
-            Open the secure message to access all attachments.
+            For security reasons, you may need to access the secure message to download attachments if the download links don't work directly.
           </p>
         </div>
+        ${downloadScript}
       `;
     }
 
