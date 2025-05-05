@@ -53,9 +53,9 @@ export const ErrorState = ({ error }: ErrorStateProps) => {
                 <div className="text-sm text-amber-700 text-left">
                   <p className="font-medium mb-1">Attachment access issues:</p>
                   <ul className="list-disc pl-5 space-y-1">
+                    <li>Try accessing the main message first without the attachment parameter</li>
                     <li>The attachment link may have expired</li>
-                    <li>You might need to access the message first before viewing attachments</li>
-                    <li>Try accessing the main message link from your email</li>
+                    <li>Check your email for the original message link</li>
                   </ul>
                 </div>
               </div>

@@ -1,7 +1,7 @@
 
 // Import necessary modules
 import { Resend } from "npm:resend@2.0.0";
-import { generateAccessUrl, generateAttachmentUrl } from "./utils/url-generator.ts";
+import { generateAccessUrl } from "./utils/url-generator.ts";
 import { EmailTemplateData } from "./types.ts";
 
 // Create Resend client with API key
@@ -25,13 +25,13 @@ export async function sendEmailNotification(
   } = {},
   isEmergency: boolean = false,
   appName: string = "EchoVault",
-  deliveryId?: string,  // Add deliveryId parameter with default of undefined
+  deliveryId?: string,
   attachments: Array<{
     path: string;
     name: string;
     size: number;
     type: string;
-  }> | null = null // Add attachments parameter
+  }> | null = null
 ) {
   try {
     console.log(`Sending email to ${recipientEmail}`);
@@ -79,65 +79,14 @@ export async function sendEmailNotification(
       `;
     }
 
-    // Add attachments information if available - UPDATED TO USE DIRECT LINKS WITH NO JAVASCRIPT
+    // Simplified attachment notification - just mention if there are attachments
     let attachmentsHtml = "";
     if (attachments && attachments.length > 0) {
-      const fileIcons = {
-        image: "🖼️",
-        video: "🎬",
-        audio: "🎵",
-        pdf: "📄",
-        text: "📝",
-        default: "📎"
-      };
-      
-      const getFileIcon = (fileType: string) => {
-        if (fileType.includes("image")) return fileIcons.image;
-        if (fileType.includes("video")) return fileIcons.video;
-        if (fileType.includes("audio")) return fileIcons.audio;
-        if (fileType.includes("pdf")) return fileIcons.pdf;
-        if (fileType.includes("text")) return fileIcons.text;
-        return fileIcons.default;
-      };
-      
-      const formatFileSize = (bytes: number) => {
-        if (bytes < 1024) return `${bytes} B`;
-        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-        return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-      };
-      
-      // Generate direct download links for attachments
-      const attachmentLinks = attachments.map(file => {
-        // Generate a direct attachment URL for the email
-        const attachmentUrl = generateAttachmentUrl(
-          messageId,
-          recipientEmail,
-          finalDeliveryId,
-          file.path,
-          file.name
-        );
-        
-        return `
-          <li style="margin-bottom: 12px;">
-            <span>${getFileIcon(file.type)} ${file.name} (${formatFileSize(file.size)})</span>
-            <div style="margin-top: 5px;">
-              <a href="${accessUrl}#attachment=${encodeURIComponent(file.path)}" 
-                style="background-color: #2563eb; color: white; padding: 6px 12px; border-radius: 4px; text-decoration: none; display: inline-block; margin-right: 8px;">
-                Download
-              </a>
-            </div>
-          </li>
-        `;
-      }).join("");
-      
       attachmentsHtml = `
         <div style="background-color: #f5f5f5; border-left: 4px solid #555; padding: 15px; margin: 20px 0; border-radius: 4px;">
-          <p style="margin: 0; font-weight: bold;">📁 Attachments (${attachments.length})</p>
-          <ul style="margin-top: 10px; padding-left: 20px;">
-            ${attachmentLinks}
-          </ul>
+          <p style="margin: 0; font-weight: bold;">📁 The message includes ${attachments.length} attachment${attachments.length > 1 ? 's' : ''}</p>
           <p style="margin: 10px 0 0 0; font-style: italic; font-size: 13px;">
-            You can access attachments by clicking the secure message link at the bottom of this email.
+            Access the secure message to view and download attachments.
           </p>
         </div>
       `;
@@ -173,20 +122,13 @@ export async function sendEmailNotification(
           ${attachmentsHtml}
           
           <p style="font-size: 16px; line-height: 1.5; margin-bottom: 30px;">
-            This message has been secured and can only be accessed through the link below.
+            This message has been secured and can only be accessed through the button below.
           </p>
           
           <div style="text-align: center; margin: 30px 0;">
             <a href="${accessUrl}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">
-              Access Secure Message
+              View Secure Message
             </a>
-          </div>
-          
-          <div style="background-color: #f8fafc; border-left: 4px solid #2563eb; padding: 15px; margin: 20px 0; border-radius: 4px;">
-            <p style="margin: 0;">
-              If you have trouble accessing the message, copy and paste this URL into your browser:<br>
-              <span style="font-family: monospace; word-break: break-all;">${accessUrl}</span>
-            </p>
           </div>
           
           <div style="background-color: #f8fafc; border-left: 4px solid #2563eb; padding: 15px; margin: 20px 0; border-radius: 4px;">

@@ -2,7 +2,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { corsHeaders } from "./cors-headers.ts";
 import { supabaseClient } from "./supabase-client.ts";
-import { handleDownloadAttachment } from "./handlers/download-attachment-handler.ts";
 
 serve(async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
@@ -17,12 +16,6 @@ serve(async (req: Request): Promise<Response> => {
   console.log(`[AccessMessage] Method: ${req.method}`);
   
   try {
-    // Route for downloading attachments
-    if (path[1] === "download") {
-      console.log("[AccessMessage] Processing download request");
-      return await handleDownloadAttachment(req);
-    }
-
     // Default handler - not found
     console.log("[AccessMessage] No matching route found");
     return new Response(
