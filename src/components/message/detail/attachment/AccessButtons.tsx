@@ -20,7 +20,7 @@ export const AccessButton: React.FC<AccessButtonProps> = ({
       <Tooltip>
         <TooltipTrigger asChild>
           <Button 
-            variant={variant as "default" | "secondary" | "destructive" | "outline" | "link" | "ghost"}
+            variant={variant}
             size="sm" 
             onClick={onClick}
             disabled={isLoading}
@@ -101,6 +101,7 @@ export const RetryButton: React.FC<{
       onClick={retryAccess}
       icon={<RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''} ${HOVER_TRANSITION}`} />}
       tooltipText="Retry access"
+      className="hover:bg-amber-100"
     />
   );
 };
@@ -118,7 +119,7 @@ export const DownloadButton: React.FC<{
       onClick={downloadFile}
       icon={<Download className={`h-4 w-4 ${isLoading || downloadActive ? 'animate-pulse' : ''} ${HOVER_TRANSITION}`} />}
       tooltipText={`Download file using ${getMethodName(downloadMethod)}`}
-      className={downloadActive ? 'bg-green-500 hover:bg-green-600' : ''}
+      className={downloadActive ? 'bg-green-500 hover:bg-green-600' : 'hover:bg-blue-100'}
     />
   );
 };
@@ -139,6 +140,7 @@ export const OpenButton: React.FC<{
         <ExternalLink className={`h-4 w-4 ${isLoading ? 'animate-pulse' : ''} ${HOVER_TRANSITION}`} />
       )}
       tooltipText={hasError ? 'Retry access' : 'Open in new tab'}
+      className="hover:bg-gray-100"
     />
   );
 };

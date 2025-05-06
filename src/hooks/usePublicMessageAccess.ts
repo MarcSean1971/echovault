@@ -27,16 +27,16 @@ export const usePublicMessageAccess = ({
   deliveryId, 
   recipientEmail 
 }: UsePublicMessageAccessProps): PublicMessageAccessResult => {
-  // Track if enough time has passed to show error messages
+  // Track if enough time has passed to show error messages - reduced from 4s to 1s
   const [errorDelay, setErrorDelay] = useState(true);
   // Track if we're in a fallback loading state
   const [fallbackLoading, setFallbackLoading] = useState(false);
   
-  // Set up a timer to determine when we can show error states
+  // Set up a timer to determine when we can show error states - reduced from 4s to 1s
   useEffect(() => {
     const timer = setTimeout(() => {
       setErrorDelay(false);
-    }, 4000); // Increased to 4 seconds for more reliable error delay
+    }, 1000);
     return () => clearTimeout(timer);
   }, []);
   
@@ -83,7 +83,7 @@ export const usePublicMessageAccess = ({
       setFallbackLoading(true);
       const timer = setTimeout(() => {
         setFallbackLoading(false);
-      }, 1000); // Short delay to prevent flash
+      }, 500); // Reduced from 1s to 500ms to be more responsive
       return () => clearTimeout(timer);
     }
   }, [accessError, errorDelay]);

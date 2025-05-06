@@ -2,6 +2,7 @@
 import React from "react";
 import { AttachmentBadge } from "./AttachmentBadge";
 import { AccessMethod } from "./types";
+import { Check, X } from "lucide-react";
 
 interface DebugInfoProps {
   downloadMethod: AccessMethod;
@@ -13,6 +14,7 @@ interface DebugInfoProps {
   directUrl?: string | null;
   retryCount?: number;
   hasError?: boolean;
+  attemptedMethods?: {[key in AccessMethod]?: boolean};
 }
 
 export const DebugInfo: React.FC<DebugInfoProps> = ({
@@ -24,7 +26,8 @@ export const DebugInfo: React.FC<DebugInfoProps> = ({
   accessUrl,
   directUrl,
   retryCount,
-  hasError = false
+  hasError = false,
+  attemptedMethods = {}
 }) => {
   return (
     <div className="mt-2 text-xs text-gray-500 border-t pt-2">
@@ -55,6 +58,26 @@ export const DebugInfo: React.FC<DebugInfoProps> = ({
             <div>{retryCount}</div>
           </>
         )}
+        
+        <div><strong>Attempted Methods:</strong></div>
+        <div className="flex items-center gap-2">
+          {['secure', 'signed', 'direct'].map((method) => {
+            const attempted = attemptedMethods?.[method as AccessMethod];
+            const isSuccessful = lastSuccessMethod === method;
+            return (
+              <div key={method} className="flex items-center" title={`${method}: ${attempted ? isSuccessful ? 'Successful' : 'Failed' : 'Not attempted'}`}>
+                <span className="mr-1">{method.substring(0,1).toUpperCase()}</span>
+                {attempted !== undefined && (
+                  isSuccessful ? (
+                    <Check className="h-3 w-3 text-green-500" />
+                  ) : (
+                    <X className="h-3 w-3 text-red-500" />
+                  )
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
       
       {accessUrl && (

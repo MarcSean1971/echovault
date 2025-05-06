@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { FileIcon, AlertCircle } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
@@ -15,6 +16,7 @@ import {
   OpenButton
 } from "./AccessButtons";
 import { DebugInfo } from "./DebugInfo";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 interface AttachmentItemProps {
   attachment: AttachmentProps;
@@ -31,6 +33,8 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
   const [downloadMethod, setDownloadMethod] = useState<AccessMethod>('secure');
   const [lastSuccessMethod, setLastSuccessMethod] = useState<AccessMethod | null>(null);
   const [downloadActive, setDownloadActive] = useState(false);
+  const [attemptedMethods, setAttemptedMethods] = useState<{[key in AccessMethod]?: boolean}>({});
+  const [currentMethodStatus, setCurrentMethodStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
   // Create file access manager
   const fileAccessManager = new FileAccessManager(attachment.path, deliveryId, recipientEmail);
@@ -47,6 +51,23 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
       return () => clearTimeout(timer);
     }
   }, [downloadActive]);
+
+  // Update method status when methods change
+  useEffect(() => {
+    setCurrentMethodStatus(lastSuccessMethod === downloadMethod ? 'success' : hasError ? 'error' : 'idle');
+  }, [downloadMethod, lastSuccessMethod, hasError]);
+
+  const updateMethodStatus = (method: AccessMethod, success: boolean) => {
+    setAttemptedMethods(prev => ({...prev, [method]: true}));
+    if (success) {
+      setCurrentMethodStatus('success');
+      setLastSuccessMethod(method);
+    } else {
+      if (method === downloadMethod) {
+        setCurrentMethodStatus('error');
+      }
+    }
+  };
 
   const retryAccess = async () => {
     setIsLoading(true);
@@ -81,16 +102,18 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
               description: `Access restored using ${method === 'secure' ? 'Edge Function' : method === 'signed' ? 'Signed URL' : 'Direct URL'}`,
             });
             
-            setLastSuccessMethod(method);
+            updateMethodStatus(method, true);
             succeeded = true;
             break;
           }
         } catch (methodError) {
           console.error(`Error trying ${methodToTry} method:`, methodError);
+          updateMethodStatus(methodToTry, false);
         }
       }
       
       if (!succeeded) {
+        setHasError(true);
         toast({
           title: "Retry failed",
           description: "Unable to access the file using any method. Please try again later.",
@@ -99,6 +122,7 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
       }
     } catch (error) {
       console.error("Error retrying file access:", error);
+      setHasError(true);
     } finally {
       setIsLoading(false);
     }
@@ -115,6 +139,9 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
       title: `Switched to ${nextMethod === 'secure' ? 'Edge Function' : nextMethod === 'signed' ? 'Signed URL' : 'Direct URL'}`,
       description: `Now using ${nextMethod === 'secure' ? 'Edge Function' : nextMethod === 'signed' ? 'Signed URL' : 'Direct URL'} for file access`,
     });
+    
+    // Reset status when manually changing method
+    setCurrentMethodStatus(lastSuccessMethod === nextMethod ? 'success' : 'idle');
   };
 
   const downloadFile = async () => {
@@ -130,62 +157,88 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
         console.log("Using edge function with explicit download mode");
         
         // Get URL with download flag set to true
-        const { url } = await fileAccessManager.getAccessUrl('secure', 'download');
+        const { url, method } = await fileAccessManager.getAccessUrl('secure', 'download');
         
-        if (url) {
+        if (url && method) {
           console.log("Download URL obtained from edge function:", url);
           FileAccessManager.executeDownload(url, attachment.name, attachment.type, 'secure');
-          setLastSuccessMethod('secure');
+          updateMethodStatus('secure', true);
+          setHasError(false);
           return;
+        } else {
+          updateMethodStatus('secure', false);
         }
       }
       
       // For non-secure methods, try to get a URL with download flag
       let result;
+      let methodUsed: AccessMethod | null = null;
+      
       if (downloadMethod === 'signed') {
-        const { url } = await fileAccessManager.getAccessUrl('signed', 'download');
+        const { url, method } = await fileAccessManager.getAccessUrl('signed', 'download');
         result = url;
-      } else {
+        methodUsed = method;
+      } else if (downloadMethod === 'direct') {
         result = directUrl;
+        methodUsed = 'direct';
       }
       
-      if (result) {
-        console.log(`Download URL obtained using ${downloadMethod} method:`, result);
-        FileAccessManager.executeDownload(result, attachment.name, attachment.type, downloadMethod);
-        setLastSuccessMethod(downloadMethod);
+      if (result && methodUsed) {
+        console.log(`Download URL obtained using ${methodUsed} method:`, result);
+        FileAccessManager.executeDownload(result, attachment.name, attachment.type, methodUsed);
+        updateMethodStatus(methodUsed, true);
+        setHasError(false);
         return;
+      } else {
+        if (downloadMethod === 'signed' || downloadMethod === 'direct') {
+          updateMethodStatus(downloadMethod, false);
+        }
       }
       
       // If current method fails, try alternatives in order of security
-      // Explicitly type as AccessMethod[] to fix the error
       const fallbackMethods: AccessMethod[] = ['secure', 'signed', 'direct'].filter(m => m !== downloadMethod) as AccessMethod[];
       
       for (const method of fallbackMethods) {
         try {
           let fallbackUrl = null;
+          let actualMethod: AccessMethod | null = null;
           
           if (method === 'secure' && deliveryId && recipientEmail) {
-            const { url } = await fileAccessManager.getAccessUrl('secure', 'download');
+            const { url, method: resultMethod } = await fileAccessManager.getAccessUrl('secure', 'download');
             fallbackUrl = url;
+            actualMethod = resultMethod;
           } else if (method === 'signed') {
-            const { url } = await fileAccessManager.getAccessUrl('signed', 'download');
+            const { url, method: resultMethod } = await fileAccessManager.getAccessUrl('signed', 'download');
             fallbackUrl = url;
+            actualMethod = resultMethod;
           } else if (method === 'direct') {
             fallbackUrl = directUrl;
+            actualMethod = 'direct';
           }
           
-          if (fallbackUrl) {
-            console.log(`Fallback download URL obtained using ${method}:`, fallbackUrl);
-            FileAccessManager.executeDownload(fallbackUrl, attachment.name, attachment.type, method);
-            setDownloadMethod(method);
-            setLastSuccessMethod(method);
+          if (fallbackUrl && actualMethod) {
+            console.log(`Fallback download URL obtained using ${actualMethod}:`, fallbackUrl);
+            FileAccessManager.executeDownload(fallbackUrl, attachment.name, attachment.type, actualMethod);
+            setDownloadMethod(actualMethod);
+            updateMethodStatus(actualMethod, true);
+            toast({
+              title: "Using fallback method",
+              description: `Switched to ${actualMethod === 'secure' ? 'Edge Function' : 
+                actualMethod === 'signed' ? 'Signed URL' : 'Direct URL'} after primary method failed`,
+            });
+            setHasError(false);
             return;
+          } else {
+            updateMethodStatus(method, false);
           }
         } catch (fallbackError) {
           console.error(`Error with fallback method ${method}:`, fallbackError);
+          updateMethodStatus(method, false);
         }
       }
       
+      // If all methods fail, show error
+      setHasError(true);
       toast({
         title: "Download Error",
         description: "Could not access the file using any method. Please try again or contact support.",
@@ -193,6 +246,7 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
       });
     } catch (error) {
       console.error("Error downloading attachment:", error);
+      setHasError(true);
       toast({
         title: "Error",
         description: "An error occurred while trying to download the attachment",
@@ -210,13 +264,14 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
       setIsLoading(true);
       const { url, method } = await fileAccessManager.getAccessUrl(downloadMethod);
       
-      if (url) {
+      if (url && method) {
         // For opening in a new tab
         window.open(url, '_blank');
-        if (method) {
-          setLastSuccessMethod(method);
-        }
+        updateMethodStatus(method, true);
+        setHasError(false);
         return;
+      } else {
+        updateMethodStatus(downloadMethod, false);
       }
       
       // Try alternatives if current method fails
@@ -226,24 +281,28 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
         try {
           const { url: alternativeUrl, method: altMethod } = await fileAccessManager.getAccessUrl(alternativeMethod);
           
-          if (alternativeUrl) {
+          if (alternativeUrl && altMethod) {
             window.open(alternativeUrl, '_blank');
             setDownloadMethod(alternativeMethod);
-            if (altMethod) {
-              setLastSuccessMethod(altMethod);
-            }
+            updateMethodStatus(altMethod, true);
             
             toast({
               title: "Using alternative method",
               description: `Switched to ${alternativeMethod === 'secure' ? 'Edge Function' : alternativeMethod === 'signed' ? 'Signed URL' : 'Direct URL'} for viewing`,
             });
+            setHasError(false);
             return;
+          } else {
+            updateMethodStatus(alternativeMethod, false);
           }
         } catch (altError) {
           console.error(`Error with alternative method ${alternativeMethod}:`, altError);
+          updateMethodStatus(alternativeMethod, false);
         }
       }
       
+      // If all methods fail, show error
+      setHasError(true);
       toast({
         title: "Access Error",
         description: "Could not access the file using any method. Please try again or contact support.",
@@ -251,6 +310,7 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
       });
     } catch (error) {
       console.error("Error opening attachment:", error);
+      setHasError(true);
       toast({
         title: "Error",
         description: "An error occurred while trying to access the attachment",
@@ -266,12 +326,13 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
     if (directUrl) {
       window.open(directUrl, '_blank');
       setDownloadMethod('direct');
-      setLastSuccessMethod('direct');
+      updateMethodStatus('direct', true);
       toast({
         title: "Direct URL Test",
         description: "Opening direct URL without security checks"
       });
     } else {
+      updateMethodStatus('direct', false);
       toast({
         title: "Error",
         description: "Could not generate direct URL",
@@ -282,6 +343,34 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
   
   const toggleDebug = () => {
     setShowDebug(prev => !prev);
+  };
+  
+  const getMethodStatusBadge = () => {
+    if (currentMethodStatus === 'success') {
+      return (
+        <StatusBadge status="success" size="sm" showIcon className="ml-2">
+          Success
+        </StatusBadge>
+      );
+    } else if (currentMethodStatus === 'error') {
+      return (
+        <StatusBadge status="warning" size="sm" showIcon className="ml-2">
+          Failed
+        </StatusBadge>
+      );
+    }
+    return null;
+  };
+
+  const getFallbackInfoBadge = () => {
+    if (lastSuccessMethod && lastSuccessMethod !== downloadMethod) {
+      return (
+        <StatusBadge status="info" size="sm" showIcon className="ml-2">
+          Using fallback
+        </StatusBadge>
+      );
+    }
+    return null;
   };
   
   return (
@@ -296,9 +385,13 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
           <div className="truncate">
             <div className="flex items-center gap-2">
               <span className="block truncate">{attachment.name}</span>
-              <AttachmentBadge method={downloadMethod} />
             </div>
-            <span className="text-xs text-muted-foreground">{formatFileSize(attachment.size)}</span>
+            <div className="flex items-center flex-wrap gap-2 mt-1">
+              <AttachmentBadge method={downloadMethod} />
+              {getMethodStatusBadge()}
+              {getFallbackInfoBadge()}
+              <span className="text-xs text-muted-foreground">{formatFileSize(attachment.size)}</span>
+            </div>
           </div>
         </div>
         
@@ -322,26 +415,19 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
             tryDirectAccess={tryDirectAccess}
           />
 
-          {/* Retry or Download button */}
-          {hasError ? (
-            <RetryButton
-              isLoading={isLoading}
-              retryAccess={retryAccess}
-            />
-          ) : (
-            <DownloadButton
-              isLoading={isLoading}
-              downloadActive={downloadActive}
-              downloadFile={downloadFile}
-              downloadMethod={downloadMethod}
-            />
-          )}
+          {/* Download button - always show, retry on error */}
+          <DownloadButton
+            isLoading={isLoading}
+            downloadActive={downloadActive}
+            downloadFile={downloadFile}
+            downloadMethod={downloadMethod}
+          />
           
-          {/* Open/Retry button */}
+          {/* Open button */}
           <OpenButton 
             isLoading={isLoading}
             hasError={hasError}
-            onClick={hasError ? retryAccess : openFile}
+            onClick={openFile}
           />
         </div>
       </div>
@@ -368,6 +454,7 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
           directUrl={directUrl}
           retryCount={retryCount}
           hasError={hasError}
+          attemptedMethods={attemptedMethods}
         />
       )}
     </div>

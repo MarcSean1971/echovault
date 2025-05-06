@@ -25,6 +25,11 @@ export const getPublicFileUrl = async (
     url.searchParams.append('recipient', recipientEmail);
     url.searchParams.append('mode', mode);
     
+    // Add explicit download parameter for download mode
+    if (mode === 'download') {
+      url.searchParams.append('download', 'true');
+    }
+    
     console.log(`Generated file access URL: ${url.toString()}`);
     return url.toString();
   } catch (error) {
@@ -73,6 +78,15 @@ export const getAuthenticatedFileUrl = async (
     if (!data?.signedUrl) {
       console.error("No signed URL returned");
       return null;
+    }
+    
+    // If download is requested, ensure URL has download parameter
+    if (forDownload) {
+      const url = new URL(data.signedUrl);
+      if (!url.searchParams.has('download')) {
+        url.searchParams.append('download', 'true');
+        return url.toString();
+      }
     }
     
     return data.signedUrl;
