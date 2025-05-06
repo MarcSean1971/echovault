@@ -11,7 +11,7 @@ import {
   DirectAccessButton,
   DownloadButton,
   OpenButton
-} from "./AccessButtons";
+} from "./buttons";
 import { DebugInfo } from "./DebugInfo";
 import { useAttachmentAccess } from "@/hooks/useAttachmentAccess";
 import { MethodStatusBadge, FallbackInfoBadge } from "./StatusBadges";
