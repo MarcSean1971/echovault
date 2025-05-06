@@ -102,12 +102,18 @@ serve(async (req: Request): Promise<Response> => {
         if (isDevelopment) {
           console.log("[FileAccess] DEVELOPMENT MODE: Using simplified security checks");
           
-          // If the path includes the bucket name, extract it
-          if (finalFilePath.startsWith('message-attachments/')) {
-            finalFilePath = finalFilePath.substring('message-attachments/'.length);
+          // Extract the bucket name from the path if present
+          if (finalFilePath.includes('/')) {
+            const pathParts = finalFilePath.split('/');
+            // The first part might be the bucket name
+            bucketName = pathParts[0];
+            // If path is in format bucket/rest/of/path, extract accordingly
+            if (pathParts.length > 1) {
+              finalFilePath = pathParts.slice(1).join('/');
+            }
           }
           
-          console.log(`[FileAccess] Using direct file access with path: ${finalFilePath}`);
+          console.log(`[FileAccess] Using direct file access with path: ${finalFilePath} in bucket: ${bucketName}`);
         } 
         // In production mode, do full validation
         else {
@@ -173,12 +179,19 @@ serve(async (req: Request): Promise<Response> => {
           fileName = requestedAttachment.name;
           fileType = requestedAttachment.type || "application/octet-stream";
           
-          if (finalFilePath.startsWith(`${bucketName}/`)) {
-            finalFilePath = finalFilePath.substring(bucketName.length + 1);
+          // Extract the bucket name from the path if present
+          if (finalFilePath.includes('/')) {
+            const pathParts = finalFilePath.split('/');
+            // The first part is the bucket name
+            bucketName = pathParts[0];
+            // If path is in format bucket/rest/of/path, extract accordingly
+            if (pathParts.length > 1) {
+              finalFilePath = pathParts.slice(1).join('/');
+            }
           }
         }
         
-        console.log(`[FileAccess] Using final file path: ${finalFilePath}`);
+        console.log(`[FileAccess] Using final file path: ${finalFilePath} in bucket: ${bucketName}`);
         
         try {
           // Download the file directly

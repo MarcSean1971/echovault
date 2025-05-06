@@ -79,6 +79,11 @@ export const MessageDisplay = ({ message, isInitialLoading = false }: MessageDis
   // Force download all attachments at once
   const downloadAllAttachments = async () => {
     if (!message?.attachments || message.attachments.length === 0 || !deliveryId || !recipientEmail) {
+      toast({
+        title: "Unable to download files",
+        description: "Missing required information for downloads. Try refreshing the page.",
+        variant: "destructive"
+      });
       return;
     }
 
@@ -103,12 +108,17 @@ export const MessageDisplay = ({ message, isInitialLoading = false }: MessageDis
             console.error(`Failed to get URL for ${attachment.name}`);
             toast({
               title: "Download error",
-              description: `Could not download ${attachment.name}`,
+              description: `Could not download ${attachment.name}. Try clicking the individual download button instead.`,
               variant: "destructive"
             });
           }
         } catch (error) {
           console.error(`Error downloading ${attachment.name}:`, error);
+          toast({
+            title: "Download failed",
+            description: "An error occurred. Try using individual download buttons instead.",
+            variant: "destructive"
+          });
         }
       }, index * 1500); // Delay each download by 1.5 seconds
     });
@@ -220,7 +230,7 @@ export const MessageDisplay = ({ message, isInitialLoading = false }: MessageDis
                 {deliveryId && recipientEmail && message.attachments.length > 0 && (
                   <Button 
                     onClick={downloadAllAttachments}
-                    className="bg-green-600 hover:bg-green-700 text-white"
+                    className="bg-green-600 hover:bg-green-700 text-white animate-pulse-once shadow-md"
                   >
                     <Download className="h-4 w-4 mr-2" />
                     Download All
@@ -238,10 +248,10 @@ export const MessageDisplay = ({ message, isInitialLoading = false }: MessageDis
               <div className="mt-4 p-3 bg-blue-50 border border-blue-100 rounded text-sm">
                 <p className="font-medium text-blue-700 mb-2">Having trouble downloading?</p>
                 <ol className="list-decimal pl-5 space-y-1 text-blue-700">
-                  <li>Click the download button next to each attachment</li>
-                  <li>If files don't download, try the "Download All" button at the top</li>
-                  <li>Right-click on any attachment and select "Save link as..."</li>
-                  <li>If using Safari, you may need to enable automatic downloads</li>
+                  <li>Use the green <strong>"Download All"</strong> button at the top to download all files at once</li>
+                  <li>Or click the green <strong>shield icon</strong> next to any attachment to force a secure download</li>
+                  <li>If those don't work, try the regular download button (arrow icon)</li>
+                  <li>Still having issues? Click the "Debug" button in the top right for more information</li>
                 </ol>
               </div>
             </div>
