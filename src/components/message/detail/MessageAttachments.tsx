@@ -1,8 +1,8 @@
 
-import { AttachmentItem } from "./AttachmentItem";
 import { Message } from "@/types/message";
 import { Paperclip } from "lucide-react";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { AttachmentItem } from "./attachment/AttachmentItem";
 
 interface MessageAttachmentsProps {
   message: Message;
