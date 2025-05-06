@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from "react";
 import { toast } from "@/components/ui/use-toast";
 import { AccessMethod, AccessMode } from "@/components/message/detail/attachment/types";
-import { FileAccessManager } from "@/services/messages/fileAccessManager";
+import { FileAccessManager } from "@/services/messages/fileAccess";
 
 interface UseAttachmentAccessProps {
   filePath: string;

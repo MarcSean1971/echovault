@@ -1,12 +1,12 @@
 
-import { toast } from "@/components/ui/use-toast";
-import { getPublicFileUrl, getAuthenticatedFileUrl, getDirectPublicUrl } from "./fileAccessService";
-import { AccessMethod, AccessMode, AccessMethodData } from "@/components/message/detail/attachment/types";
+import { getPublicFileUrl, getAuthenticatedFileUrl, getDirectPublicUrl } from "../fileAccessService";
+import { AccessMethod, AccessMode } from "@/components/message/detail/attachment/types";
+import { AccessMethodData } from "./types";
 
 /**
- * File access manager that handles different access methods
+ * Generates URLs for accessing files using different methods
  */
-export class FileAccessManager {
+export class FileUrlGenerator {
   private filePath: string;
   private deliveryId?: string;
   private recipientEmail?: string;
@@ -130,80 +130,5 @@ export class FileAccessManager {
       
       return { url: null, method: null };
     }
-  }
-  
-  /**
-   * Check if browser supports the download attribute
-   */
-  private static browserSupportsDownload(): boolean {
-    const a = document.createElement('a');
-    return typeof a.download !== 'undefined';
-  }
-  
-  /**
-   * Create an anchor element for download or viewing
-   */
-  public static createAnchorElement(url: string, fileName: string, fileType: string, forDownload: boolean): HTMLAnchorElement {
-    const a = document.createElement('a');
-    
-    // Add cache-busting parameter
-    const cacheBuster = `_t=${Date.now()}`;
-    if (url.includes('?')) {
-      a.href = `${url}&${cacheBuster}`;
-    } else {
-      a.href = `${url}?${cacheBuster}`;
-    }
-    
-    // Force content-disposition by adding 'download' parameters
-    if (forDownload) {
-      if (FileAccessManager.browserSupportsDownload()) {
-        a.download = fileName;
-        a.setAttribute('download', fileName);
-      } else {
-        // For browsers that don't support download attribute,
-        // ensure the URL has a download parameter
-        if (url.includes('?')) {
-          a.href = `${url}&download=true&filename=${encodeURIComponent(fileName)}&${cacheBuster}`;
-        } else {
-          a.href = `${url}?download=true&filename=${encodeURIComponent(fileName)}&${cacheBuster}`;
-        }
-      }
-    } else {
-      a.target = '_blank';
-    }
-    
-    a.setAttribute('type', fileType || 'application/octet-stream');
-    
-    return a;
-  }
-  
-  /**
-   * Execute download with appropriate notification
-   */
-  public static executeDownload(url: string, fileName: string, fileType: string, method: AccessMethod): void {
-    // Create link with download attribute
-    const a = FileAccessManager.createAnchorElement(url, fileName, fileType, true);
-    
-    // Append to body, click, then remove
-    document.body.appendChild(a);
-    a.click();
-    
-    // Short delay before removal to ensure download starts
-    setTimeout(() => {
-      document.body.removeChild(a);
-    }, 100);
-    
-    // Show success notification
-    const methodName = method === 'secure' ? 'Edge Function' : 
-                       method === 'signed' ? 'Signed URL' : 'Direct URL';
-    
-    toast({
-      title: "Download started",
-      description: `${fileName} is being downloaded using ${methodName}`,
-    });
-    
-    // Log for debugging
-    console.log(`Download initiated: ${fileName} using ${methodName}`);
-    console.log(`Download URL: ${url}`);
   }
 }
