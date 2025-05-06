@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
@@ -122,7 +121,7 @@ export default function DiagnosticAccess() {
         setError("Message not found");
         addLog('Message not found');
       } else {
-        // Transform the raw data to match the Message type format
+        // Transform the raw data to match the Message type format with all required properties
         const transformedMessage: Message = {
           ...data,
           attachments: Array.isArray(data.attachments) 
@@ -132,7 +131,10 @@ export default function DiagnosticAccess() {
                 size: att.size || 0,
                 type: att.type || '',
               }))
-            : null
+            : null,
+          // Add the required properties that might be missing from the database
+          expires_at: data.expires_at || null,
+          sender_name: data.sender_name || null
         };
         setMessage(transformedMessage);
         addLog(`Success! Loaded message: "${data.title}"`);
@@ -188,7 +190,10 @@ export default function DiagnosticAccess() {
                 size: att.size || 0,
                 type: att.type || ''
               }))
-            : null
+            : null,
+          // Ensure expires_at and sender_name are present in the transformed message
+          expires_at: edgeFnResult.message.expires_at || null,
+          sender_name: edgeFnResult.message.sender_name || null
         };
         setMessage(transformedMessage);
         addLog(`Success! Edge function loaded message: "${edgeFnResult.message.title}"`);
@@ -240,7 +245,10 @@ export default function DiagnosticAccess() {
                 size: att.size || 0,
                 type: att.type || ''
               }))
-            : null
+            : null,
+          // Ensure expires_at and sender_name are present in the transformed message
+          expires_at: edgeFnResult.message.expires_at || null,
+          sender_name: edgeFnResult.message.sender_name || null
         };
         setMessage(transformedMessage);
         addLog(`Success! Bypass mode loaded message: "${edgeFnResult.message.title}"`);

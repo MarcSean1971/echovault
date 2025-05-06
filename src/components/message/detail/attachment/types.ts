@@ -25,6 +25,7 @@ export interface AccessButtonProps {
   tooltipText: string;
   variant?: "default" | "secondary" | "destructive" | "outline" | "link" | "ghost";
   className?: string;
+  disabled?: boolean;  // Add the missing disabled property
 }
 
 export interface AttachmentAccessHookResult {

@@ -12,7 +12,8 @@ export const AccessButton: React.FC<AccessButtonProps> = ({
   icon, 
   tooltipText, 
   variant = "outline",
-  className = ""
+  className = "",
+  disabled = false
 }) => {
   return (
     <TooltipProvider>
@@ -22,7 +23,7 @@ export const AccessButton: React.FC<AccessButtonProps> = ({
             variant={variant}
             size="sm" 
             onClick={onClick}
-            disabled={isLoading}
+            disabled={isLoading || disabled}
             className={`${HOVER_TRANSITION} relative ${className}`}
           >
             {isLoading ? (
