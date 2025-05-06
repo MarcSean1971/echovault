@@ -1,5 +1,5 @@
 
-import { Shield, Check, AlertCircle, Bug } from "lucide-react";
+import { Shield, Check, AlertCircle, Bug, Download } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Message } from "@/types/message";
@@ -11,6 +11,7 @@ import { HOVER_TRANSITION, BUTTON_HOVER_EFFECTS } from "@/utils/hoverEffects";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
 import { LoadingState } from "./LoadingState";
+import { FileAccessManager } from "@/services/messages/fileAccess";
 
 interface MessageDisplayProps {
   message: Message | null;
@@ -25,6 +26,9 @@ export const MessageDisplay = ({ message, isInitialLoading = false }: MessageDis
   const [showDebug, setShowDebug] = useState(false);
   const [localLoading, setLocalLoading] = useState(true);
   const [showAttachments, setShowAttachments] = useState(false);
+
+  // Add a banner message for development mode
+  const isDevelopment = true; // Set to false for production
   
   // Show debug mode immediately if URL contains debug=true
   useEffect(() => {
@@ -41,10 +45,11 @@ export const MessageDisplay = ({ message, isInitialLoading = false }: MessageDis
   useEffect(() => {
     const timer = setTimeout(() => {
       setLocalLoading(false);
+      // Always show attachments without delay
       if (message?.attachments && message.attachments.length > 0) {
         setShowAttachments(true);
       }
-    }, 1000);
+    }, 500); // Faster loading time
     return () => clearTimeout(timer);
   }, [message]);
 
@@ -70,6 +75,44 @@ export const MessageDisplay = ({ message, isInitialLoading = false }: MessageDis
       }
     }
   }, [message, deliveryId, recipientEmail]);
+
+  // Force download all attachments at once
+  const downloadAllAttachments = async () => {
+    if (!message?.attachments || message.attachments.length === 0 || !deliveryId || !recipientEmail) {
+      return;
+    }
+
+    toast({
+      title: "Starting downloads",
+      description: `Downloading ${message.attachments.length} files...`
+    });
+
+    // Download each attachment with a slight delay to prevent browser blocking
+    message.attachments.forEach((attachment, index) => {
+      setTimeout(async () => {
+        try {
+          console.log(`Starting download for attachment ${index + 1}: ${attachment.name}`);
+          const fileAccessManager = new FileAccessManager(attachment.path, deliveryId, recipientEmail);
+          const { url } = await fileAccessManager.getAccessUrl('secure', 'download');
+          
+          if (url) {
+            console.log(`Got download URL for ${attachment.name}: ${url}`);
+            // Force download using our FileAccessManager
+            FileAccessManager.executeDownload(url, attachment.name, attachment.type, 'secure');
+          } else {
+            console.error(`Failed to get URL for ${attachment.name}`);
+            toast({
+              title: "Download error",
+              description: `Could not download ${attachment.name}`,
+              variant: "destructive"
+            });
+          }
+        } catch (error) {
+          console.error(`Error downloading ${attachment.name}:`, error);
+        }
+      }, index * 1500); // Delay each download by 1.5 seconds
+    });
+  };
 
   const toggleDebug = () => {
     setShowDebug(prev => !prev);
@@ -123,6 +166,14 @@ export const MessageDisplay = ({ message, isInitialLoading = false }: MessageDis
 
   return (
     <div className="container mx-auto max-w-3xl px-4 py-8">
+      {isDevelopment && (
+        <div className="bg-amber-100 border-l-4 border-amber-500 p-4 mb-4">
+          <p className="text-amber-700">
+            <strong>DEVELOPMENT MODE</strong> - Reduced security checks are active for testing purposes.
+          </p>
+        </div>
+      )}
+      
       <Card className="p-6">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -149,9 +200,6 @@ export const MessageDisplay = ({ message, isInitialLoading = false }: MessageDis
               <p><strong>Recipient:</strong> {recipientEmail || '(not found)'}</p>
               <p><strong>Attachment count:</strong> {message.attachments?.length || 0}</p>
               <p><strong>Current URL:</strong> {window.location.href}</p>
-              <p className="mt-2 text-blue-600">
-                Tip: To force download mode, click the blue shield icon button next to the download button for any attachment.
-              </p>
             </div>
           )}
           
@@ -166,23 +214,36 @@ export const MessageDisplay = ({ message, isInitialLoading = false }: MessageDis
           
           {message.attachments && message.attachments.length > 0 && showAttachments && (
             <div className="pt-4">
-              <h3 className="text-lg font-medium mb-2">Attachments</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium">Attachments</h3>
+                
+                {deliveryId && recipientEmail && message.attachments.length > 0 && (
+                  <Button 
+                    onClick={downloadAllAttachments}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Download All
+                  </Button>
+                )}
+              </div>
+              
               <MessageAttachments 
                 message={message} 
                 deliveryId={deliveryId || undefined}
                 recipientEmail={recipientEmail || undefined}
               />
               
-              {showDebug && (
-                <div className="mt-4 p-3 bg-blue-50 border border-blue-100 rounded text-sm">
-                  <p className="font-medium text-blue-700">Download Instructions:</p>
-                  <ol className="list-decimal pl-5 mt-2 space-y-1 text-blue-700">
-                    <li>Use the blue shield button (Force secure download) for direct downloads</li>
-                    <li>If files open in a new tab instead of downloading, try right-clicking the button and select "Save link as..."</li>
-                    <li>For technical users: Add <code>&debug=true</code> to the URL to see extended debug information</li>
-                  </ol>
-                </div>
-              )}
+              {/* Simple download instructions */}
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-100 rounded text-sm">
+                <p className="font-medium text-blue-700 mb-2">Having trouble downloading?</p>
+                <ol className="list-decimal pl-5 space-y-1 text-blue-700">
+                  <li>Click the download button next to each attachment</li>
+                  <li>If files don't download, try the "Download All" button at the top</li>
+                  <li>Right-click on any attachment and select "Save link as..."</li>
+                  <li>If using Safari, you may need to enable automatic downloads</li>
+                </ol>
+              </div>
             </div>
           )}
         </div>

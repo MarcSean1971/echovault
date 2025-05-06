@@ -22,53 +22,32 @@ export class FileDownloader {
     const { fileName, fileType, forDownload } = options;
     const a = document.createElement('a');
     
-    // Add cache-busting parameter
-    const cacheBuster = `_t=${Date.now()}`;
+    // Add timestamp to prevent caching
+    const timestamp = Date.now();
     let finalUrl = url;
     if (url.includes('?')) {
-      finalUrl = `${url}&${cacheBuster}`;
+      finalUrl = `${url}&_t=${timestamp}`;
     } else {
-      finalUrl = `${url}?${cacheBuster}`;
+      finalUrl = `${url}?_t=${timestamp}`;
     }
     
     // Set href with enhanced cache busting
     a.href = finalUrl;
     
-    // Force content-disposition by adding 'download' parameters
-    if (forDownload) {
-      if (FileDownloader.browserSupportsDownload()) {
-        a.download = fileName;
-        a.setAttribute('download', fileName);
-        
-        // For secure/signed URLs, ensure download parameters are included
-        if (url.includes('mode=') || url.includes('download=')) {
-          // URL already has download parameters
-          console.log(`Using existing download parameters in URL: ${finalUrl}`);
-        } else if (finalUrl.includes('?')) {
-          finalUrl = `${finalUrl}&download=true&mode=download&forceDownload=true`;
-          a.href = finalUrl;
-        } else {
-          finalUrl = `${finalUrl}?download=true&mode=download&forceDownload=true`;
-          a.href = finalUrl;
-        }
-        
-        console.log(`Enhanced download URL: ${finalUrl}`);
-      } else {
-        // For browsers that don't support download attribute,
-        // ensure the URL has a download parameter
-        if (finalUrl.includes('?')) {
-          a.href = `${finalUrl}&download=true&mode=download&forceDownload=true&filename=${encodeURIComponent(fileName)}`;
-        } else {
-          a.href = `${finalUrl}?download=true&mode=download&forceDownload=true&filename=${encodeURIComponent(fileName)}`;
-        }
-        console.log(`Fallback download URL for unsupported browser: ${a.href}`);
-      }
+    // Always force download - simplified approach
+    a.download = fileName;
+    a.setAttribute('download', fileName);
+    
+    // Add additional download parameters to help Edge Function
+    if (finalUrl.includes('?')) {
+      a.href = `${finalUrl}&download=true&mode=download&forceDownload=true`;
     } else {
-      a.target = '_blank';
+      a.href = `${finalUrl}?download=true&mode=download&forceDownload=true`;
     }
     
-    a.setAttribute('type', fileType || 'application/octet-stream');
+    console.log(`[FileDownloader] Download URL: ${a.href}`);
     
+    a.setAttribute('type', fileType || 'application/octet-stream');
     return a;
   }
   
@@ -76,50 +55,57 @@ export class FileDownloader {
    * Execute download with appropriate notification
    */
   public static executeDownload(url: string, fileName: string, fileType: string, method: AccessMethod): void {
-    console.log(`Starting download execution for ${fileName} using ${method} method`);
-    console.log(`Download URL: ${url}`);
+    console.log(`[FileDownloader] Starting download for ${fileName} using ${method} method`);
+    console.log(`[FileDownloader] Download URL: ${url}`);
     
     // Create link with download attribute
     const downloadOptions = { fileName, fileType, forDownload: true };
     const a = FileDownloader.createAnchorElement(url, downloadOptions);
     
-    // Log the final URL for debugging
-    console.log(`Final download URL: ${a.href}`);
-    console.log(`Download attribute: ${a.hasAttribute('download') ? a.getAttribute('download') : 'not set'}`);
-    
-    // Try to create a direct click event for better download handling
+    // Try multiple download strategies for browser compatibility
     try {
-      // Simulate a more direct click for better browser compatibility
-      a.style.display = 'none';
+      // Add to body and click for better browser compatibility
       document.body.appendChild(a);
+      a.style.display = 'none';
       
-      // Add a delay before clicking to ensure the DOM has time to update
+      // Give the browser a moment to register the download element
       setTimeout(() => {
-        console.log("Clicking download link");
+        console.log("[FileDownloader] Clicking download link");
         a.click();
         
         // Short delay before removal to ensure download starts
         setTimeout(() => {
           document.body.removeChild(a);
-        }, 300);
+          
+          // Show a simple success notification
+          toast({
+            title: "Download started",
+            description: `${fileName} is being downloaded.`,
+          });
+        }, 1000);
       }, 100);
     } catch (error) {
-      console.error("Error during download execution:", error);
-      // Fallback method - try a different approach
-      window.open(url, '_blank');
+      console.error("[FileDownloader] Error during download execution:", error);
+      
+      // Try alternative download method
+      try {
+        console.log("[FileDownloader] Trying window.open fallback method");
+        window.open(url, '_blank');
+        
+        toast({
+          title: "Download initiated",
+          description: "A new tab has been opened. If download doesn't start automatically, save the file manually.",
+        });
+      } catch (fallbackError) {
+        console.error("[FileDownloader] Fallback method also failed:", fallbackError);
+        
+        toast({
+          title: "Download failed",
+          description: "Please right-click the download button and select 'Save link as...'",
+          variant: "destructive"
+        });
+      }
     }
-    
-    // Show success notification
-    const methodName = method === 'secure' ? 'Edge Function' : 
-                      method === 'signed' ? 'Signed URL' : 'Direct URL';
-    
-    toast({
-      title: "Download started",
-      description: `${fileName} is being downloaded using ${methodName}`,
-    });
-    
-    // Log for debugging
-    console.log(`Download initiated: ${fileName} using ${methodName}`);
   }
   
   /**
@@ -129,6 +115,7 @@ export class FileDownloader {
     const viewOptions = { fileName, fileType, forDownload: false };
     const a = FileDownloader.createAnchorElement(url, viewOptions);
     
+    a.target = "_blank";
     document.body.appendChild(a);
     a.click();
     

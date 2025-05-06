@@ -52,11 +52,11 @@ export async function sendEmailNotification(
     const appDomain = Deno.env.get("APP_DOMAIN");
     console.log(`APP_DOMAIN environment variable is ${appDomain ? "set to: " + appDomain : "not set"}`);
 
-    // Determine emergency styling and messaging
-    const subjectPrefix = isEmergency ? `⚠️ EMERGENCY FROM ${senderName.toUpperCase()}: ` : "";
+    // Set emergency styling if needed
+    const subjectPrefix = isEmergency ? `⚠️ EMERGENCY: ` : "";
     const emergencyBanner = isEmergency 
       ? `<div style="background-color: #ffebee; border-left: 4px solid #f44336; padding: 15px; margin-bottom: 20px;">
-          <strong>EMERGENCY MESSAGE FROM ${senderName.toUpperCase()}:</strong> This is an urgent communication that requires your immediate attention.
+          <strong>⚠️ EMERGENCY MESSAGE:</strong> This message requires your immediate attention.
         </div>`
       : "";
       
@@ -69,8 +69,8 @@ export async function sendEmailNotification(
       const locationName = location.name ? location.name : `${location.latitude}, ${location.longitude}`;
       
       locationHtml = `
-        <div style="background-color: #f0f8ff; border-left: 4px solid #4285f4; padding: 15px; margin: 20px 0; border-radius: 4px;">
-          <p style="margin: 0; font-weight: bold;">📍 ${senderName}'s Location: ${locationName}</p>
+        <div style="margin: 20px 0;">
+          <p style="margin: 0; font-weight: bold;">📍 Shared location: ${locationName}</p>
           <p style="margin: 10px 0 0 0;">
             <a href="https://maps.google.com/?q=${location.latitude},${location.longitude}" 
                style="color: #4285f4; text-decoration: underline;">View on Google Maps</a>
@@ -79,41 +79,34 @@ export async function sendEmailNotification(
       `;
     }
 
-    // Simplified attachment notification - just mention if there are attachments
+    // Simplified attachment notification
     let attachmentsHtml = "";
     if (attachments && attachments.length > 0) {
       attachmentsHtml = `
-        <div style="background-color: #f5f5f5; border-left: 4px solid #555; padding: 15px; margin: 20px 0; border-radius: 4px;">
-          <p style="margin: 0; font-weight: bold;">📁 This message includes ${attachments.length} attachment${attachments.length > 1 ? 's' : ''}</p>
-          <p style="margin: 10px 0 0 0; font-style: italic; font-size: 13px;">
-            Click the button below to access the secure message and view attachments.
-          </p>
+        <div style="margin: 20px 0;">
+          <p style="margin: 0; font-weight: bold;">📁 ${attachments.length} attachment${attachments.length > 1 ? 's' : ''} included</p>
         </div>
       `;
     }
 
-    // Send the email
+    // Send the email with a much simpler template
     const emailResponse = await resend.emails.send({
       from: `${appName} <notifications@echo-vault.app>`,
       to: [recipientEmail],
-      subject: `${subjectPrefix}${senderName} has sent you a secure message: "${messageTitle}"`,
+      subject: `${subjectPrefix}${senderName} sent you a message: "${messageTitle}"`,
       html: `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           ${emergencyBanner}
-          <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-            <h1 style="color: #2563eb; margin-top: 0;">${appName}</h1>
-            <p style="font-size: 16px; margin-bottom: 0;">Secure Message Notification</p>
-          </div>
           
-          <h2 style="color: #333; font-size: 20px; margin-bottom: 20px;">Hello ${recipientName || "there"},</h2>
+          <h1 style="color: #2563eb;">${messageTitle}</h1>
           
-          <p style="font-size: 16px; line-height: 1.5; margin-bottom: 20px;">
-            <strong>${senderName}</strong> has sent you a secure message titled "<strong>${messageTitle}</strong>".
+          <p style="font-size: 16px; margin: 16px 0;">
+            <strong>${senderName}</strong> has sent you a secure message.
           </p>
           
           ${messageContent ? `
-          <div style="background-color: #f7f7f7; padding: 15px; border-radius: 4px; margin-bottom: 20px;">
-            <p style="font-size: 14px; line-height: 1.5; margin: 0; font-style: italic;">${messageContent}</p>
+          <div style="background-color: #f7f7f7; padding: 15px; border-radius: 4px; margin: 16px 0;">
+            <p style="margin: 0;">${messageContent}</p>
           </div>
           ` : ''}
           
@@ -121,25 +114,19 @@ export async function sendEmailNotification(
           
           ${attachmentsHtml}
           
-          <p style="font-size: 16px; line-height: 1.5; margin-bottom: 30px;">
-            This message has been secured and can only be accessed through the button below.
-          </p>
-          
-          <div style="text-align: center; margin: 30px 0;">
+          <div style="text-align: center; margin: 24px 0;">
             <a href="${accessUrl}" style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">
-              View Secure Message
+              View Message
             </a>
           </div>
           
-          <div style="background-color: #f8fafc; border-left: 4px solid #2563eb; padding: 15px; margin: 20px 0; border-radius: 4px;">
-            <p style="margin: 0; font-style: italic;">
-              Please note that the message may have additional security measures in place, such as a PIN code or a delayed access time, depending on the sender's preferences.
-            </p>
-          </div>
+          <p style="color: #666; font-size: 14px;">
+            If the button doesn't work, copy and paste this link into your browser:<br>
+            <a href="${accessUrl}" style="color: #2563eb; word-break: break-all;">${accessUrl}</a>
+          </p>
           
-          <div style="border-top: 1px solid #e5e5e5; padding-top: 20px; font-size: 14px; color: #666;">
-            <p>This email was sent from a notification-only address that cannot accept incoming email. Please do not reply to this message.</p>
-            <p style="margin-bottom: 0;">© ${new Date().getFullYear()} ${appName} Service</p>
+          <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #eee; font-size: 12px; color: #666;">
+            <p>This email was sent from a notification-only address.</p>
           </div>
         </div>
       `,

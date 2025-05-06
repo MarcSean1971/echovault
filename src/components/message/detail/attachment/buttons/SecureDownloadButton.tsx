@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Shield, Download } from "lucide-react";
-import { HOVER_TRANSITION, BUTTON_HOVER_EFFECTS } from "@/utils/hoverEffects";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { AccessButton } from "./AccessButton";
 
 interface SecureDownloadButtonProps { 
@@ -24,8 +24,8 @@ export const SecureDownloadButton: React.FC<SecureDownloadButtonProps> = ({
           <Download className={`h-2 w-2 absolute -bottom-0.5 -right-0.5 text-white ${HOVER_TRANSITION}`} />
         </div>
       }
-      tooltipText="Force secure download (Edge Function)"
-      className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow"
+      tooltipText="Force secure download"
+      className="bg-green-600 hover:bg-green-700 text-white shadow-md hover:shadow-lg"
     />
   );
 };

@@ -16,8 +16,13 @@ export const getPublicFileUrl = async (
   mode: 'view' | 'download' = 'view'
 ): Promise<string | null> => {
   try {
-    // Edge function URL for accessing files - use string concatenation to avoid accessing protected property
-    const functionUrl = `${window.location.origin}/functions/access-file/file/${encodeURIComponent(filePath)}`;
+    // Get project URL for proper Edge Function URL generation
+    const projectUrl = window.location.origin;
+    console.log(`[FileAccess] Using project URL: ${projectUrl}`);
+    
+    // Edge function URL for accessing files - use explicit URL construction
+    const functionUrl = `${projectUrl}/functions/access-file/file/${encodeURIComponent(filePath)}`;
+    console.log(`[FileAccess] Base function URL: ${functionUrl}`);
     
     // Add query parameters
     const url = new URL(functionUrl);
@@ -25,20 +30,18 @@ export const getPublicFileUrl = async (
     url.searchParams.append('recipient', recipientEmail);
     url.searchParams.append('mode', mode);
     
-    // Add explicit download parameter for download mode
-    if (mode === 'download') {
-      url.searchParams.append('download', 'true');
-      url.searchParams.append('forceDownload', 'true');
-    }
+    // ALWAYS add explicit download parameter for consistency
+    url.searchParams.append('download', 'true');
+    url.searchParams.append('forceDownload', 'true');
     
     // Add cache-busting parameter
     url.searchParams.append('t', Date.now().toString());
     url.searchParams.append('expires', (Date.now() + 3600000).toString()); // 1 hour expiry
     
-    console.log(`Generated file access URL: ${url.toString()}`);
+    console.log(`[FileAccess] Generated file access URL: ${url.toString()}`);
     return url.toString();
   } catch (error) {
-    console.error("Error generating public file URL:", error);
+    console.error("[FileAccess] Error generating public file URL:", error);
     return null;
   }
 };
@@ -61,6 +64,8 @@ export const getAuthenticatedFileUrl = async (
     const bucketName = pathParts[0];
     const filePathInBucket = pathParts.slice(1).join('/');
     
+    console.log(`[FileAccess] Getting signed URL for ${bucketName}/${filePathInBucket}`);
+    
     // Get signed URL from Supabase storage
     const { data, error } = await supabase.storage
       .from(bucketName)
@@ -70,7 +75,7 @@ export const getAuthenticatedFileUrl = async (
       });
     
     if (error) {
-      console.error("Error getting signed URL:", error);
+      console.error("[FileAccess] Error getting signed URL:", error);
       
       if (includeFallback) {
         // Try direct public URL as fallback
@@ -81,23 +86,22 @@ export const getAuthenticatedFileUrl = async (
     }
     
     if (!data?.signedUrl) {
-      console.error("No signed URL returned");
+      console.error("[FileAccess] No signed URL returned");
       return null;
     }
     
-    // If download is requested, ensure URL has download parameter
-    if (forDownload) {
-      const url = new URL(data.signedUrl);
-      if (!url.searchParams.has('download')) {
-        url.searchParams.append('download', 'true');
-        url.searchParams.append('forceDownload', 'true');
-        return url.toString();
-      }
+    // ALWAYS ensure URL has download parameter for consistency
+    const url = new URL(data.signedUrl);
+    if (!url.searchParams.has('download')) {
+      url.searchParams.append('download', 'true');
+      url.searchParams.append('forceDownload', 'true');
+      return url.toString();
     }
     
+    console.log(`[FileAccess] Signed URL: ${data.signedUrl}`);
     return data.signedUrl;
   } catch (error) {
-    console.error("Error generating authenticated file URL:", error);
+    console.error("[FileAccess] Error generating authenticated file URL:", error);
     return null;
   }
 };
@@ -114,17 +118,20 @@ export const getDirectPublicUrl = (filePath: string): string | null => {
     const bucketName = pathParts[0];
     const filePathInBucket = pathParts.slice(1).join('/');
     
+    console.log(`[FileAccess] Getting direct public URL for ${bucketName}/${filePathInBucket}`);
+    
     // Get public URL from Supabase storage
     const { data } = supabase.storage.from(bucketName).getPublicUrl(filePathInBucket);
     
     if (!data?.publicUrl) {
-      console.error("No public URL returned");
+      console.error("[FileAccess] No public URL returned");
       return null;
     }
     
+    console.log(`[FileAccess] Direct public URL: ${data.publicUrl}`);
     return data.publicUrl;
   } catch (error) {
-    console.error("Error generating direct public URL:", error);
+    console.error("[FileAccess] Error generating direct public URL:", error);
     return null;
   }
 };
