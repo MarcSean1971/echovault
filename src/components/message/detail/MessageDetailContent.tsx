@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { MessageLoading } from "./MessageLoading";
 import { MessageNotFound } from "./MessageNotFound";
@@ -19,6 +20,7 @@ import { useNavigate } from "react-router-dom";
 import { WhatsAppIntegration } from "./content/WhatsAppIntegration";
 import { toast } from "@/components/ui/use-toast";
 import { useHoverEffects } from "@/hooks/useHoverEffects";
+import { useSearchParams } from "react-router-dom";
 
 interface MessageDetailContentProps {
   message: Message;
@@ -68,6 +70,11 @@ export function MessageDetailContent({
   const navigate = useNavigate();
   const transcription = message && message.message_type !== 'text' ? 
     extractTranscription(message.message_type, message.content) : null;
+  
+  // Get delivery ID and recipient email from URL for attachment access
+  const [searchParams] = useSearchParams();
+  const deliveryId = searchParams.get('delivery');
+  const recipientEmail = searchParams.get('recipient');
   
   // Check if this is a WhatsApp-enabled panic trigger
   const isPanicTrigger = condition?.condition_type === 'panic_trigger';
