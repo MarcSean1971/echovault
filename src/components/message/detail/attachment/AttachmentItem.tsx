@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { FileIcon, AlertCircle } from "lucide-react";
 import { toast } from "@/components/ui/use-toast";
@@ -159,7 +158,7 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
       
       // If current method fails, try alternatives in order of security
       // Explicitly type as AccessMethod[] to fix the error
-      const fallbackMethods: AccessMethod[] = ['secure', 'signed', 'direct'].filter(m => m !== downloadMethod);
+      const fallbackMethods: AccessMethod[] = ['secure', 'signed', 'direct'].filter(m => m !== downloadMethod) as AccessMethod[];
       
       for (const method of fallbackMethods) {
         try {
@@ -358,7 +357,6 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
         </div>
       )}
 
-      {/* Debug information */}
       {(showDebug || hasError) && (
         <DebugInfo
           downloadMethod={downloadMethod}

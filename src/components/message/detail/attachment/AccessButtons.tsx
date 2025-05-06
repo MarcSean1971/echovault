@@ -20,7 +20,7 @@ export const AccessButton: React.FC<AccessButtonProps> = ({
       <Tooltip>
         <TooltipTrigger asChild>
           <Button 
-            variant={variant} 
+            variant={variant as "default" | "secondary" | "destructive" | "outline" | "link" | "ghost"}
             size="sm" 
             onClick={onClick}
             disabled={isLoading}

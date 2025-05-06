@@ -23,6 +23,6 @@ export interface AccessButtonProps {
   onClick: () => void;
   icon: React.ReactNode;
   tooltipText: string;
-  variant?: string;
+  variant?: "default" | "secondary" | "destructive" | "outline" | "link" | "ghost";
   className?: string;
 }
