@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { FileIcon, Download, ExternalLink, AlertCircle, RefreshCw, Link, Bug, Check, Shield, FileCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -201,6 +202,7 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
     
     try {
       // Try the opposite of the current method first as a retry strategy
+      // FIX: Explicitly type this array as AccessMethod[]
       const methodsToTry: AccessMethod[] = ['secure', 'signed', 'direct'];
       
       // Reorder to try methods in different order
@@ -352,6 +354,7 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
       }
       
       // If current method fails, try alternatives in order of security
+      // FIX: Explicitly type this array as AccessMethod[]
       const fallbackMethods: AccessMethod[] = ['secure', 'signed', 'direct'].filter(m => m !== downloadMethod);
       
       for (const method of fallbackMethods) {
