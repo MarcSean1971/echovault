@@ -76,6 +76,7 @@ export function MessageDetailContent({
   
   // Function to generate a public test view URL
   const generatePublicTestViewUrl = () => {
+    // Check if we have existing delivered_messages for this message
     // Get a random recipient from the list
     if (!recipients || recipients.length === 0) {
       toast({
@@ -89,11 +90,12 @@ export function MessageDetailContent({
     // Get the first recipient
     const recipient = recipients[0];
     
-    // Generate a test delivery ID
-    const testDeliveryId = `test-${Date.now()}`;
+    // Generate a valid delivery ID format instead of a random test one
+    // Using a consistent format: preview-{message-id}-{timestamp}
+    const testDeliveryId = `preview-${message.id.substring(0, 8)}-${Date.now()}`;
     
-    // Build the URL
-    const publicViewUrl = `/access/message/${message.id}?delivery=${testDeliveryId}&recipient=${encodeURIComponent(recipient.email)}&debug=true`;
+    // Build the URL with debug flag
+    const publicViewUrl = `/access/message/${message.id}?delivery=${testDeliveryId}&recipient=${encodeURIComponent(recipient.email)}&debug=true&preview=true`;
     
     // Copy the URL to the clipboard
     navigator.clipboard.writeText(window.location.origin + publicViewUrl);
@@ -156,9 +158,9 @@ export function MessageDetailContent({
                     <h2 className="text-lg font-medium">Attachments</h2>
                     <Button 
                       onClick={openPublicTestView}
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                      className={`bg-blue-600 hover:bg-blue-700 text-white ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
                     >
-                      <Eye className="h-4 w-4 mr-2" />
+                      <Eye className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} />
                       Test Public View
                     </Button>
                   </div>
@@ -244,7 +246,7 @@ export function MessageDetailContent({
                     disabled={isArmed || isActionLoading}
                     className="whitespace-nowrap"
                   >
-                    <Mail className="h-4 w-4 mr-2" />
+                    <Mail className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} />
                     Send Test Message
                   </Button>
                   
@@ -252,9 +254,9 @@ export function MessageDetailContent({
                     variant="outline"
                     size="sm"
                     onClick={openPublicTestView}
-                    className="whitespace-nowrap bg-blue-50 hover:bg-blue-100 border-blue-200"
+                    className={`whitespace-nowrap bg-blue-50 hover:bg-blue-100 border-blue-200 ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
                   >
-                    <Eye className="h-4 w-4 mr-2" />
+                    <Eye className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} />
                     Test Public View
                   </Button>
                 </div>
@@ -330,13 +332,21 @@ export function MessageDetailContent({
               <p className="font-medium text-blue-800">Debugging is automatically enabled in test view mode.</p>
               <p className="text-blue-700 text-sm mt-1">If download buttons are not visible, click the "Debug" button in the top right to see detailed information.</p>
             </div>
+            <div className="bg-amber-50 p-4 rounded mt-2">
+              <p className="font-medium text-amber-800">Note about Testing:</p>
+              <p className="text-amber-700 text-sm mt-1">
+                The public view uses a test delivery ID which won't match real message deliveries.
+                This is expected and will show a message not found error initially.
+                Click the "Debug" button to see message information.
+              </p>
+            </div>
           </div>
           <SheetFooter className="flex-row justify-end gap-2 mt-6">
             <Button variant="outline" onClick={() => setShowPublicViewHelp(false)}>
               Close
             </Button>
-            <Button onClick={openPublicTestView}>
-              <Eye className="h-4 w-4 mr-2" />
+            <Button onClick={openPublicTestView} className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}>
+              <Eye className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} />
               Open Test View Again
             </Button>
           </SheetFooter>

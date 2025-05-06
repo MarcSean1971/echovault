@@ -8,6 +8,7 @@ interface UsePublicMessageAccessProps {
   messageId: string | undefined;
   deliveryId: string | null;
   recipientEmail: string | null;
+  isPreviewMode?: boolean; // Add preview mode parameter
 }
 
 interface PublicMessageAccessResult {
@@ -25,14 +26,15 @@ interface PublicMessageAccessResult {
 export const usePublicMessageAccess = ({ 
   messageId, 
   deliveryId, 
-  recipientEmail 
+  recipientEmail,
+  isPreviewMode = false
 }: UsePublicMessageAccessProps): PublicMessageAccessResult => {
-  // Track if enough time has passed to show error messages - reduced from 4s to 1s
+  // Track if enough time has passed to show error messages
   const [errorDelay, setErrorDelay] = useState(true);
   // Track if we're in a fallback loading state
   const [fallbackLoading, setFallbackLoading] = useState(false);
   
-  // Set up a timer to determine when we can show error states - reduced from 4s to 1s
+  // Set up a timer to determine when we can show error states
   useEffect(() => {
     const timer = setTimeout(() => {
       setErrorDelay(false);
@@ -49,11 +51,12 @@ export const usePublicMessageAccess = ({
   } = useAccessVerification({
     messageId,
     deliveryId,
-    recipientEmail
+    recipientEmail,
+    isPreviewMode
   });
 
-  // Only show errors after the delay period
-  const error = errorDelay ? null : accessError;
+  // Only show errors after the delay period and if not in preview mode
+  const error = (errorDelay || isPreviewMode) ? null : accessError;
 
   // Then handle security constraints
   const {
@@ -70,7 +73,8 @@ export const usePublicMessageAccess = ({
     conditionData,
     deliveryData,
     isLoading: accessLoading,
-    error
+    error,
+    isPreviewMode
   });
 
   // Combined loading state to prevent UI flashing
@@ -78,15 +82,15 @@ export const usePublicMessageAccess = ({
 
   // Set fallback loading when access methods change to prevent UI flashing
   useEffect(() => {
-    if (accessError && !errorDelay) {
+    if (accessError && !errorDelay && !isPreviewMode) {
       // If we have an error but it's not showing yet, maintain loading state
       setFallbackLoading(true);
       const timer = setTimeout(() => {
         setFallbackLoading(false);
-      }, 500); // Reduced from 1s to 500ms to be more responsive
+      }, 500);
       return () => clearTimeout(timer);
     }
-  }, [accessError, errorDelay]);
+  }, [accessError, errorDelay, isPreviewMode]);
 
   return {
     message,

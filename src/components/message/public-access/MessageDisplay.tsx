@@ -16,9 +16,14 @@ import { FileAccessManager } from "@/services/messages/fileAccess";
 interface MessageDisplayProps {
   message: Message | null;
   isInitialLoading?: boolean;
+  isPreviewMode?: boolean;
 }
 
-export const MessageDisplay = ({ message, isInitialLoading = false }: MessageDisplayProps) => {
+export const MessageDisplay = ({ 
+  message, 
+  isInitialLoading = false,
+  isPreviewMode = false
+}: MessageDisplayProps) => {
   // Get delivery ID and recipient email from URL for attachment access
   const [searchParams] = useSearchParams();
   const deliveryId = searchParams.get('delivery');
@@ -28,7 +33,7 @@ export const MessageDisplay = ({ message, isInitialLoading = false }: MessageDis
   const [showAttachments, setShowAttachments] = useState(false);
 
   // Add a banner message for development mode
-  const isDevelopment = true; // Set to false for production
+  const isDevelopment = isPreviewMode || searchParams.get('debug') === 'true'; 
   
   // Show debug mode immediately if URL contains debug=true
   useEffect(() => {
@@ -39,7 +44,15 @@ export const MessageDisplay = ({ message, isInitialLoading = false }: MessageDis
         description: "Showing extended diagnostic information",
       });
     }
-  }, [searchParams]);
+    
+    // Show preview mode message if applicable
+    if (isPreviewMode) {
+      toast({
+        title: "Preview Mode Active",
+        description: "This is a test view - some features may be limited",
+      });
+    }
+  }, [searchParams, isPreviewMode]);
   
   // Add a local loading state to prevent flash of "not found"
   useEffect(() => {
@@ -60,6 +73,7 @@ export const MessageDisplay = ({ message, isInitialLoading = false }: MessageDis
       console.log("Message ID:", message.id);
       console.log("Delivery ID:", deliveryId);
       console.log("Recipient email:", recipientEmail);
+      console.log("Is Preview Mode:", isPreviewMode);
       console.log("Current URL:", window.location.href);
       
       if (message.attachments && message.attachments.length > 0) {
@@ -74,14 +88,16 @@ export const MessageDisplay = ({ message, isInitialLoading = false }: MessageDis
         });
       }
     }
-  }, [message, deliveryId, recipientEmail]);
+  }, [message, deliveryId, recipientEmail, isPreviewMode]);
 
   // Force download all attachments at once
   const downloadAllAttachments = async () => {
     if (!message?.attachments || message.attachments.length === 0 || !deliveryId || !recipientEmail) {
       toast({
         title: "Unable to download files",
-        description: "Missing required information for downloads. Try refreshing the page.",
+        description: isPreviewMode 
+          ? "Downloads are limited in preview mode. Try clicking individual download buttons."
+          : "Missing required information for downloads. Try refreshing the page.",
         variant: "destructive"
       });
       return;
@@ -147,7 +163,9 @@ export const MessageDisplay = ({ message, isInitialLoading = false }: MessageDis
             <AlertCircle className={`h-12 w-12 text-amber-500 ${HOVER_TRANSITION}`} />
             <h2 className="text-xl font-semibold">Message Not Available</h2>
             <p className="text-muted-foreground">
-              There was a problem loading the message content. Please try again later.
+              {isPreviewMode 
+                ? "This is a preview view. In real usage, message content would appear here."
+                : "There was a problem loading the message content. Please try again later."}
             </p>
             <Button 
               variant="outline" 
@@ -166,6 +184,7 @@ export const MessageDisplay = ({ message, isInitialLoading = false }: MessageDis
                 <p className="text-sm"><strong>Delivery ID:</strong> {deliveryId || '(not found)'}</p>
                 <p className="text-sm"><strong>Recipient:</strong> {recipientEmail || '(not found)'}</p>
                 <p className="text-sm"><strong>Current URL:</strong> {window.location.href}</p>
+                <p className="text-sm"><strong>Preview Mode:</strong> {isPreviewMode ? 'Yes' : 'No'}</p>
               </div>
             )}
           </div>
@@ -179,7 +198,7 @@ export const MessageDisplay = ({ message, isInitialLoading = false }: MessageDis
       {isDevelopment && (
         <div className="bg-amber-100 border-l-4 border-amber-500 p-4 mb-4">
           <p className="text-amber-700">
-            <strong>DEVELOPMENT MODE</strong> - Reduced security checks are active for testing purposes.
+            <strong>{isPreviewMode ? 'PREVIEW MODE' : 'DEVELOPMENT MODE'}</strong> - {isPreviewMode ? 'Testing message display with simulated delivery' : 'Reduced security checks are active for testing purposes.'}
           </p>
         </div>
       )}
@@ -208,6 +227,7 @@ export const MessageDisplay = ({ message, isInitialLoading = false }: MessageDis
               <p><strong>Message ID:</strong> {message.id}</p>
               <p><strong>Delivery ID:</strong> {deliveryId || '(not found)'}</p>
               <p><strong>Recipient:</strong> {recipientEmail || '(not found)'}</p>
+              <p><strong>Preview Mode:</strong> {isPreviewMode ? 'Yes' : 'No'}</p>
               <p><strong>Attachment count:</strong> {message.attachments?.length || 0}</p>
               <p><strong>Current URL:</strong> {window.location.href}</p>
             </div>
@@ -215,7 +235,11 @@ export const MessageDisplay = ({ message, isInitialLoading = false }: MessageDis
           
           <div className="bg-green-50 border border-green-100 rounded-md p-3 flex items-center space-x-2">
             <Check className={`h-5 w-5 text-green-500 flex-shrink-0 ${HOVER_TRANSITION}`} />
-            <p className="text-sm text-green-700">Secure message access verified</p>
+            <p className="text-sm text-green-700">
+              {isPreviewMode
+                ? "Preview mode active - simulating secure message access"
+                : "Secure message access verified"}
+            </p>
           </div>
           
           <Separator />
@@ -230,9 +254,9 @@ export const MessageDisplay = ({ message, isInitialLoading = false }: MessageDis
                 {deliveryId && recipientEmail && message.attachments.length > 0 && (
                   <Button 
                     onClick={downloadAllAttachments}
-                    className="bg-green-600 hover:bg-green-700 text-white animate-pulse-once shadow-md"
+                    className={`bg-green-600 hover:bg-green-700 text-white ${isPreviewMode ? '' : 'animate-pulse-once'} shadow-md ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
                   >
-                    <Download className="h-4 w-4 mr-2" />
+                    <Download className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} />
                     Download All
                   </Button>
                 )}

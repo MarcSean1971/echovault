@@ -8,12 +8,15 @@ import { DelayedUnlock } from '@/components/message/public-access/DelayedUnlock'
 import { MessageDisplay } from '@/components/message/public-access/MessageDisplay';
 import { useEffect, useState } from 'react';
 import { MessageNotFound } from '@/components/message/detail/MessageNotFound';
+import { supabase } from "@/integrations/supabase/client";
 
 export default function PublicMessageAccess() {
   // Track if we're in the initial loading phase
   const [initialLoading, setInitialLoading] = useState(true);
   // Track if enough time has passed to show error messages
   const [canShowError, setCanShowError] = useState(false);
+  // Track if this is a preview mode access
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
   
   // Get message ID from URL path parameter
   const { id: messageId } = useParams<{ id: string }>();
@@ -22,15 +25,23 @@ export default function PublicMessageAccess() {
   const [searchParams] = useSearchParams();
   const deliveryId = searchParams.get('delivery');
   const recipientEmail = searchParams.get('recipient');
+  const isDebugMode = searchParams.get('debug') === 'true';
+  
+  // Check if this is a preview URL
+  useEffect(() => {
+    const previewParam = searchParams.get('preview') === 'true';
+    const isTestDelivery = deliveryId?.startsWith('preview-') || deliveryId?.startsWith('test-');
+    setIsPreviewMode(previewParam || isTestDelivery);
+  }, [deliveryId, searchParams]);
   
   // Set up a more efficient timing system for UI states
   useEffect(() => {
-    // Initial loading check - reduced from 2s to 1s
+    // Initial loading check
     const initialTimer = setTimeout(() => {
       setInitialLoading(false);
     }, 1000);
     
-    // Error display phase - reduced from 4s to 1s
+    // Error display phase
     const errorTimer = setTimeout(() => {
       setCanShowError(true);
     }, 1000);
@@ -49,6 +60,8 @@ export default function PublicMessageAccess() {
     console.log("Query parameters (raw):");
     console.log("deliveryId (raw):", deliveryId);
     console.log("recipientEmail (raw):", recipientEmail);
+    console.log("isDebugMode:", isDebugMode);
+    console.log("isPreviewMode:", isPreviewMode);
 
     // Properly decode parameters to ensure correct comparison
     const decodedEmail = recipientEmail ? decodeURIComponent(recipientEmail) : null;
@@ -68,7 +81,12 @@ export default function PublicMessageAccess() {
       if (!recipientEmail) missingParams.push("recipientEmail");
       console.error(`Missing parameters: ${missingParams.join(', ')}`);
     }
-  }, [messageId, deliveryId, recipientEmail]);
+    
+    // If it's a preview mode, log that
+    if (isPreviewMode) {
+      console.log("PREVIEW MODE DETECTED: This is a test/preview access");
+    }
+  }, [messageId, deliveryId, recipientEmail, isDebugMode, isPreviewMode]);
   
   // Properly decode parameters before passing to hook
   const decodedEmail = recipientEmail ? decodeURIComponent(recipientEmail) : null;
@@ -87,7 +105,8 @@ export default function PublicMessageAccess() {
   } = usePublicMessageAccess({ 
     messageId, 
     deliveryId: decodedDeliveryId, 
-    recipientEmail: decodedEmail
+    recipientEmail: decodedEmail,
+    isPreviewMode // Pass preview mode to hook
   });
   
   // Handle PIN submission
@@ -95,14 +114,47 @@ export default function PublicMessageAccess() {
     await verifyPin(pinCode);
   };
   
+  // If we're in preview mode and there's a message ID, try to fetch the message directly
+  const [previewMessage, setPreviewMessage] = useState<any>(null);
+  
+  useEffect(() => {
+    const fetchPreviewMessage = async () => {
+      if (isPreviewMode && messageId && isDebugMode) {
+        try {
+          const { data, error } = await supabase
+            .from('messages')
+            .select('*')
+            .eq('id', messageId)
+            .single();
+            
+          if (error) {
+            console.error("Error fetching preview message:", error);
+          } else if (data) {
+            console.log("Preview message data fetched directly:", data);
+            setPreviewMessage(data);
+          }
+        } catch (err) {
+          console.error("Error in preview mode fetch:", err);
+        }
+      }
+    };
+    
+    fetchPreviewMessage();
+  }, [isPreviewMode, messageId, isDebugMode]);
+  
   // Render loading state during initial loading phase
   if (isLoading || initialLoading) {
     return <LoadingState />;
   }
   
+  // For preview mode with debug enabled, show the message directly if available
+  if (isPreviewMode && isDebugMode && previewMessage) {
+    return <MessageDisplay message={previewMessage} isInitialLoading={false} isPreviewMode={true} />;
+  }
+  
   // Only show error state if we're allowed to show errors and there is an error
   if (error && canShowError) {
-    return <ErrorState error={error} />;
+    return <ErrorState error={error} isPreviewMode={isPreviewMode} />;
   }
   
   // Render PIN entry form
@@ -128,5 +180,9 @@ export default function PublicMessageAccess() {
   }
   
   // Render message content
-  return <MessageDisplay message={message} isInitialLoading={initialLoading} />;
+  return <MessageDisplay 
+    message={message} 
+    isInitialLoading={initialLoading}
+    isPreviewMode={isPreviewMode}
+  />;
 }

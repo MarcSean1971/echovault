@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { Message } from '@/types/message';
@@ -10,6 +9,7 @@ interface UseSecurityConstraintsProps {
   deliveryData: any | null;
   isLoading: boolean;
   error: string | null;
+  isPreviewMode?: boolean;
 }
 
 interface SecurityConstraintsResult {
@@ -28,195 +28,183 @@ export const useSecurityConstraints = ({
   conditionData,
   deliveryData,
   isLoading: accessLoading,
-  error
+  error,
+  isPreviewMode = false
 }: UseSecurityConstraintsProps): SecurityConstraintsResult => {
   const [isPinRequired, setIsPinRequired] = useState(false);
   const [isUnlockDelayed, setIsUnlockDelayed] = useState(false);
   const [unlockTime, setUnlockTime] = useState<Date | null>(null);
   const [isVerified, setIsVerified] = useState(false);
   const [message, setMessage] = useState<Message | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  
-  // Load message content once verified
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch the message content when verification is successful or in preview mode
   useEffect(() => {
-    const loadMessage = async () => {
-      if (!messageId || accessLoading || error || !deliveryData) {
+    const fetchMessage = async () => {
+      // Don't fetch if there's an error, we're still loading access verification data, 
+      // or we don't have a message ID
+      if (error || accessLoading || !messageId) {
+        setIsLoading(false);
         return;
       }
-
-      try {
-        setIsLoading(true);
-        
-        // If we have the message from the edge function response, we can use that
-        if (deliveryData.message) {
-          console.log("Using message from edge function response");
-          // Transform the message to ensure it conforms to our expected Message type
-          const transformedMessage: Message = {
-            ...deliveryData.message,
-            attachments: Array.isArray(deliveryData.message.attachments)
-              ? deliveryData.message.attachments.map((att: any) => ({
-                  path: att.path || '',
-                  name: att.name || '',
-                  size: att.size || 0,
-                  type: att.type || ''
-                }))
-              : null
-          };
-          setMessage(transformedMessage);
-          setIsVerified(true);
-          setIsLoading(false);
-          return;
-        }
-
-        // Otherwise fetch the message from the database
-        const { data, error: messageError } = await supabase
-          .from('messages')
-          .select('*')
-          .eq('id', messageId)
-          .maybeSingle();
-          
-        if (messageError) {
-          console.error("Error loading message:", messageError);
-          toast({
-            title: "Error",
-            description: "Failed to load message content",
-            variant: "destructive"
-          });
-          setIsLoading(false);
-          return;
-        }
-        
-        if (!data) {
-          console.error("Message not found");
-          setIsLoading(false);
-          return;
-        }
-        
-        // Transform the message to ensure it conforms to our expected Message type
-        const transformedMessage: Message = {
-          ...data,
-          attachments: Array.isArray(data.attachments)
-            ? data.attachments.map((att: any) => ({
-                path: att.path || '',
-                name: att.name || '',
-                size: att.size || 0,
-                type: att.type || ''
-              }))
-            : null
-        };
-        
-        setMessage(transformedMessage);
+      
+      // In preview mode, bypass the security checks
+      if (isPreviewMode) {
+        console.log("Preview mode: bypassing security constraints");
+        setIsPinRequired(false);
+        setIsUnlockDelayed(false);
         setIsVerified(true);
         
-        // Update view count in the delivered_messages table
-        if (deliveryData.id && !deliveryData.viewed_at) {
-          await supabase
-            .from('delivered_messages')
-            .update({
-              viewed_at: new Date().toISOString(),
-              viewed_count: 1
-            })
-            .eq('id', deliveryData.id);
-        } else if (deliveryData.id) {
-          // Increment view count if already viewed
-          await supabase
-            .from('delivered_messages')
-            .update({
-              viewed_count: (deliveryData.viewed_count || 0) + 1
-            })
-            .eq('id', deliveryData.id);
+        try {
+          // Fetch the message directly
+          const { data: messageData, error: messageError } = await supabase
+            .from('messages')
+            .select('*')
+            .eq('id', messageId)
+            .single();
+            
+          if (messageError) {
+            console.error("Error fetching message in preview mode:", messageError);
+            setIsLoading(false);
+            return;
+          }
+          
+          if (!messageData) {
+            console.error("No message found with ID:", messageId);
+            setIsLoading(false);
+            return;
+          }
+          
+          console.log("Message loaded in preview mode:", messageData);
+          setMessage(messageData as Message);
+          setIsLoading(false);
+          return;
+        } catch (err) {
+          console.error("Error in preview mode message fetch:", err);
+          setIsLoading(false);
+          return;
         }
-      } catch (e) {
-        console.error("Error in loadMessage:", e);
-      } finally {
+      }
+      
+      // Handle security constraints based on condition data
+      if (conditionData) {
+        // Check if a PIN code is required
+        if (conditionData.pin_code) {
+          console.log("PIN code required for message access");
+          setIsPinRequired(true);
+        }
+        
+        // Check if there's an unlock delay
+        if (conditionData.unlock_delay_hours && conditionData.unlock_delay_hours > 0) {
+          console.log(`Unlock delay of ${conditionData.unlock_delay_hours} hours required`);
+          setIsUnlockDelayed(true);
+          
+          // Calculate the unlock time
+          if (deliveryData && deliveryData.delivered_at) {
+            const deliveredAt = new Date(deliveryData.delivered_at);
+            const delayMilliseconds = conditionData.unlock_delay_hours * 60 * 60 * 1000;
+            const unlockTimeValue = new Date(deliveredAt.getTime() + delayMilliseconds);
+            console.log(`Unlock time: ${unlockTimeValue.toISOString()}`);
+            setUnlockTime(unlockTimeValue);
+            
+            // Check if the unlock time has passed
+            const now = new Date();
+            if (now >= unlockTimeValue) {
+              console.log("Unlock time has already passed");
+              setIsUnlockDelayed(false);
+            }
+          }
+        }
+      } else {
+        console.log("No security constraints - direct access allowed");
+      }
+      
+      // If no security constraints or they're satisfied, fetch the message
+      if ((!isPinRequired && !isUnlockDelayed) || isVerified) {
+        try {
+          console.log("Fetching message content...");
+          
+          // If we have an edge function result with the message, use that
+          if (deliveryData && deliveryData._message) {
+            console.log("Using message from edge function result");
+            setMessage(deliveryData._message as Message);
+            setIsLoading(false);
+            return;
+          }
+          
+          // Otherwise fetch from the database
+          const { data: messageData, error: messageError } = await supabase
+            .from('messages')
+            .select('*')
+            .eq('id', messageId)
+            .single();
+            
+          if (messageError) {
+            console.error("Error fetching message:", messageError);
+            setIsLoading(false);
+            return;
+          }
+          
+          if (!messageData) {
+            console.error("No message found with ID:", messageId);
+            setIsLoading(false);
+            return;
+          }
+          
+          console.log("Message loaded:", messageData);
+          setMessage(messageData as Message);
+        } catch (err) {
+          console.error("Error fetching message:", err);
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        console.log("Security constraints not satisfied yet");
         setIsLoading(false);
       }
     };
     
-    loadMessage();
-  }, [messageId, accessLoading, error, deliveryData]);
-  
-  // Check if security constraints apply (PIN, delayed unlock)
-  useEffect(() => {
-    if (!conditionData) {
-      return;
-    }
-    
-    // Check if PIN protection is enabled
-    if (conditionData.pin_code) {
-      setIsPinRequired(true);
-    }
-    
-    // Check if delayed unlock is enabled
-    if (conditionData.unlock_delay_hours && conditionData.unlock_delay_hours > 0) {
-      setIsUnlockDelayed(true);
-      
-      // Check if delivered_at + unlock_delay_hours is in the future
-      if (deliveryData && deliveryData.delivered_at) {
-        const deliveredAt = new Date(deliveryData.delivered_at);
-        const unlockAt = new Date(deliveredAt.getTime() + (conditionData.unlock_delay_hours * 60 * 60 * 1000));
-        
-        setUnlockTime(unlockAt);
-        
-        // If unlock time is in the future, don't show content yet
-        if (unlockAt > new Date()) {
-          setIsVerified(false);
-        }
-      }
-    }
-  }, [conditionData, deliveryData]);
+    fetchMessage();
+  }, [messageId, conditionData, deliveryData, error, accessLoading, isPinRequired, isUnlockDelayed, isVerified, isPreviewMode]);
   
   // Function to verify PIN code
-  const verifyPin = async (enteredPin: string): Promise<boolean> => {
-    setIsLoading(true);
-    
-    try {
-      if (!conditionData || !conditionData.pin_code) {
-        setIsLoading(false);
-        return false;
-      }
-      
-      if (enteredPin === conditionData.pin_code) {
-        setIsVerified(true);
-        toast({
-          title: "PIN Accepted",
-          description: "Message unlocked successfully"
-        });
-        setIsLoading(false);
-        return true;
-      }
-      
-      toast({
-        title: "Invalid PIN",
-        description: "The PIN you entered is incorrect",
-        variant: "destructive"
-      });
-      setIsLoading(false);
-      return false;
-    } catch (error) {
-      console.error("Error verifying PIN:", error);
-      setIsLoading(false);
+  const verifyPin = async (pinCode: string): Promise<boolean> => {
+    if (!conditionData || !conditionData.pin_code) {
+      console.error("No PIN code configured for verification");
       return false;
     }
-  };
-  
-  // Function to handle when unlock time has expired
-  const handleUnlockExpired = async (): Promise<void> => {
-    setIsLoading(true);
     
-    try {
+    // In a real system, we'd hash the pin and compare securely
+    // For now, we'll just do a direct comparison
+    const isCorrect = pinCode === conditionData.pin_code;
+    
+    if (isCorrect) {
+      console.log("PIN verification successful");
       setIsVerified(true);
+      setIsPinRequired(false);
       toast({
-        title: "Message Unlocked",
-        description: "The delayed access period has ended"
+        title: "Access granted",
+        description: "PIN code verified successfully",
       });
-    } catch (error) {
-      console.error("Error handling unlock expiry:", error);
-    } finally {
-      setIsLoading(false);
+    } else {
+      console.log("PIN verification failed");
+      toast({
+        title: "Access denied",
+        description: "Incorrect PIN code",
+        variant: "destructive",
+      });
     }
+    
+    return isCorrect;
   };
   
+  // Function to handle expired unlock delay
+  const handleUnlockExpired = async (): Promise<void> => {
+    console.log("Unlock delay has expired");
+    setIsUnlockDelayed(false);
+    setIsVerified(true);
+  };
+
   return {
     isPinRequired,
     isUnlockDelayed,

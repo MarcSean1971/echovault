@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Shield, Download } from "lucide-react";
-import { HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { HOVER_TRANSITION, BUTTON_HOVER_EFFECTS } from "@/utils/hoverEffects";
 import { AccessButton } from "./AccessButton";
 
 interface SecureDownloadButtonProps { 

@@ -1,4 +1,3 @@
-
 import { AlertCircle, HelpCircle, ArrowLeft, RefreshCw, FileText, Bug } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,9 +11,10 @@ import { supabase } from "@/integrations/supabase/client";
 
 interface ErrorStateProps {
   error: string;
+  isPreviewMode?: boolean;
 }
 
-export const ErrorState = ({ error }: ErrorStateProps) => {
+export const ErrorState = ({ error, isPreviewMode = false }: ErrorStateProps) => {
   const [isAttachmentError, setIsAttachmentError] = useState(false);
   const [messageId, setMessageId] = useState<string | null>(null);
   const [technicalDetails, setTechnicalDetails] = useState<string | null>(null);
@@ -34,6 +34,7 @@ export const ErrorState = ({ error }: ErrorStateProps) => {
     console.log("Message ID from params:", id);
     console.log("Delivery ID from query:", deliveryId);
     console.log("Recipient email from query:", recipientEmail);
+    console.log("Is Preview Mode:", isPreviewMode);
     
     // Extract technical details if available
     if (error && error.includes(":")) {
@@ -52,7 +53,7 @@ export const ErrorState = ({ error }: ErrorStateProps) => {
     // Extract messageId from URL if present
     const messageIdFromUrl = id || getMessageIdFromUrl();
     setMessageId(messageIdFromUrl);
-  }, [error, id, deliveryId, recipientEmail]);
+  }, [error, id, deliveryId, recipientEmail, isPreviewMode]);
 
   // Extract messageId from URL if present
   const getMessageIdFromUrl = () => {
@@ -152,6 +153,14 @@ export const ErrorState = ({ error }: ErrorStateProps) => {
 
   return (
     <div className="container mx-auto max-w-3xl px-4 py-8">
+      {isPreviewMode && (
+        <div className="bg-amber-100 border-l-4 border-amber-500 p-4 mb-4">
+          <p className="text-amber-700">
+            <strong>PREVIEW MODE</strong> - This is a test view with a simulated delivery ID which will show an access error. This is expected behavior.
+          </p>
+        </div>
+      )}
+      
       <Card className="p-6 border-red-200">
         <div className="flex flex-col items-center justify-center text-center space-y-4 py-6">
           <AlertCircle className={`h-12 w-12 text-red-500 ${HOVER_TRANSITION}`} />
@@ -160,8 +169,8 @@ export const ErrorState = ({ error }: ErrorStateProps) => {
           <Alert variant="destructive" className="mb-2">
             <AlertTitle>Error accessing {isAttachmentError ? 'attachment' : 'message'}</AlertTitle>
             <AlertDescription>
-              {error}
-              {technicalDetails && (
+              {isPreviewMode ? 'This is expected in preview mode. Use the Debug button for options.' : error}
+              {!isPreviewMode && technicalDetails && (
                 <div className="mt-2 text-sm opacity-80">
                   Technical details: {technicalDetails}
                 </div>
@@ -200,6 +209,7 @@ export const ErrorState = ({ error }: ErrorStateProps) => {
               <p className="text-sm"><strong>Message ID:</strong> {messageId || '(not found)'}</p>
               <p className="text-sm"><strong>Delivery ID:</strong> {deliveryId || '(not found)'}</p>
               <p className="text-sm"><strong>Recipient:</strong> {recipientEmail || '(not found)'}</p>
+              <p className="text-sm"><strong>Preview Mode:</strong> {isPreviewMode ? 'Yes' : 'No'}</p>
               <p className="text-sm"><strong>Current URL:</strong> {window.location.href}</p>
               {deliveryData && (
                 <>
@@ -256,6 +266,23 @@ export const ErrorState = ({ error }: ErrorStateProps) => {
             </div>
           )}
           
+          {isPreviewMode && (
+            <div className="bg-blue-50 border border-blue-100 rounded-md p-4 w-full max-w-md">
+              <div className="flex items-start">
+                <HelpCircle className={`h-5 w-5 text-blue-500 mr-2 mt-0.5 flex-shrink-0 ${HOVER_TRANSITION}`} />
+                <div className="text-sm text-blue-700 text-left">
+                  <p className="font-medium mb-1">Preview Mode Information:</p>
+                  <ul className="list-disc pl-5 space-y-1">
+                    <li>This is a test view using a simulated delivery ID</li>
+                    <li>The error message is expected in preview mode</li>
+                    <li>In real usage, recipients will get a valid delivery ID via email</li>
+                    <li>Test the download buttons by clicking the "Debug" button above</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+          
           <Separator className="my-2" />
           
           <div className="bg-blue-50 border border-blue-100 rounded-md p-4 w-full max-w-md">
@@ -294,14 +321,16 @@ export const ErrorState = ({ error }: ErrorStateProps) => {
               <ArrowLeft className={`h-4 w-4 ${HOVER_TRANSITION}`} />
               Go Back
             </Button>
-            <Button 
-              variant="secondary"
-              onClick={regenerateAccess}
-              className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default} flex items-center gap-2 mt-2 sm:mt-0`}
-            >
-              <FileText className={`h-4 w-4 ${HOVER_TRANSITION}`} />
-              Request New Link
-            </Button>
+            {!isPreviewMode && (
+              <Button 
+                variant="secondary"
+                onClick={regenerateAccess}
+                className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default} flex items-center gap-2 mt-2 sm:mt-0`}
+              >
+                <FileText className={`h-4 w-4 ${HOVER_TRANSITION}`} />
+                Request New Link
+              </Button>
+            )}
           </div>
         </div>
       </Card>

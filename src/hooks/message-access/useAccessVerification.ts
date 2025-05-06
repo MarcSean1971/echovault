@@ -7,6 +7,7 @@ interface UseAccessVerificationProps {
   messageId: string | undefined;
   deliveryId: string | null;
   recipientEmail: string | null;
+  isPreviewMode?: boolean;
 }
 
 interface AccessVerificationResult {
@@ -20,7 +21,8 @@ interface AccessVerificationResult {
 export const useAccessVerification = ({
   messageId,
   deliveryId,
-  recipientEmail
+  recipientEmail,
+  isPreviewMode = false
 }: UseAccessVerificationProps): AccessVerificationResult => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,11 +42,89 @@ export const useAccessVerification = ({
         console.error('Missing required parameters:', { 
           messageId: messageId || 'missing', 
           deliveryId: deliveryId || 'missing', 
-          recipientEmail: recipientEmail || 'missing' 
+          recipientEmail: recipientEmail || 'missing',
+          isPreviewMode
         });
+        
+        // For preview mode, show a different error
+        if (isPreviewMode) {
+          console.log("Preview mode active, not showing error for missing parameters");
+          setIsLoading(false);
+          return;
+        }
+        
         setError(`Invalid access link. Missing parameters: ${missingParams.join(', ')}. Please check your email for the correct link.`);
         setIsLoading(false);
         return;
+      }
+      
+      // For preview mode with delivery ID starting with preview- or test-, bypass the normal verification
+      const isTestDelivery = deliveryId.startsWith('preview-') || deliveryId.startsWith('test-');
+      if (isPreviewMode || isTestDelivery) {
+        console.log("Preview mode enabled, bypassing normal access verification");
+        
+        try {
+          // Get message directly for preview mode
+          const { data: messageData, error: messageError } = await supabase
+            .from('messages')
+            .select('*')
+            .eq('id', messageId)
+            .maybeSingle();
+            
+          if (messageError) {
+            console.error("Preview mode message fetch error:", messageError);
+            setError("Could not load preview message: " + messageError.message);
+          } else if (!messageData) {
+            console.error("No message found in preview mode");
+            setError("Message not found in preview mode");
+          } else {
+            console.log("Preview mode message fetched successfully:", messageData);
+            
+            // Create synthetic delivery data for preview
+            const syntheticDeliveryData = {
+              id: `preview-${Date.now()}`,
+              message_id: messageId,
+              delivery_id: deliveryId,
+              recipient_id: "preview-recipient",
+              viewed_at: new Date().toISOString(),
+              viewed_count: 1,
+              delivered_at: new Date().toISOString(),
+              created_at: new Date().toISOString()
+            };
+            
+            // Create synthetic recipient data
+            const syntheticRecipientData = {
+              id: "preview-recipient",
+              email: recipientEmail,
+              name: "Preview User"
+            };
+            
+            // Create synthetic condition data
+            const syntheticConditionData = {
+              id: `preview-${Date.now()}`,
+              pin_code: null,
+              unlock_delay_hours: 0
+            };
+            
+            console.log("Created synthetic data for preview mode:", {
+              delivery: syntheticDeliveryData,
+              recipient: syntheticRecipientData,
+              condition: syntheticConditionData
+            });
+            
+            setDeliveryData(syntheticDeliveryData);
+            setRecipientData(syntheticRecipientData);
+            setConditionData(syntheticConditionData);
+          }
+          
+          setIsLoading(false);
+          return;
+        } catch (err) {
+          console.error("Error in preview mode:", err);
+          setError("Preview mode error: " + (err instanceof Error ? err.message : String(err)));
+          setIsLoading(false);
+          return;
+        }
       }
       
       try {
@@ -213,7 +293,7 @@ export const useAccessVerification = ({
     };
     
     verifyAccess();
-  }, [messageId, deliveryId, recipientEmail]);
+  }, [messageId, deliveryId, recipientEmail, isPreviewMode]);
 
   return {
     isLoading,
