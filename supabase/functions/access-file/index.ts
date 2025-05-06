@@ -19,7 +19,9 @@ serve(async (req: Request): Promise<Response> => {
   console.log(`[FileAccess] Query parameters: ${url.search}`);
   
   // Check if this is a download or view request
-  const downloadMode = url.searchParams.get('mode') === 'download';
+  // Now we check for both mode=download and download=true for backward compatibility
+  const downloadMode = url.searchParams.get('mode') === 'download' || 
+                       url.searchParams.get('download') === 'true';
   console.log(`[FileAccess] Download mode: ${downloadMode ? 'true' : 'false'}`);
   
   // Initialize Supabase client with service role key for admin access
@@ -223,151 +225,60 @@ serve(async (req: Request): Promise<Response> => {
         
         console.log(`[FileAccess] Using final file path: ${finalFilePath}`);
         
+        // IMPROVED DOWNLOAD HANDLING
+        // Always handle downloads directly rather than redirects to improve reliability
         try {
-          // IMPORTANT: When in download mode, ALWAYS serve the file directly rather than using redirects
-          // This ensures proper Content-Disposition handling
+          // Download the file directly, regardless of view or download mode
+          const { data: fileData, error: fileError } = await supabase.storage
+            .from(bucketName)
+            .download(finalFilePath);
+            
+          if (fileError) {
+            console.error(`[FileAccess] File download error: ${fileError.message}`);
+            throw fileError;
+          }
+          
+          if (!fileData) {
+            console.error(`[FileAccess] No file data returned from download`);
+            throw new Error("File data not available");
+          }
+          
+          // Set appropriate headers based on mode
+          const headers = {
+            ...corsHeaders,
+            "Content-Type": requestedAttachment.type || "application/octet-stream",
+            // Explicit no-cache to prevent browser caching issues
+            "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+            "Content-Length": fileData.size.toString()
+          };
+          
+          // Add file name parameter to Content-Disposition
+          const encodedFileName = encodeURIComponent(requestedAttachment.name);
+          
+          // CRITICAL FIX: If download mode is requested, force attachment download
           if (downloadMode) {
-            console.log(`[FileAccess] Download mode active, forcing download for: ${finalFilePath}`);
-            
-            // Download the file and send it with attachment Content-Disposition
-            const { data: fileData, error: fileError } = await supabase.storage
-              .from(bucketName)
-              .download(finalFilePath);
-              
-            if (fileError) {
-              console.error(`[FileAccess] Download error: ${fileError.message}`);
-              throw fileError;
-            }
-            
-            if (!fileData) {
-              console.error(`[FileAccess] No file data returned from download`);
-              throw new Error("File data not available");
-            }
-            
-            // CRITICAL: Set proper download headers with Content-Disposition: attachment
-            // This is what browsers use to determine if file should be downloaded
-            const headers = {
-              ...corsHeaders,
-              "Content-Type": requestedAttachment.type || "application/octet-stream",
-              "Content-Disposition": `attachment; filename="${encodeURIComponent(requestedAttachment.name)}"`,
-              "Cache-Control": "no-store",
-              "Content-Length": fileData.size.toString()
-            };
-            
-            console.log(`[FileAccess] Successfully serving file as forced download: ${finalFilePath}`);
-            console.log(`[FileAccess] Headers: ${JSON.stringify(headers)}`);
-            
-            return new Response(fileData, { headers });
+            console.log(`[FileAccess] ⬇️ DOWNLOAD MODE ACTIVE - Forcing download with attachment disposition`);
+            headers["Content-Disposition"] = `attachment; filename="${encodedFileName}"`;
+          } else {
+            console.log(`[FileAccess] 👁️ VIEW MODE ACTIVE - Using inline disposition`);
+            headers["Content-Disposition"] = `inline; filename="${encodedFileName}"`;
           }
           
-          // Regular view mode - try to use direct file serving instead of signed URL redirect
-          // This gives us more control over the headers
-          console.log(`[FileAccess] View mode, serving file directly: ${finalFilePath}`);
+          console.log(`[FileAccess] Responding with headers: ${JSON.stringify(headers)}`);
           
-          try {
-            // Download and serve the file directly instead of redirecting to a signed URL
-            const { data: fileData, error: fileError } = await supabase.storage
-              .from(bucketName)
-              .download(finalFilePath);
-              
-            if (fileError) {
-              console.error(`[FileAccess] Direct file serve error: ${fileError.message}`);
-              throw fileError;
-            }
-            
-            if (!fileData) {
-              console.error(`[FileAccess] No file data returned from download`);
-              throw new Error("File data not available");
-            }
-            
-            // Set appropriate Content-Disposition for viewing
-            const headers = {
-              ...corsHeaders,
-              "Content-Type": requestedAttachment.type || "application/octet-stream",
-              "Content-Disposition": `inline; filename="${encodeURIComponent(requestedAttachment.name)}"`,
-              "Cache-Control": "no-store",
-              "Content-Length": fileData.size.toString()
-            };
-            
-            console.log(`[FileAccess] Successfully serving file for viewing: ${finalFilePath}`);
-            
-            return new Response(fileData, { headers });
-          } catch (directFileError) {
-            console.error(`[FileAccess] Error serving file directly: ${directFileError.message}`);
-            
-            // Fall back to signed URL as last resort for viewing
-            console.log(`[FileAccess] Falling back to signed URL for view mode: ${finalFilePath}`);
-            
-            const { data: signedUrlData, error: signedUrlError } = await supabase.storage
-              .from(bucketName)
-              .createSignedUrl(finalFilePath, 60);
-              
-            if (signedUrlError) {
-              console.error(`[FileAccess] Error creating signed URL: ${signedUrlError.message}`);
-              throw signedUrlError;
-            }
-            
-            if (signedUrlData?.signedUrl) {
-              console.log(`[FileAccess] Created signed URL: ${signedUrlData.signedUrl}`);
-              
-              // Redirect to the signed URL
-              return new Response(null, { 
-                status: 302, 
-                headers: { 
-                  ...corsHeaders, 
-                  "Location": signedUrlData.signedUrl,
-                  "Cache-Control": "no-cache" 
-                }
-              });
-            }
-            
-            throw new Error("Failed to generate any valid file access URL");
-          }
+          return new Response(fileData, { headers });
         } catch (storageError) {
           console.error(`[FileAccess] Storage access error: ${storageError.message}`);
-          
-          // Try to serve the file directly as a last resort
-          try {
-            console.log(`[FileAccess] Attempting final direct download fallback`);
-            
-            const { data: fileData, error: fileError } = await supabase.storage
-              .from(bucketName)
-              .download(finalFilePath);
-              
-            if (fileError) {
-              console.error(`[FileAccess] Final fallback download error: ${fileError.message}`);
-              throw fileError;
+          return new Response(
+            JSON.stringify({ error: "File access error", details: storageError.message }),
+            { 
+              status: 500, 
+              headers: { ...corsHeaders, "Content-Type": "application/json" }
             }
-            
-            if (!fileData) {
-              console.error(`[FileAccess] No file data returned from final fallback download`);
-              throw new Error("File data not available");
-            }
-            
-            // Determine Content-Disposition based on download mode
-            const contentDisposition = downloadMode 
-              ? `attachment; filename="${encodeURIComponent(requestedAttachment.name)}"`
-              : `inline; filename="${encodeURIComponent(requestedAttachment.name)}"`;
-              
-            console.log(`[FileAccess] Using Content-Disposition in fallback: ${contentDisposition}`);
-            
-            // Success - return the file with proper Content-Type
-            const headers = {
-              ...corsHeaders,
-              "Content-Type": requestedAttachment.type || "application/octet-stream",
-              "Content-Disposition": contentDisposition,
-              "Cache-Control": "no-store"
-            };
-            
-            console.log(`[FileAccess] Successfully serving file via final fallback: ${finalFilePath}`);
-            
-            return new Response(fileData, { headers });
-          } catch (downloadError) {
-            console.error(`[FileAccess] All file access methods failed: ${downloadError.message}`);
-            throw downloadError;
-          }
+          );
         }
-        
       } catch (validationError) {
         console.error(`[FileAccess] Validation error: ${validationError.message}`);
         return new Response(

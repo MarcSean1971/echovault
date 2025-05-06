@@ -30,6 +30,9 @@ export const getPublicFileUrl = async (
       url.searchParams.append('download', 'true');
     }
     
+    // Add cache-busting parameter
+    url.searchParams.append('t', Date.now().toString());
+    
     console.log(`Generated file access URL: ${url.toString()}`);
     return url.toString();
   } catch (error) {

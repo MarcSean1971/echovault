@@ -25,7 +25,7 @@ export const SecureDownloadButton: React.FC<SecureDownloadButtonProps> = ({
         </div>
       }
       tooltipText="Force secure download (Edge Function)"
-      className="bg-blue-600 hover:bg-blue-700"
+      className="bg-blue-600 hover:bg-blue-700 text-white"
     />
   );
 };
