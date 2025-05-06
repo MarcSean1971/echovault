@@ -28,19 +28,21 @@ export const getPublicFileUrl = async (
     const functionUrl = `${projectUrl}/functions/access-file/file/${encodeURIComponent(filePath)}`;
     console.log(`[FileAccess] Base function URL: ${functionUrl}`);
     
-    // Add query parameters
+    // Build URL with properly encoded parameters
     const url = new URL(functionUrl);
+    
+    // Add properly encoded parameters (ensure they're all strings)
     url.searchParams.append('delivery', deliveryId);
     url.searchParams.append('recipient', recipientEmail);
     url.searchParams.append('mode', mode);
     
-    // ALWAYS add explicit download parameter for consistency
-    url.searchParams.append('download', 'true');
-    url.searchParams.append('forceDownload', 'true');
+    // Use download-file parameter instead of download to avoid ambiguity
+    if (mode === 'download') {
+      url.searchParams.append('download-file', 'true');
+    }
     
-    // Add cache-busting parameter
+    // Cache-busting parameter
     url.searchParams.append('t', Date.now().toString());
-    url.searchParams.append('expires', (Date.now() + 3600000).toString()); // 1 hour expiry
     
     console.log(`[FileAccess] Generated file access URL: ${url.toString()}`);
     return url.toString();
@@ -121,9 +123,8 @@ export const getAuthenticatedFileUrl = async (
     
     // ALWAYS ensure URL has download parameter for consistency
     const url = new URL(data.signedUrl);
-    if (forDownload && !url.searchParams.has('download')) {
-      url.searchParams.append('download', 'true');
-      url.searchParams.append('forceDownload', 'true');
+    if (forDownload && !url.searchParams.has('download-file')) {
+      url.searchParams.append('download-file', 'true');
       return url.toString();
     }
     

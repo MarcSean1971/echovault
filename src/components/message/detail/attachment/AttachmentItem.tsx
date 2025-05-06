@@ -1,4 +1,3 @@
-
 import React from "react";
 import { FileIcon, AlertCircle } from "lucide-react";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
@@ -73,18 +72,38 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
       if (url) {
         console.log("Secure download URL obtained:", url);
         
-        // Add extra parameters to ensure download
-        const finalUrl = url.includes('?') 
-          ? `${url}&forceDownload=true&t=${Date.now()}` 
-          : `${url}?forceDownload=true&t=${Date.now()}`;
+        // Parse URL and add additional parameters
+        try {
+          const parsedUrl = new URL(url);
           
-        console.log("Final secure download URL:", finalUrl);
-        
-        FileAccessManager.executeDownload(finalUrl, attachment.name, attachment.type, 'secure');
-        toast({
-          title: "Secure download started",
-          description: `${attachment.name} is being downloaded using Edge Function`,
-        });
+          // Add download parameters using the correct format
+          parsedUrl.searchParams.delete('download'); // Remove potential old parameter
+          parsedUrl.searchParams.set('download-file', 'true'); // Add new parameter
+          parsedUrl.searchParams.set('mode', 'download');
+          parsedUrl.searchParams.set('t', Date.now().toString()); // Add cache-busting
+          
+          const finalUrl = parsedUrl.toString();
+          console.log("Final secure download URL:", finalUrl);
+          
+          FileAccessManager.executeDownload(finalUrl, attachment.name, attachment.type, 'secure');
+          
+          toast({
+            title: "Secure download started",
+            description: `${attachment.name} is being downloaded using Edge Function`,
+          });
+        } catch (urlError) {
+          // Fallback to simple string concatenation if URL parsing fails
+          const separator = url.includes('?') ? '&' : '?';
+          const finalUrl = `${url}${separator}download-file=true&mode=download&t=${Date.now()}`;
+          
+          console.log("Final secure download URL (fallback method):", finalUrl);
+          FileAccessManager.executeDownload(finalUrl, attachment.name, attachment.type, 'secure');
+          
+          toast({
+            title: "Secure download started",
+            description: `${attachment.name} is being downloaded using Edge Function`,
+          });
+        }
       } else {
         console.error("Failed to get secure download URL");
         toast({

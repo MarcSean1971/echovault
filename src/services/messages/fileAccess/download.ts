@@ -25,27 +25,46 @@ export class FileDownloader {
     // Add timestamp to prevent caching
     const timestamp = Date.now();
     let finalUrl = url;
-    if (url.includes('?')) {
-      finalUrl = `${url}&_t=${timestamp}`;
-    } else {
-      finalUrl = `${url}?_t=${timestamp}`;
+    
+    // Parse the URL to properly add parameters
+    try {
+      const parsedUrl = new URL(url);
+      
+      // Add timestamp for cache busting
+      parsedUrl.searchParams.append('t', timestamp.toString());
+      
+      // Add download parameters using the correct format
+      if (forDownload) {
+        parsedUrl.searchParams.append('download-file', 'true');
+        parsedUrl.searchParams.append('mode', 'download');
+      }
+      
+      finalUrl = parsedUrl.toString();
+    } catch (error) {
+      // If URL parsing fails, fall back to simple string concat
+      if (url.includes('?')) {
+        finalUrl = `${url}&t=${timestamp}`;
+        if (forDownload) {
+          finalUrl += '&download-file=true&mode=download';
+        }
+      } else {
+        finalUrl = `${url}?t=${timestamp}`;
+        if (forDownload) {
+          finalUrl += '&download-file=true&mode=download';
+        }
+      }
     }
     
     // Set href with enhanced cache busting
     a.href = finalUrl;
     
-    // Always force download - simplified approach
-    a.download = fileName;
-    a.setAttribute('download', fileName);
-    
-    // Add additional download parameters to help Edge Function
-    if (finalUrl.includes('?')) {
-      a.href = `${finalUrl}&download=true&mode=download&forceDownload=true`;
-    } else {
-      a.href = `${finalUrl}?download=true&mode=download&forceDownload=true`;
+    // Set download attribute when forcing download
+    if (forDownload) {
+      a.download = fileName;
+      a.setAttribute('download', fileName);
     }
     
-    console.log(`[FileDownloader] Download URL: ${a.href}`);
+    console.log(`[FileDownloader] ${forDownload ? 'Download' : 'View'} URL: ${a.href}`);
     
     a.setAttribute('type', fileType || 'application/octet-stream');
     return a;

@@ -18,11 +18,13 @@ serve(async (req: Request): Promise<Response> => {
   console.log(`[FileAccess] Path parts: ${JSON.stringify(pathParts)}`);
   console.log(`[FileAccess] Query parameters: ${url.search}`);
   
-  // SIMPLIFIED FOR DEVELOPMENT: Always treat as download mode
-  // This ensures files always download rather than open in browser
-  const downloadMode = true;
+  // Check for download mode from various parameter names
+  const downloadMode = 
+    url.searchParams.get('download-file') === 'true' || 
+    url.searchParams.get('mode') === 'download' ||
+    url.searchParams.has('forceDownload');
   
-  console.log(`[FileAccess] Download mode: ${downloadMode ? 'true' : 'false'} (FORCED TRUE FOR DEVELOPMENT)`);
+  console.log(`[FileAccess] Download mode: ${downloadMode ? 'true' : 'false'}`);
   
   // Initialize Supabase client with service role key for admin access
   const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
@@ -223,9 +225,16 @@ serve(async (req: Request): Promise<Response> => {
           // Add file name parameter to Content-Disposition
           const encodedFileName = encodeURIComponent(fileName);
           
-          // Force download with attachment disposition
-          headers["Content-Disposition"] = `attachment; filename="${encodedFileName}"; filename*=UTF-8''${encodedFileName}`;
-          console.log(`[FileAccess] FORCING DOWNLOAD with headers: ${JSON.stringify(headers)}`);
+          // Set correct content disposition based on download mode
+          if (downloadMode) {
+            // Force download with attachment disposition
+            headers["Content-Disposition"] = `attachment; filename="${encodedFileName}"; filename*=UTF-8''${encodedFileName}`;
+            console.log(`[FileAccess] FORCING DOWNLOAD with headers:`, headers);
+          } else {
+            // Default to inline disposition for viewing
+            headers["Content-Disposition"] = `inline; filename="${encodedFileName}"; filename*=UTF-8''${encodedFileName}`;
+            console.log(`[FileAccess] INLINE VIEWING with headers:`, headers);
+          }
           
           return new Response(fileData, { headers });
         } catch (storageError) {
