@@ -18,6 +18,9 @@ export type Message = {
   location_longitude?: number | null;
   location_name?: string | null;
   share_location?: boolean;
+  // Add missing fields that are causing errors
+  expires_at?: string | null;
+  sender_name?: string | null;
 };
 
 export type Recipient = {
