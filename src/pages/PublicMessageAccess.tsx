@@ -27,11 +27,11 @@ export default function PublicMessageAccess() {
   useEffect(() => {
     const initialTimer = setTimeout(() => {
       setInitialLoading(false);
-    }, 500); // Short delay before leaving initial loading state
+    }, 1500); // Increased from 500ms to 1500ms to avoid the flash
     
     const errorTimer = setTimeout(() => {
       setCanShowError(true);
-    }, 1500); // Longer delay before showing error states
+    }, 2500); // Increased from 1500ms to 2500ms for error states
     
     return () => {
       clearTimeout(initialTimer);
@@ -113,8 +113,9 @@ export default function PublicMessageAccess() {
     return <DelayedUnlock unlockTime={unlockTime} onUnlock={handleUnlockExpired} />;
   }
   
-  // Handle case where message is null (not found)
-  if (!message && canShowError) {
+  // Handle case where message is null (not found) - only show if we're past initial loading phase
+  // AND if enough time has passed to show errors
+  if (!message && canShowError && !initialLoading) {
     return <MessageNotFound isInitialLoading={initialLoading} />;
   }
   

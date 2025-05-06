@@ -34,7 +34,7 @@ export const usePublicMessageAccess = ({
   useEffect(() => {
     const timer = setTimeout(() => {
       setErrorDelay(false);
-    }, 1000); // Delay before allowing error states to show
+    }, 2000); // Increased from 1000ms to 2000ms for better error delay
     return () => clearTimeout(timer);
   }, []);
   
@@ -72,7 +72,7 @@ export const usePublicMessageAccess = ({
 
   return {
     message,
-    isLoading,
+    isLoading, 
     error,
     isPinRequired,
     isUnlockDelayed,

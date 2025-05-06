@@ -10,10 +10,11 @@ import { useEffect, useState } from "react";
 import { HOVER_TRANSITION, BUTTON_HOVER_EFFECTS } from "@/utils/hoverEffects";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
+import { LoadingState } from "./LoadingState";
 
 interface MessageDisplayProps {
   message: Message | null;
-  isInitialLoading?: boolean; // New prop to indicate initial loading state
+  isInitialLoading?: boolean;
 }
 
 export const MessageDisplay = ({ message, isInitialLoading = false }: MessageDisplayProps) => {
@@ -22,6 +23,15 @@ export const MessageDisplay = ({ message, isInitialLoading = false }: MessageDis
   const deliveryId = searchParams.get('delivery');
   const recipientEmail = searchParams.get('recipient');
   const [showDebug, setShowDebug] = useState(false);
+  const [localLoading, setLocalLoading] = useState(true);
+  
+  // Add a local loading state to prevent flash of "not found"
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLocalLoading(false);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Log parameters for debugging
   useEffect(() => {
@@ -56,9 +66,9 @@ export const MessageDisplay = ({ message, isInitialLoading = false }: MessageDis
     }
   };
 
-  // If we're in the initial loading phase, don't show the "not found" message
-  if (isInitialLoading) {
-    return null; // Return nothing during initial loading to prevent flash
+  // If we're in any loading phase, show loading spinner/skeleton instead of "not found"
+  if (isInitialLoading || localLoading) {
+    return <LoadingState />;
   }
 
   if (!message) {

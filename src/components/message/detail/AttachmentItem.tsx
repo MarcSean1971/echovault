@@ -157,10 +157,10 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
       
       if (url) {
         // Create an invisible anchor element and trigger the download
+        // Removed target="_blank" to ensure download works properly
         const a = document.createElement('a');
         a.href = url;
-        a.download = attachment.name;
-        a.target = "_blank";
+        a.download = attachment.name; // Set the download attribute with the filename
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -178,8 +178,7 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
           setDownloadMethod(alternativeMethod);
           const a = document.createElement('a');
           a.href = alternativeUrl;
-          a.download = attachment.name;
-          a.target = "_blank";
+          a.download = attachment.name; // Set the download attribute with the filename
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
@@ -216,6 +215,7 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
       const url = await getFileAccessUrl(downloadMethod);
       
       if (url) {
+        // For opening in a new tab, we want to use target="_blank"
         window.open(url, '_blank');
       } else {
         // Try the alternative method if the primary method fails
