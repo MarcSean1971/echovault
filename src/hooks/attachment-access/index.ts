@@ -1,7 +1,6 @@
 
 import { useEffect } from "react";
-import { toast } from "@/components/ui/use-toast";
-import { AttachmentAccessProps, AttachmentAccessResult } from "./types";
+import { AttachmentAccessProps, AttachmentAccessResult, AttachmentAccessUtilities } from "./types";
 import { useAttachmentState } from "./useAttachmentState";
 import { useDownloadHandlers } from "./useDownloadHandlers";
 
@@ -23,25 +22,25 @@ export function useAttachmentAccess(props: AttachmentAccessProps): AttachmentAcc
     toggleDownloadMethod
   } = useAttachmentState();
   
+  // Create utilities object to pass to handlers
+  const utilities: AttachmentAccessUtilities = {
+    updateMethodStatus,
+    setLoading,
+    setHasError,
+    setDownloadActive,
+    incrementRetryCount,
+    setAccessUrl,
+    setDownloadMethod
+  };
+  
   // Use the download handlers
   const {
     directUrl,
     downloadFile: executeDownload,
     openFile: executeOpenFile,
     tryDirectAccess,
-    retryAccess
-  } = useDownloadHandlers(
-    props, 
-    {
-      updateMethodStatus,
-      setLoading,
-      setHasError,
-      setDownloadActive,
-      incrementRetryCount,
-      setAccessUrl,
-      setDownloadMethod
-    }
-  );
+    retryAccess: executeRetry
+  } = useDownloadHandlers(props, utilities);
   
   // Update download active state after a short period
   useEffect(() => {
@@ -75,6 +74,12 @@ export function useAttachmentAccess(props: AttachmentAccessProps): AttachmentAcc
   const openFile = async () => {
     if (state.isLoading) return;
     await executeOpenFile(state.downloadMethod);
+  };
+  
+  // Fix the return type to ensure it's Promise<void>
+  const retryAccess = async (): Promise<void> => {
+    await executeRetry();
+    // Removed the return statement to ensure void return type
   };
 
   // Return combined state and handlers

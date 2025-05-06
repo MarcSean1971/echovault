@@ -32,3 +32,14 @@ export interface AttachmentAccessResult extends AttachmentAccessState {
   tryDirectAccess: () => void;
   toggleDebug: () => void;
 }
+
+// New interface for state utilities passed to handlers
+export interface AttachmentAccessUtilities {
+  updateMethodStatus: (method: AccessMethod, success: boolean) => void;
+  setLoading: (isLoading: boolean) => void;
+  setHasError: (hasError: boolean) => void;
+  setDownloadActive: (downloadActive: boolean) => void;
+  incrementRetryCount: () => void;
+  setAccessUrl: (url: string | null) => void;
+  setDownloadMethod: (method: AccessMethod) => void;
+}
