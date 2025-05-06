@@ -2,6 +2,7 @@
 import { useAccessVerification } from './message-access/useAccessVerification';
 import { useSecurityConstraints } from './message-access/useSecurityConstraints';
 import { Message } from '@/types/message';
+import { useState, useEffect } from 'react';
 
 interface UsePublicMessageAccessProps {
   messageId: string | undefined;
@@ -26,10 +27,21 @@ export const usePublicMessageAccess = ({
   deliveryId, 
   recipientEmail 
 }: UsePublicMessageAccessProps): PublicMessageAccessResult => {
+  // Track if enough time has passed to show error messages
+  const [errorDelay, setErrorDelay] = useState(true);
+  
+  // Set up a timer to determine when we can show error states
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setErrorDelay(false);
+    }, 1000); // Delay before allowing error states to show
+    return () => clearTimeout(timer);
+  }, []);
+  
   // First verify access and get data
   const {
     isLoading,
-    error,
+    error: accessError,
     deliveryData,
     conditionData
   } = useAccessVerification({
@@ -37,6 +49,9 @@ export const usePublicMessageAccess = ({
     deliveryId,
     recipientEmail
   });
+
+  // Only show errors after the delay period
+  const error = errorDelay ? null : accessError;
 
   // Then handle security constraints
   const {

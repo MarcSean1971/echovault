@@ -13,9 +13,10 @@ import { toast } from "@/components/ui/use-toast";
 
 interface MessageDisplayProps {
   message: Message | null;
+  isInitialLoading?: boolean; // New prop to indicate initial loading state
 }
 
-export const MessageDisplay = ({ message }: MessageDisplayProps) => {
+export const MessageDisplay = ({ message, isInitialLoading = false }: MessageDisplayProps) => {
   // Get delivery ID and recipient email from URL for attachment access
   const [searchParams] = useSearchParams();
   const deliveryId = searchParams.get('delivery');
@@ -54,6 +55,11 @@ export const MessageDisplay = ({ message }: MessageDisplayProps) => {
       });
     }
   };
+
+  // If we're in the initial loading phase, don't show the "not found" message
+  if (isInitialLoading) {
+    return null; // Return nothing during initial loading to prevent flash
+  }
 
   if (!message) {
     return (

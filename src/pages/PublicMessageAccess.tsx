@@ -6,9 +6,15 @@ import { ErrorState } from '@/components/message/public-access/ErrorState';
 import { PinEntry } from '@/components/message/public-access/PinEntry';
 import { DelayedUnlock } from '@/components/message/public-access/DelayedUnlock';
 import { MessageDisplay } from '@/components/message/public-access/MessageDisplay';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { MessageNotFound } from '@/components/message/detail/MessageNotFound';
 
 export default function PublicMessageAccess() {
+  // Track if we're in the initial loading phase
+  const [initialLoading, setInitialLoading] = useState(true);
+  // Track if enough time has passed to show error messages
+  const [canShowError, setCanShowError] = useState(false);
+  
   // Get message ID from URL path parameter
   const { id: messageId } = useParams<{ id: string }>();
   
@@ -16,6 +22,22 @@ export default function PublicMessageAccess() {
   const [searchParams] = useSearchParams();
   const deliveryId = searchParams.get('delivery');
   const recipientEmail = searchParams.get('recipient');
+  
+  // Set up a timer to determine when we can show error states
+  useEffect(() => {
+    const initialTimer = setTimeout(() => {
+      setInitialLoading(false);
+    }, 500); // Short delay before leaving initial loading state
+    
+    const errorTimer = setTimeout(() => {
+      setCanShowError(true);
+    }, 1500); // Longer delay before showing error states
+    
+    return () => {
+      clearTimeout(initialTimer);
+      clearTimeout(errorTimer);
+    };
+  }, []);
   
   // For debugging purposes - log the parameters
   useEffect(() => {
@@ -72,12 +94,12 @@ export default function PublicMessageAccess() {
   };
   
   // Render loading state
-  if (isLoading) {
+  if (isLoading || initialLoading) {
     return <LoadingState />;
   }
   
-  // Render error state
-  if (error) {
+  // Only show error state if we're allowed to show errors and there is an error
+  if (error && canShowError) {
     return <ErrorState error={error} />;
   }
   
@@ -91,6 +113,11 @@ export default function PublicMessageAccess() {
     return <DelayedUnlock unlockTime={unlockTime} onUnlock={handleUnlockExpired} />;
   }
   
+  // Handle case where message is null (not found)
+  if (!message && canShowError) {
+    return <MessageNotFound isInitialLoading={initialLoading} />;
+  }
+  
   // Render message content
-  return <MessageDisplay message={message} />;
+  return <MessageDisplay message={message} isInitialLoading={initialLoading} />;
 }
