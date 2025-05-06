@@ -1,3 +1,4 @@
+
 import React from "react";
 import { FileIcon, AlertCircle } from "lucide-react";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
@@ -53,22 +54,36 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
     recipientEmail
   });
   
-  // New function for secure download
+  // Function for secure download
   const forceSecureDownload = async () => {
-    if (isLoading || !deliveryId || !recipientEmail) return;
+    if (isLoading || !deliveryId || !recipientEmail) {
+      console.log("Cannot force secure download - missing parameters or loading");
+      return;
+    }
     
     try {
       // Force the secure download method regardless of current download method
+      console.log("Starting forced secure download");
       const fileAccessManager = new FileAccessManager(attachment.path, deliveryId, recipientEmail);
       const { url } = await fileAccessManager.getAccessUrl('secure', 'download');
       
       if (url) {
-        FileAccessManager.executeDownload(url, attachment.name, attachment.type, 'secure');
+        console.log("Secure download URL obtained:", url);
+        
+        // Add extra parameters to ensure download
+        const finalUrl = url.includes('?') 
+          ? `${url}&forceDownload=true&t=${Date.now()}` 
+          : `${url}?forceDownload=true&t=${Date.now()}`;
+          
+        console.log("Final secure download URL:", finalUrl);
+        
+        FileAccessManager.executeDownload(finalUrl, attachment.name, attachment.type, 'secure');
         toast({
           title: "Secure download started",
           description: `${attachment.name} is being downloaded using Edge Function`,
         });
       } else {
+        console.error("Failed to get secure download URL");
         toast({
           title: "Download failed",
           description: "Could not generate secure download URL",
@@ -127,7 +142,7 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
             tryDirectAccess={tryDirectAccess}
           />
 
-          {/* Force secure download button */}
+          {/* Force secure download button - Only show when delivery params exist */}
           {deliveryId && recipientEmail && (
             <SecureDownloadButton
               isLoading={isLoading}

@@ -45,10 +45,10 @@ export class FileDownloader {
           // URL already has download parameters
           console.log(`Using existing download parameters in URL: ${finalUrl}`);
         } else if (finalUrl.includes('?')) {
-          finalUrl = `${finalUrl}&download=true&mode=download`;
+          finalUrl = `${finalUrl}&download=true&mode=download&forceDownload=true`;
           a.href = finalUrl;
         } else {
-          finalUrl = `${finalUrl}?download=true&mode=download`;
+          finalUrl = `${finalUrl}?download=true&mode=download&forceDownload=true`;
           a.href = finalUrl;
         }
         
@@ -57,9 +57,9 @@ export class FileDownloader {
         // For browsers that don't support download attribute,
         // ensure the URL has a download parameter
         if (finalUrl.includes('?')) {
-          a.href = `${finalUrl}&download=true&mode=download&filename=${encodeURIComponent(fileName)}`;
+          a.href = `${finalUrl}&download=true&mode=download&forceDownload=true&filename=${encodeURIComponent(fileName)}`;
         } else {
-          a.href = `${finalUrl}?download=true&mode=download&filename=${encodeURIComponent(fileName)}`;
+          a.href = `${finalUrl}?download=true&mode=download&forceDownload=true&filename=${encodeURIComponent(fileName)}`;
         }
         console.log(`Fallback download URL for unsupported browser: ${a.href}`);
       }
@@ -87,19 +87,27 @@ export class FileDownloader {
     console.log(`Final download URL: ${a.href}`);
     console.log(`Download attribute: ${a.hasAttribute('download') ? a.getAttribute('download') : 'not set'}`);
     
-    // Append to body, click, then remove
-    document.body.appendChild(a);
-    
-    // Add a delay before clicking to ensure the DOM has time to update
-    setTimeout(() => {
-      console.log("Clicking download link");
-      a.click();
+    // Try to create a direct click event for better download handling
+    try {
+      // Simulate a more direct click for better browser compatibility
+      a.style.display = 'none';
+      document.body.appendChild(a);
       
-      // Short delay before removal to ensure download starts
+      // Add a delay before clicking to ensure the DOM has time to update
       setTimeout(() => {
-        document.body.removeChild(a);
-      }, 300);
-    }, 100);
+        console.log("Clicking download link");
+        a.click();
+        
+        // Short delay before removal to ensure download starts
+        setTimeout(() => {
+          document.body.removeChild(a);
+        }, 300);
+      }, 100);
+    } catch (error) {
+      console.error("Error during download execution:", error);
+      // Fallback method - try a different approach
+      window.open(url, '_blank');
+    }
     
     // Show success notification
     const methodName = method === 'secure' ? 'Edge Function' : 

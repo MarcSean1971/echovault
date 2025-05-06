@@ -19,9 +19,11 @@ serve(async (req: Request): Promise<Response> => {
   console.log(`[FileAccess] Query parameters: ${url.search}`);
   
   // Check if this is a download or view request
-  // Now we check for both mode=download and download=true for backward compatibility
+  // Now we check for multiple parameters to ensure we catch all download requests
   const downloadMode = url.searchParams.get('mode') === 'download' || 
-                       url.searchParams.get('download') === 'true';
+                       url.searchParams.get('download') === 'true' ||
+                       url.searchParams.get('forceDownload') === 'true';
+  
   console.log(`[FileAccess] Download mode: ${downloadMode ? 'true' : 'false'}`);
   
   // Initialize Supabase client with service role key for admin access
@@ -46,7 +48,6 @@ serve(async (req: Request): Promise<Response> => {
   try {
     // Check if the path includes "access-file" in the URL and handle accordingly
     // This is to ensure compatibility with both URL formats
-    // Our client might be calling with /access-file/file/... or /file/...
     let filePathIndex = 1; // Default assuming /file/...
     
     if (pathParts.length >= 2) {
@@ -260,7 +261,8 @@ serve(async (req: Request): Promise<Response> => {
           // CRITICAL FIX: If download mode is requested, force attachment download
           if (downloadMode) {
             console.log(`[FileAccess] ⬇️ DOWNLOAD MODE ACTIVE - Forcing download with attachment disposition`);
-            headers["Content-Disposition"] = `attachment; filename="${encodedFileName}"`;
+            // Use a stronger attachment disposition header to force downloads
+            headers["Content-Disposition"] = `attachment; filename="${encodedFileName}"; filename*=UTF-8''${encodedFileName}`;
           } else {
             console.log(`[FileAccess] 👁️ VIEW MODE ACTIVE - Using inline disposition`);
             headers["Content-Disposition"] = `inline; filename="${encodedFileName}"`;

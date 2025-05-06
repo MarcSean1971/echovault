@@ -45,13 +45,14 @@ export function useFileDownloadHandler({ props, utilities }: DownloadHandlerProp
         
         if (url && resultMethod) {
           console.log("Download URL obtained from edge function:", url);
-          // Add logging to track the actual URL being used
-          console.log(`Actual download URL: ${url}`);
           
           // Add timestamp to URL to prevent caching
+          const timestamp = Date.now();
           const timeStampedUrl = url.includes('?') 
-            ? `${url}&t=${Date.now()}` 
-            : `${url}?t=${Date.now()}`;
+            ? `${url}&t=${timestamp}&forceDownload=true` 
+            : `${url}?t=${timestamp}&forceDownload=true`;
+          
+          console.log(`Actual download URL with timestamp: ${timeStampedUrl}`);
           
           FileAccessManager.executeDownload(timeStampedUrl, fileName, fileType, 'secure');
           updateMethodStatus('secure', true);

@@ -28,10 +28,12 @@ export const getPublicFileUrl = async (
     // Add explicit download parameter for download mode
     if (mode === 'download') {
       url.searchParams.append('download', 'true');
+      url.searchParams.append('forceDownload', 'true');
     }
     
     // Add cache-busting parameter
     url.searchParams.append('t', Date.now().toString());
+    url.searchParams.append('expires', (Date.now() + 3600000).toString()); // 1 hour expiry
     
     console.log(`Generated file access URL: ${url.toString()}`);
     return url.toString();
@@ -88,6 +90,7 @@ export const getAuthenticatedFileUrl = async (
       const url = new URL(data.signedUrl);
       if (!url.searchParams.has('download')) {
         url.searchParams.append('download', 'true');
+        url.searchParams.append('forceDownload', 'true');
         return url.toString();
       }
     }

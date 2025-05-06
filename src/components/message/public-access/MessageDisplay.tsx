@@ -24,14 +24,29 @@ export const MessageDisplay = ({ message, isInitialLoading = false }: MessageDis
   const recipientEmail = searchParams.get('recipient');
   const [showDebug, setShowDebug] = useState(false);
   const [localLoading, setLocalLoading] = useState(true);
+  const [showAttachments, setShowAttachments] = useState(false);
+  
+  // Show debug mode immediately if URL contains debug=true
+  useEffect(() => {
+    if (searchParams.get('debug') === 'true') {
+      setShowDebug(true);
+      toast({
+        title: "Debug Mode Active",
+        description: "Showing extended diagnostic information",
+      });
+    }
+  }, [searchParams]);
   
   // Add a local loading state to prevent flash of "not found"
   useEffect(() => {
     const timer = setTimeout(() => {
       setLocalLoading(false);
-    }, 2000); // Increased to 2 seconds to ensure components are fully loaded
+      if (message?.attachments && message.attachments.length > 0) {
+        setShowAttachments(true);
+      }
+    }, 1000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [message]);
 
   // Log parameters for debugging
   useEffect(() => {
@@ -134,6 +149,9 @@ export const MessageDisplay = ({ message, isInitialLoading = false }: MessageDis
               <p><strong>Recipient:</strong> {recipientEmail || '(not found)'}</p>
               <p><strong>Attachment count:</strong> {message.attachments?.length || 0}</p>
               <p><strong>Current URL:</strong> {window.location.href}</p>
+              <p className="mt-2 text-blue-600">
+                Tip: To force download mode, click the blue shield icon button next to the download button for any attachment.
+              </p>
             </div>
           )}
           
@@ -146,7 +164,7 @@ export const MessageDisplay = ({ message, isInitialLoading = false }: MessageDis
           
           <MessageContent message={message} isArmed={false} />
           
-          {message.attachments && message.attachments.length > 0 && (
+          {message.attachments && message.attachments.length > 0 && showAttachments && (
             <div className="pt-4">
               <h3 className="text-lg font-medium mb-2">Attachments</h3>
               <MessageAttachments 
@@ -154,6 +172,17 @@ export const MessageDisplay = ({ message, isInitialLoading = false }: MessageDis
                 deliveryId={deliveryId || undefined}
                 recipientEmail={recipientEmail || undefined}
               />
+              
+              {showDebug && (
+                <div className="mt-4 p-3 bg-blue-50 border border-blue-100 rounded text-sm">
+                  <p className="font-medium text-blue-700">Download Instructions:</p>
+                  <ol className="list-decimal pl-5 mt-2 space-y-1 text-blue-700">
+                    <li>Use the blue shield button (Force secure download) for direct downloads</li>
+                    <li>If files open in a new tab instead of downloading, try right-clicking the button and select "Save link as..."</li>
+                    <li>For technical users: Add <code>&debug=true</code> to the URL to see extended debug information</li>
+                  </ol>
+                </div>
+              )}
             </div>
           )}
         </div>
