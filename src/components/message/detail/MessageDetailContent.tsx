@@ -19,6 +19,7 @@ import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetT
 import { useNavigate } from "react-router-dom";
 import { WhatsAppIntegration } from "./content/WhatsAppIntegration";
 import { toast } from "@/components/ui/use-toast";
+import { useHoverEffects } from "@/hooks/useHoverEffects";
 
 interface MessageDetailContentProps {
   message: Message;
@@ -61,6 +62,8 @@ export function MessageDetailContent({
   setShowSendTestDialog,
   handleSendTestMessages
 }: MessageDetailContentProps) {
+  const { getButtonHoverClasses, HOVER_TRANSITION } = useHoverEffects();
+  
   // Add state for delete confirmation and public view dialog
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showPublicViewHelp, setShowPublicViewHelp] = useState(false);
@@ -158,7 +161,7 @@ export function MessageDetailContent({
                     <h2 className="text-lg font-medium">Attachments</h2>
                     <Button 
                       onClick={openPublicTestView}
-                      className={`bg-blue-600 hover:bg-blue-700 text-white ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
+                      className={`bg-blue-600 hover:bg-blue-700 text-white ${HOVER_TRANSITION} ${getButtonHoverClasses('default')}`}
                     >
                       <Eye className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} />
                       Test Public View
@@ -254,7 +257,7 @@ export function MessageDetailContent({
                     variant="outline"
                     size="sm"
                     onClick={openPublicTestView}
-                    className={`whitespace-nowrap bg-blue-50 hover:bg-blue-100 border-blue-200 ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
+                    className={`whitespace-nowrap bg-blue-50 hover:bg-blue-100 border-blue-200 ${HOVER_TRANSITION} ${getButtonHoverClasses('default')}`}
                   >
                     <Eye className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} />
                     Test Public View
@@ -345,7 +348,7 @@ export function MessageDetailContent({
             <Button variant="outline" onClick={() => setShowPublicViewHelp(false)}>
               Close
             </Button>
-            <Button onClick={openPublicTestView} className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}>
+            <Button onClick={openPublicTestView} className={`${HOVER_TRANSITION} ${getButtonHoverClasses('default')}`}>
               <Eye className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} />
               Open Test View Again
             </Button>
@@ -362,3 +365,4 @@ export function MessageDetailContent({
     </div>
   );
 }
+
