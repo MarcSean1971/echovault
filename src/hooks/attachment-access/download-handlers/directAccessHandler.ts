@@ -8,7 +8,8 @@ import { DownloadHandlerProps } from "./types";
  */
 export function useDirectAccessHandler({ props, utilities }: DownloadHandlerProps) {
   const {
-    filePath
+    filePath,
+    fileName
   } = props;
   
   const {
@@ -23,20 +24,33 @@ export function useDirectAccessHandler({ props, utilities }: DownloadHandlerProp
   const directUrl = fileAccessManager.getDirectUrl();
 
   const tryDirectAccess = () => {
-    if (directUrl) {
+    if (!directUrl) {
+      console.error(`[DirectAccess] No direct URL available for ${fileName || 'file'}`);
+      updateMethodStatus('direct', false);
+      toast({
+        title: "Direct URL Error",
+        description: "Could not generate a direct URL for this file. The storage bucket may not be public.",
+        variant: "destructive"
+      });
+      return false;
+    }
+    
+    try {
+      console.log(`[DirectAccess] Opening direct URL: ${directUrl}`);
       window.open(directUrl, '_blank');
       setDownloadMethod('direct');
       updateMethodStatus('direct', true);
       toast({
         title: "Direct URL Test",
-        description: "Opening direct URL without security checks"
+        description: "Opening file with direct URL access"
       });
       return true;
-    } else {
+    } catch (error) {
+      console.error("[DirectAccess] Error opening direct URL:", error);
       updateMethodStatus('direct', false);
       toast({
-        title: "Error",
-        description: "Could not generate direct URL",
+        title: "Direct Access Failed",
+        description: "Could not open the file using direct URL access",
         variant: "destructive"
       });
       return false;

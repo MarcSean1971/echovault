@@ -21,7 +21,17 @@ export class FileUrlGenerator {
    * Get direct public URL for the file
    */
   public getDirectUrl(): string | null {
-    return getDirectPublicUrl(this.filePath);
+    try {
+      const directUrl = getDirectPublicUrl(this.filePath);
+      if (!directUrl) {
+        console.error(`[FileAccess] Unable to generate direct URL for ${this.filePath}`);
+        return null;
+      }
+      return directUrl;
+    } catch (error) {
+      console.error(`[FileAccess] Error in getDirectUrl:`, error);
+      return null;
+    }
   }
   
   /**
@@ -42,6 +52,7 @@ export class FileUrlGenerator {
           console.log("Using direct public URL access");
           return { url: directUrl, method: 'direct' };
         }
+        throw new Error("Could not generate direct URL");
       }
       
       // If we're in public view mode with delivery ID and recipient email 
