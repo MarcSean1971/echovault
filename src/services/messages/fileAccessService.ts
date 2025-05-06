@@ -17,7 +17,7 @@ export const getPublicFileUrl = async (
 ): Promise<string | null> => {
   try {
     // Edge function URL for accessing files
-    const functionUrl = `${supabase.functions.getFunctionUrl('access-file')}/file/${encodeURIComponent(filePath)}`;
+    const functionUrl = `${supabase.functions.url}/access-file/file/${encodeURIComponent(filePath)}`;
     
     // Add query parameters
     const url = new URL(functionUrl);
