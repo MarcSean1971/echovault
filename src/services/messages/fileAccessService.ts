@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 // Define valid bucket names for consistency
@@ -20,12 +19,12 @@ export const getPublicFileUrl = async (
   mode: 'view' | 'download' = 'view'
 ): Promise<string | null> => {
   try {
-    // Get project URL for proper Edge Function URL generation
-    const projectUrl = window.location.origin;
-    console.log(`[FileAccess] Using project URL: ${projectUrl}`);
+    // Use Supabase project URL for proper Edge Function URL generation
+    const supabaseUrl = "https://onwthrpgcnfydxzzmyot.supabase.co";
+    console.log(`[FileAccess] Using Supabase URL: ${supabaseUrl}`);
     
     // Edge function URL for accessing files - use explicit URL construction
-    const functionUrl = `${projectUrl}/functions/access-file/file/${encodeURIComponent(filePath)}`;
+    const functionUrl = `${supabaseUrl}/functions/v1/access-file/file/${encodeURIComponent(filePath)}`;
     console.log(`[FileAccess] Base function URL: ${functionUrl}`);
     
     // Build URL with properly encoded parameters

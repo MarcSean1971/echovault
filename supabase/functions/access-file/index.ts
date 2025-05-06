@@ -46,88 +46,66 @@ serve(async (req: Request): Promise<Response> => {
   const supabase = createClient(supabaseUrl, supabaseServiceRoleKey);
   
   try {
-    // Check if the path includes "access-file" in the URL and handle accordingly
-    let filePathIndex = 1; // Default assuming /file/...
+    // Extract file path from URL based on the detected pattern
+    let filePath = '';
+    let filePathIndex = 0;
     
+    // Handle different path patterns
     if (pathParts.length >= 2) {
       if (pathParts[0] === 'access-file' && pathParts[1] === 'file') {
-        filePathIndex = 2; // Path format: /access-file/file/...
+        // Pattern: /access-file/file/{path}
+        filePathIndex = 2;
         console.log("[FileAccess] Detected /access-file/file/ path format");
       } else if (pathParts[0] === 'file') {
-        filePathIndex = 1; // Path format: /file/...
+        // Pattern: /file/{path}
+        filePathIndex = 1;
         console.log("[FileAccess] Detected /file/ path format");
+      } else if (pathParts[0] === 'v1' && pathParts[1] === 'access-file') {
+        // Pattern: /v1/access-file/file/{path}
+        filePathIndex = pathParts.indexOf('file') + 1;
+        console.log("[FileAccess] Detected /v1/access-file/file/ path format");
       }
       
-      // Extract file path from URL based on the detected format
-      let filePath = pathParts.slice(filePathIndex).join('/');
-      
-      // Properly decode the URL-encoded path
-      try {
-        filePath = decodeURIComponent(filePath);
-        console.log(`[FileAccess] Decoded file path: ${filePath}`);
-      } catch (decodeError) {
-        console.error(`[FileAccess] Error decoding file path: ${decodeError.message}`);
-        // Continue with the encoded path as fallback
-      }
-      
-      console.log(`[FileAccess] Requested file path: ${filePath}`);
-      
-      // Get query parameters for security validation
-      const deliveryId = url.searchParams.get('delivery');
-      const recipientEmail = url.searchParams.get('recipient');
-      
-      console.log(`[FileAccess] Query params: delivery=${deliveryId}, recipient=${recipientEmail}`);
-      
-      // IMPORTANT: Set to FALSE to enforce security validation in all environments
-      const isDevelopment = false;
-      
-      if (!isDevelopment && (!deliveryId || !recipientEmail)) {
-        return new Response(
-          JSON.stringify({ error: "Missing required parameters. Both delivery ID and recipient email are required." }),
-          { 
-            status: 400, 
-            headers: { ...corsHeaders, "Content-Type": "application/json" }
-          }
-        );
-      }
-      
-      try {
-        // SIMPLIFIED VALIDATION FOR DEVELOPMENT
-        // In development mode, we'll make minimal security checks to make it work
-        let messageId: string | null = null;
-        let bucketName = "message-attachments";
-        let finalFilePath = filePath;
-        let fileName = filePath.split('/').pop() || 'download';
-        let fileType = "application/octet-stream";
+      // Extract file path
+      if (filePathIndex > 0 && filePathIndex < pathParts.length) {
+        filePath = pathParts.slice(filePathIndex).join('/');
         
-        // If we're in development mode and have minimal params, we'll attempt direct access
-        if (isDevelopment) {
-          console.log("[FileAccess] DEVELOPMENT MODE: Using simplified security checks");
-          
-          // Extract the bucket name from the path if present
-          if (finalFilePath.includes('/')) {
-            const pathParts = finalFilePath.split('/');
-            // The first part might be the bucket name
-            bucketName = pathParts[0];
-            // If path is in format bucket/rest/of/path, extract accordingly
-            if (pathParts.length > 1) {
-              finalFilePath = pathParts.slice(1).join('/');
+        // Properly decode the URL-encoded path
+        try {
+          filePath = decodeURIComponent(filePath);
+          console.log(`[FileAccess] Decoded file path: ${filePath}`);
+        } catch (decodeError) {
+          console.error(`[FileAccess] Error decoding file path: ${decodeError.message}`);
+          // Continue with the encoded path as fallback
+        }
+        
+        console.log(`[FileAccess] Requested file path: ${filePath}`);
+        
+        // Get query parameters for security validation
+        const deliveryId = url.searchParams.get('delivery');
+        const recipientEmail = url.searchParams.get('recipient');
+        
+        console.log(`[FileAccess] Query params: delivery=${deliveryId}, recipient=${recipientEmail}`);
+        
+        // Always enforce security validation in production
+        if (!deliveryId || !recipientEmail) {
+          return new Response(
+            JSON.stringify({ error: "Missing required parameters. Both delivery ID and recipient email are required." }),
+            { 
+              status: 400, 
+              headers: { ...corsHeaders, "Content-Type": "application/json" }
             }
-          }
+          );
+        }
+        
+        try {
+          let messageId: string | null = null;
+          let bucketName = "message-attachments";
+          let finalFilePath = filePath;
+          let fileName = filePath.split('/').pop() || 'download';
+          let fileType = "application/octet-stream";
           
-          console.log(`[FileAccess] Using direct file access with path: ${finalFilePath} in bucket: ${bucketName}`);
-        } 
-        // In production mode, do full validation
-        else {
-          if (!deliveryId || !recipientEmail) {
-            throw new Error("Missing required delivery ID or recipient email");
-          }
-          
-          // Decode the recipient email to ensure proper comparison
-          const decodedRecipientEmail = decodeURIComponent(recipientEmail);
-          console.log(`[FileAccess] Validating access for delivery: ${deliveryId}, recipient: ${decodedRecipientEmail}`);
-          
-          // Validate that the delivery exists and matches the recipient
+          // Validate delivery and recipient
           const { data: deliveryData, error: deliveryError } = await supabase
             .from('delivered_messages')
             .select('message_id, recipient_id, condition_id')
@@ -135,7 +113,7 @@ serve(async (req: Request): Promise<Response> => {
             .maybeSingle();
           
           if (deliveryError || !deliveryData) {
-            throw new Error("Invalid delivery ID");
+            throw new Error(`Invalid delivery ID: ${deliveryError?.message || "Not found"}`);
           }
           
           messageId = deliveryData.message_id;
@@ -148,7 +126,7 @@ serve(async (req: Request): Promise<Response> => {
             .maybeSingle();
           
           if (recipientError || !recipientData) {
-            throw new Error("Invalid recipient");
+            throw new Error(`Invalid recipient: ${recipientError?.message || "Not found"}`);
           }
           
           // Access has been validated, now get the message to verify the attachment path
@@ -159,103 +137,115 @@ serve(async (req: Request): Promise<Response> => {
             .maybeSingle();
           
           if (messageError || !messageData) {
-            throw new Error("Message not found");
+            throw new Error(`Message not found: ${messageError?.message || "Not found"}`);
           }
           
           // Validate the requested file path exists in the message attachments
           const attachments = messageData.attachments || [];
+          console.log(`[FileAccess] Message attachments:`, attachments);
           
-          // Find the matching attachment
+          // Find the matching attachment (either by exact match or contained path)
           const requestedAttachment = attachments.find((att: any) => {
-            const normalizedAttPath = att.path.toLowerCase();
-            const normalizedRequestPath = filePath.toLowerCase();
-            return normalizedAttPath.includes(normalizedRequestPath) || normalizedRequestPath.includes(normalizedAttPath);
+            // Normalize paths for comparison
+            const attPath = att.path ? att.path.toLowerCase() : '';
+            const reqPath = filePath.toLowerCase();
+            
+            // Try different matching strategies
+            return attPath === reqPath || 
+                   attPath.endsWith(reqPath) || 
+                   reqPath.endsWith(attPath) ||
+                   attPath.includes(reqPath) ||
+                   reqPath.includes(attPath);
           });
           
           if (!requestedAttachment) {
+            console.error(`[FileAccess] Attachment not found in message. Requested: ${filePath}`);
+            console.error(`[FileAccess] Available attachments:`, attachments.map((a: any) => a.path));
             throw new Error("Attachment not found in message");
           }
           
-          // Extract the correct path without the bucket prefix
-          finalFilePath = requestedAttachment.path;
-          fileName = requestedAttachment.name;
-          fileType = requestedAttachment.type || "application/octet-stream";
+          console.log(`[FileAccess] Found matching attachment:`, requestedAttachment);
           
-          // Extract the bucket name from the path if present
+          // Extract the correct path and metadata
+          finalFilePath = requestedAttachment.path;
+          fileName = requestedAttachment.name || fileName;
+          fileType = requestedAttachment.type || fileType;
+          
+          // Handle bucket name extraction if path includes bucket prefix
           if (finalFilePath.includes('/')) {
             const pathParts = finalFilePath.split('/');
-            // The first part is the bucket name
-            bucketName = pathParts[0];
-            // If path is in format bucket/rest/of/path, extract accordingly
-            if (pathParts.length > 1) {
+            // Check if first part is a valid bucket name
+            if (pathParts[0] === "message-attachments" || pathParts[0] === "message_attachments") {
+              bucketName = pathParts[0];
               finalFilePath = pathParts.slice(1).join('/');
             }
           }
-        }
-        
-        console.log(`[FileAccess] Using final file path: ${finalFilePath} in bucket: ${bucketName}`);
-        
-        try {
-          // Download the file directly
-          const { data: fileData, error: fileError } = await supabase.storage
-            .from(bucketName)
-            .download(finalFilePath);
+          
+          console.log(`[FileAccess] Using final file path: ${finalFilePath} in bucket: ${bucketName}`);
+          
+          try {
+            // Download the file from storage
+            console.log(`[FileAccess] Downloading from bucket: ${bucketName}, path: ${finalFilePath}`);
+            const { data: fileData, error: fileError } = await supabase.storage
+              .from(bucketName)
+              .download(finalFilePath);
+              
+            if (fileError) {
+              console.error(`[FileAccess] File download error: ${fileError.message}`);
+              throw fileError;
+            }
             
-          if (fileError) {
-            console.error(`[FileAccess] File download error: ${fileError.message}`);
-            throw fileError;
+            if (!fileData) {
+              console.error(`[FileAccess] No file data returned from download`);
+              throw new Error("File data not available");
+            }
+            
+            // Set appropriate headers for the response
+            const headers = {
+              ...corsHeaders,
+              "Content-Type": fileType,
+              // Aggressive no-cache settings
+              "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "Pragma": "no-cache",
+              "Expires": "0",
+              "Content-Length": fileData.size.toString()
+            };
+            
+            // Add file name parameter to Content-Disposition
+            const encodedFileName = encodeURIComponent(fileName);
+            
+            // Set correct content disposition based on download mode
+            if (downloadMode) {
+              // Force download with attachment disposition
+              headers["Content-Disposition"] = `attachment; filename="${encodedFileName}"; filename*=UTF-8''${encodedFileName}`;
+              console.log(`[FileAccess] FORCING DOWNLOAD with headers:`, headers);
+            } else {
+              // Default to inline disposition for viewing
+              headers["Content-Disposition"] = `inline; filename="${encodedFileName}"; filename*=UTF-8''${encodedFileName}`;
+              console.log(`[FileAccess] INLINE VIEWING with headers:`, headers);
+            }
+            
+            return new Response(fileData, { headers });
+          } catch (storageError) {
+            console.error(`[FileAccess] Storage access error: ${storageError.message}`);
+            return new Response(
+              JSON.stringify({ error: "File access error", details: storageError.message }),
+              { 
+                status: 500, 
+                headers: { ...corsHeaders, "Content-Type": "application/json" }
+              }
+            );
           }
-          
-          if (!fileData) {
-            console.error(`[FileAccess] No file data returned from download`);
-            throw new Error("File data not available");
-          }
-          
-          // Set appropriate headers for forcing download
-          const headers = {
-            ...corsHeaders,
-            "Content-Type": fileType,
-            // Aggressive no-cache settings
-            "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
-            "Pragma": "no-cache",
-            "Expires": "0",
-            "Content-Length": fileData.size.toString()
-          };
-          
-          // Add file name parameter to Content-Disposition
-          const encodedFileName = encodeURIComponent(fileName);
-          
-          // Set correct content disposition based on download mode
-          if (downloadMode) {
-            // Force download with attachment disposition
-            headers["Content-Disposition"] = `attachment; filename="${encodedFileName}"; filename*=UTF-8''${encodedFileName}`;
-            console.log(`[FileAccess] FORCING DOWNLOAD with headers:`, headers);
-          } else {
-            // Default to inline disposition for viewing
-            headers["Content-Disposition"] = `inline; filename="${encodedFileName}"; filename*=UTF-8''${encodedFileName}`;
-            console.log(`[FileAccess] INLINE VIEWING with headers:`, headers);
-          }
-          
-          return new Response(fileData, { headers });
-        } catch (storageError) {
-          console.error(`[FileAccess] Storage access error: ${storageError.message}`);
+        } catch (validationError) {
+          console.error(`[FileAccess] Validation error: ${validationError.message}`);
           return new Response(
-            JSON.stringify({ error: "File access error", details: storageError.message }),
+            JSON.stringify({ error: validationError.message || "Access denied" }),
             { 
-              status: 500, 
+              status: 403, 
               headers: { ...corsHeaders, "Content-Type": "application/json" }
             }
           );
         }
-      } catch (validationError) {
-        console.error(`[FileAccess] Validation error: ${validationError.message}`);
-        return new Response(
-          JSON.stringify({ error: validationError.message || "Access denied" }),
-          { 
-            status: 403, 
-            headers: { ...corsHeaders, "Content-Type": "application/json" }
-          }
-        );
       }
     }
     
