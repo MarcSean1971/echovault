@@ -24,6 +24,8 @@ export interface Message {
   location_latitude?: number | null;
   location_longitude?: number | null;
   location_name?: string | null;
+  expires_at?: string | null;  // Add expires_at field
+  sender_name?: string | null; // Add sender_name field
 }
 
 /**
