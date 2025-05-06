@@ -27,11 +27,10 @@ export const AccessButton: React.FC<AccessButtonProps> = ({
             className={`${HOVER_TRANSITION} relative ${className}`}
           >
             {isLoading ? (
-              <span className="absolute inset-0 flex items-center justify-center">
-                <Loader2 className="h-4 w-4 animate-spin" />
-              </span>
-            ) : icon}
-            <span className={isLoading ? "opacity-0" : ""}>{icon}</span>
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              icon
+            )}
           </Button>
         </TooltipTrigger>
         <TooltipContent>
