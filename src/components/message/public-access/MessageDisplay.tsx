@@ -1,93 +1,170 @@
 
-import { Download } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { Download, Eye, Lock, Shield, Calendar, Clock } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Message } from "@/types/message";
 import { MessageContent } from "@/components/message/detail/MessageContent";
 import { MessageAttachments } from "@/components/message/detail/MessageAttachments";
 import { useSearchParams } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { HOVER_TRANSITION, BUTTON_HOVER_EFFECTS } from "@/utils/hoverEffects";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { Button } from "@/components/ui/button";
 import { LoadingState } from "./LoadingState";
+import { Badge } from "@/components/ui/badge";
+import { formatDistanceToNow } from "date-fns";
 
 interface MessageDisplayProps {
   message: Message | null;
-  isInitialLoading?: boolean;
   isPreviewMode?: boolean;
 }
 
 export const MessageDisplay = ({ 
   message, 
-  isInitialLoading = false,
   isPreviewMode = false
 }: MessageDisplayProps) => {
   // Get delivery ID and recipient email from URL for attachment access
   const [searchParams] = useSearchParams();
   const deliveryId = searchParams.get('delivery');
   const recipientEmail = searchParams.get('recipient');
-  const [localLoading, setLocalLoading] = useState(true);
+  
+  const [isLoading, setIsLoading] = useState(true);
   const [showAttachments, setShowAttachments] = useState(false);
   
-  // Add a local loading state to prevent flash of "not found"
+  // Format date helper
+  const formatMessageDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return `${date.toLocaleDateString()} · ${formatDistanceToNow(date, { addSuffix: true })}`;
+    } catch (e) {
+      return dateString;
+    }
+  };
+  
+  // Add a graceful loading state with fade-in effect
   useEffect(() => {
     const timer = setTimeout(() => {
-      setLocalLoading(false);
-      // Always show attachments without delay
+      setIsLoading(false);
       if (message?.attachments && message.attachments.length > 0) {
-        setShowAttachments(true);
+        const attachmentTimer = setTimeout(() => {
+          setShowAttachments(true);
+        }, 300); // Staggered reveal for attachments
+        return () => clearTimeout(attachmentTimer);
       }
-    }, 500); // Faster loading time
+    }, 600);
+    
     return () => clearTimeout(timer);
   }, [message]);
 
-  if (isInitialLoading || localLoading) {
+  if (isLoading) {
     return <LoadingState />;
   }
 
   if (!message) {
     return (
-      <Card className="max-w-2xl mx-auto p-6 mt-8">
-        <div className="text-center py-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Message not found</h2>
-          <p className="text-gray-500">
-            This message may have been deleted or the link is invalid.
-          </p>
-        </div>
-      </Card>
+      <div className="container mx-auto max-w-3xl px-4 py-8">
+        <Card className="overflow-hidden border-red-100">
+          <div className="p-8 text-center">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-50 mb-6">
+              <Lock className="h-8 w-8 text-red-500" />
+            </div>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-2">Message Not Available</h2>
+            <p className="text-gray-500 mb-6">
+              This message may have been deleted, expired, or the link is invalid.
+            </p>
+            <Button variant="outline" className="mt-2" onClick={() => window.location.reload()}>
+              Try Again
+            </Button>
+          </div>
+        </Card>
+      </div>
     );
   }
 
   return (
-    <Card className="max-w-2xl mx-auto p-6 mt-4 mb-16">
-      <h1 className="text-2xl font-bold mb-4">{message.title}</h1>
-      
-      <div className="prose max-w-full mb-6">
-        <MessageContent message={message} isArmed={true} />
-      </div>
-      
-      {message.attachments && message.attachments.length > 0 && showAttachments && (
-        <>
-          <Separator className="my-6" />
-          
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Attachments</h2>
+    <div className="container mx-auto max-w-3xl px-4 py-8 mb-16 animate-fade-in">
+      {isPreviewMode && (
+        <div className="mb-4 rounded-lg bg-amber-50 p-4 border border-amber-200">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <Eye className="h-5 w-5 text-amber-400" aria-hidden="true" />
             </div>
-            
-            <MessageAttachments 
-              message={message} 
-              deliveryId={deliveryId} 
-              recipientEmail={recipientEmail} 
-            />
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-amber-800">Preview Mode</h3>
+              <p className="text-sm text-amber-700">
+                You're viewing this message in preview mode. Some features may be limited.
+              </p>
+            </div>
           </div>
-        </>
+        </div>
       )}
       
-      {/* Footer with timestamp */}
-      <div className="mt-8 pt-4 border-t text-sm text-gray-500">
-        <p>This message was delivered securely.</p>
-      </div>
-    </Card>
+      <Card className="overflow-hidden border shadow-sm">
+        {/* Message Header */}
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6 text-white">
+          <h1 className="text-2xl font-bold mb-2">{message.title}</h1>
+          <div className="flex items-center text-blue-100 text-sm">
+            <Calendar className="h-4 w-4 mr-1" />
+            <span>{formatMessageDate(message.created_at)}</span>
+          </div>
+        </div>
+        
+        {/* Security Badge */}
+        <div className="bg-blue-50 px-6 py-2 border-b border-blue-100">
+          <div className="flex items-center">
+            <Shield className="h-4 w-4 text-blue-600 mr-2" />
+            <span className="text-sm font-medium text-blue-700">Secure Message</span>
+            
+            <Badge variant="outline" className="ml-auto border-blue-200 text-blue-700">
+              <Clock className="h-3 w-3 mr-1" /> {message.expires_at ? 'Expires' : 'No Expiration'}
+            </Badge>
+          </div>
+        </div>
+        
+        {/* Message Content */}
+        <div className="p-6">
+          <div className="prose max-w-full">
+            <MessageContent message={message} isArmed={true} />
+          </div>
+          
+          {/* Attachments Section */}
+          {message.attachments && message.attachments.length > 0 && showAttachments && (
+            <div className={`mt-8 animate-fade-in`}>
+              <Separator className="my-6" />
+              
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold flex items-center">
+                    <Download className="h-4 w-4 mr-2 text-blue-600" />
+                    Attachments
+                  </h2>
+                </div>
+                
+                <MessageAttachments 
+                  message={message} 
+                  deliveryId={deliveryId} 
+                  recipientEmail={recipientEmail} 
+                />
+              </div>
+            </div>
+          )}
+        </div>
+        
+        {/* Footer */}
+        <div className="bg-gray-50 px-6 py-4 text-sm text-gray-500 border-t">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <Shield className={`h-4 w-4 mr-2 text-blue-500 ${HOVER_TRANSITION}`} />
+              <span>This message was delivered securely</span>
+            </div>
+            
+            <div>
+              {message.sender_name && (
+                <span>From: {message.sender_name}</span>
+              )}
+            </div>
+          </div>
+        </div>
+      </Card>
+    </div>
   );
-}
+};

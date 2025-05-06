@@ -1,13 +1,14 @@
 
 import React from "react";
-import { FileIcon, AlertCircle } from "lucide-react";
+import { FileIcon, AlertCircle, FileCheck, Shield, ExternalLink } from "lucide-react";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { AttachmentProps } from "./types";
 import { formatFileSize } from "@/utils/fileUtils";
 import { AttachmentBadge } from "./AttachmentBadge";
 import { 
   DownloadButton,
-  OpenButton
+  OpenButton,
+  MethodToggleButton
 } from "./buttons";
 import { useAttachmentAccess } from "@/hooks/useAttachmentAccess";
 import { MethodStatusBadge } from "./StatusBadges";
@@ -30,7 +31,8 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
     downloadActive,
     currentMethodStatus,
     downloadFile,
-    openFile
+    openFile,
+    toggleDownloadMethod
   } = useAttachmentAccess({
     filePath: attachment.path,
     fileName: attachment.name,
@@ -40,18 +42,39 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
     recipientEmail
   });
   
+  // Get icon based on file type
+  const getFileIcon = () => {
+    if (hasError) {
+      return <AlertCircle className={`h-4 w-4 text-red-500 flex-shrink-0 ${HOVER_TRANSITION}`} />;
+    }
+    
+    if (downloadMethod === 'secure') {
+      return <Shield className={`h-4 w-4 text-blue-600 flex-shrink-0 ${HOVER_TRANSITION}`} />;
+    }
+    
+    if (downloadMethod === 'signed') {
+      return <FileCheck className={`h-4 w-4 text-green-600 flex-shrink-0 ${HOVER_TRANSITION}`} />;
+    }
+    
+    if (downloadMethod === 'direct') {
+      return <ExternalLink className={`h-4 w-4 text-amber-600 flex-shrink-0 ${HOVER_TRANSITION}`} />;
+    }
+    
+    return <FileIcon className={`h-4 w-4 flex-shrink-0 ${HOVER_TRANSITION}`} />;
+  };
+  
   return (
-    <div className={`border rounded-md p-3 transition-all duration-200 hover:shadow-md ${hasError ? 'border-red-300 bg-red-50' : 'hover:border-primary/20'}`}>
+    <div className={`border rounded-md p-3 transition-all duration-200 hover:shadow-sm ${
+      hasError ? 'border-red-300 bg-red-50' : 
+      downloadActive ? 'border-blue-200 bg-blue-50' : 
+      'hover:border-blue-200 hover:bg-blue-50/30'
+    }`}>
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3 overflow-hidden">
-          {hasError ? (
-            <AlertCircle className={`h-4 w-4 text-red-500 flex-shrink-0 ${HOVER_TRANSITION}`} />
-          ) : (
-            <FileIcon className={`h-4 w-4 flex-shrink-0 ${HOVER_TRANSITION}`} />
-          )}
+          {getFileIcon()}
           <div className="truncate">
             <div className="flex items-center gap-2">
-              <span className="block truncate">{attachment.name}</span>
+              <span className="block truncate font-medium">{attachment.name}</span>
             </div>
             <div className="flex items-center flex-wrap gap-2 mt-1">
               <AttachmentBadge method={downloadMethod} />
@@ -62,7 +85,14 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
         </div>
         
         <div className="flex space-x-2">
-          {/* Regular download button */}
+          {/* Download Method Toggle */}
+          <MethodToggleButton
+            downloadMethod={downloadMethod}
+            isLoading={isLoading}
+            toggleDownloadMethod={toggleDownloadMethod}
+          />
+          
+          {/* Download button */}
           <DownloadButton
             isLoading={isLoading}
             downloadActive={downloadActive}

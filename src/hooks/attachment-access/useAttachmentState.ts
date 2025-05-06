@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { AttachmentAccessState, AttachmentAccessProps } from "./types";
 import { AccessMethod } from "@/components/message/detail/attachment/types";
@@ -12,7 +13,7 @@ export function useAttachmentState() {
     retryCount: 0,
     showDebug: false,
     accessUrl: null,
-    downloadMethod: 'signed', // Changed from 'secure' to 'signed' as default
+    downloadMethod: 'signed', // Using 'signed' as default method
     lastSuccessMethod: null,
     downloadActive: false,
     attemptedMethods: {
@@ -33,6 +34,8 @@ export function useAttachmentState() {
       if (success) {
         newState.currentMethodStatus = 'success';
         newState.lastSuccessMethod = method;
+        // Reset error state on success
+        newState.hasError = false;
       } else if (method === prev.downloadMethod) {
         newState.currentMethodStatus = 'error';
       }

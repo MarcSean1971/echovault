@@ -78,8 +78,8 @@ serve(async (req: Request): Promise<Response> => {
       
       console.log(`[FileAccess] Query params: delivery=${deliveryId}, recipient=${recipientEmail}`);
       
-      // DEVELOPMENT MODE: Make minimal security checks
-      const isDevelopment = true; // CHANGE TO FALSE FOR PRODUCTION
+      // IMPORTANT: Set to FALSE to enforce security validation in all environments
+      const isDevelopment = false;
       
       if (!isDevelopment && (!deliveryId || !recipientEmail)) {
         return new Response(

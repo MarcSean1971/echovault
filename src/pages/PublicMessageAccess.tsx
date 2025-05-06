@@ -11,11 +11,8 @@ import { MessageNotFound } from '@/components/message/detail/MessageNotFound';
 import { supabase } from "@/integrations/supabase/client";
 
 export default function PublicMessageAccess() {
-  // Track if we're in the initial loading phase
-  const [initialLoading, setInitialLoading] = useState(true);
-  // Track if enough time has passed to show error messages
-  const [canShowError, setCanShowError] = useState(false);
-  // Track if this is a preview mode access
+  // Control UI states
+  const [initialLoadState, setInitialLoadState] = useState<'loading' | 'complete' | 'error'>('loading');
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   
   // Get message ID from URL path parameter
@@ -34,64 +31,11 @@ export default function PublicMessageAccess() {
     setIsPreviewMode(previewParam || isTestDelivery);
   }, [deliveryId, searchParams]);
   
-  // Set up a more efficient timing system for UI states
-  useEffect(() => {
-    // Initial loading check
-    const initialTimer = setTimeout(() => {
-      setInitialLoading(false);
-    }, 1000);
-    
-    // Error display phase
-    const errorTimer = setTimeout(() => {
-      setCanShowError(true);
-    }, 1000);
-    
-    return () => {
-      clearTimeout(initialTimer);
-      clearTimeout(errorTimer);
-    };
-  }, []);
-  
-  // For debugging purposes - log the parameters
-  useEffect(() => {
-    console.log("==== PublicMessageAccess.tsx ====");
-    console.log("Path parameters:");
-    console.log("messageId:", messageId);
-    console.log("Query parameters (raw):");
-    console.log("deliveryId (raw):", deliveryId);
-    console.log("recipientEmail (raw):", recipientEmail);
-    console.log("isDebugMode:", isDebugMode);
-    console.log("isPreviewMode:", isPreviewMode);
-
-    // Properly decode parameters to ensure correct comparison
-    const decodedEmail = recipientEmail ? decodeURIComponent(recipientEmail) : null;
-    const decodedDeliveryId = deliveryId ? decodeURIComponent(deliveryId) : null;
-    
-    console.log("Decoded parameters:");
-    console.log("decodedDeliveryId:", decodedDeliveryId);
-    console.log("decodedEmail:", decodedEmail);
-    console.log("Current URL:", window.location.href);
-    
-    // Validate the parameters
-    if (!messageId || !deliveryId || !recipientEmail) {
-      console.error("Missing required parameters for message access!");
-      const missingParams = [];
-      if (!messageId) missingParams.push("messageId");
-      if (!deliveryId) missingParams.push("deliveryId");
-      if (!recipientEmail) missingParams.push("recipientEmail");
-      console.error(`Missing parameters: ${missingParams.join(', ')}`);
-    }
-    
-    // If it's a preview mode, log that
-    if (isPreviewMode) {
-      console.log("PREVIEW MODE DETECTED: This is a test/preview access");
-    }
-  }, [messageId, deliveryId, recipientEmail, isDebugMode, isPreviewMode]);
-  
   // Properly decode parameters before passing to hook
   const decodedEmail = recipientEmail ? decodeURIComponent(recipientEmail) : null;
   const decodedDeliveryId = deliveryId ? decodeURIComponent(deliveryId) : null;
   
+  // Request access to the message
   const { 
     message,
     isLoading,
@@ -106,15 +50,26 @@ export default function PublicMessageAccess() {
     messageId, 
     deliveryId: decodedDeliveryId, 
     recipientEmail: decodedEmail,
-    isPreviewMode // Pass preview mode to hook
+    isPreviewMode
   });
+  
+  // Set up a timing system for smooth UI transitions
+  useEffect(() => {
+    // Initial loading state - show loading animation for at least 1 second
+    // This prevents UI flashing
+    const loadTimer = setTimeout(() => {
+      setInitialLoadState(error ? 'error' : 'complete');
+    }, 1000);
+    
+    return () => clearTimeout(loadTimer);
+  }, [message, error, isLoading]);
   
   // Handle PIN submission
   const handlePinSubmit = async (pinCode: string) => {
     await verifyPin(pinCode);
   };
   
-  // If we're in preview mode and there's a message ID, try to fetch the message directly
+  // For preview mode with debug, try to fetch the message directly
   const [previewMessage, setPreviewMessage] = useState<any>(null);
   
   useEffect(() => {
@@ -127,10 +82,7 @@ export default function PublicMessageAccess() {
             .eq('id', messageId)
             .single();
             
-          if (error) {
-            console.error("Error fetching preview message:", error);
-          } else if (data) {
-            console.log("Preview message data fetched directly:", data);
+          if (data) {
             setPreviewMessage(data);
           }
         } catch (err) {
@@ -143,17 +95,17 @@ export default function PublicMessageAccess() {
   }, [isPreviewMode, messageId, isDebugMode]);
   
   // Render loading state during initial loading phase
-  if (isLoading || initialLoading) {
+  if ((isLoading || initialLoadState === 'loading') && !error) {
     return <LoadingState />;
   }
   
   // For preview mode with debug enabled, show the message directly if available
   if (isPreviewMode && isDebugMode && previewMessage) {
-    return <MessageDisplay message={previewMessage} isInitialLoading={false} isPreviewMode={true} />;
+    return <MessageDisplay message={previewMessage} isPreviewMode={true} />;
   }
   
-  // Only show error state if we're allowed to show errors and there is an error
-  if (error && canShowError) {
+  // Show specific error state
+  if (error && initialLoadState !== 'loading') {
     return <ErrorState error={error} isPreviewMode={isPreviewMode} />;
   }
   
@@ -167,22 +119,14 @@ export default function PublicMessageAccess() {
     return <DelayedUnlock unlockTime={unlockTime} onUnlock={handleUnlockExpired} />;
   }
   
-  // We're explicitly not showing MessageNotFound until we're sure we're not loading
-  // and enough time has passed to show errors
-  if (!message && canShowError && !initialLoading && !isLoading) {
-    return <MessageNotFound isInitialLoading={false} />;
+  // Show not found state when appropriate - only after loading is complete
+  if (!message && initialLoadState === 'complete' && !isLoading) {
+    return <MessageNotFound />;
   }
   
-  // If message is null but we're still in the grace period before showing errors,
-  // continue showing loading state to prevent UI flashing
-  if (!message) {
-    return <LoadingState />;
-  }
-  
-  // Render message content
+  // Render message content when everything is ready
   return <MessageDisplay 
     message={message} 
-    isInitialLoading={initialLoading}
     isPreviewMode={isPreviewMode}
   />;
 }

@@ -25,8 +25,8 @@ export const DownloadButton: React.FC<DownloadButtonProps> = ({
       isLoading={isLoading}
       onClick={downloadFile}
       icon={<Download className={`h-4 w-4 ${isLoading || downloadActive ? 'animate-pulse' : ''} ${HOVER_TRANSITION}`} />}
-      tooltipText={`Download file using ${getMethodName(downloadMethod)}`}
-      className={downloadActive ? 'bg-green-500 hover:bg-green-600' : 'hover:bg-blue-100'}
+      tooltipText={`Download using ${getMethodName(downloadMethod)}`}
+      className={downloadActive ? 'bg-blue-600 hover:bg-blue-700 text-white' : 'hover:bg-blue-50 hover:border-blue-200'}
     />
   );
 };
