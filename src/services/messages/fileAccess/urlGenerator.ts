@@ -37,7 +37,7 @@ export class FileUrlGenerator {
   /**
    * Get file URL using specified method
    */
-  public async getAccessUrl(method: AccessMethod = 'secure', accessMode: AccessMode = 'view'): Promise<AccessMethodData> {
+  public async getAccessUrl(method: AccessMethod = 'signed', accessMode: AccessMode = 'view'): Promise<AccessMethodData> {
     try {
       console.log(`Getting file access URL for: ${this.filePath} using method: ${method}, mode: ${accessMode}`);
       
@@ -55,7 +55,27 @@ export class FileUrlGenerator {
         throw new Error("Could not generate direct URL");
       }
       
-      // If we're in public view mode with delivery ID and recipient email 
+      // Prefer signed URL method
+      if (method === 'signed') {
+        // Default to the standard Supabase storage URL generation
+        console.log("Using signed URL access");
+        
+        // Add download parameter for authenticated downloads
+        const url = await getAuthenticatedFileUrl(
+          this.filePath, 
+          false, 
+          accessMode === 'download'
+        );
+        
+        console.log("Generated signed URL:", url);
+        
+        if (url) {
+          return { url, method: 'signed' };
+        }
+        // If signed URL fails, fall through to other methods
+      }
+      
+      // Only use secure/edge function if explicitly requested and delivery params exist
       if (method === 'secure' && this.deliveryId && this.recipientEmail) {
         console.log(`Using secure public access with deliveryId: ${this.deliveryId}, recipient: ${this.recipientEmail}`);
         
@@ -69,34 +89,14 @@ export class FileUrlGenerator {
         
         console.log("Generated secure public URL:", url);
         
-        if (!url) {
-          throw new Error("Could not generate secure access URL");
+        if (url) {
+          return { url, method: 'secure' };
         }
-        
-        return { url, method: 'secure' };
-      } else if (method === 'signed') {
-        // Default to the standard Supabase storage URL generation
-        console.log("Using signed URL access");
-        
-        // Add download parameter for authenticated downloads
-        const url = await getAuthenticatedFileUrl(
-          this.filePath, 
-          false, 
-          accessMode === 'download'
-        );
-        
-        console.log("Generated signed URL:", url);
-        
-        if (!url) {
-          throw new Error("Could not generate signed URL");
-        }
-        
-        return { url, method: 'signed' };
       }
       
-      // Fallback to signed URL if not explicitly requesting direct
-      // Fix for the comparison error by using explicit check instead of inequality
-      if (method === 'secure' || method === 'signed') {
+      // If requested method fails or isn't available, try other methods in order of preference
+      // First try signed if we weren't already using it
+      if (method !== 'signed') {
         const signedResult = await getAuthenticatedFileUrl(
           this.filePath, 
           false, 
@@ -109,7 +109,22 @@ export class FileUrlGenerator {
         }
       }
       
-      // Fallback to direct URL if all else fails
+      // Then try secure if we have the credentials and weren't already using it
+      if (method !== 'secure' && this.deliveryId && this.recipientEmail) {
+        const secureUrl = await getPublicFileUrl(
+          this.filePath,
+          this.deliveryId,
+          this.recipientEmail,
+          accessMode
+        );
+        
+        if (secureUrl) {
+          console.log("Falling back to secure URL access");
+          return { url: secureUrl, method: 'secure' };
+        }
+      }
+      
+      // Finally try direct URL if all else fails
       const directUrl = this.getDirectUrl();
       if (directUrl) {
         console.log("Falling back to direct URL access");
@@ -120,9 +135,27 @@ export class FileUrlGenerator {
     } catch (error) {
       console.error("Error generating URL:", error);
       
-      // If secure method fails, try signed URL as fallback
-      if (method === 'secure') {
-        console.log("Secure access failed, trying signed URL");
+      // Try alternatives if the primary method fails
+      if (method === 'signed') {
+        // Try secure method if delivery params exist
+        if (this.deliveryId && this.recipientEmail) {
+          try {
+            const secureUrl = await getPublicFileUrl(this.filePath, this.deliveryId, this.recipientEmail, accessMode);
+            if (secureUrl) {
+              return { url: secureUrl, method: 'secure' };
+            }
+          } catch (secureError) {
+            console.error("Secure URL fallback failed:", secureError);
+          }
+        }
+        
+        // If secure fails or isn't available, try direct
+        const directUrl = this.getDirectUrl();
+        if (directUrl) {
+          return { url: directUrl, method: 'direct' };
+        }
+      } else if (method === 'secure') {
+        // Try signed URL if secure method fails
         try {
           const signedUrl = await getAuthenticatedFileUrl(this.filePath, true, accessMode === 'download');
           if (signedUrl) {
@@ -132,10 +165,9 @@ export class FileUrlGenerator {
           console.error("Signed URL fallback also failed:", fallbackError);
         }
         
-        // If signed URL also fails, try direct as last resort
+        // Try direct as last resort
         const directUrl = this.getDirectUrl();
         if (directUrl) {
-          console.log("Secure and signed access failed, falling back to direct URL");
           return { url: directUrl, method: 'direct' };
         }
       }

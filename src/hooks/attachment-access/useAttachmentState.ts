@@ -12,7 +12,7 @@ export function useAttachmentState() {
     retryCount: 0,
     showDebug: false,
     accessUrl: null,
-    downloadMethod: 'secure',
+    downloadMethod: 'signed', // Changed from 'secure' to 'signed' as default
     lastSuccessMethod: null,
     downloadActive: false,
     attemptedMethods: {
@@ -74,8 +74,8 @@ export function useAttachmentState() {
   };
 
   const toggleDownloadMethod = () => {
-    // Cycle through the methods: secure -> signed -> direct -> secure
-    const methods: AccessMethod[] = ['secure', 'signed', 'direct'];
+    // Cycle through the methods: signed -> direct -> secure -> signed
+    const methods: AccessMethod[] = ['signed', 'direct', 'secure'];
     const currentIndex = methods.indexOf(state.downloadMethod);
     const nextMethod = methods[(currentIndex + 1) % methods.length];
     

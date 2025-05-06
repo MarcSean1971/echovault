@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { MessageLoading } from "./MessageLoading";
 import { MessageNotFound } from "./MessageNotFound";
@@ -14,7 +13,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { MessageDeliverySettings } from "./MessageDeliverySettings";
 import { MessageRecipientsList } from "./MessageRecipientsList";
 import { Button } from "@/components/ui/button";
-import { Edit, Eye, Mail, Trash2, Download } from "lucide-react";
+import { Edit, Mail, Trash2 } from "lucide-react";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useNavigate } from "react-router-dom";
 import { WhatsAppIntegration } from "./content/WhatsAppIntegration";
@@ -64,9 +63,8 @@ export function MessageDetailContent({
 }: MessageDetailContentProps) {
   const { getButtonHoverClasses, HOVER_TRANSITION } = useHoverEffects();
   
-  // Add state for delete confirmation and public view dialog
+  // Add state for delete confirmation
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showPublicViewHelp, setShowPublicViewHelp] = useState(false);
   const navigate = useNavigate();
   const transcription = message && message.message_type !== 'text' ? 
     extractTranscription(message.message_type, message.content) : null;
@@ -76,47 +74,6 @@ export function MessageDetailContent({
   const isWhatsAppPanicTrigger = isPanicTrigger && 
                                condition?.panic_config && 
                                condition?.panic_config?.methods?.includes('whatsapp');
-  
-  // Function to generate a public test view URL
-  const generatePublicTestViewUrl = () => {
-    // Check if we have existing delivered_messages for this message
-    // Get a random recipient from the list
-    if (!recipients || recipients.length === 0) {
-      toast({
-        title: "No recipients available",
-        description: "Please add recipients to this message before testing the public view.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    // Get the first recipient
-    const recipient = recipients[0];
-    
-    // Generate a valid delivery ID format instead of a random test one
-    // Using a consistent format: preview-{message-id}-{timestamp}
-    const testDeliveryId = `preview-${message.id.substring(0, 8)}-${Date.now()}`;
-    
-    // Build the URL with debug flag
-    const publicViewUrl = `/access/message/${message.id}?delivery=${testDeliveryId}&recipient=${encodeURIComponent(recipient.email)}&debug=true&preview=true`;
-    
-    // Copy the URL to the clipboard
-    navigator.clipboard.writeText(window.location.origin + publicViewUrl);
-    
-    // Show the dialog with instructions
-    setShowPublicViewHelp(true);
-    
-    // Return the URL for navigation
-    return publicViewUrl;
-  };
-  
-  // Function to open the public view in a new tab
-  const openPublicTestView = () => {
-    const url = generatePublicTestViewUrl();
-    if (url) {
-      window.open(url, '_blank');
-    }
-  };
 
   if (isLoading) {
     return <MessageLoading />;
@@ -157,17 +114,12 @@ export function MessageDetailContent({
               <>
                 <Separator className="my-4" />
                 <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-medium">Attachments</h2>
-                    <Button 
-                      onClick={openPublicTestView}
-                      className={`bg-blue-600 hover:bg-blue-700 text-white ${HOVER_TRANSITION} ${getButtonHoverClasses('default')}`}
-                    >
-                      <Eye className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} />
-                      Test Public View
-                    </Button>
-                  </div>
-                  <MessageAttachments message={message} />
+                  <h2 className="text-lg font-medium mb-4">Attachments</h2>
+                  <MessageAttachments 
+                    message={message}
+                    deliveryId={deliveryId}
+                    recipientEmail={recipientEmail}
+                  />
                 </div>
               </>
             )}
@@ -241,28 +193,16 @@ export function MessageDetailContent({
             <CardContent className="p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-medium">Recipients</h2>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={onSendTestMessage}
-                    disabled={isArmed || isActionLoading}
-                    className="whitespace-nowrap"
-                  >
-                    <Mail className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} />
-                    Send Test Message
-                  </Button>
-                  
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={openPublicTestView}
-                    className={`whitespace-nowrap bg-blue-50 hover:bg-blue-100 border-blue-200 ${HOVER_TRANSITION} ${getButtonHoverClasses('default')}`}
-                  >
-                    <Eye className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} />
-                    Test Public View
-                  </Button>
-                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onSendTestMessage}
+                  disabled={isArmed || isActionLoading}
+                  className="whitespace-nowrap"
+                >
+                  <Mail className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} />
+                  Send Test Message
+                </Button>
               </div>
               
               <div className="mt-2">
@@ -314,48 +254,6 @@ export function MessageDetailContent({
         </SheetContent>
       </Sheet>
       
-      {/* Public View Help Sheet */}
-      <Sheet open={showPublicViewHelp} onOpenChange={setShowPublicViewHelp}>
-        <SheetContent>
-          <SheetHeader>
-            <SheetTitle>Testing Public Message View</SheetTitle>
-            <SheetDescription>
-              A public test URL has been copied to your clipboard and will open in a new tab.
-            </SheetDescription>
-          </SheetHeader>
-          <div className="py-4 space-y-4">
-            <p>This URL simulates how recipients would see your message. You should see:</p>
-            <ul className="list-disc pl-5 space-y-2">
-              <li>The message content</li>
-              <li>All attachments with download buttons</li>
-              <li><strong>A green "Download All" button</strong> at the top of the attachments section</li>
-              <li>Each attachment having a green "Secure Download" button</li>
-            </ul>
-            <div className="bg-blue-50 p-4 rounded">
-              <p className="font-medium text-blue-800">Debugging is automatically enabled in test view mode.</p>
-              <p className="text-blue-700 text-sm mt-1">If download buttons are not visible, click the "Debug" button in the top right to see detailed information.</p>
-            </div>
-            <div className="bg-amber-50 p-4 rounded mt-2">
-              <p className="font-medium text-amber-800">Note about Testing:</p>
-              <p className="text-amber-700 text-sm mt-1">
-                The public view uses a test delivery ID which won't match real message deliveries.
-                This is expected and will show a message not found error initially.
-                Click the "Debug" button to see message information.
-              </p>
-            </div>
-          </div>
-          <SheetFooter className="flex-row justify-end gap-2 mt-6">
-            <Button variant="outline" onClick={() => setShowPublicViewHelp(false)}>
-              Close
-            </Button>
-            <Button onClick={openPublicTestView} className={`${HOVER_TRANSITION} ${getButtonHoverClasses('default')}`}>
-              <Eye className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} />
-              Open Test View Again
-            </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
-      
       <SendTestMessageDialog 
         open={showSendTestDialog}
         onOpenChange={setShowSendTestDialog}
@@ -365,4 +263,3 @@ export function MessageDetailContent({
     </div>
   );
 }
-

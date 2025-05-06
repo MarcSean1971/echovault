@@ -28,9 +28,6 @@ export function generateAccessUrl(messageId: string, recipientEmail: string, del
     
     // Debug logging
     console.log(`Generated access URL: ${accessUrl}`);
-    console.log(`URL verification - Original messageId: ${messageId}`);
-    console.log(`URL verification - Original deliveryId: ${deliveryId}`);
-    console.log(`URL verification - Original recipientEmail: ${recipientEmail}`);
     
     return accessUrl;
   } catch (error) {
@@ -42,43 +39,50 @@ export function generateAccessUrl(messageId: string, recipientEmail: string, del
 }
 
 /**
- * Generate a file access URL that uses our secure edge function
+ * Generate a file access URL that uses the signed URL method (preferred)
+ * This is now the default method since it's more reliable
  */
 export function generateFileAccessUrl(filePath: string, recipientEmail: string, deliveryId: string) {
   // Use the Supabase URL for edge functions
   const supabaseUrl = Deno.env.get('SUPABASE_URL') || "https://onwthrpgcnfydxzzmyot.supabase.co";
   
+  // Note: We no longer generate edge function URLs directly
+  // Instead we will rely on the client-side to generate signed URLs
+  // which don't require the edge function
+  
   try {
-    // Make sure the filePath is properly encoded
-    const encodedFilePath = encodeURIComponent(filePath);
-    
-    // Build the base URL
-    const baseUrl = `${supabaseUrl}/functions/v1/access-file/file/${encodedFilePath}`;
-    
-    // Build complete URL with query parameters
+    const appDomain = Deno.env.get("APP_DOMAIN") || "echo-vault.app";
+    const domainWithProtocol = appDomain.startsWith('http://') || appDomain.startsWith('https://') 
+      ? appDomain 
+      : `https://${appDomain}`;
+
+    // Create a URL that points to the message with the attachment
+    // The client-side will handle accessing the attachment via signed URL
+    const baseUrl = `${domainWithProtocol}/access/message/${encodeURIComponent(deliveryId)}`;
     const url = new URL(baseUrl);
     url.searchParams.append("delivery", deliveryId);
     url.searchParams.append("recipient", recipientEmail);
+    url.searchParams.append("attachment", encodeURIComponent(filePath));
     
     const fileAccessUrl = url.toString();
     
-    // Debug logging
     console.log(`Generated file access URL: ${fileAccessUrl}`);
-    console.log(`URL verification - Original filePath: ${filePath}`);
-    console.log(`URL verification - Original deliveryId: ${deliveryId}`);
-    console.log(`URL verification - Original recipientEmail: ${recipientEmail}`);
     
     return fileAccessUrl;
   } catch (error) {
     console.error(`Error generating file access URL: ${error}`);
     
     // Fallback with direct string concatenation
-    return `${supabaseUrl}/functions/v1/access-file/file/${encodeURIComponent(filePath)}?delivery=${encodeURIComponent(deliveryId)}&recipient=${encodeURIComponent(recipientEmail)}`;
+    const appDomain = Deno.env.get("APP_DOMAIN") || "echo-vault.app";
+    const domainWithProtocol = appDomain.startsWith('http://') || appDomain.startsWith('https://') 
+      ? appDomain 
+      : `https://${appDomain}`;
+    
+    return `${domainWithProtocol}/access/message/${encodeURIComponent(deliveryId)}?delivery=${encodeURIComponent(deliveryId)}&recipient=${encodeURIComponent(recipientEmail)}&attachment=${encodeURIComponent(filePath)}`;
   }
 }
 
-// This function is intentionally kept for backward compatibility
-// but now uses our new file access endpoint
+// This function is kept for backward compatibility
 export function generateAttachmentUrl(messageId: string, recipientEmail: string, deliveryId: string, attachmentPath: string, attachmentName: string) {
   // Use the new file access function
   return generateFileAccessUrl(attachmentPath, recipientEmail, deliveryId);
