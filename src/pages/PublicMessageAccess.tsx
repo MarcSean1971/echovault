@@ -12,6 +12,8 @@ import { MessageNotFound } from '@/components/message/detail/MessageNotFound';
 export default function PublicMessageAccess() {
   // Track if we're in the initial loading phase
   const [initialLoading, setInitialLoading] = useState(true);
+  // Extended loading time for a smoother experience
+  const [extendedLoading, setExtendedLoading] = useState(true);
   // Track if enough time has passed to show error messages
   const [canShowError, setCanShowError] = useState(false);
   
@@ -23,18 +25,26 @@ export default function PublicMessageAccess() {
   const deliveryId = searchParams.get('delivery');
   const recipientEmail = searchParams.get('recipient');
   
-  // Set up a timer to determine when we can show error states
+  // Set up a more robust timing system for UI states
   useEffect(() => {
+    // Initial quick loading check
     const initialTimer = setTimeout(() => {
       setInitialLoading(false);
-    }, 3000); // Increased to 3000ms (3 seconds) to avoid flashing
+    }, 2000); // 2 seconds for initial loading
     
+    // Extended loading phase to prevent flickering between states
+    const extendedTimer = setTimeout(() => {
+      setExtendedLoading(false);
+    }, 3500); // 3.5 seconds for extended loading
+    
+    // Error display phase - only show errors after this time
     const errorTimer = setTimeout(() => {
       setCanShowError(true);
-    }, 4000); // Increased to 4000ms (4 seconds) for error states
+    }, 4000); // 4 seconds before showing errors
     
     return () => {
       clearTimeout(initialTimer);
+      clearTimeout(extendedTimer);
       clearTimeout(errorTimer);
     };
   }, []);
@@ -93,8 +103,8 @@ export default function PublicMessageAccess() {
     await verifyPin(pinCode);
   };
   
-  // Render loading state
-  if (isLoading || initialLoading) {
+  // Render loading state during any loading phase
+  if (isLoading || initialLoading || extendedLoading) {
     return <LoadingState />;
   }
   
@@ -115,16 +125,16 @@ export default function PublicMessageAccess() {
   
   // We're explicitly not showing MessageNotFound until we're sure we're not loading
   // and enough time has passed to show errors
-  if (!message && canShowError && !initialLoading && !isLoading) {
+  if (!message && canShowError && !initialLoading && !extendedLoading && !isLoading) {
     return <MessageNotFound isInitialLoading={false} />;
   }
   
   // If message is null but we're still in the grace period before showing errors,
-  // show loading state instead of "not found"
+  // continue showing loading state to prevent UI flashing
   if (!message) {
     return <LoadingState />;
   }
   
   // Render message content
-  return <MessageDisplay message={message} isInitialLoading={initialLoading} />;
+  return <MessageDisplay message={message} isInitialLoading={initialLoading || extendedLoading} />;
 }

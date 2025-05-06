@@ -95,7 +95,7 @@ export async function getPublicFileUrl(
   } catch (error) {
     console.error("Error generating public file URL:", error);
     
-    // If edge function approach fails, try direct signed URL as fallback
+    // If edge function approach fails, try signed URL as fallback
     try {
       console.log("Attempting fallback to signed URL approach");
       const signedUrl = await getAuthenticatedFileUrl(filePath, true, mode === 'download');

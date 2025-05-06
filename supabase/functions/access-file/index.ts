@@ -224,7 +224,8 @@ serve(async (req: Request): Promise<Response> => {
         console.log(`[FileAccess] Using final file path: ${finalFilePath}`);
         
         try {
-          // Check if the downloadMode is true, if so, serve for download directly rather than signed URL
+          // IMPORTANT: When in download mode, ALWAYS serve the file directly rather than using redirects
+          // This ensures proper Content-Disposition handling
           if (downloadMode) {
             console.log(`[FileAccess] Download mode active, forcing download for: ${finalFilePath}`);
             
@@ -243,12 +244,14 @@ serve(async (req: Request): Promise<Response> => {
               throw new Error("File data not available");
             }
             
-            // Success - return the file with proper download Content-Disposition
+            // CRITICAL: Set proper download headers with Content-Disposition: attachment
+            // This is what browsers use to determine if file should be downloaded
             const headers = {
               ...corsHeaders,
               "Content-Type": requestedAttachment.type || "application/octet-stream",
-              "Content-Disposition": `attachment; filename="${requestedAttachment.name}"`,
-              "Cache-Control": "no-store"
+              "Content-Disposition": `attachment; filename="${encodeURIComponent(requestedAttachment.name)}"`,
+              "Cache-Control": "no-store",
+              "Content-Length": fileData.size.toString()
             };
             
             console.log(`[FileAccess] Successfully serving file as forced download: ${finalFilePath}`);
@@ -257,47 +260,18 @@ serve(async (req: Request): Promise<Response> => {
             return new Response(fileData, { headers });
           }
           
-          // Regular mode - try to use signed URL 
-          console.log(`[FileAccess] Attempting to generate direct signed URL from ${bucketName}/${finalFilePath}`);
+          // Regular view mode - try to use direct file serving instead of signed URL redirect
+          // This gives us more control over the headers
+          console.log(`[FileAccess] View mode, serving file directly: ${finalFilePath}`);
           
-          const { data: signedUrlData, error: signedUrlError } = await supabase.storage
-            .from(bucketName)
-            .createSignedUrl(finalFilePath, 60);
-            
-          if (signedUrlError) {
-            console.error(`[FileAccess] Error creating signed URL: ${signedUrlError.message}`);
-            throw signedUrlError;
-          }
-          
-          if (signedUrlData?.signedUrl) {
-            console.log(`[FileAccess] Successfully created signed URL: ${signedUrlData.signedUrl}`);
-            
-            // Redirect to the signed URL
-            return new Response(null, { 
-              status: 302, 
-              headers: { 
-                ...corsHeaders, 
-                "Location": signedUrlData.signedUrl,
-                "Cache-Control": "no-cache" 
-              }
-            });
-          }
-          
-          throw new Error("No signed URL was generated");
-          
-        } catch (storageError) {
-          console.error(`[FileAccess] Storage access error: ${storageError.message}`);
-          
-          // Try to serve the file directly as a last resort
           try {
-            console.log(`[FileAccess] Attempting to download file directly`);
-            
+            // Download and serve the file directly instead of redirecting to a signed URL
             const { data: fileData, error: fileError } = await supabase.storage
               .from(bucketName)
               .download(finalFilePath);
               
             if (fileError) {
-              console.error(`[FileAccess] Download error: ${fileError.message}`);
+              console.error(`[FileAccess] Direct file serve error: ${fileError.message}`);
               throw fileError;
             }
             
@@ -306,12 +280,76 @@ serve(async (req: Request): Promise<Response> => {
               throw new Error("File data not available");
             }
             
+            // Set appropriate Content-Disposition for viewing
+            const headers = {
+              ...corsHeaders,
+              "Content-Type": requestedAttachment.type || "application/octet-stream",
+              "Content-Disposition": `inline; filename="${encodeURIComponent(requestedAttachment.name)}"`,
+              "Cache-Control": "no-store",
+              "Content-Length": fileData.size.toString()
+            };
+            
+            console.log(`[FileAccess] Successfully serving file for viewing: ${finalFilePath}`);
+            
+            return new Response(fileData, { headers });
+          } catch (directFileError) {
+            console.error(`[FileAccess] Error serving file directly: ${directFileError.message}`);
+            
+            // Fall back to signed URL as last resort for viewing
+            console.log(`[FileAccess] Falling back to signed URL for view mode: ${finalFilePath}`);
+            
+            const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+              .from(bucketName)
+              .createSignedUrl(finalFilePath, 60);
+              
+            if (signedUrlError) {
+              console.error(`[FileAccess] Error creating signed URL: ${signedUrlError.message}`);
+              throw signedUrlError;
+            }
+            
+            if (signedUrlData?.signedUrl) {
+              console.log(`[FileAccess] Created signed URL: ${signedUrlData.signedUrl}`);
+              
+              // Redirect to the signed URL
+              return new Response(null, { 
+                status: 302, 
+                headers: { 
+                  ...corsHeaders, 
+                  "Location": signedUrlData.signedUrl,
+                  "Cache-Control": "no-cache" 
+                }
+              });
+            }
+            
+            throw new Error("Failed to generate any valid file access URL");
+          }
+        } catch (storageError) {
+          console.error(`[FileAccess] Storage access error: ${storageError.message}`);
+          
+          // Try to serve the file directly as a last resort
+          try {
+            console.log(`[FileAccess] Attempting final direct download fallback`);
+            
+            const { data: fileData, error: fileError } = await supabase.storage
+              .from(bucketName)
+              .download(finalFilePath);
+              
+            if (fileError) {
+              console.error(`[FileAccess] Final fallback download error: ${fileError.message}`);
+              throw fileError;
+            }
+            
+            if (!fileData) {
+              console.error(`[FileAccess] No file data returned from final fallback download`);
+              throw new Error("File data not available");
+            }
+            
             // Determine Content-Disposition based on download mode
             const contentDisposition = downloadMode 
-              ? `attachment; filename="${requestedAttachment.name}"`
-              : `inline; filename="${requestedAttachment.name}"`;
+              ? `attachment; filename="${encodeURIComponent(requestedAttachment.name)}"`
+              : `inline; filename="${encodeURIComponent(requestedAttachment.name)}"`;
               
-            console.log(`[FileAccess] Using Content-Disposition: ${contentDisposition}`);
+            console.log(`[FileAccess] Using Content-Disposition in fallback: ${contentDisposition}`);
             
             // Success - return the file with proper Content-Type
             const headers = {
@@ -321,11 +359,11 @@ serve(async (req: Request): Promise<Response> => {
               "Cache-Control": "no-store"
             };
             
-            console.log(`[FileAccess] Successfully serving file directly: ${finalFilePath}`);
+            console.log(`[FileAccess] Successfully serving file via final fallback: ${finalFilePath}`);
             
             return new Response(fileData, { headers });
           } catch (downloadError) {
-            console.error(`[FileAccess] Direct download failed: ${downloadError.message}`);
+            console.error(`[FileAccess] All file access methods failed: ${downloadError.message}`);
             throw downloadError;
           }
         }

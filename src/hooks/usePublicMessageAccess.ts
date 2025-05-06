@@ -29,18 +29,20 @@ export const usePublicMessageAccess = ({
 }: UsePublicMessageAccessProps): PublicMessageAccessResult => {
   // Track if enough time has passed to show error messages
   const [errorDelay, setErrorDelay] = useState(true);
+  // Track if we're in a fallback loading state
+  const [fallbackLoading, setFallbackLoading] = useState(false);
   
   // Set up a timer to determine when we can show error states
   useEffect(() => {
     const timer = setTimeout(() => {
       setErrorDelay(false);
-    }, 3500); // Increased to 3.5 seconds for more reliable error delay
+    }, 4000); // Increased to 4 seconds for more reliable error delay
     return () => clearTimeout(timer);
   }, []);
   
   // First verify access and get data
   const {
-    isLoading,
+    isLoading: accessLoading,
     error: accessError,
     deliveryData,
     conditionData
@@ -60,15 +62,31 @@ export const usePublicMessageAccess = ({
     unlockTime,
     isVerified,
     message,
+    isLoading: securityLoading,
     verifyPin,
     handleUnlockExpired
   } = useSecurityConstraints({
     messageId,
     conditionData,
     deliveryData,
-    isLoading,
+    isLoading: accessLoading,
     error
   });
+
+  // Combined loading state to prevent UI flashing
+  const isLoading = accessLoading || securityLoading || fallbackLoading;
+
+  // Set fallback loading when access methods change to prevent UI flashing
+  useEffect(() => {
+    if (accessError && !errorDelay) {
+      // If we have an error but it's not showing yet, maintain loading state
+      setFallbackLoading(true);
+      const timer = setTimeout(() => {
+        setFallbackLoading(false);
+      }, 1000); // Short delay to prevent flash
+      return () => clearTimeout(timer);
+    }
+  }, [accessError, errorDelay]);
 
   return {
     message,

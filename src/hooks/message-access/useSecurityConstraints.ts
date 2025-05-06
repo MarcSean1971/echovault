@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { Message } from '@/types/message';
@@ -17,6 +18,7 @@ interface SecurityConstraintsResult {
   unlockTime: Date | null;
   isVerified: boolean;
   message: Message | null;
+  isLoading: boolean;
   verifyPin: (pinCode: string) => Promise<boolean>;
   handleUnlockExpired: () => Promise<void>;
 }
@@ -25,7 +27,7 @@ export const useSecurityConstraints = ({
   messageId,
   conditionData,
   deliveryData,
-  isLoading,
+  isLoading: accessLoading,
   error
 }: UseSecurityConstraintsProps): SecurityConstraintsResult => {
   const [isPinRequired, setIsPinRequired] = useState(false);
@@ -33,15 +35,18 @@ export const useSecurityConstraints = ({
   const [unlockTime, setUnlockTime] = useState<Date | null>(null);
   const [isVerified, setIsVerified] = useState(false);
   const [message, setMessage] = useState<Message | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   
   // Load message content once verified
   useEffect(() => {
     const loadMessage = async () => {
-      if (!messageId || isLoading || error || !deliveryData) {
+      if (!messageId || accessLoading || error || !deliveryData) {
         return;
       }
 
       try {
+        setIsLoading(true);
+        
         // If we have the message from the edge function response, we can use that
         if (deliveryData.message) {
           console.log("Using message from edge function response");
@@ -59,6 +64,7 @@ export const useSecurityConstraints = ({
           };
           setMessage(transformedMessage);
           setIsVerified(true);
+          setIsLoading(false);
           return;
         }
 
@@ -76,11 +82,13 @@ export const useSecurityConstraints = ({
             description: "Failed to load message content",
             variant: "destructive"
           });
+          setIsLoading(false);
           return;
         }
         
         if (!data) {
           console.error("Message not found");
+          setIsLoading(false);
           return;
         }
         
@@ -120,11 +128,13 @@ export const useSecurityConstraints = ({
         }
       } catch (e) {
         console.error("Error in loadMessage:", e);
+      } finally {
+        setIsLoading(false);
       }
     };
     
     loadMessage();
-  }, [messageId, isLoading, error, deliveryData]);
+  }, [messageId, accessLoading, error, deliveryData]);
   
   // Check if security constraints apply (PIN, delayed unlock)
   useEffect(() => {
@@ -158,34 +168,53 @@ export const useSecurityConstraints = ({
   
   // Function to verify PIN code
   const verifyPin = async (enteredPin: string): Promise<boolean> => {
-    if (!conditionData || !conditionData.pin_code) {
+    setIsLoading(true);
+    
+    try {
+      if (!conditionData || !conditionData.pin_code) {
+        setIsLoading(false);
+        return false;
+      }
+      
+      if (enteredPin === conditionData.pin_code) {
+        setIsVerified(true);
+        toast({
+          title: "PIN Accepted",
+          description: "Message unlocked successfully"
+        });
+        setIsLoading(false);
+        return true;
+      }
+      
+      toast({
+        title: "Invalid PIN",
+        description: "The PIN you entered is incorrect",
+        variant: "destructive"
+      });
+      setIsLoading(false);
+      return false;
+    } catch (error) {
+      console.error("Error verifying PIN:", error);
+      setIsLoading(false);
       return false;
     }
-    
-    if (enteredPin === conditionData.pin_code) {
-      setIsVerified(true);
-      toast({
-        title: "PIN Accepted",
-        description: "Message unlocked successfully"
-      });
-      return true;
-    }
-    
-    toast({
-      title: "Invalid PIN",
-      description: "The PIN you entered is incorrect",
-      variant: "destructive"
-    });
-    return false;
   };
   
   // Function to handle when unlock time has expired
   const handleUnlockExpired = async (): Promise<void> => {
-    setIsVerified(true);
-    toast({
-      title: "Message Unlocked",
-      description: "The delayed access period has ended"
-    });
+    setIsLoading(true);
+    
+    try {
+      setIsVerified(true);
+      toast({
+        title: "Message Unlocked",
+        description: "The delayed access period has ended"
+      });
+    } catch (error) {
+      console.error("Error handling unlock expiry:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
   
   return {
@@ -194,6 +223,7 @@ export const useSecurityConstraints = ({
     unlockTime,
     isVerified,
     message,
+    isLoading,
     verifyPin,
     handleUnlockExpired
   };
