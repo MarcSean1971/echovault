@@ -27,11 +27,11 @@ export default function PublicMessageAccess() {
   useEffect(() => {
     const initialTimer = setTimeout(() => {
       setInitialLoading(false);
-    }, 1500); // Increased from 500ms to 1500ms to avoid the flash
+    }, 3000); // Increased to 3000ms (3 seconds) to avoid flashing
     
     const errorTimer = setTimeout(() => {
       setCanShowError(true);
-    }, 2500); // Increased from 1500ms to 2500ms for error states
+    }, 4000); // Increased to 4000ms (4 seconds) for error states
     
     return () => {
       clearTimeout(initialTimer);
@@ -113,10 +113,16 @@ export default function PublicMessageAccess() {
     return <DelayedUnlock unlockTime={unlockTime} onUnlock={handleUnlockExpired} />;
   }
   
-  // Handle case where message is null (not found) - only show if we're past initial loading phase
-  // AND if enough time has passed to show errors
-  if (!message && canShowError && !initialLoading) {
-    return <MessageNotFound isInitialLoading={initialLoading} />;
+  // We're explicitly not showing MessageNotFound until we're sure we're not loading
+  // and enough time has passed to show errors
+  if (!message && canShowError && !initialLoading && !isLoading) {
+    return <MessageNotFound isInitialLoading={false} />;
+  }
+  
+  // If message is null but we're still in the grace period before showing errors,
+  // show loading state instead of "not found"
+  if (!message) {
+    return <LoadingState />;
   }
   
   // Render message content

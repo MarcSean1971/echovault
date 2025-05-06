@@ -39,12 +39,14 @@ export function getDirectPublicUrl(filePath: string) {
  * @param filePath The file path in storage
  * @param deliveryId The delivery ID for authentication
  * @param recipientEmail The recipient email for authentication
+ * @param mode Whether to force download or view the file ("download" or "view")
  * @returns The URL to access the file
  */
 export async function getPublicFileUrl(
   filePath: string,
   deliveryId: string,
-  recipientEmail: string
+  recipientEmail: string,
+  mode: 'download' | 'view' = 'view'
 ) {
   if (!filePath || !deliveryId || !recipientEmail) {
     console.error("Missing required parameters for file access", { 
@@ -76,7 +78,8 @@ export async function getPublicFileUrl(
       deliveryId,
       encodedDeliveryId,
       recipientEmail,
-      encodedEmail
+      encodedEmail,
+      mode
     });
     
     // Set a longer expiration for the URL (3 hours = 10800 seconds)
@@ -84,7 +87,7 @@ export async function getPublicFileUrl(
     
     // The edge function is registered at '/functions/v1/access-file' and expects just 'file/' 
     // without the duplicate 'access-file' in the path
-    const accessUrl = `${baseUrl}/functions/v1/access-file/file/${encodedPath}?delivery=${encodedDeliveryId}&recipient=${encodedEmail}&expires=${Date.now() + (expiresIn * 1000)}`;
+    const accessUrl = `${baseUrl}/functions/v1/access-file/file/${encodedPath}?delivery=${encodedDeliveryId}&recipient=${encodedEmail}&expires=${Date.now() + (expiresIn * 1000)}&mode=${mode}`;
     
     console.log(`Generated public file access URL: ${accessUrl}`);
     
@@ -95,7 +98,7 @@ export async function getPublicFileUrl(
     // If edge function approach fails, try direct signed URL as fallback
     try {
       console.log("Attempting fallback to signed URL approach");
-      const signedUrl = await getAuthenticatedFileUrl(filePath, true);
+      const signedUrl = await getAuthenticatedFileUrl(filePath, true, mode === 'download');
       
       if (signedUrl) {
         console.log("Successfully generated fallback signed URL");
@@ -132,9 +135,14 @@ export async function getPublicFileUrl(
  * 
  * @param filePath The file path in storage
  * @param skipAuth Whether to skip authentication check (for fallback)
+ * @param forceDownload Whether to force the file to be downloaded
  * @returns The signed URL for the file
  */
-export async function getAuthenticatedFileUrl(filePath: string, skipAuth = false) {
+export async function getAuthenticatedFileUrl(
+  filePath: string, 
+  skipAuth = false,
+  forceDownload = false
+) {
   if (!filePath) {
     console.error("No file path provided");
     return null;
@@ -150,7 +158,7 @@ export async function getAuthenticatedFileUrl(filePath: string, skipAuth = false
       cleanFilePath = filePath.includes('/') ? filePath.substring(filePath.indexOf('/') + 1) : filePath;
     }
     
-    console.log(`Generating signed URL for file: ${cleanFilePath} from bucket: ${bucketName}`);
+    console.log(`Generating signed URL for file: ${cleanFilePath} from bucket: ${bucketName}, forceDownload: ${forceDownload}`);
     
     // Extended to 24 hours (86400 seconds)
     const expiresIn = 86400; 
@@ -158,7 +166,10 @@ export async function getAuthenticatedFileUrl(filePath: string, skipAuth = false
     // Try with the standard bucket name
     const { data, error } = await supabase.storage
       .from(bucketName)
-      .createSignedUrl(cleanFilePath, expiresIn); 
+      .createSignedUrl(cleanFilePath, expiresIn, {
+        // Set download flag if requested
+        download: forceDownload ? cleanFilePath.split('/').pop() || true : undefined
+      }); 
     
     if (error) {
       console.error("Error generating signed URL:", error);
@@ -172,7 +183,9 @@ export async function getAuthenticatedFileUrl(filePath: string, skipAuth = false
         
         const alternativeResult = await supabase.storage
           .from(alternativeBucket)
-          .createSignedUrl(cleanFilePath, expiresIn);
+          .createSignedUrl(cleanFilePath, expiresIn, {
+            download: forceDownload ? cleanFilePath.split('/').pop() || true : undefined
+          });
           
         if (alternativeResult.error) {
           console.error("Error with alternative bucket:", alternativeResult.error);

@@ -29,7 +29,7 @@ export const MessageDisplay = ({ message, isInitialLoading = false }: MessageDis
   useEffect(() => {
     const timer = setTimeout(() => {
       setLocalLoading(false);
-    }, 500);
+    }, 2000); // Increased to 2 seconds to ensure components are fully loaded
     return () => clearTimeout(timer);
   }, []);
 

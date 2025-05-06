@@ -34,7 +34,7 @@ export const usePublicMessageAccess = ({
   useEffect(() => {
     const timer = setTimeout(() => {
       setErrorDelay(false);
-    }, 2000); // Increased from 1000ms to 2000ms for better error delay
+    }, 3500); // Increased to 3.5 seconds for more reliable error delay
     return () => clearTimeout(timer);
   }, []);
   

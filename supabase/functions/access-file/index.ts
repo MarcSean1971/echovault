@@ -18,6 +18,10 @@ serve(async (req: Request): Promise<Response> => {
   console.log(`[FileAccess] Path parts: ${JSON.stringify(pathParts)}`);
   console.log(`[FileAccess] Query parameters: ${url.search}`);
   
+  // Check if this is a download or view request
+  const downloadMode = url.searchParams.get('mode') === 'download';
+  console.log(`[FileAccess] Download mode: ${downloadMode ? 'true' : 'false'}`);
+  
   // Initialize Supabase client with service role key for admin access
   const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
   const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -220,7 +224,40 @@ serve(async (req: Request): Promise<Response> => {
         console.log(`[FileAccess] Using final file path: ${finalFilePath}`);
         
         try {
-          // Check if we can directly serve from the storage bucket using signed URL
+          // Check if the downloadMode is true, if so, serve for download directly rather than signed URL
+          if (downloadMode) {
+            console.log(`[FileAccess] Download mode active, forcing download for: ${finalFilePath}`);
+            
+            // Download the file and send it with attachment Content-Disposition
+            const { data: fileData, error: fileError } = await supabase.storage
+              .from(bucketName)
+              .download(finalFilePath);
+              
+            if (fileError) {
+              console.error(`[FileAccess] Download error: ${fileError.message}`);
+              throw fileError;
+            }
+            
+            if (!fileData) {
+              console.error(`[FileAccess] No file data returned from download`);
+              throw new Error("File data not available");
+            }
+            
+            // Success - return the file with proper download Content-Disposition
+            const headers = {
+              ...corsHeaders,
+              "Content-Type": requestedAttachment.type || "application/octet-stream",
+              "Content-Disposition": `attachment; filename="${requestedAttachment.name}"`,
+              "Cache-Control": "no-store"
+            };
+            
+            console.log(`[FileAccess] Successfully serving file as forced download: ${finalFilePath}`);
+            console.log(`[FileAccess] Headers: ${JSON.stringify(headers)}`);
+            
+            return new Response(fileData, { headers });
+          }
+          
+          // Regular mode - try to use signed URL 
           console.log(`[FileAccess] Attempting to generate direct signed URL from ${bucketName}/${finalFilePath}`);
           
           const { data: signedUrlData, error: signedUrlError } = await supabase.storage
@@ -269,15 +306,22 @@ serve(async (req: Request): Promise<Response> => {
               throw new Error("File data not available");
             }
             
+            // Determine Content-Disposition based on download mode
+            const contentDisposition = downloadMode 
+              ? `attachment; filename="${requestedAttachment.name}"`
+              : `inline; filename="${requestedAttachment.name}"`;
+              
+            console.log(`[FileAccess] Using Content-Disposition: ${contentDisposition}`);
+            
             // Success - return the file with proper Content-Type
             const headers = {
               ...corsHeaders,
               "Content-Type": requestedAttachment.type || "application/octet-stream",
-              "Content-Disposition": `attachment; filename="${requestedAttachment.name}"`,
+              "Content-Disposition": contentDisposition,
               "Cache-Control": "no-store"
             };
             
-            console.log(`[FileAccess] Successfully serving file as direct download: ${finalFilePath}`);
+            console.log(`[FileAccess] Successfully serving file directly: ${finalFilePath}`);
             
             return new Response(fileData, { headers });
           } catch (downloadError) {

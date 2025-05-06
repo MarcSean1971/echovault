@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { FileIcon, Download, ExternalLink, AlertCircle, RefreshCw, Link, Bug, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -31,10 +30,10 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
   // Get direct public URL (for direct access option)
   const directUrl = getDirectPublicUrl(attachment.path);
 
-  const getFileAccessUrl = async (method: 'secure' | 'direct' = 'secure') => {
+  const getFileAccessUrl = async (method: 'secure' | 'direct' = 'secure', forDownload: boolean = false) => {
     try {
       setHasError(false);
-      console.log(`Getting file access URL for: ${attachment.path} using method: ${method}`);
+      console.log(`Getting file access URL for: ${attachment.path} using method: ${method}, forDownload: ${forDownload}`);
       
       if (!attachment.path) {
         throw new Error("File path is missing");
@@ -51,7 +50,15 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
       // If we're in public view mode with delivery ID and recipient email 
       if (method === 'secure' && deliveryId && recipientEmail) {
         console.log(`Using secure public access with deliveryId: ${deliveryId}, recipient: ${recipientEmail}`);
-        const url = await getPublicFileUrl(attachment.path, deliveryId, recipientEmail);
+        
+        // Add download=true parameter for file downloads
+        const url = await getPublicFileUrl(
+          attachment.path, 
+          deliveryId, 
+          recipientEmail, 
+          forDownload ? 'download' : 'view'
+        );
+        
         console.log("Generated secure public URL:", url);
         setAccessUrl(url);
         
@@ -64,7 +71,14 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
       } else if (method === 'secure') {
         // Default to the standard Supabase storage URL generation for authenticated users
         console.log("Using authenticated access");
-        const url = await getAuthenticatedFileUrl(attachment.path);
+        
+        // Add download parameter for authenticated downloads
+        const url = await getAuthenticatedFileUrl(
+          attachment.path, 
+          false, 
+          forDownload
+        );
+        
         console.log("Generated authenticated URL:", url);
         setAccessUrl(url);
         
@@ -153,32 +167,64 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
     
     try {
       setIsLoading(true);
-      const url = await getFileAccessUrl(downloadMethod);
+      console.log("Starting file download with method:", downloadMethod);
+      
+      // Get URL with download flag set to true
+      const url = await getFileAccessUrl(downloadMethod, true);
       
       if (url) {
-        // Create an invisible anchor element and trigger the download
-        // Removed target="_blank" to ensure download works properly
+        console.log("Download URL obtained:", url);
+        
+        // Explicitly create a download link with proper attributes
         const a = document.createElement('a');
         a.href = url;
-        a.download = attachment.name; // Set the download attribute with the filename
+        a.download = attachment.name;
+        a.setAttribute('download', attachment.name); // Double set for compatibility
+        
+        // For extra assurance, add a timestamp to break any cache
+        if (url.includes('?')) {
+          a.href = `${url}&_t=${Date.now()}`;
+        } else {
+          a.href = `${url}?_t=${Date.now()}`;
+        }
+        
+        // Set additional attributes to encourage download behavior
+        a.setAttribute('type', attachment.type || 'application/octet-stream');
+        
+        // Append to body, click, and remove (standard download technique)
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         
         toast({
           title: "Download started",
-          description: `${attachment.name} is being downloaded using ${downloadMethod} access`,
+          description: `${attachment.name} is being downloaded`,
         });
       } else {
         // Try the alternative method if the primary method fails
         const alternativeMethod = downloadMethod === 'secure' ? 'direct' : 'secure';
-        const alternativeUrl = await getFileAccessUrl(alternativeMethod);
+        console.log("Primary download failed, trying alternative method:", alternativeMethod);
+        
+        const alternativeUrl = await getFileAccessUrl(alternativeMethod, true);
         
         if (alternativeUrl) {
           setDownloadMethod(alternativeMethod);
+          
           const a = document.createElement('a');
           a.href = alternativeUrl;
-          a.download = attachment.name; // Set the download attribute with the filename
+          a.download = attachment.name;
+          a.setAttribute('download', attachment.name);
+          
+          // For extra assurance, add a timestamp to break any cache
+          if (alternativeUrl.includes('?')) {
+            a.href = `${alternativeUrl}&_t=${Date.now()}`;
+          } else {
+            a.href = `${alternativeUrl}?_t=${Date.now()}`;
+          }
+          
+          // Set additional attributes to encourage download behavior
+          a.setAttribute('type', attachment.type || 'application/octet-stream');
+          
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
