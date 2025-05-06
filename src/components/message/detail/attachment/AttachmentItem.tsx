@@ -220,7 +220,7 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
       }
       
       // Try alternatives if current method fails
-      const alternativeMethods: AccessMethod[] = ['secure', 'signed', 'direct'].filter(m => m !== downloadMethod);
+      const alternativeMethods: AccessMethod[] = ['secure', 'signed', 'direct'].filter(m => m !== downloadMethod) as AccessMethod[];
       
       for (const alternativeMethod of alternativeMethods) {
         try {
