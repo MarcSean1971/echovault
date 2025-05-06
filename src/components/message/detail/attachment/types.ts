@@ -26,3 +26,23 @@ export interface AccessButtonProps {
   variant?: "default" | "secondary" | "destructive" | "outline" | "link" | "ghost";
   className?: string;
 }
+
+export interface AttachmentAccessHookResult {
+  isLoading: boolean;
+  hasError: boolean;
+  retryCount: number;
+  showDebug: boolean;
+  accessUrl: string | null;
+  downloadMethod: AccessMethod;
+  lastSuccessMethod: AccessMethod | null;
+  downloadActive: boolean;
+  attemptedMethods: {[key in AccessMethod]?: boolean};
+  currentMethodStatus: 'idle' | 'success' | 'error';
+  directUrl: string | null;
+  retryAccess: () => Promise<void>;
+  toggleDownloadMethod: () => void;
+  downloadFile: () => Promise<void>;
+  openFile: () => Promise<void>;
+  tryDirectAccess: () => void;
+  toggleDebug: () => void;
+}
