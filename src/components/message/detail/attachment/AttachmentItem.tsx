@@ -1,4 +1,3 @@
-
 import React from "react";
 import { FileIcon, AlertCircle } from "lucide-react";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
@@ -10,12 +9,15 @@ import {
   DebugButton, 
   DirectAccessButton,
   DownloadButton,
-  OpenButton
+  OpenButton,
+  SecureDownloadButton
 } from "./buttons";
 import { DebugInfo } from "./DebugInfo";
 import { useAttachmentAccess } from "@/hooks/useAttachmentAccess";
 import { MethodStatusBadge, FallbackInfoBadge } from "./StatusBadges";
 import { AttachmentErrorInfo } from "./AttachmentErrorInfo";
+import { FileAccessManager } from "@/services/messages/fileAccess";
+import { toast } from "@/components/ui/use-toast";
 
 interface AttachmentItemProps {
   attachment: AttachmentProps;
@@ -50,6 +52,38 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
     deliveryId,
     recipientEmail
   });
+  
+  // New function for secure download
+  const forceSecureDownload = async () => {
+    if (isLoading || !deliveryId || !recipientEmail) return;
+    
+    try {
+      // Force the secure download method regardless of current download method
+      const fileAccessManager = new FileAccessManager(attachment.path, deliveryId, recipientEmail);
+      const { url } = await fileAccessManager.getAccessUrl('secure', 'download');
+      
+      if (url) {
+        FileAccessManager.executeDownload(url, attachment.name, attachment.type, 'secure');
+        toast({
+          title: "Secure download started",
+          description: `${attachment.name} is being downloaded using Edge Function`,
+        });
+      } else {
+        toast({
+          title: "Download failed",
+          description: "Could not generate secure download URL",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error("Secure download error:", error);
+      toast({
+        title: "Secure download failed",
+        description: "An error occurred during secure download",
+        variant: "destructive"
+      });
+    }
+  };
   
   return (
     <div className={`border rounded-md p-3 transition-all duration-200 hover:shadow-md ${hasError ? 'border-red-300 bg-red-50' : 'hover:border-primary/20'}`}>
@@ -93,7 +127,15 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
             tryDirectAccess={tryDirectAccess}
           />
 
-          {/* Download button */}
+          {/* Force secure download button */}
+          {deliveryId && recipientEmail && (
+            <SecureDownloadButton
+              isLoading={isLoading}
+              onClick={forceSecureDownload}
+            />
+          )}
+
+          {/* Regular download button */}
           <DownloadButton
             isLoading={isLoading}
             downloadActive={downloadActive}

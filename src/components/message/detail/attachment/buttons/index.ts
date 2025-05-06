@@ -6,3 +6,4 @@ export * from "./DirectAccessButton";
 export * from "./RetryButton";
 export * from "./DownloadButton";
 export * from "./OpenButton";
+export * from "./SecureDownloadButton";
