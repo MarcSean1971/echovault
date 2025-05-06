@@ -19,14 +19,18 @@ interface AttachmentItemProps {
   recipientEmail?: string;
 }
 
+// Define specific types for access methods
+type AccessMethod = 'secure' | 'signed' | 'direct';
+type AccessMode = 'download' | 'view';
+
 export function AttachmentItem({ attachment, deliveryId, recipientEmail }: AttachmentItemProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [showDebug, setShowDebug] = useState(false);
   const [accessUrl, setAccessUrl] = useState<string | null>(null);
-  const [downloadMethod, setDownloadMethod] = useState<'secure' | 'signed' | 'direct'>('secure');
-  const [lastSuccessMethod, setLastSuccessMethod] = useState<'secure' | 'signed' | 'direct' | null>(null);
+  const [downloadMethod, setDownloadMethod] = useState<AccessMethod>('secure');
+  const [lastSuccessMethod, setLastSuccessMethod] = useState<AccessMethod | null>(null);
   const [downloadActive, setDownloadActive] = useState(false);
 
   // Get direct public URL (for direct access option)
@@ -43,7 +47,7 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
   }, [downloadActive]);
 
   // Function to get appropriate badge variant based on access method
-  const getBadgeVariant = (method: 'secure' | 'signed' | 'direct') => {
+  const getBadgeVariant = (method: AccessMethod) => {
     switch (method) {
       case 'secure':
         return "default"; // Green for secure (edge function)
@@ -57,7 +61,7 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
   };
 
   // Function to get friendly name for access method
-  const getMethodName = (method: 'secure' | 'signed' | 'direct') => {
+  const getMethodName = (method: AccessMethod) => {
     switch (method) {
       case 'secure':
         return "Edge Function";
@@ -70,10 +74,10 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
     }
   };
 
-  const getFileAccessUrl = async (method: 'secure' | 'signed' | 'direct' = 'secure', forDownload: boolean = false) => {
+  const getFileAccessUrl = async (method: AccessMethod = 'secure', accessMode: AccessMode = 'view') => {
     try {
       setHasError(false);
-      console.log(`Getting file access URL for: ${attachment.path} using method: ${method}, forDownload: ${forDownload}`);
+      console.log(`Getting file access URL for: ${attachment.path} using method: ${method}, forDownload: ${accessMode === 'download'}`);
       
       if (!attachment.path) {
         throw new Error("File path is missing");
@@ -85,7 +89,7 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
         setAccessUrl(directUrl);
         setLastSuccessMethod('direct');
         setDownloadMethod('direct');
-        return { url: directUrl, method: 'direct' as const };
+        return { url: directUrl, method: 'direct' as AccessMethod };
       }
       
       // If we're in public view mode with delivery ID and recipient email 
@@ -97,7 +101,7 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
           attachment.path, 
           deliveryId, 
           recipientEmail, 
-          forDownload ? 'download' : 'view'
+          accessMode
         );
         
         console.log("Generated secure public URL:", url);
@@ -109,7 +113,7 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
         
         setLastSuccessMethod('secure');
         setDownloadMethod('secure');
-        return { url, method: 'secure' as const };
+        return { url, method: 'secure' as AccessMethod };
       } else if (method === 'signed') {
         // Default to the standard Supabase storage URL generation
         console.log("Using signed URL access");
@@ -118,7 +122,7 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
         const url = await getAuthenticatedFileUrl(
           attachment.path, 
           false, 
-          forDownload
+          accessMode === 'download'
         );
         
         console.log("Generated signed URL:", url);
@@ -130,7 +134,7 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
         
         setLastSuccessMethod('signed');
         setDownloadMethod('signed');
-        return { url, method: 'signed' as const };
+        return { url, method: 'signed' as AccessMethod };
       }
       
       // Fallback to signed URL if not explicitly requesting direct
@@ -138,7 +142,7 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
         const signedResult = await getAuthenticatedFileUrl(
           attachment.path, 
           false, 
-          forDownload
+          accessMode === 'download'
         );
         
         if (signedResult) {
@@ -146,7 +150,7 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
           setAccessUrl(signedResult);
           setLastSuccessMethod('signed');
           setDownloadMethod('signed');
-          return { url: signedResult, method: 'signed' as const };
+          return { url: signedResult, method: 'signed' as AccessMethod };
         }
       }
       
@@ -156,7 +160,7 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
         setAccessUrl(directUrl);
         setLastSuccessMethod('direct');
         setDownloadMethod('direct');
-        return { url: directUrl, method: 'direct' as const };
+        return { url: directUrl, method: 'direct' as AccessMethod };
       }
       
       throw new Error("No suitable access method found for this file");
@@ -168,12 +172,12 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
       if (method === 'secure') {
         console.log("Secure access failed, trying signed URL");
         try {
-          const signedUrl = await getAuthenticatedFileUrl(attachment.path, true, forDownload);
+          const signedUrl = await getAuthenticatedFileUrl(attachment.path, true, accessMode === 'download');
           if (signedUrl) {
             setDownloadMethod('signed');
             setLastSuccessMethod('signed');
             setAccessUrl(signedUrl);
-            return { url: signedUrl, method: 'signed' as const };
+            return { url: signedUrl, method: 'signed' as AccessMethod };
           }
         } catch (fallbackError) {
           console.error("Signed URL fallback also failed:", fallbackError);
@@ -184,7 +188,7 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
           console.log("Secure and signed access failed, falling back to direct URL");
           setDownloadMethod('direct');
           setLastSuccessMethod('direct');
-          return { url: directUrl, method: 'direct' as const };
+          return { url: directUrl, method: 'direct' as AccessMethod };
         }
       }
       
@@ -198,7 +202,7 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
     
     try {
       // Try the opposite of the current method first as a retry strategy
-      const methodsToTry: Array<'secure' | 'signed' | 'direct'> = ['secure', 'signed', 'direct'];
+      const methodsToTry: AccessMethod[] = ['secure', 'signed', 'direct'];
       
       // Reorder to try methods in different order
       const currentIndex = methodsToTry.indexOf(downloadMethod);
@@ -215,13 +219,13 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
         try {
           const { url, method } = await getFileAccessUrl(methodToTry);
           
-          if (url) {
+          if (url && method) {
             setHasError(false);
-            setDownloadMethod(method || 'secure');
+            setDownloadMethod(method);
             
             toast({
               title: "Retry successful",
-              description: `Access restored using ${getMethodName(method || 'secure')}`,
+              description: `Access restored using ${getMethodName(method)}`,
             });
             
             succeeded = true;
@@ -248,7 +252,7 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
 
   const toggleDownloadMethod = () => {
     // Cycle through the methods: secure -> signed -> direct -> secure
-    const methods: Array<'secure' | 'signed' | 'direct'> = ['secure', 'signed', 'direct'];
+    const methods: AccessMethod[] = ['secure', 'signed', 'direct'];
     const currentIndex = methods.indexOf(downloadMethod);
     const nextMethod = methods[(currentIndex + 1) % methods.length];
     
@@ -276,7 +280,7 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
           attachment.path, 
           deliveryId, 
           recipientEmail, 
-          true // Force download mode
+          'download' // Use download mode
         );
         
         if (url) {
@@ -349,7 +353,7 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
       }
       
       // If current method fails, try alternatives in order of security
-      const fallbackMethods: Array<'secure' | 'signed' | 'direct'> = ['secure', 'signed', 'direct'].filter(m => m !== downloadMethod);
+      const fallbackMethods: AccessMethod[] = ['secure', 'signed', 'direct'].filter(m => m !== downloadMethod);
       
       for (const method of fallbackMethods) {
         try {
@@ -360,7 +364,7 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
               attachment.path, 
               deliveryId, 
               recipientEmail, 
-              true
+              'download'
             );
           } else if (method === 'signed') {
             fallbackUrl = await getAuthenticatedFileUrl(attachment.path, true, true);
@@ -429,12 +433,14 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
       if (url) {
         // For opening in a new tab
         window.open(url, '_blank');
-        setLastSuccessMethod(method || downloadMethod);
+        if (method) {
+          setLastSuccessMethod(method);
+        }
         return;
       }
       
       // Try alternatives if current method fails
-      const alternativeMethods: Array<'secure' | 'signed' | 'direct'> = ['secure', 'signed', 'direct'].filter(m => m !== downloadMethod);
+      const alternativeMethods: AccessMethod[] = ['secure', 'signed', 'direct'].filter(m => m !== downloadMethod);
       
       for (const alternativeMethod of alternativeMethods) {
         try {
@@ -443,7 +449,9 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
           if (alternativeUrl) {
             window.open(alternativeUrl, '_blank');
             setDownloadMethod(alternativeMethod);
-            setLastSuccessMethod(altMethod || alternativeMethod);
+            if (altMethod) {
+              setLastSuccessMethod(altMethod);
+            }
             
             toast({
               title: "Using alternative method",

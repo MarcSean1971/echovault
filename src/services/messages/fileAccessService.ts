@@ -1,243 +1,110 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/components/ui/use-toast";
 
 /**
- * Simple direct public URL for a file in storage (no security checks)
- * For testing purposes only - DO NOT use in production
- * 
- * @param filePath The file path in storage
- * @returns Direct public URL to the file
+ * Get a public URL for a file using the edge function
+ * @param filePath File path in storage
+ * @param deliveryId Delivery ID for authentication
+ * @param recipientEmail Recipient email for authentication
+ * @param mode Whether to view or download the file
+ * @returns Promise with the URL
  */
-export function getDirectPublicUrl(filePath: string) {
-  if (!filePath) {
-    return null;
-  }
-  
-  // Standardize on the message-attachments bucket
-  const bucketName = "message-attachments";
-  
-  // Clean up the file path if it contains bucket name
-  let cleanFilePath = filePath;
-  if (filePath.startsWith('message-attachments/') || filePath.startsWith('message_attachments/')) {
-    cleanFilePath = filePath.includes('/') ? filePath.substring(filePath.indexOf('/') + 1) : filePath;
-  }
-  
-  console.log(`Generating direct public URL for: ${cleanFilePath} from bucket: ${bucketName}`);
-  
-  // Use the Supabase Storage public URL pattern
-  const baseUrl = "https://onwthrpgcnfydxzzmyot.supabase.co";
-  const publicUrl = `${baseUrl}/storage/v1/object/public/${bucketName}/${cleanFilePath}`;
-  
-  console.log(`Direct public URL: ${publicUrl}`);
-  return publicUrl;
-}
-
-/**
- * Access a file using our secure edge function for public access
- * 
- * @param filePath The file path in storage
- * @param deliveryId The delivery ID for authentication
- * @param recipientEmail The recipient email for authentication
- * @param mode Whether to force download or view the file ("download" or "view")
- * @returns The URL to access the file
- */
-export async function getPublicFileUrl(
-  filePath: string,
-  deliveryId: string,
+export const getPublicFileUrl = async (
+  filePath: string, 
+  deliveryId: string, 
   recipientEmail: string,
-  mode: 'download' | 'view' = 'view'
-) {
-  if (!filePath || !deliveryId || !recipientEmail) {
-    console.error("Missing required parameters for file access", { 
-      filePath: filePath || "missing", 
-      deliveryId: deliveryId || "missing", 
-      recipientEmail: recipientEmail || "missing" 
-    });
-    toast({
-      title: "File Access Error",
-      description: "Missing required information for file access",
-      variant: "destructive"
-    });
-    return null;
-  }
-
+  mode: 'view' | 'download' = 'view'
+): Promise<string | null> => {
   try {
-    // Hard-coded Supabase project URL to ensure consistency
-    const baseUrl = "https://onwthrpgcnfydxzzmyot.supabase.co";
+    // Edge function URL for accessing files
+    const functionUrl = `${supabase.functions.url}/access-file/file/${encodeURIComponent(filePath)}`;
     
-    // Clean and encode path components - ensure we're very careful with encoding
-    const encodedPath = encodeURIComponent(filePath);
-    const encodedDeliveryId = encodeURIComponent(deliveryId);
-    const encodedEmail = encodeURIComponent(recipientEmail);
+    // Add query parameters
+    const url = new URL(functionUrl);
+    url.searchParams.append('delivery', deliveryId);
+    url.searchParams.append('recipient', recipientEmail);
+    url.searchParams.append('mode', mode);
     
-    console.log("File access parameters:", {
-      baseUrl,
-      filePath,
-      encodedPath,
-      deliveryId,
-      encodedDeliveryId,
-      recipientEmail,
-      encodedEmail,
-      mode
-    });
-    
-    // Set a longer expiration for the URL (3 hours = 10800 seconds)
-    const expiresIn = 10800;
-    
-    // The edge function is registered at '/functions/v1/access-file' and expects just 'file/' 
-    // without the duplicate 'access-file' in the path
-    const accessUrl = `${baseUrl}/functions/v1/access-file/file/${encodedPath}?delivery=${encodedDeliveryId}&recipient=${encodedEmail}&expires=${Date.now() + (expiresIn * 1000)}&mode=${mode}`;
-    
-    console.log(`Generated public file access URL: ${accessUrl}`);
-    
-    return accessUrl;
+    console.log(`Generated file access URL: ${url.toString()}`);
+    return url.toString();
   } catch (error) {
     console.error("Error generating public file URL:", error);
-    
-    // If edge function approach fails, try signed URL as fallback
-    try {
-      console.log("Attempting fallback to signed URL approach");
-      const signedUrl = await getAuthenticatedFileUrl(filePath, true, mode === 'download');
-      
-      if (signedUrl) {
-        console.log("Successfully generated fallback signed URL");
-        return signedUrl;
-      }
-    } catch (fallbackError) {
-      console.error("Fallback mechanism also failed:", fallbackError);
-    }
-    
-    // If all attempts fail, try the direct public URL as a last resort
-    try {
-      console.log("Attempting fallback to direct public URL");
-      const directUrl = getDirectPublicUrl(filePath);
-      
-      if (directUrl) {
-        console.log("Generated direct public URL as last resort fallback");
-        return directUrl;
-      }
-    } catch (directUrlError) {
-      console.error("Direct URL fallback also failed:", directUrlError);
-    }
-    
-    toast({
-      title: "File Access Error",
-      description: "Failed to generate secure access link for the file",
-      variant: "destructive"
-    });
     return null;
   }
-}
+};
 
 /**
- * Get a signed URL for authenticated access to a file
- * 
- * @param filePath The file path in storage
- * @param skipAuth Whether to skip authentication check (for fallback)
- * @param forceDownload Whether to force the file to be downloaded
- * @returns The signed URL for the file
+ * Get an authenticated URL for a file using Supabase storage
+ * @param filePath File path in storage
+ * @param includeFallback Whether to include fallback options
+ * @param forDownload Whether to set download flag
+ * @returns Promise with the URL
  */
-export async function getAuthenticatedFileUrl(
+export const getAuthenticatedFileUrl = async (
   filePath: string, 
-  skipAuth = false,
-  forceDownload = false
-) {
-  if (!filePath) {
-    console.error("No file path provided");
-    return null;
-  }
-
+  includeFallback: boolean = false,
+  forDownload: boolean = false
+): Promise<string | null> => {
   try {
-    // Standardize on the message-attachments bucket
-    const bucketName = "message-attachments";
+    // Extract bucket name and file path
+    const pathParts = filePath.split('/');
+    const bucketName = pathParts[0];
+    const filePathInBucket = pathParts.slice(1).join('/');
     
-    // Clean up the file path if it contains bucket name
-    let cleanFilePath = filePath;
-    if (filePath.startsWith('message-attachments/') || filePath.startsWith('message_attachments/')) {
-      cleanFilePath = filePath.includes('/') ? filePath.substring(filePath.indexOf('/') + 1) : filePath;
-    }
-    
-    console.log(`Generating signed URL for file: ${cleanFilePath} from bucket: ${bucketName}, forceDownload: ${forceDownload}`);
-    
-    // Extended to 24 hours (86400 seconds)
-    const expiresIn = 86400; 
-    
-    // Try with the standard bucket name
+    // Get signed URL from Supabase storage
     const { data, error } = await supabase.storage
       .from(bucketName)
-      .createSignedUrl(cleanFilePath, expiresIn, {
-        // Set download flag if requested
-        download: forceDownload ? cleanFilePath.split('/').pop() || true : undefined
-      }); 
+      .createSignedUrl(filePathInBucket, 60, {
+        download: forDownload,
+        transform: undefined
+      });
     
     if (error) {
-      console.error("Error generating signed URL:", error);
+      console.error("Error getting signed URL:", error);
       
-      // Only try alternative bucket if there's an error with the standard bucket
-      if (error.message.includes("does not exist") || error.message.includes("not found")) {
-        console.log("File not found in primary bucket, trying alternative bucket name");
-        
-        // Try the alternative bucket naming format as fallback
-        const alternativeBucket = "message_attachments";
-        
-        const alternativeResult = await supabase.storage
-          .from(alternativeBucket)
-          .createSignedUrl(cleanFilePath, expiresIn, {
-            download: forceDownload ? cleanFilePath.split('/').pop() || true : undefined
-          });
-          
-        if (alternativeResult.error) {
-          console.error("Error with alternative bucket:", alternativeResult.error);
-          
-          // Last resort - try direct public URL
-          const directUrl = getDirectPublicUrl(filePath);
-          if (directUrl) {
-            console.log("Using direct public URL as last resort");
-            return directUrl;
-          }
-          
-          throw new Error(`File access error: ${alternativeResult.error.message}`);
-        }
-        
-        console.log("Successfully generated URL with alternative bucket");
-        return alternativeResult.data.signedUrl;
+      if (includeFallback) {
+        // Try direct public URL as fallback
+        return getDirectPublicUrl(filePath);
       }
       
-      // Last resort - try direct public URL
-      const directUrl = getDirectPublicUrl(filePath);
-      if (directUrl) {
-        console.log("Using direct public URL as last resort");
-        return directUrl;
-      }
-      
-      throw new Error(`File access error: ${error.message}`);
+      return null;
     }
     
     if (!data?.signedUrl) {
-      console.error("No signed URL returned from Supabase");
-      
-      // Last resort - try direct public URL
-      const directUrl = getDirectPublicUrl(filePath);
-      if (directUrl) {
-        console.log("Using direct public URL as last resort");
-        return directUrl;
-      }
-      
-      throw new Error("No URL generated for the file");
+      console.error("No signed URL returned");
+      return null;
     }
     
-    console.log(`Successfully generated signed URL for ${cleanFilePath}`);
     return data.signedUrl;
   } catch (error) {
-    console.error("Error getting file URL:", error);
-    if (!skipAuth) {
-      toast({
-        title: "File Access Error",
-        description: "Could not access the file. It may have been deleted or you don't have permission to view it.",
-        variant: "destructive"
-      });
-    }
+    console.error("Error generating authenticated file URL:", error);
     return null;
   }
-}
+};
+
+/**
+ * Get a direct public URL for a file (less secure)
+ * @param filePath File path in storage
+ * @returns Direct public URL
+ */
+export const getDirectPublicUrl = (filePath: string): string | null => {
+  try {
+    // Extract bucket name and file path
+    const pathParts = filePath.split('/');
+    const bucketName = pathParts[0];
+    const filePathInBucket = pathParts.slice(1).join('/');
+    
+    // Get public URL from Supabase storage
+    const { data } = supabase.storage.from(bucketName).getPublicUrl(filePathInBucket);
+    
+    if (!data?.publicUrl) {
+      console.error("No public URL returned");
+      return null;
+    }
+    
+    return data.publicUrl;
+  } catch (error) {
+    console.error("Error generating direct public URL:", error);
+    return null;
+  }
+};
