@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 import { AttachmentAccessProps, AttachmentAccessResult, AttachmentAccessUtilities } from "./types";
 import { useAttachmentState } from "./useAttachmentState";
-import { useDownloadHandlers } from "./useDownloadHandlers";
+import { useDownloadHandlers } from "./download-handlers";
 
 /**
  * Main hook for attachment access functionality
