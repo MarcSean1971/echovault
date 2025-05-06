@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { AttachmentAccessState, AttachmentAccessProps } from "./types";
 import { AccessMethod } from "@/components/message/detail/attachment/types";
@@ -16,7 +15,11 @@ export function useAttachmentState() {
     downloadMethod: 'secure',
     lastSuccessMethod: null,
     downloadActive: false,
-    attemptedMethods: {},
+    attemptedMethods: {
+      secure: false,
+      signed: false,
+      direct: false
+    },
     currentMethodStatus: 'idle'
   });
 

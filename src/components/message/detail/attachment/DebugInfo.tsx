@@ -12,7 +12,7 @@ interface DebugInfoProps {
   directUrl: string | null;
   retryCount: number;
   hasError: boolean;
-  attemptedMethods: Record<AccessMethod, boolean>;
+  attemptedMethods: {[key in AccessMethod]?: boolean};
 }
 
 export function DebugInfo({

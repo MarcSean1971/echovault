@@ -54,6 +54,9 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
     recipientEmail
   });
   
+  // Check if there might be bucket-related errors
+  const hasBucketError = hasError && !directUrl;
+  
   // Function for secure download
   const forceSecureDownload = async () => {
     if (isLoading || !deliveryId || !recipientEmail) {
@@ -167,7 +170,7 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
         </div>
       </div>
       
-      <AttachmentErrorInfo hasError={hasError} retryCount={retryCount} />
+      <AttachmentErrorInfo hasError={hasError} retryCount={retryCount} bucketError={hasBucketError} />
 
       {(showDebug || hasError) && (
         <DebugInfo

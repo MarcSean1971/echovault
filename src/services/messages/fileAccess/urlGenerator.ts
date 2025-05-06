@@ -95,7 +95,9 @@ export class FileUrlGenerator {
       }
       
       // Fallback to signed URL if not explicitly requesting direct
-      if (method !== 'direct') {
+      // Fix for the comparison error by using an explicit variable
+      const accessMethod: AccessMethod = method;
+      if (accessMethod !== 'direct') {
         const signedResult = await getAuthenticatedFileUrl(
           this.filePath, 
           false, 
