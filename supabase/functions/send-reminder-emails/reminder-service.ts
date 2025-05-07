@@ -22,7 +22,6 @@ interface ReminderData {
   condition: {
     id: string;
     message_id: string;
-    user_id: string;
     active: boolean;
     condition_type: string;
     recipients: Recipient[];
@@ -79,6 +78,7 @@ export async function sendReminder(data: ReminderData, debug = false): Promise<{
     
     if (debug) {
       console.log(`Sending reminders for message "${message.title}" from ${senderName}`);
+      console.log(`Message user_id: ${message.user_id}`);
       console.log(`Deadline in ${hoursUntilDeadline.toFixed(1)} hours`);
       console.log(`Recipients: ${condition.recipients.length}`);
     }
@@ -175,7 +175,14 @@ export async function sendReminder(data: ReminderData, debug = false): Promise<{
     
     // Record that reminders were sent
     try {
-      const recordResult = await recordReminderSent(message.id, condition.id, condition.deadline);
+      // Pass user_id from message to recordReminderSent
+      const recordResult = await recordReminderSent(
+        message.id, 
+        condition.id, 
+        condition.deadline,
+        message.user_id
+      );
+      
       if (!recordResult) {
         console.warn(`Failed to record reminder for message ${message.id}`);
       }

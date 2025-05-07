@@ -30,23 +30,29 @@ export function DeadmanSwitchControls({
       setIsSendingReminder(true);
       console.log(`Triggering manual reminder for message ${messageId}`);
       
+      if (!isArmed) {
+        toast({
+          title: "Message not armed",
+          description: "The message must be armed before sending test reminders.",
+          variant: "destructive",
+          duration: 5000,
+        });
+        setIsSendingReminder(false);
+        return;
+      }
+      
+      toast({
+        title: "Sending test reminder",
+        description: "Initiating reminder check...",
+        duration: 3000,
+      });
+      
       const result = await triggerManualReminder(messageId);
       
       if (result.success) {
         console.log(`Reminder triggered successfully for message ${messageId}`);
-        toast({
-          title: "Test reminder triggered",
-          description: "The reminder check has been initiated. Check your email shortly.",
-          duration: 5000,
-        });
       } else {
         console.error("Error triggering reminder:", result.error);
-        toast({
-          title: "Error",
-          description: `Failed to trigger test reminder: ${result.error || "Unknown error"}`,
-          variant: "destructive",
-          duration: 5000,
-        });
       }
     } catch (error) {
       console.error("Error sending test reminder:", error);
@@ -84,7 +90,7 @@ export function DeadmanSwitchControls({
         {isArmed ? (
           <p>Reminders will be sent to recipients before the message triggers.</p>
         ) : (
-          <p>Reminders are only sent when the message is armed.</p>
+          <p className="text-amber-600 font-medium">Message must be armed before reminders can be sent.</p>
         )}
       </div>
       

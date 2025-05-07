@@ -70,22 +70,42 @@ export async function triggerManualReminder(messageId: string): Promise<{ succes
       console.error("Error triggering manual reminder:", error);
       toast({
         title: "Error",
-        description: "Failed to trigger reminders: " + error.message,
+        description: `Failed to trigger reminders: ${error.message}`,
         variant: "destructive",
       });
       return { success: false, error: error.message };
     }
     
+    // Log the full response for debugging
     console.log("Manual reminder response:", data);
     
+    if (data && data.messages_processed === 0) {
+      toast({
+        title: "No reminders sent",
+        description: "No reminders were sent. Check that the message has reminder hours configured and recipients set.",
+        variant: "default",
+      });
+      return { success: false, error: "No messages processed" };
+    }
+    
     toast({
-      title: "Reminder Check Triggered",
-      description: "System will send reminders if deadline is approaching",
+      title: "Reminders sent",
+      description: data?.successful_reminders > 0 
+        ? `Successfully sent ${data.successful_reminders} reminder(s)` 
+        : "Reminder check triggered, but no messages were sent",
     });
     
     return { success: true };
   } catch (error: any) {
     console.error("Error in triggerManualReminder:", error);
+    
+    // Show a more detailed error message
+    toast({
+      title: "Error",
+      description: `Failed to trigger reminders: ${error.message || "Unknown error"}`,
+      variant: "destructive",
+    });
+    
     return { success: false, error: error.message || "Unknown error" };
   }
 }

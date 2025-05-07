@@ -15,7 +15,6 @@ interface Message {
 interface Condition {
   id: string;
   message_id: string;
-  user_id: string;
   active: boolean;
   condition_type: string;
   recipients: Array<{
@@ -53,7 +52,6 @@ export async function getMessagesNeedingReminders(
       .select(`
         id,
         message_id,
-        user_id,
         active,
         condition_type,
         recipients,
@@ -148,7 +146,8 @@ export async function getMessagesNeedingReminders(
 export async function recordReminderSent(
   messageId: string,
   conditionId: string,
-  deadline: string
+  deadline: string,
+  userId: string // Added user_id parameter
 ): Promise<boolean> {
   try {
     const supabase = supabaseClient();
@@ -158,6 +157,7 @@ export async function recordReminderSent(
       .insert({
         message_id: messageId,
         condition_id: conditionId,
+        user_id: userId, // Include user_id in the insert
         deadline: deadline,
         sent_at: new Date().toISOString()
       });
