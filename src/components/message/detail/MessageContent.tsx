@@ -61,8 +61,7 @@ export function MessageContent({
         <>
           <Separator className="my-4" />
           <MessageAttachments 
-            attachments={message.attachments} 
-            messageId={message.id} 
+            message={message}
             deliveryId={deliveryId}
             recipientEmail={recipientEmail}
           />

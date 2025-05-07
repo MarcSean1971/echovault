@@ -6,8 +6,8 @@ import { AttachmentItem } from "./attachment/AttachmentItem";
 
 interface MessageAttachmentsProps {
   message: Message;
-  deliveryId?: string;
-  recipientEmail?: string;
+  deliveryId?: string | null;
+  recipientEmail?: string | null;
 }
 
 export function MessageAttachments({ message, deliveryId, recipientEmail }: MessageAttachmentsProps) {

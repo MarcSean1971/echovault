@@ -2,14 +2,16 @@
 import React, { useState } from "react";
 import { FileIcon } from "lucide-react";
 import { AudioPlayer } from "@/components/media/AudioPlayer";
+import { Message } from "@/types/message";
 
 interface AudioMessageContentProps {
-  mediaUrl: string | null;
-  transcription: string | null;
-  loading: boolean;
+  mediaUrl?: string | null;
+  transcription?: string | null;
+  loading?: boolean;
+  message: Message;
 }
 
-export function AudioMessageContent({ mediaUrl, transcription, loading }: AudioMessageContentProps) {
+export function AudioMessageContent({ mediaUrl, transcription, loading, message }: AudioMessageContentProps) {
   const [showTranscription, setShowTranscription] = useState(false);
 
   if (loading) {

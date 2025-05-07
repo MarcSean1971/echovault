@@ -20,6 +20,9 @@ export type Message = {
   // Message metadata fields
   expires_at: string | null;
   sender_name: string | null;
+  // Panic trigger configuration
+  panic_config?: any;
+  panic_trigger_config?: any;
 };
 
 export type Recipient = {

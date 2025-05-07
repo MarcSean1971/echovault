@@ -16,7 +16,7 @@ interface MessageSidebarProps {
   renderConditionType: () => string;
   renderRecipients: () => React.ReactNode;
   handleDisarmMessage: () => Promise<void>;
-  handleArmMessage: () => Promise<void>;
+  handleArmMessage: () => Promise<Date | null>;  // Fix the return type
   showDeleteConfirm: boolean;
   setShowDeleteConfirm: (value: boolean) => void;
   handleDelete: () => Promise<void>;

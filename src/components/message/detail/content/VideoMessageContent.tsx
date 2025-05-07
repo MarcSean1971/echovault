@@ -2,14 +2,16 @@
 import React, { useState } from "react";
 import { FileIcon } from "lucide-react";
 import { VideoPlayer } from "@/components/media/VideoPlayer";
+import { Message } from "@/types/message";
 
 interface VideoMessageContentProps {
-  mediaUrl: string | null;
-  transcription: string | null;
-  loading: boolean;
+  mediaUrl?: string | null;
+  transcription?: string | null;
+  loading?: boolean;
+  message: Message;
 }
 
-export function VideoMessageContent({ mediaUrl, transcription, loading }: VideoMessageContentProps) {
+export function VideoMessageContent({ mediaUrl, transcription, loading, message }: VideoMessageContentProps) {
   const [showTranscription, setShowTranscription] = useState(false);
 
   if (loading) {

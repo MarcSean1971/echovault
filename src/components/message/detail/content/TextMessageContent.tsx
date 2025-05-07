@@ -1,14 +1,16 @@
 
 import React from "react";
+import { Message } from "@/types/message";
 
 interface TextMessageContentProps {
-  content: string | null;
+  content?: string | null;
+  message: Message;
 }
 
-export function TextMessageContent({ content }: TextMessageContentProps) {
+export function TextMessageContent({ message }: TextMessageContentProps) {
   return (
     <div className="whitespace-pre-wrap prose dark:prose-invert max-w-none text-sm md:text-base">
-      {content || <span className="text-muted-foreground italic">No content</span>}
+      {message.content || <span className="text-muted-foreground italic">No content</span>}
     </div>
   );
 }

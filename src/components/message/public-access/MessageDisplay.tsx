@@ -1,11 +1,9 @@
-
 import React, { useEffect, useState } from "react";
 import { Download, Eye, Lock, Shield, Calendar, Clock } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Message } from "@/types/message";
 import { MessageContent } from "@/components/message/detail/MessageContent";
-import { MessageAttachments } from "@/components/message/detail/MessageAttachments";
 import { useSearchParams } from "react-router-dom";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { Button } from "@/components/ui/button";
@@ -123,7 +121,7 @@ export const MessageDisplay = ({
         {/* Message Content */}
         <div className="p-6">
           <div className="prose max-w-full">
-            <MessageContent message={message} isArmed={true} />
+            {message && <MessageContent message={message} deliveryId={deliveryId} recipientEmail={recipientEmail} />}
           </div>
           
           {/* Attachments Section */}
