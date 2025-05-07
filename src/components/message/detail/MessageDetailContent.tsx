@@ -21,6 +21,8 @@ import { WhatsAppIntegration } from "./content/WhatsAppIntegration";
 import { toast } from "@/components/ui/use-toast";
 import { useHoverEffects } from "@/hooks/useHoverEffects";
 import { useSearchParams } from "react-router-dom";
+import { DeadmanSwitchControls } from "./content/deadman/DeadmanSwitchControls";
+import { ReminderHistory } from "./content/deadman/ReminderHistory";
 
 interface MessageDetailContentProps {
   message: Message;
@@ -81,6 +83,10 @@ export function MessageDetailContent({
   const isWhatsAppPanicTrigger = isPanicTrigger && 
                                condition?.panic_config && 
                                condition?.panic_config?.methods?.includes('whatsapp');
+                               
+  // Check if this is a deadman's switch with reminders
+  const isDeadmanSwitch = condition?.condition_type === 'no_check_in';
+  const hasReminderHours = condition?.reminder_hours && condition.reminder_hours.length > 0;
 
   if (isLoading) {
     return <MessageLoading />;
@@ -191,6 +197,20 @@ export function MessageDetailContent({
                 )}
               </div>
             </div>
+            
+            {/* Add Deadman's Switch Reminder Controls */}
+            {isDeadmanSwitch && hasReminderHours && (
+              <>
+                <Separator className="my-4" />
+                <DeadmanSwitchControls 
+                  messageId={message.id}
+                  reminderHours={condition.reminder_hours}
+                  isArmed={isArmed}
+                />
+                
+                <ReminderHistory messageId={message.id} />
+              </>
+            )}
           </CardContent>
         </Card>
         

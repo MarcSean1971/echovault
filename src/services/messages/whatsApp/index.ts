@@ -7,4 +7,7 @@ export * from './utils/whatsAppUtils';
 export { sendWhatsAppCheckIn } from './whatsAppCheckInService';
 
 // Export the reminder functionality
-export { sendWhatsAppReminder } from './whatsAppReminderService';
+export { 
+  sendWhatsAppReminder,
+  triggerManualReminder
+} from './whatsAppReminderService';

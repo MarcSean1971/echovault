@@ -6,7 +6,7 @@ import { toast } from "@/components/ui/use-toast";
  * Send a WhatsApp reminder for upcoming message triggering
  * @param messageId The ID of the message to send a reminder for
  * @param phone The recipient's phone number
- * @param deadline The deadline when the message will be triggered
+ * @param message The reminder message text
  */
 export async function sendWhatsAppReminder(
   messageId: string,
@@ -51,6 +51,7 @@ export async function sendWhatsAppReminder(
 
 /**
  * Manually trigger reminders for a message
+ * This is used for both email and WhatsApp reminders
  */
 export async function triggerManualReminder(messageId: string): Promise<{ success: boolean; error?: string }> {
   try {
