@@ -43,7 +43,8 @@ export function MainContentSection({
       <MessageMainCard>
         <MessageContent 
           message={message}
-          // Fix: Remove deliveryId and recipientEmail as they don't exist in MessageContentProps
+          deliveryId={deliveryId}
+          recipientEmail={recipientEmail}
         />
       </MessageMainCard>
     </>

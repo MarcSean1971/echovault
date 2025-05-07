@@ -1,26 +1,23 @@
 
-import { useState } from "react";
+import React, { useState } from "react";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { toast } from "@/components/ui/use-toast";
-import { Mail } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { RecipientSelector } from "./test-notification/RecipientSelector";
-import { SendingProgress } from "./test-notification/SendingProgress";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Send } from "lucide-react";
 
 interface SendTestMessageDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   messageTitle: string;
-  recipients: { id: string; name: string; email: string; phone?: string }[];
+  recipients: { id: string; name: string; email: string }[];
+  onSendTestMessages: (selectedRecipients: { id: string; name: string; email: string }[]) => Promise<void>;
 }
 
 export function SendTestMessageDialog({
@@ -28,157 +25,106 @@ export function SendTestMessageDialog({
   onOpenChange,
   messageTitle,
   recipients,
+  onSendTestMessages
 }: SendTestMessageDialogProps) {
-  const { user } = useAuth();
-  const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
-  const [isSending, setIsSending] = useState(false);
-  const [sentCount, setSentCount] = useState(0);
-  const [hasSendingStarted, setHasSendingStarted] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  
-  // App name constant
-  const APP_NAME = "EchoVault";
+  const [selectedRecipients, setSelectedRecipients] = useState<{ id: string; name: string; email: string }[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Function to send test emails
-  const handleSend = async () => {
-    if (!user?.email) return;
-    
-    setIsSending(true);
-    setHasSendingStarted(true);
-    setSentCount(0);
-    setError(null);
-    
-    try {
-      const selectedRecipientsData = recipients.filter(r => 
-        selectedRecipients.includes(r.id)
-      );
-      
-      let successCount = 0;
-      let lastError = null;
-      
-      for (const recipient of selectedRecipientsData) {
-        try {
-          // Call the Supabase function to send email
-          const { data, error } = await supabase.functions.invoke('send-test-email', {
-            body: {
-              recipientName: recipient.name,
-              recipientEmail: recipient.email,
-              senderName: user.email,
-              messageTitle,
-              appName: APP_NAME
-            }
-          });
-          
-          if (error) throw error;
-          
-          successCount++;
-          setSentCount(prev => prev + 1);
-        } catch (err: any) {
-          console.error(`Error sending to ${recipient.email}:`, err);
-          lastError = err;
-          // Continue with other recipients if one fails
-        }
-      }
-      
-      if (successCount === 0 && lastError) {
-        // If all emails failed, show an error
-        setError(lastError.message || "Failed to send test emails. Make sure you have domain verification set up in Resend.");
-        toast({
-          title: "Error sending emails",
-          description: "No test emails could be sent. Check console for details.",
-          variant: "destructive"
-        });
-      } else if (successCount < selectedRecipientsData.length) {
-        // Some succeeded but some failed
-        toast({
-          title: "Partially completed",
-          description: `Successfully sent ${successCount} of ${selectedRecipientsData.length} test messages.`,
-        });
-      } else {
-        // All succeeded
-        toast({
-          title: "Test messages sent",
-          description: `Successfully sent ${successCount} of ${selectedRecipientsData.length} test messages.`,
-        });
-        
-        // Close the dialog if all messages were sent successfully
-        setTimeout(() => {
-          onOpenChange(false);
-          resetState();
-        }, 1500);
-      }
-    } catch (error: any) {
-      console.error("Error in sending test messages:", error);
-      setError(error.message || "There was a problem sending the test messages.");
-      toast({
-        title: "Error",
-        description: "There was a problem sending the test messages.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsSending(false);
+  // Reset selections when dialog opens/closes
+  React.useEffect(() => {
+    if (!open) {
+      setSelectedRecipients([]);
+      setIsLoading(false);
+    } else {
+      // Pre-select all recipients by default
+      setSelectedRecipients([...recipients]);
+    }
+  }, [open, recipients]);
+
+  const toggleRecipient = (recipient: { id: string; name: string; email: string }) => {
+    if (selectedRecipients.some(r => r.id === recipient.id)) {
+      setSelectedRecipients(selectedRecipients.filter(r => r.id !== recipient.id));
+    } else {
+      setSelectedRecipients([...selectedRecipients, recipient]);
     }
   };
 
-  // Reset state when dialog closes
-  const resetState = () => {
-    setSelectedRecipients([]);
-    setSentCount(0);
-    setHasSendingStarted(false);
-    setError(null);
+  const toggleAllRecipients = () => {
+    if (selectedRecipients.length === recipients.length) {
+      setSelectedRecipients([]);
+    } else {
+      setSelectedRecipients([...recipients]);
+    }
   };
 
-  const handleOpenChange = (open: boolean) => {
-    if (!open) resetState();
-    onOpenChange(open);
+  const handleSendTest = async () => {
+    try {
+      setIsLoading(true);
+      await onSendTestMessages(selectedRecipients);
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Error sending test messages:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Send Test Message</DialogTitle>
           <DialogDescription>
-            Send a test email to notify recipients that they've been included in this message.
-            No actual message content will be shared.
+            Send a test version of "{messageTitle}" to selected recipients.
           </DialogDescription>
         </DialogHeader>
-
-        <div className="space-y-4 py-4">
-          <RecipientSelector
-            recipients={recipients}
-            selectedRecipients={selectedRecipients}
-            setSelectedRecipients={setSelectedRecipients}
-          />
-
-          <SendingProgress
-            hasSendingStarted={hasSendingStarted}
-            isSending={isSending}
-            sentCount={sentCount}
-            totalCount={selectedRecipients.length}
-            error={error}
-          />
+        <div className="py-4">
+          {recipients.length > 0 ? (
+            <>
+              <div className="flex items-center space-x-2 pb-4">
+                <Checkbox 
+                  id="select-all" 
+                  checked={selectedRecipients.length === recipients.length && recipients.length > 0}
+                  onCheckedChange={toggleAllRecipients}
+                />
+                <Label htmlFor="select-all" className="font-medium">Select All Recipients</Label>
+              </div>
+              
+              <div className="border rounded-md divide-y">
+                {recipients.map((recipient) => (
+                  <div key={recipient.id} className="flex items-center space-x-2 p-3">
+                    <Checkbox 
+                      id={`recipient-${recipient.id}`}
+                      checked={selectedRecipients.some(r => r.id === recipient.id)}
+                      onCheckedChange={() => toggleRecipient(recipient)}
+                    />
+                    <div className="grid gap-0.5">
+                      <Label htmlFor={`recipient-${recipient.id}`} className="font-medium">{recipient.name}</Label>
+                      <span className="text-sm text-muted-foreground">{recipient.email}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <p className="text-center py-6 text-muted-foreground">No recipients available for this message.</p>
+          )}
         </div>
-
-        <DialogFooter className="sm:justify-between">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => handleOpenChange(false)}
-            disabled={isSending}
-          >
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button
-            type="button"
-            onClick={handleSend}
-            disabled={selectedRecipients.length === 0 || isSending}
-            className="gap-2"
+          <Button 
+            onClick={handleSendTest} 
+            disabled={selectedRecipients.length === 0 || isLoading}
           >
-            <Mail className="h-4 w-4" />
-            {isSending ? "Sending..." : "Send Test Messages"}
+            {isLoading ? "Sending..." : (
+              <>
+                <Send className="h-4 w-4 mr-2" /> Send Test
+              </>
+            )}
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );

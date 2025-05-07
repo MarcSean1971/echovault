@@ -24,7 +24,7 @@ export function MessageContent({
   const renderMessageContent = () => {
     switch (message.message_type) {
       case "text":
-        return <TextMessageContent message={message} />;
+        return <TextMessageContent message={message} content={message.content} />;
       case "video":
         return <VideoMessageContent message={message} />;
       case "audio":
