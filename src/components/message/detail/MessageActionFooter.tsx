@@ -1,13 +1,13 @@
 
 import { Button } from "@/components/ui/button";
-import { Info, Edit, Trash2, Bell, BellOff } from "lucide-react";
-import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Edit, Trash2, Bell, BellOff, Mail } from "lucide-react";
+import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useNavigate } from "react-router-dom";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface MessageActionFooterProps {
   messageId: string;
   isArmed: boolean;
-  conditionId: string | null;
   isActionLoading: boolean;
   handleArmMessage: () => Promise<void>;
   handleDisarmMessage: () => Promise<void>;
@@ -20,7 +20,6 @@ interface MessageActionFooterProps {
 export function MessageActionFooter({
   messageId,
   isArmed,
-  conditionId,
   isActionLoading,
   handleArmMessage,
   handleDisarmMessage,
@@ -42,7 +41,7 @@ export function MessageActionFooter({
               disabled={isActionLoading}
               className="text-green-600 hover:bg-green-50 hover:text-green-700 flex-1 sm:flex-none"
             >
-              <BellOff className="h-4 w-4 mr-2" /> Disarm
+              <BellOff className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} /> Disarm
             </Button>
           ) : (
             <Button
@@ -51,7 +50,7 @@ export function MessageActionFooter({
               disabled={isActionLoading}
               className="flex-1 sm:flex-none"
             >
-              <Bell className="h-4 w-4 mr-2" /> Arm
+              <Bell className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} /> Arm
             </Button>
           )}
           
@@ -61,7 +60,7 @@ export function MessageActionFooter({
             disabled={isArmed || isActionLoading}
             className="sm:ml-auto"
           >
-            <Edit className="h-4 w-4 mr-1 sm:mr-2" /> <span className="hidden sm:inline">Edit</span>
+            <Edit className={`h-4 w-4 mr-1 sm:mr-2 ${HOVER_TRANSITION}`} /> <span className="hidden sm:inline">Edit</span>
           </Button>
           
           {onSendTestMessage && (
@@ -70,7 +69,7 @@ export function MessageActionFooter({
               onClick={onSendTestMessage}
               disabled={isArmed || isActionLoading}
             >
-              <Info className="h-4 w-4 mr-1 sm:mr-2" /> <span className="hidden sm:inline">Test</span>
+              <Mail className={`h-4 w-4 mr-1 sm:mr-2 ${HOVER_TRANSITION}`} /> <span className="hidden sm:inline">Test</span>
             </Button>
           )}
           
@@ -80,7 +79,7 @@ export function MessageActionFooter({
             disabled={isArmed || isActionLoading}
             className="text-destructive border-destructive hover:bg-destructive/10"
           >
-            <Trash2 className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Delete</span>
+            <Trash2 className={`h-4 w-4 sm:mr-2 ${HOVER_TRANSITION}`} /> <span className="hidden sm:inline">Delete</span>
           </Button>
         </div>
       </div>

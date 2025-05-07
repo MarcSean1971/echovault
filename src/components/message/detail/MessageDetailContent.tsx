@@ -4,25 +4,20 @@ import { MessageLoading } from "./MessageLoading";
 import { MessageNotFound } from "./MessageNotFound";
 import { SendTestMessageDialog } from "./SendTestMessageDialog";
 import { Message } from "@/types/message";
-import { MessageHeader } from "./MessageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { extractTranscription } from "@/utils/messageFormatUtils";
-import { MessageContent } from "./MessageContent";
-import { MessageAttachments } from "./MessageAttachments";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { MessageDeliverySettings } from "./MessageDeliverySettings";
 import { MessageRecipientsList } from "./MessageRecipientsList";
 import { Button } from "@/components/ui/button";
-import { Edit, Mail, Trash2 } from "lucide-react";
+import { Mail } from "lucide-react";
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { useNavigate } from "react-router-dom";
-import { WhatsAppIntegration } from "./content/WhatsAppIntegration";
-import { toast } from "@/components/ui/use-toast";
-import { useHoverEffects } from "@/hooks/useHoverEffects";
 import { useSearchParams } from "react-router-dom";
 import { DeadmanSwitchControls } from "./content/deadman/DeadmanSwitchControls";
 import { ReminderHistory } from "./content/deadman/ReminderHistory";
+import { MainContentSection } from "./content/MainContentSection";
+import { MessageActionFooter } from "./MessageActionFooter";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface MessageDetailContentProps {
   message: Message;
@@ -65,24 +60,13 @@ export function MessageDetailContent({
   setShowSendTestDialog,
   handleSendTestMessages
 }: MessageDetailContentProps) {
-  const { getButtonHoverClasses, HOVER_TRANSITION } = useHoverEffects();
-  
   // Add state for delete confirmation
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const navigate = useNavigate();
-  const transcription = message && message.message_type !== 'text' ? 
-    extractTranscription(message.message_type, message.content) : null;
   
   // Get delivery ID and recipient email from URL for attachment access
   const [searchParams] = useSearchParams();
   const deliveryId = searchParams.get('delivery');
   const recipientEmail = searchParams.get('recipient');
-  
-  // Check if this is a WhatsApp-enabled panic trigger
-  const isPanicTrigger = condition?.condition_type === 'panic_trigger';
-  const isWhatsAppPanicTrigger = isPanicTrigger && 
-                               condition?.panic_config && 
-                               condition?.panic_config?.methods?.includes('whatsapp');
                                
   // Check if this is a deadman's switch with reminders
   const isDeadmanSwitch = condition?.condition_type === 'no_check_in';
@@ -99,56 +83,19 @@ export function MessageDetailContent({
   return (
     <div className="max-w-3xl mx-auto py-4 px-4 sm:px-6 pb-20 mb-16">
       <div className="space-y-6">
-        {/* Message Header */}
-        <Card className="overflow-hidden">
-          <CardContent className="p-6">
-            <MessageHeader 
-              message={message}
-              isArmed={isArmed}
-              isActionLoading={isActionLoading}
-              handleDisarmMessage={handleDisarmMessage}
-              handleArmMessage={handleArmMessage}
-            />
-          </CardContent>
-        </Card>
-        
         {/* Message Content */}
-        <Card className="overflow-hidden">
-          <CardContent className="p-6 space-y-6">
-            <div>
-              <h2 className="text-lg font-medium mb-4">Message Content</h2>
-              <MessageContent 
-                message={message} 
-                isArmed={isArmed} 
-              />
-            </div>
-            
-            {message.attachments && message.attachments.length > 0 && (
-              <>
-                <Separator className="my-4" />
-                <div>
-                  <h2 className="text-lg font-medium mb-4">Attachments</h2>
-                  <MessageAttachments 
-                    message={message}
-                    deliveryId={deliveryId}
-                    recipientEmail={recipientEmail}
-                  />
-                </div>
-              </>
-            )}
-            
-            {/* Add WhatsApp Test Button for WhatsApp panic triggers */}
-            {isWhatsAppPanicTrigger && (
-              <>
-                <Separator className="my-4" />
-                <WhatsAppIntegration 
-                  messageId={message.id} 
-                  panicConfig={condition?.panic_config} 
-                />
-              </>
-            )}
-          </CardContent>
-        </Card>
+        <MainContentSection 
+          message={message}
+          isArmed={isArmed}
+          isActionLoading={isActionLoading}
+          condition={condition}
+          formatDate={formatDate}
+          renderConditionType={renderConditionType}
+          handleDisarmMessage={handleDisarmMessage}
+          handleArmMessage={handleArmMessage}
+          deliveryId={deliveryId}
+          recipientEmail={recipientEmail}
+        />
         
         {/* Status and Delivery Settings */}
         <Card className="overflow-hidden">
@@ -239,47 +186,19 @@ export function MessageDetailContent({
           </Card>
         )}
         
-        {/* Action Footer - Only essential actions, no duplicates */}
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-sm border-t z-10">
-          <div className="flex gap-2 w-full max-w-3xl mx-auto">
-            <Button
-              variant="outline"
-              onClick={() => navigate(`/message/${message.id}/edit`)}
-              disabled={isArmed || isActionLoading}
-              className="sm:ml-auto"
-            >
-              <Edit className="h-4 w-4 mr-1 sm:mr-2" /> <span className="hidden sm:inline">Edit</span>
-            </Button>
-            
-            <Button
-              variant="outline"
-              onClick={() => setShowDeleteConfirm(true)}
-              disabled={isArmed || isActionLoading}
-              className="text-destructive border-destructive hover:bg-destructive/10"
-            >
-              <Trash2 className="h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Delete</span>
-            </Button>
-          </div>
-        </div>
+        {/* Action Footer */}
+        <MessageActionFooter
+          messageId={message.id}
+          isArmed={isArmed}
+          isActionLoading={isActionLoading}
+          handleArmMessage={handleArmMessage}
+          handleDisarmMessage={handleDisarmMessage}
+          showDeleteConfirm={showDeleteConfirm}
+          setShowDeleteConfirm={setShowDeleteConfirm}
+          handleDelete={handleDelete}
+          onSendTestMessage={onSendTestMessage}
+        />
       </div>
-      
-      {/* Delete confirmation sheet */}
-      <Sheet open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <SheetContent>
-          <SheetHeader>
-            <SheetTitle>Are you sure?</SheetTitle>
-            <SheetDescription>
-              This action cannot be undone. This will permanently delete your message.
-            </SheetDescription>
-          </SheetHeader>
-          <SheetFooter className="flex-row justify-end gap-2 mt-6">
-            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDelete}>Delete</Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
       
       <SendTestMessageDialog 
         open={showSendTestDialog}

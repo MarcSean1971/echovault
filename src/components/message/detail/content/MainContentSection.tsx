@@ -6,7 +6,7 @@ import { MessageDeliverySettings } from "../MessageDeliverySettings";
 import { Separator } from "@/components/ui/separator";
 import { WhatsAppIntegration } from "./WhatsAppIntegration";
 import { Message } from "@/types/message";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { MapPin } from "lucide-react";
 
 interface MainContentSectionProps {
@@ -18,6 +18,8 @@ interface MainContentSectionProps {
   renderConditionType: () => string;
   handleDisarmMessage: () => Promise<void>;
   handleArmMessage: () => Promise<void>;
+  deliveryId?: string;
+  recipientEmail?: string;
 }
 
 export function MainContentSection({
@@ -28,7 +30,9 @@ export function MainContentSection({
   formatDate,
   renderConditionType,
   handleDisarmMessage,
-  handleArmMessage
+  handleArmMessage,
+  deliveryId,
+  recipientEmail
 }: MainContentSectionProps) {
   // Check if this is a WhatsApp-enabled panic trigger
   const isPanicTrigger = condition?.condition_type === 'panic_trigger';
@@ -42,7 +46,7 @@ export function MainContentSection({
 
   return (
     <Card className="overflow-hidden">
-      <div className="p-6">
+      <CardContent className="p-6">
         <MessageHeader 
           message={message} 
           isArmed={isArmed}
@@ -60,7 +64,11 @@ export function MainContentSection({
           />
           
           {message.attachments && message.attachments.length > 0 && (
-            <MessageAttachments message={message} />
+            <MessageAttachments 
+              message={message} 
+              deliveryId={deliveryId}
+              recipientEmail={recipientEmail}
+            />
           )}
           
           {/* Display location if available */}
@@ -105,12 +113,14 @@ export function MainContentSection({
         
         {/* Add WhatsApp Test Button for WhatsApp panic triggers */}
         {isWhatsAppPanicTrigger && (
-          <WhatsAppIntegration 
-            messageId={message.id} 
-            panicConfig={condition?.panic_config} 
-          />
+          <div className="mt-4">
+            <WhatsAppIntegration 
+              messageId={message.id} 
+              panicConfig={condition?.panic_config} 
+            />
+          </div>
         )}
-      </div>
+      </CardContent>
     </Card>
   );
 }
