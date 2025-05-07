@@ -23,7 +23,7 @@ interface Condition {
     email: string;
     phone?: string;
   }>;
-  deadline?: string;
+  trigger_date?: string; // Changed from deadline to trigger_date
   reminder_hours?: number[];
   // Add other condition fields as needed
 }
@@ -55,7 +55,7 @@ export async function getMessagesNeedingReminders(
         active,
         condition_type,
         recipients,
-        deadline,
+        trigger_date, 
         reminder_hours,
         panic_config,
         messages (
@@ -87,12 +87,12 @@ export async function getMessagesNeedingReminders(
     
     // Process each condition
     for (const condition of conditions || []) {
-      // Skip if no deadline or no reminder hours
-      if (!condition.deadline || !condition.reminder_hours || condition.reminder_hours.length === 0) {
+      // Skip if no trigger_date or no reminder hours
+      if (!condition.trigger_date || !condition.reminder_hours || condition.reminder_hours.length === 0) {
         continue;
       }
       
-      const deadline = new Date(condition.deadline);
+      const deadline = new Date(condition.trigger_date);
       const message = condition.messages;
       
       if (!message) {
@@ -146,8 +146,8 @@ export async function getMessagesNeedingReminders(
 export async function recordReminderSent(
   messageId: string,
   conditionId: string,
-  deadline: string,
-  userId: string // This is the user_id from the message
+  triggerDate: string, // Changed from deadline to triggerDate
+  userId: string
 ): Promise<boolean> {
   try {
     const supabase = supabaseClient();
@@ -160,8 +160,8 @@ export async function recordReminderSent(
       .insert({
         message_id: messageId,
         condition_id: conditionId,
-        user_id: userId, // Use the user_id from the message
-        deadline: deadline,
+        user_id: userId,
+        deadline: triggerDate, // Keep the column name 'deadline' in the database
         sent_at: new Date().toISOString()
       });
     

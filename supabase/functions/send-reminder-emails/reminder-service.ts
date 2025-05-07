@@ -16,7 +16,7 @@ interface ReminderData {
     id: string;
     title: string;
     content: string | null;
-    user_id: string; // Make sure this is included from the message
+    user_id: string;
     message_type: string;
   };
   condition: {
@@ -25,7 +25,7 @@ interface ReminderData {
     active: boolean;
     condition_type: string;
     recipients: Recipient[];
-    deadline?: string;
+    trigger_date?: string; // Changed from deadline to trigger_date
     reminder_hours?: number[];
   };
   hoursUntilDeadline: number;
@@ -48,8 +48,8 @@ export async function sendReminder(data: ReminderData, debug = false): Promise<{
   const { message, condition, hoursUntilDeadline } = data;
   
   try {
-    if (!condition.deadline) {
-      console.error(`No deadline set for condition ${condition.id}`);
+    if (!condition.trigger_date) { // Changed from deadline to trigger_date
+      console.error(`No trigger_date set for condition ${condition.id}`);
       return { success: false, results: [] };
     }
     
@@ -100,7 +100,7 @@ export async function sendReminder(data: ReminderData, debug = false): Promise<{
           senderName,
           message.title,
           hoursUntilDeadline,
-          condition.deadline,
+          condition.trigger_date, // Changed from deadline to trigger_date
           debug
         );
         
@@ -139,7 +139,7 @@ export async function sendReminder(data: ReminderData, debug = false): Promise<{
             {
               id: message.id,
               title: message.title,
-              deadline: condition.deadline,
+              deadline: condition.trigger_date, // Changed from deadline to trigger_date
               hoursUntil: Math.round(hoursUntilDeadline)
             },
             senderName,
@@ -173,7 +173,7 @@ export async function sendReminder(data: ReminderData, debug = false): Promise<{
       }
     }
     
-    // Record that reminders were sent - FIXED: Pass user_id from the message
+    // Record that reminders were sent
     try {
       // Get user_id from message
       if (!message.user_id) {
@@ -184,7 +184,7 @@ export async function sendReminder(data: ReminderData, debug = false): Promise<{
       const recordResult = await recordReminderSent(
         message.id, 
         condition.id, 
-        condition.deadline,
+        condition.trigger_date, // Changed from deadline to trigger_date
         message.user_id || 'unknown' // Use the user_id from the message
       );
       
