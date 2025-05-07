@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { triggerManualReminder } from "@/services/messages/whatsApp/whatsAppReminderService";
 import { toast } from "@/components/ui/use-toast";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
-import { Card } from "@/components/ui/card";
 
 interface DeadmanSwitchControlsProps {
   messageId: string;
@@ -29,17 +28,33 @@ export function DeadmanSwitchControls({
   const handleTestReminder = async () => {
     try {
       setIsSendingReminder(true);
-      await triggerManualReminder(messageId);
-      toast({
-        title: "Test reminder triggered",
-        description: "The reminder check has been initiated",
-      });
+      console.log(`Triggering manual reminder for message ${messageId}`);
+      
+      const result = await triggerManualReminder(messageId);
+      
+      if (result.success) {
+        console.log(`Reminder triggered successfully for message ${messageId}`);
+        toast({
+          title: "Test reminder triggered",
+          description: "The reminder check has been initiated. Check your email shortly.",
+          duration: 5000,
+        });
+      } else {
+        console.error("Error triggering reminder:", result.error);
+        toast({
+          title: "Error",
+          description: `Failed to trigger test reminder: ${result.error || "Unknown error"}`,
+          variant: "destructive",
+          duration: 5000,
+        });
+      }
     } catch (error) {
       console.error("Error sending test reminder:", error);
       toast({
         title: "Error",
-        description: "Failed to trigger test reminder",
+        description: "Failed to trigger test reminder. Check the console for details.",
         variant: "destructive",
+        duration: 5000,
       });
     } finally {
       setIsSendingReminder(false);

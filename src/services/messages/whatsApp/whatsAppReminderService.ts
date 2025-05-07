@@ -55,20 +55,28 @@ export async function sendWhatsAppReminder(
  */
 export async function triggerManualReminder(messageId: string): Promise<{ success: boolean; error?: string }> {
   try {
-    // Call the reminder edge function directly
+    console.log(`Triggering manual reminder for message ${messageId}`);
+    
+    // Call the reminder edge function directly with debug flag
     const { data, error } = await supabase.functions.invoke("send-reminder-emails", {
-      body: { messageId }
+      body: { 
+        messageId,
+        debug: true, // Enable debug mode for more detailed logs
+        forceSend: true // Force sending even if not due yet
+      }
     });
     
     if (error) {
       console.error("Error triggering manual reminder:", error);
       toast({
         title: "Error",
-        description: "Failed to trigger reminders",
+        description: "Failed to trigger reminders: " + error.message,
         variant: "destructive",
       });
       return { success: false, error: error.message };
     }
+    
+    console.log("Manual reminder response:", data);
     
     toast({
       title: "Reminder Check Triggered",
