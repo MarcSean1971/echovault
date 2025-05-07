@@ -39,3 +39,6 @@ verify_jwt = false  # Webhook needs to be public for Twilio to call it
 
 [functions.perform-whatsapp-check-in]
 verify_jwt = true
+
+[functions.access-file]
+verify_jwt = false  # Allow public access for file downloads without authentication
