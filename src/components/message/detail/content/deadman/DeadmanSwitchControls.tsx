@@ -53,12 +53,18 @@ export function DeadmanSwitchControls({
         console.log(`Reminder triggered successfully for message ${messageId}`);
       } else {
         console.error("Error triggering reminder:", result.error);
+        toast({
+          title: "Error sending reminder",
+          description: result.error || "An unknown error occurred",
+          variant: "destructive",
+          duration: 5000,
+        });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error sending test reminder:", error);
       toast({
         title: "Error",
-        description: "Failed to trigger test reminder. Check the console for details.",
+        description: "Failed to trigger test reminder: " + (error.message || "Check the console for details"),
         variant: "destructive",
         duration: 5000,
       });

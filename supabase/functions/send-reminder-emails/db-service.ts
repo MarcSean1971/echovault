@@ -147,17 +147,20 @@ export async function recordReminderSent(
   messageId: string,
   conditionId: string,
   deadline: string,
-  userId: string // Added user_id parameter
+  userId: string // This is the user_id from the message
 ): Promise<boolean> {
   try {
     const supabase = supabaseClient();
+    
+    // Log the params for debugging
+    console.log(`Recording reminder for message ${messageId}, condition ${conditionId}, userId ${userId}`);
     
     const { error } = await supabase
       .from('sent_reminders')
       .insert({
         message_id: messageId,
         condition_id: conditionId,
-        user_id: userId, // Include user_id in the insert
+        user_id: userId, // Use the user_id from the message
         deadline: deadline,
         sent_at: new Date().toISOString()
       });

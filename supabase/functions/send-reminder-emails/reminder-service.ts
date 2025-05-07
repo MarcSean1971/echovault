@@ -16,7 +16,7 @@ interface ReminderData {
     id: string;
     title: string;
     content: string | null;
-    user_id: string;
+    user_id: string; // Make sure this is included from the message
     message_type: string;
   };
   condition: {
@@ -173,14 +173,19 @@ export async function sendReminder(data: ReminderData, debug = false): Promise<{
       }
     }
     
-    // Record that reminders were sent
+    // Record that reminders were sent - FIXED: Pass user_id from the message
     try {
+      // Get user_id from message
+      if (!message.user_id) {
+        console.warn(`No user_id in message ${message.id}, using string 'unknown'`);
+      }
+      
       // Pass user_id from message to recordReminderSent
       const recordResult = await recordReminderSent(
         message.id, 
         condition.id, 
         condition.deadline,
-        message.user_id
+        message.user_id || 'unknown' // Use the user_id from the message
       );
       
       if (!recordResult) {
