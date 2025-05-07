@@ -1,23 +1,18 @@
 
-import { useState, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { toast } from "@/components/ui/use-toast";
+import { useParams } from "react-router-dom";
+import { useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { MessageLoading } from "@/components/message/detail/MessageLoading";
 import { MessageNotFound } from "@/components/message/detail/MessageNotFound";
 import { MessageDetailContent } from "@/components/message/detail/MessageDetailContent";
 import { formatDate, getConditionType } from "@/utils/messageHelpers";
 import { useMessageDetail } from "@/hooks/useMessageDetail";
-import { deleteMessage, handleArmMessage, handleDisarmMessage } from "@/services/messages/messageDetailService";
-import { MessageRecipientsList } from "@/components/message/detail/MessageRecipientsList";
-import { sendTestNotification } from "@/services/messages/notificationService";
-import { useConditionRefresh } from "@/hooks/useConditionRefresh";
+import { MessageRecipientProvider } from "@/components/message/detail/MessageRecipientProvider";
+import { useMessageActions } from "@/hooks/useMessageActions";
 
 export default function MessageDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [isActionLoading, setIsActionLoading] = useState(false);
-  const [showSendTestDialog, setShowSendTestDialog] = useState(false);
-  const { refreshConditions } = useConditionRefresh();
 
   // Use memoized callback for error navigation to prevent recreation on each render
   const handleError = useCallback(() => navigate("/messages"), [navigate]);
@@ -34,67 +29,20 @@ export default function MessageDetail() {
     setIsArmed
   } = useMessageDetail(id, handleError);
   
-  const handleMessageDelete = async () => {
-    if (!message) return;
-    const success = await deleteMessage(message.id);
-    if (success) {
-      navigate("/messages");
-    }
-  };
+  // Use our custom hook for message actions
+  const {
+    isActionLoading,
+    showSendTestDialog,
+    setShowSendTestDialog,
+    handleMessageDelete,
+    onArmMessage,
+    onDisarmMessage,
+    onSendTestMessage,
+    handleSendTestMessages
+  } = useMessageActions(id, conditionId, setIsArmed);
   
-  const onArmMessage = async () => {
-    if (!conditionId) return;
-    
-    setIsActionLoading(true);
-    const newDeadline = await handleArmMessage(conditionId, setIsArmed);
-    
-    // Refresh conditions data in header buttons
-    await refreshConditions();
-    
-    setIsActionLoading(false);
-  };
-  
-  const onDisarmMessage = async () => {
-    if (!conditionId) return;
-    
-    setIsActionLoading(true);
-    await handleDisarmMessage(conditionId, setIsArmed);
-    
-    // Refresh conditions data in header buttons
-    await refreshConditions();
-    
-    setIsActionLoading(false);
-  };
-
-  // Custom function to render recipients list with React components
-  const renderRecipients = () => {
-    return <MessageRecipientsList recipients={recipients} />;
-  };
-
-  // Open the test message dialog
-  const onSendTestMessage = () => {
-    if (!message) return;
-    setShowSendTestDialog(true);
-  };
-
-  // Handle sending test messages to selected recipients
-  const handleSendTestMessages = async (selectedRecipients: { id: string; name: string; email: string }[]) => {
-    if (!message || selectedRecipients.length === 0) return;
-    
-    try {
-      setIsActionLoading(true);
-      
-      // For now we'll use the existing function, but in production we'd
-      // want to modify the backend to accept an array of recipients
-      await sendTestNotification(message.id);
-      
-      setShowSendTestDialog(false);
-    } catch (error) {
-      console.error("Error sending test messages:", error);
-    } finally {
-      setIsActionLoading(false);
-    }
-  };
+  // Get the recipient rendering function
+  const { renderRecipients } = MessageRecipientProvider({ recipients });
 
   if (isLoading) {
     return <MessageLoading />;
