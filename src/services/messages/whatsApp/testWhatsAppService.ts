@@ -6,7 +6,6 @@ import {
   getPhoneRecipient,
   getMessageDetails,
   getSenderInfo,
-  formatLocationInfo,
   handleWhatsAppError,
   showWhatsAppSuccess
 } from "./utils/whatsAppUtils";
@@ -35,8 +34,8 @@ export async function sendTestWhatsAppMessage(messageId: string) {
     // Format message with test indicators
     const testMessage = `🧪 TEST MESSAGE from ${senderName}: ${message.title || "Test Message"}\n\nThis is a test of the emergency notification system. No action is required.`;
     
-    // Send test message
-    const { data, error: sendError } = await supabase.functions.invoke("send-whatsapp-notification", {
+    // Send test message using our simplified function
+    const { data, error: sendError } = await supabase.functions.invoke("send-whatsapp", {
       body: {
         to: recipient.phone,
         message: testMessage

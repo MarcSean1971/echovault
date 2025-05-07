@@ -36,21 +36,26 @@ export async function sendTestWhatsAppTemplate(messageId: string): Promise<boole
     // Format location information
     const { locationInfo, mapUrl } = formatLocationInfo(message);
     
-    console.log(`Sending WhatsApp template to ${recipient.phone} with location info: ${locationInfo}`);
+    console.log(`Sending WhatsApp template to ${recipient.phone}`);
     
-    // Format phone number to ensure proper format (remove whatsapp: prefix if it exists)
-    const formattedPhone = recipient.phone.startsWith('+') ? 
-      recipient.phone : 
-      `+${recipient.phone.replace(/\D/g, '')}`;
+    // Format phone number (remove whatsapp: prefix if it exists)
+    const formattedPhone = recipient.phone.replace("whatsapp:", "");
+    const cleanPhone = formattedPhone.startsWith('+') ? 
+      formattedPhone : 
+      `+${formattedPhone.replace(/\D/g, '')}`;
     
-    // Use direct approach with simplified parameters
-    const { data, error } = await supabase.functions.invoke("send-whatsapp-alert", {
+    // Use our simplified edge function
+    const { data, error } = await supabase.functions.invoke("send-whatsapp", {
       body: {
-        recipientPhone: formattedPhone,
-        senderName: senderName,
-        recipientName: recipient.name,
-        locationText: locationInfo,
-        locationLink: mapUrl
+        to: cleanPhone,
+        useTemplate: true,
+        templateId: "HX4386568436c1f993dd47146448194dd8", // Default emergency template
+        templateParams: {
+          senderName: senderName,
+          recipientName: recipient.name,
+          locationText: locationInfo,
+          mapUrl: mapUrl
+        }
       }
     });
     

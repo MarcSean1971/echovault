@@ -1,18 +1,11 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { supabaseClient } from "./supabase-client.ts";
+import { corsHeaders, createSuccessResponse, createErrorResponse } from "../shared/whatsapp-utils.ts";
+import { createSupabaseAdmin } from "../shared/supabase-client.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-interface CheckInRequest {
-  userId: string;
-  phoneNumber: string;
-  method?: string;
-}
-
+/**
+ * Processes a check-in from WhatsApp and updates condition timestamps
+ */
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -20,96 +13,66 @@ serve(async (req) => {
   }
 
   try {
-    console.log("WhatsApp check-in function called");
+    console.log("[CHECK-IN] Processing WhatsApp check-in request");
     
     // Parse the request body
-    let requestData: CheckInRequest;
-    
+    let requestData;
     try {
       requestData = await req.json();
-      console.log("Received check-in request:", JSON.stringify(requestData, null, 2));
-    } catch (e) {
-      console.error("Failed to parse request body:", e);
-      throw new Error("Invalid request body. Expected JSON object with 'userId' and 'phoneNumber'.");
+    } catch (error) {
+      return createErrorResponse({ message: "Invalid JSON in request body" }, 400);
     }
     
     const { userId, phoneNumber, method = "whatsapp" } = requestData;
     
     if (!userId) {
-      throw new Error("Missing required parameter: userId");
+      return createErrorResponse({ message: "Missing required parameter: userId" }, 400);
     }
+    
+    console.log(`[CHECK-IN] Processing check-in for user ${userId} via ${method}`);
     
     // Initialize Supabase client
-    const supabase = supabaseClient();
+    const supabase = createSupabaseAdmin();
     const now = new Date().toISOString();
     
-    console.log(`Processing check-in for user ${userId} via ${method} (phone: ${phoneNumber})`);
-    
-    try {
-      // Get all active conditions for this user
-      const { data: conditionsData, error: conditionsError } = await supabase
-        .from("message_conditions")
-        .select("id, message_id, messages!inner(user_id)")
-        .eq("messages.user_id", userId)
-        .eq("active", true);
-        
-      if (conditionsError) {
-        throw new Error(`Error fetching conditions: ${conditionsError.message}`);
-      }
+    // Get all active conditions for this user
+    const { data: conditionsData, error: conditionsError } = await supabase
+      .from("message_conditions")
+      .select("id, message_id, messages!inner(user_id)")
+      .eq("messages.user_id", userId)
+      .eq("active", true);
       
-      console.log(`Found ${conditionsData?.length || 0} active conditions for user ${userId}`);
-      
-      // Update all conditions with the new check-in time
-      if (conditionsData && conditionsData.length > 0) {
-        const conditionIds = conditionsData.map(c => c.id);
-        console.log(`Updating ${conditionIds.length} active conditions with new check-in time: ${now}`);
-        
-        const { error: updateError } = await supabase
-          .from("message_conditions")
-          .update({ 
-            last_checked: now
-          })
-          .in("id", conditionIds);
-          
-        if (updateError) {
-          throw new Error(`Failed to update conditions: ${updateError.message}`);
-        }
-        
-        console.log("Successfully updated conditions with new check-in time");
-      } else {
-        console.log("No active conditions found for user");
-      }
-      
-      // Log the check-in activity
-      console.log(`Check-in successful for user ${userId} via ${method}`);
-      
-      // Return success
-      return new Response(
-        JSON.stringify({
-          success: true,
-          timestamp: now,
-          method: method,
-          conditions_updated: conditionsData?.length || 0
-        }),
-        {
-          headers: { "Content-Type": "application/json", ...corsHeaders },
-        }
-      );
-    } catch (error: any) {
-      console.error("Error performing check-in:", error);
-      throw error;
+    if (conditionsError) {
+      throw new Error(`Error fetching conditions: ${conditionsError.message}`);
     }
-  } catch (error: any) {
-    console.error("Error in WhatsApp check-in function:", error);
-    return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error.message || "Unknown error occurred"
-      }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+    
+    console.log(`[CHECK-IN] Found ${conditionsData?.length || 0} active conditions for user ${userId}`);
+    
+    // Update all conditions with the new check-in time
+    if (conditionsData && conditionsData.length > 0) {
+      const conditionIds = conditionsData.map(c => c.id);
+      
+      const { error: updateError } = await supabase
+        .from("message_conditions")
+        .update({ last_checked: now })
+        .in("id", conditionIds);
+        
+      if (updateError) {
+        throw new Error(`Failed to update conditions: ${updateError.message}`);
       }
-    );
+      
+      console.log("[CHECK-IN] Successfully updated conditions with new check-in time");
+    } else {
+      console.log("[CHECK-IN] No active conditions found for user");
+    }
+    
+    return createSuccessResponse({
+      timestamp: now,
+      method: method,
+      conditions_updated: conditionsData?.length || 0
+    });
+    
+  } catch (error) {
+    return createErrorResponse(error);
   }
 });

@@ -133,7 +133,6 @@ export async function getSenderInfo() {
     
     // Format sender name
     const senderName = `${userData?.first_name || ""} ${userData?.last_name || ""}`.trim() || "You";
-    console.log(`Sender name for WhatsApp: ${senderName}`);
     
     return { senderName, userId };
   } catch (error: any) {
@@ -159,10 +158,6 @@ export function formatLocationInfo(message: any) {
   if (message?.share_location && message?.location_latitude && message?.location_longitude) {
     locationInfo = message.location_name || `${message.location_latitude}, ${message.location_longitude}`;
     mapUrl = `https://maps.google.com/?q=${message.location_latitude},${message.location_longitude}`;
-    console.log(`Formatted location: ${locationInfo}`);
-    console.log(`Map URL: ${mapUrl}`);
-  } else {
-    console.log("No location information available, using test values");
   }
   
   return { locationInfo, mapUrl };
