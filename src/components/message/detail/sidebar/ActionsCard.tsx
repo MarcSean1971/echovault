@@ -1,30 +1,19 @@
 
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import {
-  Shield,
-  ShieldOff,
-  Trash2,
-  Bell,
-  Pencil,
-  Clock,
-  Mail,
-} from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { ActionsHeader } from "./actions/ActionsHeader";
+import { ArmButton } from "./actions/ArmButton";
+import { ReminderHistoryButton } from "./actions/ReminderHistoryButton";
+import { TestMessageButton } from "./actions/TestMessageButton";
+import { EditMessageButton } from "./actions/EditMessageButton";
+import { DeleteMessageButton } from "./actions/DeleteMessageButton";
 
 interface ActionsCardProps {
   messageId: string;
   isArmed: boolean;
   conditionId: string | null;
   isActionLoading: boolean;
-  handleArmMessage: () => Promise<void>;
+  handleArmMessage: () => Promise<Date | null>;
   handleDisarmMessage: () => Promise<void>;
   showDeleteConfirm: boolean;
   setShowDeleteConfirm: (value: boolean) => void;
@@ -47,153 +36,55 @@ export function ActionsCard({
   handleDelete,
   onSendTestMessage,
   onViewReminderHistory,
-  conditionType,
   supportsReminders = false
 }: ActionsCardProps) {
-  const navigate = useNavigate();
-
-  // Common hover effect classes - removed color changes but kept positioning effects
-  const hoverEffect = "transition-all";
-  const iconHoverEffect = "transition-transform group-hover:scale-110";
-
   return (
     <Card>
       <CardContent className="p-4 space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-medium">Actions</h3>
-          <Bell className="h-5 w-5 text-muted-foreground" />
-        </div>
+        <ActionsHeader />
 
         {/* Arm/Disarm Button - FIRST */}
         {conditionId && (
-          <Button
-            variant={isArmed ? "destructive" : "default"}
-            className={`w-full group ${hoverEffect}`}
-            onClick={isArmed ? handleDisarmMessage : handleArmMessage}
-            disabled={isActionLoading}
-          >
-            {isArmed ? (
-              <>
-                <ShieldOff className={`h-4 w-4 mr-2 ${iconHoverEffect}`} />
-                Disarm Message
-              </>
-            ) : (
-              <>
-                <Shield className={`h-4 w-4 mr-2 ${iconHoverEffect}`} />
-                Arm Message
-              </>
-            )}
-          </Button>
+          <ArmButton
+            isArmed={isArmed}
+            isActionLoading={isActionLoading}
+            onArmMessage={handleArmMessage}
+            onDisarmMessage={handleDisarmMessage}
+          />
         )}
 
         {/* Reminders Button - SECOND - Only show for supported condition types */}
         {conditionId && supportsReminders && onViewReminderHistory && (
-          <Button
-            variant="outline"
-            className={`w-full group ${hoverEffect}`}
-            onClick={onViewReminderHistory}
-            disabled={isActionLoading}
-          >
-            <Clock className={`h-4 w-4 mr-2 ${iconHoverEffect}`} />
-            View Reminder History
-          </Button>
+          <ReminderHistoryButton
+            onViewReminderHistory={onViewReminderHistory}
+            isActionLoading={isActionLoading}
+          />
         )}
 
         {/* Send Test Message Button - THIRD */}
         {conditionId && onSendTestMessage && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Button
-                    variant="outline"
-                    className={`w-full group ${hoverEffect}`}
-                    onClick={onSendTestMessage}
-                    disabled={isArmed || isActionLoading}
-                  >
-                    <Mail className={`h-4 w-4 mr-2 ${iconHoverEffect}`} />
-                    Send Test Message
-                  </Button>
-                </div>
-              </TooltipTrigger>
-              {isArmed && (
-                <TooltipContent>
-                  <p>Disarm the message first to send a test</p>
-                </TooltipContent>
-              )}
-            </Tooltip>
-          </TooltipProvider>
+          <TestMessageButton
+            onSendTestMessage={onSendTestMessage}
+            isArmed={isArmed}
+            isActionLoading={isActionLoading}
+          />
         )}
 
         {/* Edit Message Button - FOURTH */}
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div>
-                <Button
-                  variant="outline"
-                  className={`w-full group ${hoverEffect}`}
-                  onClick={() => navigate(`/message/${messageId}/edit`)}
-                  disabled={isArmed || isActionLoading}
-                >
-                  <Pencil className={`h-4 w-4 mr-2 ${iconHoverEffect}`} />
-                  Edit Message
-                </Button>
-              </div>
-            </TooltipTrigger>
-            {isArmed && (
-              <TooltipContent>
-                <p>Disarm the message first to edit it</p>
-              </TooltipContent>
-            )}
-          </Tooltip>
-        </TooltipProvider>
+        <EditMessageButton
+          messageId={messageId}
+          isArmed={isArmed}
+          isActionLoading={isActionLoading}
+        />
 
         {/* Delete Button / Confirm - FIFTH */}
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div>
-                {showDeleteConfirm ? (
-                  <div className="flex space-x-2">
-                    <Button
-                      variant="default"
-                      size="sm"
-                      className={`flex-1 group ${hoverEffect}`}
-                      onClick={() => setShowDeleteConfirm(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      className={`flex-1 group ${hoverEffect}`}
-                      onClick={handleDelete}
-                      disabled={isActionLoading}
-                    >
-                      Delete
-                    </Button>
-                  </div>
-                ) : (
-                  <Button
-                    variant="outline"
-                    className={`w-full group border-destructive text-destructive ${hoverEffect}`}
-                    onClick={() => setShowDeleteConfirm(true)}
-                    disabled={isArmed || isActionLoading}
-                  >
-                    <Trash2 className={`h-4 w-4 mr-2 ${iconHoverEffect}`} />
-                    Delete Message
-                  </Button>
-                )}
-              </div>
-            </TooltipTrigger>
-            {isArmed && !showDeleteConfirm && (
-              <TooltipContent>
-                <p>Disarm the message first to delete it</p>
-              </TooltipContent>
-            )}
-          </Tooltip>
-        </TooltipProvider>
+        <DeleteMessageButton
+          showDeleteConfirm={showDeleteConfirm}
+          setShowDeleteConfirm={setShowDeleteConfirm}
+          handleDelete={handleDelete}
+          isArmed={isArmed}
+          isActionLoading={isActionLoading}
+        />
       </CardContent>
     </Card>
   );

@@ -13,7 +13,7 @@ interface MainContentSectionProps {
   formatDate: (dateString: string) => string;
   renderConditionType: () => string;
   handleDisarmMessage: () => Promise<void>;
-  handleArmMessage: () => Promise<Date | null>; // Changed return type to match the hook
+  handleArmMessage: () => Promise<Date | null>;
   deliveryId: string | null;
   recipientEmail: string | null;
 }
@@ -43,8 +43,7 @@ export function MainContentSection({
       <MessageMainCard>
         <MessageContent 
           message={message}
-          deliveryId={deliveryId}
-          recipientEmail={recipientEmail}
+          // Fix: Remove deliveryId and recipientEmail as they don't exist in MessageContentProps
         />
       </MessageMainCard>
     </>
