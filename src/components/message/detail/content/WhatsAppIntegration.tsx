@@ -4,11 +4,7 @@ import { WhatsAppHeader } from "./whatsapp/WhatsAppHeader";
 import { WhatsAppButtons } from "./whatsapp/WhatsAppButtons";
 import { WhatsAppCheckIn } from "./whatsapp/WhatsAppCheckIn";
 import { supabase } from "@/integrations/supabase/client";
-import { 
-  sendTestWhatsAppMessage, 
-  sendTestWhatsAppTemplate,
-  testWhatsAppTrigger
-} from "@/services/messages/whatsApp";
+import { sendTestWhatsAppMessage } from "@/services/messages/whatsApp";
 import { Button } from "@/components/ui/button";
 import { InfoIcon } from "lucide-react";
 import {
@@ -59,23 +55,12 @@ export function WhatsAppIntegration({ messageId, panicConfig }: WhatsAppIntegrat
     await sendTestWhatsAppMessage(messageId);
   };
   
-  const handleTestTemplate = async () => {
-    if (!messageId) return;
-    await sendTestWhatsAppTemplate(messageId);
-  };
-  
-  const handleTestTrigger = async () => {
-    const keyword = panicConfig?.trigger_keyword || "SOS";
-    await testWhatsAppTrigger(keyword);
-  };
-  
   return (
     <div className="mt-4 p-3 bg-blue-50 rounded-lg">
       <div className="flex items-center justify-between">
         <WhatsAppHeader />
         <WhatsAppButtons 
           onSendTestWhatsApp={handleSendTestWhatsApp}
-          onSendTestTemplate={handleTestTemplate}
         />
       </div>
       
@@ -98,8 +83,6 @@ export function WhatsAppIntegration({ messageId, panicConfig }: WhatsAppIntegrat
           <p><strong>Testing WhatsApp Integration:</strong></p>
           <ol className="list-decimal ml-4 space-y-1">
             <li>Use the <strong>Test Message</strong> button to send a simple text message</li>
-            <li>Use the <strong>Test Template</strong> button to send an emergency template</li>
-            <li>Use the <strong>Test SOS</strong> button to simulate sending your trigger keyword</li>
           </ol>
           <p className="mt-2"><strong>Tips for using WhatsApp with this app:</strong></p>
           <ul className="list-disc ml-4 space-y-1">
