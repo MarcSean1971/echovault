@@ -53,7 +53,8 @@ const handler = async (req: Request): Promise<Response> => {
         title: m.message.title,
         condition_id: m.condition.id,
         hours_until_deadline: m.hoursUntilDeadline,
-        reminder_hours: m.reminderHours
+        reminder_hours: m.reminderHours,
+        trigger_date: m.condition.trigger_date || 'null'
       })), null, 2));
     }
     

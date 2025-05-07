@@ -3,109 +3,70 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 
 /**
- * Send a WhatsApp reminder for upcoming message triggering
- * @param messageId The ID of the message to send a reminder for
- * @param phone The recipient's phone number
- * @param message The reminder message text
+ * Trigger a manual reminder for a message
  */
-export async function sendWhatsAppReminder(
-  messageId: string,
-  phone: string,
-  message: string
-): Promise<{ success: boolean; error?: string }> {
+export async function triggerManualReminder(messageId: string) {
   try {
-    if (!phone) {
-      console.warn("No phone number provided for WhatsApp reminder");
-      return { success: false, error: "No phone number provided" };
-    }
-    
-    console.log(`Sending WhatsApp reminder to ${phone} for message ${messageId}`);
-    
-    // Format phone number to ensure proper format (remove whatsapp: prefix if it exists)
-    const formattedPhone = phone.replace("whatsapp:", "");
-    const cleanPhone = formattedPhone.startsWith('+') ? 
-      formattedPhone : 
-      `+${formattedPhone.replace(/\D/g, '')}`;
-      
-    // Call the WhatsApp notification function through Supabase Edge Function
-    const { data, error } = await supabase.functions.invoke("send-whatsapp-notification", {
-      body: {
-        to: cleanPhone,
-        message: message,
-        messageId: messageId,
-        isReminder: true
-      }
-    });
-    
-    if (error) {
-      console.error("Error sending WhatsApp reminder:", error);
-      return { success: false, error: error.message };
-    }
-    
-    return { success: true };
-  } catch (error: any) {
-    console.error("Error in sendWhatsAppReminder:", error);
-    return { success: false, error: error.message || "Unknown error" };
-  }
-}
+    console.log(`Triggering manual reminder check for message ${messageId}`);
 
-/**
- * Manually trigger reminders for a message
- * This is used for both email and WhatsApp reminders
- */
-export async function triggerManualReminder(messageId: string): Promise<{ success: boolean; error?: string }> {
-  try {
-    console.log(`Triggering manual reminder for message ${messageId}`);
-    
-    // Call the reminder edge function directly with debug flag
+    toast({
+      title: "Reminder Check Triggered",
+      description: "Processing test reminder...",
+      duration: 3000,
+    });
+
     const { data, error } = await supabase.functions.invoke("send-reminder-emails", {
-      body: { 
-        messageId,
-        debug: true, // Enable debug mode for more detailed logs
-        forceSend: true // Force sending even if not due yet
+      body: {
+        messageId: messageId,
+        debug: true,  // Enable debug mode for detailed logs
+        forceSend: true  // Force send even if not at reminder time
       }
     });
-    
+
     if (error) {
-      console.error("Error triggering manual reminder:", error);
-      toast({
-        title: "Error",
-        description: `Failed to trigger reminders: ${error.message}`,
-        variant: "destructive",
-      });
-      return { success: false, error: error.message };
+      console.error("Error triggering reminder:", error);
+      throw error;
     }
-    
-    // Log the full response for debugging
-    console.log("Manual reminder response:", data);
-    
-    if (data && data.messages_processed === 0) {
+
+    if (data && data.successful_reminders > 0) {
+      toast({
+        title: "Test Reminder Sent",
+        description: `Successfully sent ${data.successful_reminders} reminder(s).`,
+        duration: 5000,
+      });
+      return {
+        success: true,
+        message: `Successfully sent ${data.successful_reminders} reminder(s)`,
+        data
+      };
+    } else {
+      // If we got a response but no successful reminders
+      let errorMessage = "No reminders were sent. ";
+      
+      if (data && data.message) {
+        errorMessage += data.message;
+      } else {
+        errorMessage += "Check that the message has recipients and reminder settings configured.";
+      }
+
       toast({
         title: "No reminders sent",
-        description: "No reminders were sent. Check that the message has reminder hours configured and recipients set.",
-        variant: "default",
+        description: errorMessage,
+        variant: "destructive",
+        duration: 5000,
       });
-      return { success: false, error: "No messages processed" };
+      
+      return {
+        success: false,
+        error: errorMessage,
+        data
+      };
     }
-    
-    toast({
-      title: "Reminders sent",
-      description: data?.successful_reminders > 0 
-        ? `Successfully sent ${data.successful_reminders} reminder(s)` 
-        : "Reminder check triggered, but no messages were sent",
-    });
-    
-    return { success: true };
   } catch (error: any) {
     console.error("Error in triggerManualReminder:", error);
-    
-    // Show a more detailed error message
-    toast({
-      title: "Error",
-      description: `Failed to trigger reminders: ${error.message || "Unknown error"}`,
-      variant: "destructive",
-    });
-    
-    return { success: false, error: error.message || "Unknown error" };
+    return {
+      success: false,
+      error: error.message || "An unknown error occurred"
+    };
   }
 }

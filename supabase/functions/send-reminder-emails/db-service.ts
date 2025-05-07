@@ -87,12 +87,18 @@ export async function getMessagesNeedingReminders(
     
     // Process each condition
     for (const condition of conditions || []) {
-      // Skip if no trigger_date or no reminder hours
-      if (!condition.trigger_date || !condition.reminder_hours || condition.reminder_hours.length === 0) {
+      // Skip if no reminder hours
+      if (!condition.reminder_hours || condition.reminder_hours.length === 0) {
         continue;
       }
       
-      const deadline = new Date(condition.trigger_date);
+      // Skip if no trigger_date AND NOT forceSend - this is the key change
+      // When forceSend is true, we'll proceed even if trigger_date is null
+      if (!condition.trigger_date && !forceSend) {
+        console.log(`No trigger_date for condition ${condition.id} and forceSend is not enabled, skipping`);
+        continue;
+      }
+      
       const message = condition.messages;
       
       if (!message) {
@@ -100,8 +106,15 @@ export async function getMessagesNeedingReminders(
         continue;
       }
       
-      // Calculate hours until deadline
-      const hoursUntilDeadline = (deadline.getTime() - now.getTime()) / (1000 * 60 * 60);
+      // Calculate hours until deadline or use a default for forced sends without deadline
+      let hoursUntilDeadline = 24; // Default to 24 hours if no trigger_date for forced sends
+      
+      if (condition.trigger_date) {
+        const deadline = new Date(condition.trigger_date);
+        hoursUntilDeadline = (deadline.getTime() - now.getTime()) / (1000 * 60 * 60);
+      } else if (forceSend) {
+        console.log(`Force sending reminder for message ${message.id} with no trigger_date, using default 24 hours`);
+      }
       
       // Check if any reminder hour matches
       const reminderHours = condition.reminder_hours as number[];
@@ -110,7 +123,7 @@ export async function getMessagesNeedingReminders(
       if (forceSend) {
         // If forceSend is true, always send a reminder
         shouldSendReminder = true;
-        console.log(`Force sending reminder for message ${message.id}, deadline in ${hoursUntilDeadline.toFixed(1)} hours`);
+        console.log(`Force sending reminder for message ${message.id}, deadline in ${condition.trigger_date ? hoursUntilDeadline.toFixed(1) : 'N/A'} hours`);
       } else {
         // Check if the current time matches any reminder window (within 5 minutes)
         for (const hour of reminderHours) {
@@ -161,7 +174,7 @@ export async function recordReminderSent(
         message_id: messageId,
         condition_id: conditionId,
         user_id: userId,
-        deadline: triggerDate, // Keep the column name 'deadline' in the database
+        deadline: triggerDate || new Date().toISOString(), // Use current date if triggerDate is null
         sent_at: new Date().toISOString()
       });
     

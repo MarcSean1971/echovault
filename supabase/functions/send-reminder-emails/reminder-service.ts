@@ -48,9 +48,10 @@ export async function sendReminder(data: ReminderData, debug = false): Promise<{
   const { message, condition, hoursUntilDeadline } = data;
   
   try {
-    if (!condition.trigger_date) { // Changed from deadline to trigger_date
-      console.error(`No trigger_date set for condition ${condition.id}`);
-      return { success: false, results: [] };
+    // Remove the blocking check for trigger_date since we now handle null dates in the getMessagesNeedingReminders function
+    // Instead, log a warning but continue with the reminder
+    if (!condition.trigger_date) {
+      console.log(`No trigger_date set for condition ${condition.id}, but proceeding with test reminder`);
     }
     
     if (!condition.recipients || !Array.isArray(condition.recipients) || condition.recipients.length === 0) {
@@ -79,7 +80,7 @@ export async function sendReminder(data: ReminderData, debug = false): Promise<{
     if (debug) {
       console.log(`Sending reminders for message "${message.title}" from ${senderName}`);
       console.log(`Message user_id: ${message.user_id}`);
-      console.log(`Deadline in ${hoursUntilDeadline.toFixed(1)} hours`);
+      console.log(`Deadline in ${condition.trigger_date ? hoursUntilDeadline.toFixed(1) : 'N/A'} hours`);
       console.log(`Recipients: ${condition.recipients.length}`);
     }
     
@@ -100,7 +101,7 @@ export async function sendReminder(data: ReminderData, debug = false): Promise<{
           senderName,
           message.title,
           hoursUntilDeadline,
-          condition.trigger_date, // Changed from deadline to trigger_date
+          condition.trigger_date || new Date().toISOString(), // Use current date as fallback
           debug
         );
         
@@ -139,7 +140,7 @@ export async function sendReminder(data: ReminderData, debug = false): Promise<{
             {
               id: message.id,
               title: message.title,
-              deadline: condition.trigger_date, // Changed from deadline to trigger_date
+              deadline: condition.trigger_date || new Date().toISOString(), // Use current date as fallback
               hoursUntil: Math.round(hoursUntilDeadline)
             },
             senderName,
@@ -184,7 +185,7 @@ export async function sendReminder(data: ReminderData, debug = false): Promise<{
       const recordResult = await recordReminderSent(
         message.id, 
         condition.id, 
-        condition.trigger_date, // Changed from deadline to trigger_date
+        condition.trigger_date || new Date().toISOString(), // Use current date as fallback
         message.user_id || 'unknown' // Use the user_id from the message
       );
       
