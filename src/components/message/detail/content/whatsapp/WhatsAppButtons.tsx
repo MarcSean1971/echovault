@@ -1,17 +1,21 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Smartphone } from "lucide-react";
+import { Smartphone, Bell } from "lucide-react";
 import { HOVER_TRANSITION, ICON_HOVER_EFFECTS } from "@/utils/hoverEffects";
+import { triggerManualReminder } from "@/services/messages/whatsApp/whatsAppReminderService";
 
 interface WhatsAppButtonsProps {
   onSendTestWhatsApp: () => Promise<void>;
+  messageId: string;
 }
 
 export function WhatsAppButtons({ 
-  onSendTestWhatsApp 
+  onSendTestWhatsApp, 
+  messageId 
 }: WhatsAppButtonsProps) {
   const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
+  const [isSendingReminder, setIsSendingReminder] = useState(false);
 
   const handleSendTestWhatsApp = async () => {
     try {
@@ -19,6 +23,15 @@ export function WhatsAppButtons({
       await onSendTestWhatsApp();
     } finally {
       setIsSendingWhatsApp(false);
+    }
+  };
+
+  const handleTestReminder = async () => {
+    try {
+      setIsSendingReminder(true);
+      await triggerManualReminder(messageId);
+    } finally {
+      setIsSendingReminder(false);
     }
   };
 
@@ -33,6 +46,17 @@ export function WhatsAppButtons({
       >
         <Smartphone className={`h-3 w-3 mr-1 ${ICON_HOVER_EFFECTS.default}`} />
         {isSendingWhatsApp ? "Sending..." : "Test Message"}
+      </Button>
+      
+      <Button 
+        variant="outline"
+        size="sm"
+        disabled={isSendingReminder}
+        onClick={handleTestReminder}
+        className={`flex items-center ${HOVER_TRANSITION}`}
+      >
+        <Bell className={`h-3 w-3 mr-1 ${ICON_HOVER_EFFECTS.default}`} />
+        {isSendingReminder ? "Sending..." : "Test Reminder"}
       </Button>
     </div>
   );

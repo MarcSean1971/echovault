@@ -53,6 +53,7 @@ export function WhatsAppIntegration({ messageId, panicConfig }: WhatsAppIntegrat
         <WhatsAppHeader />
         <WhatsAppButtons 
           onSendTestWhatsApp={handleSendTestWhatsApp}
+          messageId={messageId}
         />
       </div>
       

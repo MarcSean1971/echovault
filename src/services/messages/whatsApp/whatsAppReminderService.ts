@@ -1,0 +1,82 @@
+
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/components/ui/use-toast";
+
+/**
+ * Send a WhatsApp reminder for upcoming message triggering
+ * @param messageId The ID of the message to send a reminder for
+ * @param phone The recipient's phone number
+ * @param deadline The deadline when the message will be triggered
+ */
+export async function sendWhatsAppReminder(
+  messageId: string,
+  phone: string,
+  message: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!phone) {
+      console.warn("No phone number provided for WhatsApp reminder");
+      return { success: false, error: "No phone number provided" };
+    }
+    
+    console.log(`Sending WhatsApp reminder to ${phone} for message ${messageId}`);
+    
+    // Format phone number to ensure proper format (remove whatsapp: prefix if it exists)
+    const formattedPhone = phone.replace("whatsapp:", "");
+    const cleanPhone = formattedPhone.startsWith('+') ? 
+      formattedPhone : 
+      `+${formattedPhone.replace(/\D/g, '')}`;
+      
+    // Call the WhatsApp notification function through Supabase Edge Function
+    const { data, error } = await supabase.functions.invoke("send-whatsapp-notification", {
+      body: {
+        to: cleanPhone,
+        message: message,
+        messageId: messageId,
+        isReminder: true
+      }
+    });
+    
+    if (error) {
+      console.error("Error sending WhatsApp reminder:", error);
+      return { success: false, error: error.message };
+    }
+    
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error in sendWhatsAppReminder:", error);
+    return { success: false, error: error.message || "Unknown error" };
+  }
+}
+
+/**
+ * Manually trigger reminders for a message
+ */
+export async function triggerManualReminder(messageId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Call the reminder edge function directly
+    const { data, error } = await supabase.functions.invoke("send-reminder-emails", {
+      body: { messageId }
+    });
+    
+    if (error) {
+      console.error("Error triggering manual reminder:", error);
+      toast({
+        title: "Error",
+        description: "Failed to trigger reminders",
+        variant: "destructive",
+      });
+      return { success: false, error: error.message };
+    }
+    
+    toast({
+      title: "Reminder Check Triggered",
+      description: "System will send reminders if deadline is approaching",
+    });
+    
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error in triggerManualReminder:", error);
+    return { success: false, error: error.message || "Unknown error" };
+  }
+}
