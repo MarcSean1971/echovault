@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { MessageLoading } from "./MessageLoading";
 import { MessageNotFound } from "./MessageNotFound";
@@ -11,7 +10,6 @@ import { MessageDeliverySettings } from "./MessageDeliverySettings";
 import { MessageRecipientsList } from "./MessageRecipientsList";
 import { Button } from "@/components/ui/button";
 import { Mail } from "lucide-react";
-import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useSearchParams } from "react-router-dom";
 import { DeadmanSwitchControls } from "./content/deadman/DeadmanSwitchControls";
 import { ReminderHistory } from "./content/deadman/ReminderHistory";
@@ -28,7 +26,7 @@ interface MessageDetailContentProps {
   conditionId: string | null;
   condition: any;
   handleDisarmMessage: () => Promise<void>;
-  handleArmMessage: () => Promise<void>;
+  handleArmMessage: () => Promise<Date | null>;  // Changed return type to match the hook
   handleDelete: () => Promise<void>;
   formatDate: (dateString: string) => string;
   renderConditionType: () => string;

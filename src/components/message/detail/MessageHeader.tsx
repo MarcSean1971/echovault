@@ -4,13 +4,14 @@ import { ArrowLeft, Bell, BellOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Message } from "@/types/message";
 import { getMessageIcon } from "@/utils/messageFormatUtils";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface MessageHeaderProps {
   message: Message;
   isArmed: boolean;
   isActionLoading: boolean;
   handleDisarmMessage: () => Promise<void>;
-  handleArmMessage: () => Promise<void>;
+  handleArmMessage: () => Promise<Date | null>; // Changed return type to match the hook
 }
 
 export function MessageHeader({
@@ -32,7 +33,7 @@ export function MessageHeader({
             onClick={() => navigate("/messages")}
             className="rounded-full hover:bg-accent hover:text-accent-foreground"
           >
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className={`h-5 w-5 ${HOVER_TRANSITION}`} />
           </Button>
           <h1 className="text-xl font-medium md:text-2xl">Message Details</h1>
         </div>
@@ -47,7 +48,7 @@ export function MessageHeader({
               className="text-green-600 hover:bg-green-50 hover:text-green-700"
               size="sm"
             >
-              <BellOff className="h-4 w-4 mr-2" /> Disarm
+              <BellOff className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} /> Disarm
             </Button>
           ) : (
             <Button
@@ -57,7 +58,7 @@ export function MessageHeader({
               className="text-destructive hover:bg-destructive/10"
               size="sm"
             >
-              <Bell className="h-4 w-4 mr-2" /> Arm
+              <Bell className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} /> Arm
             </Button>
           )}
         </div>

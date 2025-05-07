@@ -9,7 +9,7 @@ interface MessageActionFooterProps {
   messageId: string;
   isArmed: boolean;
   isActionLoading: boolean;
-  handleArmMessage: () => Promise<void>;
+  handleArmMessage: () => Promise<Date | null>; // Changed return type to match the hook
   handleDisarmMessage: () => Promise<void>;
   showDeleteConfirm: boolean;
   setShowDeleteConfirm: (show: boolean) => void;
