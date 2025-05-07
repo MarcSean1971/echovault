@@ -9,8 +9,18 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-// Basic client without auth
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+// Basic client with proper auth configuration
+export const supabase = createClient<Database>(
+  SUPABASE_URL, 
+  SUPABASE_PUBLISHABLE_KEY,
+  {
+    auth: {
+      storage: localStorage,
+      persistSession: true,
+      autoRefreshToken: true
+    }
+  }
+);
 
 // Function to get a supabase client with the current user's JWT
 export const getSupabaseWithAuth = async (clerkJwt?: string) => {
@@ -24,6 +34,11 @@ export const getSupabaseWithAuth = async (clerkJwt?: string) => {
         headers: {
           Authorization: `Bearer ${clerkJwt}`
         }
+      },
+      auth: {
+        storage: localStorage,
+        persistSession: true,
+        autoRefreshToken: true
       }
     }
   );
