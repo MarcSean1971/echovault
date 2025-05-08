@@ -1,7 +1,6 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "./cors-headers.ts";
+import { createSupabaseAdmin } from "../shared/supabase-client.ts";
 
 console.log("[AccessFile] Function starting up");
 
@@ -63,21 +62,8 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
     
-    console.log(`[AccessFile] Creating Supabase client with URL: ${supabaseUrl}`);
-    
-    // Create the Supabase client with service role key - with additional options for reliability
-    const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      },
-      global: {
-        headers: { 
-          Authorization: `Bearer ${supabaseServiceRoleKey}`
-        }
-      }
-    });
-    
+    // Create Supabase client using the shared admin client
+    const supabase = createSupabaseAdmin();
     console.log(`[AccessFile] Supabase client created successfully`);
     
     // Extract file path from URL based on the detected pattern
@@ -159,33 +145,7 @@ serve(async (req: Request): Promise<Response> => {
             console.error(`[AccessFile] Error code: ${testQuery.error.code}`);
             console.error(`[AccessFile] Error details: ${JSON.stringify(testQuery.error.details || {})}`);
             
-            // Try reconnecting with explicit authorization
-            console.log("[AccessFile] Attempting to reconnect with explicit authorization");
-            const reconnectOptions = {
-              auth: {
-                autoRefreshToken: false,
-                persistSession: false
-              },
-              global: {
-                headers: { 
-                  Authorization: `Bearer ${supabaseServiceRoleKey}`,
-                  apikey: supabaseServiceRoleKey
-                }
-              }
-            };
-            const supabaseRetry = createClient(supabaseUrl, supabaseServiceRoleKey, reconnectOptions);
-            
-            // Test the reconnection
-            const retryTest = await supabaseRetry.from('delivered_messages').select('count(*)', { count: 'exact', head: true });
-            console.log(`[AccessFile] Reconnection test: ${retryTest.error ? 'Failed' : 'Successful'}`);
-            
-            if (retryTest.error) {
-              throw new Error(`Database connection failed: ${retryTest.error.message}`);
-            } else {
-              // If reconnection worked, replace the client
-              console.log("[AccessFile] Using reconnected client");
-              supabase = supabaseRetry;
-            }
+            throw new Error(`Database connection failed: ${testQuery.error.message}`);
           }
 
           // Validate delivery and recipient using the service role client
