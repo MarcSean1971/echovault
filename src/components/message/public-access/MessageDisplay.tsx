@@ -112,7 +112,7 @@ export const MessageDisplay = ({
           </div>
         </div>
         
-        {/* Message Content */}
+        {/* Message Content - Let MessageContent handle all content including attachments */}
         <div className="p-6">
           <div className="prose max-w-full">
             {message && <MessageContent message={message} deliveryId={deliveryId} recipientEmail={recipientEmail} />}

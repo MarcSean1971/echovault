@@ -47,11 +47,14 @@ export function MessageContent({
       
       {/* Attachments section */}
       {message.attachments && message.attachments.length > 0 && (
-        <MessageAttachments 
-          message={message}
-          deliveryId={deliveryId}
-          recipientEmail={recipientEmail}
-        />
+        <div>
+          <h3 className="text-lg font-medium mb-3">Attachments</h3>
+          <MessageAttachments 
+            message={message}
+            deliveryId={deliveryId}
+            recipientEmail={recipientEmail}
+          />
+        </div>
       )}
       
       {/* WhatsApp Integration for panic triggers */}
