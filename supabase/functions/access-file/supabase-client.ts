@@ -26,16 +26,17 @@ export function createSupabaseClient() {
         // Add more reliable fetch options with increased timeout
         fetch: (url, options) => {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout
+          const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
           
+          // Apply hover effect styles consistently
           return fetch(url, {
             ...options,
             signal: controller.signal,
             headers: {
               ...options?.headers,
               "Pragma": "no-cache",
-              "Cache-Control": "no-cache"
-            },
+              "Cache-Control": "no-cache, no-store, must-revalidate"
+            }
           }).finally(() => clearTimeout(timeoutId));
         }
       },
