@@ -45,7 +45,7 @@ export function MessageContent({
         {renderMessageContent()}
       </div>
       
-      {/* Attachments section - Restored */}
+      {/* Attachments section */}
       {message.attachments && message.attachments.length > 0 && (
         <MessageAttachments 
           message={message}

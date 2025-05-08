@@ -28,7 +28,7 @@ export function createSupabaseClient() {
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
           
-          // Apply hover effect styles consistently
+          // Apply consistent hover effect styling throughout the app
           return fetch(url, {
             ...options,
             signal: controller.signal,
