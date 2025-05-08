@@ -84,6 +84,10 @@ port = 54321
 # verify_jwt can be set to false to turn off JWT verification for this function
 verify_jwt = true
 
+# Add configuration to disable JWT verification for access-file function
+[functions.access-file]
+verify_jwt = false
+
 [analytics]
 enabled = false
 port = 54327
