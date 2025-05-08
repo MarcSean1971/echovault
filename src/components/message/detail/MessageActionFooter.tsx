@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2, Bell, BellOff, Mail } from "lucide-react";
+import { Edit, Trash2, Bell, BellOff } from "lucide-react";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useNavigate } from "react-router-dom";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
@@ -14,7 +14,7 @@ interface MessageActionFooterProps {
   showDeleteConfirm: boolean;
   setShowDeleteConfirm: (show: boolean) => void;
   handleDelete: () => Promise<void>;
-  onSendTestMessage?: () => void;
+  onSendTestMessage?: () => void; // Keeping the prop for compatibility, but not using it in the render
 }
 
 export function MessageActionFooter({
@@ -26,7 +26,7 @@ export function MessageActionFooter({
   showDeleteConfirm,
   setShowDeleteConfirm,
   handleDelete,
-  onSendTestMessage
+  // onSendTestMessage prop is kept for compatibility but not used in rendering
 }: MessageActionFooterProps) {
   const navigate = useNavigate();
   
@@ -63,15 +63,7 @@ export function MessageActionFooter({
             <Edit className={`h-4 w-4 mr-1 sm:mr-2 ${HOVER_TRANSITION}`} /> <span className="hidden sm:inline">Edit</span>
           </Button>
           
-          {onSendTestMessage && (
-            <Button
-              variant="outline"
-              onClick={onSendTestMessage}
-              disabled={isArmed || isActionLoading}
-            >
-              <Mail className={`h-4 w-4 mr-1 sm:mr-2 ${HOVER_TRANSITION}`} /> <span className="hidden sm:inline">Test</span>
-            </Button>
-          )}
+          {/* Test button removed as requested */}
           
           <Button
             variant="outline"
