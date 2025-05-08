@@ -5,7 +5,6 @@ import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Message } from "@/types/message";
 import { MessageContent } from "@/components/message/detail/MessageContent";
-import { MessageAttachments } from "@/components/message/detail/MessageAttachments";
 import { useSearchParams } from "react-router-dom";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { Button } from "@/components/ui/button";
@@ -28,7 +27,6 @@ export const MessageDisplay = ({
   const recipientEmail = searchParams.get('recipient');
   
   const [isLoading, setIsLoading] = useState(true);
-  const [showAttachments, setShowAttachments] = useState(false);
   
   // Format date helper
   const formatMessageDate = (dateString: string) => {
@@ -44,12 +42,6 @@ export const MessageDisplay = ({
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoading(false);
-      if (message?.attachments && message.attachments.length > 0) {
-        const attachmentTimer = setTimeout(() => {
-          setShowAttachments(true);
-        }, 300); // Staggered reveal for attachments
-        return () => clearTimeout(attachmentTimer);
-      }
     }, 600);
     
     return () => clearTimeout(timer);
@@ -125,28 +117,6 @@ export const MessageDisplay = ({
           <div className="prose max-w-full">
             {message && <MessageContent message={message} deliveryId={deliveryId} recipientEmail={recipientEmail} />}
           </div>
-          
-          {/* Attachments Section */}
-          {message.attachments && message.attachments.length > 0 && showAttachments && (
-            <div className={`mt-8 animate-fade-in`}>
-              <Separator className="my-6" />
-              
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-semibold flex items-center">
-                    <Download className="h-4 w-4 mr-2 text-blue-600" />
-                    Attachments
-                  </h2>
-                </div>
-                
-                <MessageAttachments 
-                  message={message} 
-                  deliveryId={deliveryId} 
-                  recipientEmail={recipientEmail} 
-                />
-              </div>
-            </div>
-          )}
         </div>
         
         {/* Footer */}
