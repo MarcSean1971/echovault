@@ -12,6 +12,12 @@ export function createSupabaseAdmin() {
     auth: {
       persistSession: false,
       autoRefreshToken: false
+    },
+    global: {
+      headers: {
+        Authorization: `Bearer ${supabaseKey}`,
+        apikey: supabaseKey
+      }
     }
   });
 }

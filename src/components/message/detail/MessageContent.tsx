@@ -5,7 +5,6 @@ import { TextMessageContent } from "./content/TextMessageContent";
 import { VideoMessageContent } from "./content/VideoMessageContent";
 import { AudioMessageContent } from "./content/AudioMessageContent";
 import { UnknownMessageContent } from "./content/UnknownMessageContent";
-import { MessageAttachments } from "./MessageAttachments";
 import { WhatsAppIntegration } from "./content/WhatsAppIntegration";
 import { Separator } from "@/components/ui/separator";
 
@@ -56,17 +55,7 @@ export function MessageContent({
         </>
       )}
       
-      {/* Message attachments */}
-      {message.attachments && message.attachments.length > 0 && (
-        <>
-          <Separator className="my-4" />
-          <MessageAttachments 
-            message={message}
-            deliveryId={deliveryId}
-            recipientEmail={recipientEmail}
-          />
-        </>
-      )}
+      {/* Note: Removed the MessageAttachments section from here since it's already handled in MessageDisplay.tsx */}
     </div>
   );
 }

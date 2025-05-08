@@ -3,20 +3,27 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "./cors-headers.ts";
 
+console.log("[AccessFile] Function starting up");
+
 serve(async (req: Request): Promise<Response> => {
+  // Enhanced logging to track requests
+  console.log("[AccessFile] ==== New request received ====");
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    console.log("[FileAccess] Handling OPTIONS preflight request");
-    return new Response(null, { headers: corsHeaders });
+    console.log("[AccessFile] Handling OPTIONS preflight request");
+    return new Response(null, { 
+      headers: corsHeaders 
+    });
   }
 
   const url = new URL(req.url);
   const pathParts = url.pathname.split('/').filter(Boolean);
   
-  console.log(`[FileAccess] Received request: ${req.method} ${url.pathname}`);
-  console.log(`[FileAccess] Full URL: ${req.url}`);
-  console.log(`[FileAccess] Path parts: ${JSON.stringify(pathParts)}`);
-  console.log(`[FileAccess] Query parameters: ${url.search}`);
+  console.log(`[AccessFile] Request details: ${req.method} ${url.pathname}`);
+  console.log(`[AccessFile] Full URL: ${req.url}`);
+  console.log(`[AccessFile] Path parts: ${JSON.stringify(pathParts)}`);
+  console.log(`[AccessFile] Query parameters: ${url.search}`);
   
   // Check for download mode from various parameter names
   const downloadMode = 
@@ -24,39 +31,54 @@ serve(async (req: Request): Promise<Response> => {
     url.searchParams.get('mode') === 'download' ||
     url.searchParams.has('forceDownload');
   
-  console.log(`[FileAccess] Download mode: ${downloadMode ? 'true' : 'false'}`);
-  
-  // Initialize Supabase client with service role key for admin access
-  // Get from environment variables
-  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-  const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-  
-  console.log(`[FileAccess] Initializing Supabase client with URL: ${supabaseUrl}`);
-  console.log(`[FileAccess] Service role key available: ${supabaseServiceRoleKey ? 'Yes' : 'No'}`);
-  
-  if (!supabaseUrl || !supabaseServiceRoleKey) {
-    console.error('[FileAccess] Missing required environment variables');
-    return new Response(
-      JSON.stringify({ error: "Server configuration error", details: "Missing required environment variables" }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      }
-    );
-  }
-  
-  console.log(`[FileAccess] Supabase URL: ${supabaseUrl}`);
+  console.log(`[AccessFile] Download mode: ${downloadMode ? 'true' : 'false'}`);
   
   try {
-    // Create the Supabase client with service role key
+    // Get environment variables - enhanced with additional error checking
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    // Log environment status (without exposing secrets)
+    console.log(`[AccessFile] Environment check:`);
+    console.log(`[AccessFile] SUPABASE_URL available: ${supabaseUrl ? 'Yes' : 'No'}`);
+    console.log(`[AccessFile] SUPABASE_SERVICE_ROLE_KEY available: ${supabaseServiceRoleKey ? 'Yes' : 'No'}`);
+
+    // Error if environment variables are missing
+    if (!supabaseUrl || !supabaseServiceRoleKey) {
+      console.error('[AccessFile] CRITICAL ERROR: Missing required environment variables');
+      
+      return new Response(
+        JSON.stringify({ 
+          error: "Server configuration error", 
+          details: "Missing required environment variables",
+          env_status: {
+            url_present: !!supabaseUrl,
+            key_present: !!supabaseServiceRoleKey
+          }
+        }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        }
+      );
+    }
+    
+    console.log(`[AccessFile] Creating Supabase client with URL: ${supabaseUrl}`);
+    
+    // Create the Supabase client with service role key - with additional options for reliability
     const supabase = createClient(supabaseUrl, supabaseServiceRoleKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false
+      },
+      global: {
+        headers: { 
+          Authorization: `Bearer ${supabaseServiceRoleKey}`
+        }
       }
     });
     
-    console.log(`[FileAccess] Supabase client created successfully`);
+    console.log(`[AccessFile] Supabase client created successfully`);
     
     // Extract file path from URL based on the detected pattern
     let filePath = '';
@@ -67,15 +89,15 @@ serve(async (req: Request): Promise<Response> => {
       if (pathParts[0] === 'access-file' && pathParts[1] === 'file') {
         // Pattern: /access-file/file/{path}
         filePathIndex = 2;
-        console.log("[FileAccess] Detected /access-file/file/ path format");
+        console.log("[AccessFile] Detected /access-file/file/ path format");
       } else if (pathParts[0] === 'file') {
         // Pattern: /file/{path}
         filePathIndex = 1;
-        console.log("[FileAccess] Detected /file/ path format");
+        console.log("[AccessFile] Detected /file/ path format");
       } else if (pathParts[0] === 'v1' && pathParts[1] === 'access-file') {
         // Pattern: /v1/access-file/file/{path}
         filePathIndex = pathParts.indexOf('file') + 1;
-        console.log("[FileAccess] Detected /v1/access-file/file/ path format");
+        console.log("[AccessFile] Detected /v1/access-file/file/ path format");
       }
       
       // Extract file path
@@ -85,19 +107,19 @@ serve(async (req: Request): Promise<Response> => {
         // Properly decode the URL-encoded path
         try {
           filePath = decodeURIComponent(filePath);
-          console.log(`[FileAccess] Decoded file path: ${filePath}`);
+          console.log(`[AccessFile] Decoded file path: ${filePath}`);
         } catch (decodeError) {
-          console.error(`[FileAccess] Error decoding file path: ${decodeError.message}`);
+          console.error(`[AccessFile] Error decoding file path: ${decodeError.message}`);
           // Continue with the encoded path as fallback
         }
         
-        console.log(`[FileAccess] Requested file path: ${filePath}`);
+        console.log(`[AccessFile] Requested file path: ${filePath}`);
         
         // Get query parameters for security validation
         const deliveryId = url.searchParams.get('delivery');
         const recipientEmail = url.searchParams.get('recipient');
         
-        console.log(`[FileAccess] Query params: delivery=${deliveryId}, recipient=${recipientEmail}`);
+        console.log(`[AccessFile] Security parameters: delivery=${deliveryId}, recipient=${recipientEmail}`);
         
         // Always enforce security validation for production
         if (!deliveryId || !recipientEmail) {
@@ -126,9 +148,48 @@ serve(async (req: Request): Promise<Response> => {
           let fileName = filePath.split('/').pop() || 'download';
           let fileType = "application/octet-stream";
           
-          console.log(`[FileAccess] Starting security validation for delivery=${deliveryId}, recipient=${recipientEmail}`);
+          console.log(`[AccessFile] Starting security validation for delivery=${deliveryId}, recipient=${recipientEmail}`);
           
+          // Test Supabase connection with a simple query first
+          const testQuery = await supabase.from('delivered_messages').select('count(*)', { count: 'exact', head: true });
+          console.log(`[AccessFile] Connection test: ${testQuery.error ? 'Failed' : 'Successful'}`);
+          
+          if (testQuery.error) {
+            console.error(`[AccessFile] Connection test error: ${testQuery.error.message}`);
+            console.error(`[AccessFile] Error code: ${testQuery.error.code}`);
+            console.error(`[AccessFile] Error details: ${JSON.stringify(testQuery.error.details || {})}`);
+            
+            // Try reconnecting with explicit authorization
+            console.log("[AccessFile] Attempting to reconnect with explicit authorization");
+            const reconnectOptions = {
+              auth: {
+                autoRefreshToken: false,
+                persistSession: false
+              },
+              global: {
+                headers: { 
+                  Authorization: `Bearer ${supabaseServiceRoleKey}`,
+                  apikey: supabaseServiceRoleKey
+                }
+              }
+            };
+            const supabaseRetry = createClient(supabaseUrl, supabaseServiceRoleKey, reconnectOptions);
+            
+            // Test the reconnection
+            const retryTest = await supabaseRetry.from('delivered_messages').select('count(*)', { count: 'exact', head: true });
+            console.log(`[AccessFile] Reconnection test: ${retryTest.error ? 'Failed' : 'Successful'}`);
+            
+            if (retryTest.error) {
+              throw new Error(`Database connection failed: ${retryTest.error.message}`);
+            } else {
+              // If reconnection worked, replace the client
+              console.log("[AccessFile] Using reconnected client");
+              supabase = supabaseRetry;
+            }
+          }
+
           // Validate delivery and recipient using the service role client
+          console.log("[AccessFile] Validating delivery record...");
           const { data: deliveryData, error: deliveryError } = await supabase
             .from('delivered_messages')
             .select('message_id, recipient_id, condition_id')
@@ -136,20 +197,23 @@ serve(async (req: Request): Promise<Response> => {
             .maybeSingle();
           
           if (deliveryError) {
-            console.error(`[FileAccess] Error fetching delivery: ${deliveryError.message}`, deliveryError);
+            console.error(`[AccessFile] Error fetching delivery: ${deliveryError.message}`, deliveryError);
+            console.error(`[AccessFile] Error code: ${deliveryError.code}`);
+            console.error(`[AccessFile] Error details: ${JSON.stringify(deliveryError.details || {})}`);
             throw new Error(`Invalid delivery ID: ${deliveryError.message}`);
           }
           
           if (!deliveryData) {
-            console.error(`[FileAccess] Delivery ID not found: ${deliveryId}`);
+            console.error(`[AccessFile] Delivery ID not found: ${deliveryId}`);
             throw new Error(`Delivery ID not found: ${deliveryId}`);
           }
           
-          console.log(`[FileAccess] Found delivery data:`, deliveryData);
+          console.log(`[AccessFile] Found delivery data: ${JSON.stringify(deliveryData)}`);
           
           messageId = deliveryData.message_id;
           
           // Verify the recipient email matches
+          console.log("[AccessFile] Validating recipient...");
           const { data: recipientData, error: recipientError } = await supabase
             .from('recipients')
             .select('id, email')
@@ -157,27 +221,28 @@ serve(async (req: Request): Promise<Response> => {
             .maybeSingle();
           
           if (recipientError) {
-            console.error(`[FileAccess] Error fetching recipient: ${recipientError.message}`, recipientError);
+            console.error(`[AccessFile] Error fetching recipient: ${recipientError.message}`, recipientError);
             throw new Error(`Invalid recipient: ${recipientError.message}`);
           }
           
           if (!recipientData) {
-            console.error(`[FileAccess] Recipient not found: ${deliveryData.recipient_id}`);
+            console.error(`[AccessFile] Recipient not found: ${deliveryData.recipient_id}`);
             throw new Error(`Recipient not found`);
           }
           
-          console.log(`[FileAccess] Found recipient data:`, recipientData);
-          console.log(`[FileAccess] Comparing emails - DB: '${recipientData.email}', Request: '${recipientEmail}'`);
+          console.log(`[AccessFile] Found recipient data: ${JSON.stringify(recipientData)}`);
+          console.log(`[AccessFile] Comparing emails - DB: '${recipientData.email}', Request: '${recipientEmail}'`);
           
           // Case insensitive comparison of emails
           if (recipientData.email.toLowerCase() !== recipientEmail.toLowerCase()) {
-            console.error(`[FileAccess] Email mismatch: DB=${recipientData.email}, Request=${recipientEmail}`);
+            console.error(`[AccessFile] Email mismatch: DB=${recipientData.email}, Request=${recipientEmail}`);
             throw new Error("Recipient email does not match");
           }
           
-          console.log(`[FileAccess] Email verification successful`);
+          console.log(`[AccessFile] Email verification successful`);
           
           // Access has been validated, now get the message to verify the attachment path
+          console.log("[AccessFile] Retrieving message data...");
           const { data: messageData, error: messageError } = await supabase
             .from('messages')
             .select('attachments')
@@ -185,18 +250,18 @@ serve(async (req: Request): Promise<Response> => {
             .maybeSingle();
           
           if (messageError) {
-            console.error(`[FileAccess] Error fetching message: ${messageError.message}`, messageError);
+            console.error(`[AccessFile] Error fetching message: ${messageError.message}`, messageError);
             throw new Error(`Message not found: ${messageError.message}`);
           }
           
           if (!messageData) {
-            console.error(`[FileAccess] Message not found: ${deliveryData.message_id}`);
+            console.error(`[AccessFile] Message not found: ${deliveryData.message_id}`);
             throw new Error(`Message not found`);
           }
           
           // Validate the requested file path exists in the message attachments
           const attachments = messageData.attachments || [];
-          console.log(`[FileAccess] Message attachments:`, attachments);
+          console.log(`[AccessFile] Message attachments: ${JSON.stringify(attachments)}`);
           
           // Find the matching attachment (either by exact match or contained path)
           const requestedAttachment = attachments.find((att: any) => {
@@ -213,12 +278,12 @@ serve(async (req: Request): Promise<Response> => {
           });
           
           if (!requestedAttachment) {
-            console.error(`[FileAccess] Attachment not found in message. Requested: ${filePath}`);
-            console.error(`[FileAccess] Available attachments:`, attachments.map((a: any) => a.path));
+            console.error(`[AccessFile] Attachment not found in message. Requested: ${filePath}`);
+            console.error(`[AccessFile] Available attachments: ${JSON.stringify(attachments.map((a: any) => a.path))}`);
             throw new Error("Attachment not found in message");
           }
           
-          console.log(`[FileAccess] Found matching attachment:`, requestedAttachment);
+          console.log(`[AccessFile] Found matching attachment: ${JSON.stringify(requestedAttachment)}`);
           
           // Extract the correct path and metadata
           finalFilePath = requestedAttachment.path;
@@ -235,26 +300,28 @@ serve(async (req: Request): Promise<Response> => {
             }
           }
           
-          console.log(`[FileAccess] Using final file path: ${finalFilePath} in bucket: ${bucketName}`);
+          console.log(`[AccessFile] Using final file path: ${finalFilePath} in bucket: ${bucketName}`);
           
           try {
             // Download the file from storage
-            console.log(`[FileAccess] Downloading from bucket: ${bucketName}, path: ${finalFilePath}`);
+            console.log(`[AccessFile] Downloading from bucket: ${bucketName}, path: ${finalFilePath}`);
             const { data: fileData, error: fileError } = await supabase.storage
               .from(bucketName)
               .download(finalFilePath);
               
             if (fileError) {
-              console.error(`[FileAccess] File download error: ${fileError.message}`, fileError);
+              console.error(`[AccessFile] File download error: ${fileError.message}`, fileError);
+              console.error(`[AccessFile] Error code: ${fileError.code}`);
+              console.error(`[AccessFile] Error details: ${JSON.stringify(fileError.details || {})}`);
               throw fileError;
             }
             
             if (!fileData) {
-              console.error(`[FileAccess] No file data returned from download`);
+              console.error(`[AccessFile] No file data returned from download`);
               throw new Error("File data not available");
             }
             
-            console.log(`[FileAccess] File downloaded successfully, size: ${fileData.size} bytes`);
+            console.log(`[AccessFile] File downloaded successfully, size: ${fileData.size} bytes`);
             
             // Set appropriate headers for the response
             const headers = {
@@ -274,18 +341,20 @@ serve(async (req: Request): Promise<Response> => {
             if (downloadMode) {
               // Force download with attachment disposition
               headers["Content-Disposition"] = `attachment; filename="${encodedFileName}"; filename*=UTF-8''${encodedFileName}`;
-              console.log(`[FileAccess] FORCING DOWNLOAD with headers:`, headers);
+              console.log(`[AccessFile] FORCING DOWNLOAD with headers: ${JSON.stringify(headers)}`);
             } else {
               // Default to inline disposition for viewing
               headers["Content-Disposition"] = `inline; filename="${encodedFileName}"; filename*=UTF-8''${encodedFileName}`;
-              console.log(`[FileAccess] INLINE VIEWING with headers:`, headers);
+              console.log(`[AccessFile] INLINE VIEWING with headers: ${JSON.stringify(headers)}`);
             }
             
             // Return the file with appropriate headers
-            console.log(`[FileAccess] Successfully sending file response with ${Object.keys(headers).length} headers`);
+            console.log(`[AccessFile] Successfully sending file response with ${Object.keys(headers).length} headers`);
             return new Response(fileData, { headers });
           } catch (storageError: any) {
-            console.error(`[FileAccess] Storage access error: ${storageError.message}`, storageError);
+            console.error(`[AccessFile] Storage access error: ${storageError.message}`, storageError);
+            console.error(`[AccessFile] Error stack: ${storageError.stack || 'No stack trace'}`);
+            
             return new Response(
               JSON.stringify({ 
                 error: "File access error", 
@@ -300,7 +369,9 @@ serve(async (req: Request): Promise<Response> => {
             );
           }
         } catch (validationError: any) {
-          console.error(`[FileAccess] Validation error: ${validationError.message}`, validationError);
+          console.error(`[AccessFile] Validation error: ${validationError.message}`, validationError);
+          console.error(`[AccessFile] Error stack: ${validationError.stack || 'No stack trace'}`);
+          
           return new Response(
             JSON.stringify({ 
               error: validationError.message || "Access denied",
@@ -320,7 +391,7 @@ serve(async (req: Request): Promise<Response> => {
     }
     
     // Default handler - not found
-    console.error(`[FileAccess] No matching route found for path: ${url.pathname}`);
+    console.error(`[AccessFile] No matching route found for path: ${url.pathname}`);
     return new Response(
       JSON.stringify({ error: "Not found", path: url.pathname }),
       { 
@@ -329,8 +400,8 @@ serve(async (req: Request): Promise<Response> => {
       }
     );
   } catch (error: any) {
-    console.error(`[FileAccess] Unhandled error: ${error.message}`);
-    console.error(error.stack);
+    console.error(`[AccessFile] Unhandled error: ${error.message}`);
+    console.error(error.stack || "No stack trace available");
     
     return new Response(
       JSON.stringify({ 
