@@ -2,7 +2,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 
 /**
- * Create a Supabase client with admin privileges with retry logic
+ * Create a Supabase client with admin privileges with enhanced retry logic
  */
 export function createSupabaseClient() {
   const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
@@ -16,25 +16,36 @@ export function createSupabaseClient() {
   console.log("[AccessFile] Creating Supabase admin client");
   
   try {
-    // Create client with strict connection options for better reliability
+    // Create client with enhanced connection options for better reliability
     return createClient(supabaseUrl, supabaseKey, {
       auth: {
         persistSession: false,
         autoRefreshToken: false
       },
       global: {
-        // Add more reliable fetch options
+        // Add more reliable fetch options with increased timeout
         fetch: (url, options) => {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 20000); // 20 second timeout
+          
           return fetch(url, {
             ...options,
-            // Increase timeouts for better reliability
-            signal: AbortSignal.timeout(15000),
-          });
+            signal: controller.signal,
+            headers: {
+              ...options?.headers,
+              "Pragma": "no-cache",
+              "Cache-Control": "no-cache"
+            },
+          }).finally(() => clearTimeout(timeoutId));
         }
       },
       db: {
         // More strict schema validation for better error messages
         schema: 'public'
+      },
+      // Disable retryOnConflict to force immediate failure on conflict errors
+      postgrest: {
+        retryOnConflict: false
       }
     });
   } catch (error) {
