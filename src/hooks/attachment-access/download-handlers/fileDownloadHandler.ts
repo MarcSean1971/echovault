@@ -36,7 +36,7 @@ export function useFileDownloadHandler({ props, utilities }: DownloadHandlerProp
     try {
       console.log("Starting file download with method:", method);
       
-      // IMPORTANT: Explicitly use Edge Function with download mode for secure downloads
+      // For secure downloads using Edge Function
       if (method === 'secure' && props.deliveryId && props.recipientEmail) {
         console.log("Using edge function with explicit download mode");
         
@@ -46,15 +46,14 @@ export function useFileDownloadHandler({ props, utilities }: DownloadHandlerProp
         if (url && resultMethod) {
           console.log("Download URL obtained from edge function:", url);
           
-          // Add timestamp to URL to prevent caching
-          const timestamp = Date.now();
-          const timeStampedUrl = url.includes('?') 
-            ? `${url}&t=${timestamp}&forceDownload=true` 
-            : `${url}?t=${timestamp}&forceDownload=true`;
+          // Create clean URL with necessary parameters
+          const urlObj = new URL(url);
+          urlObj.searchParams.append('download-file', 'true');
+          urlObj.searchParams.append('mode', 'download');
           
-          console.log(`Actual download URL with timestamp: ${timeStampedUrl}`);
+          console.log(`Actual download URL: ${urlObj.toString()}`);
           
-          FileAccessManager.executeDownload(timeStampedUrl, fileName, fileType, 'secure');
+          FileAccessManager.executeDownload(urlObj.toString(), fileName, fileType, 'secure');
           updateMethodStatus('secure', true);
           setHasError(false);
           return true;
@@ -63,79 +62,80 @@ export function useFileDownloadHandler({ props, utilities }: DownloadHandlerProp
         }
       }
       
-      // For non-secure methods, try to get a URL with download flag
-      let result;
-      let methodUsed: AccessMethod | null = null;
-      
+      // For non-secure methods
       if (method === 'signed') {
         const { url, method: resultMethod } = await fileAccessManager.getAccessUrl('signed', 'download');
-        result = url;
-        methodUsed = resultMethod;
-      } else if (method === 'direct') {
-        result = directUrl;
-        methodUsed = 'direct';
-      }
-      
-      if (result && methodUsed) {
-        console.log(`Download URL obtained using ${methodUsed} method:`, result);
-        FileAccessManager.executeDownload(result, fileName, fileType, methodUsed);
-        updateMethodStatus(methodUsed, true);
+        if (url && resultMethod) {
+          FileAccessManager.executeDownload(url, fileName, fileType, resultMethod);
+          updateMethodStatus(resultMethod, true);
+          setHasError(false);
+          return true;
+        }
+        updateMethodStatus('signed', false);
+      } else if (method === 'direct' && directUrl) {
+        FileAccessManager.executeDownload(directUrl, fileName, fileType, 'direct');
+        updateMethodStatus('direct', true);
         setHasError(false);
         return true;
-      } else {
-        if (method === 'signed' || method === 'direct') {
-          updateMethodStatus(method, false);
-        }
       }
       
-      // If current method fails, try alternatives in order of security
-      const fallbackMethods: AccessMethod[] = ['secure', 'signed', 'direct']
-        .filter(m => m !== method) as AccessMethod[];
+      // If current method fails, try one fallback
+      const fallbackMethod: AccessMethod = method === 'secure' ? 'signed' : 
+                                           method === 'signed' ? 'direct' : 'signed';
       
-      for (const fallbackMethod of fallbackMethods) {
-        try {
-          let fallbackUrl = null;
-          let actualMethod: AccessMethod | null = null;
-          
-          if (fallbackMethod === 'secure' && props.deliveryId && props.recipientEmail) {
-            const { url, method: resultMethod } = await fileAccessManager.getAccessUrl('secure', 'download');
-            fallbackUrl = url;
-            actualMethod = resultMethod;
-          } else if (fallbackMethod === 'signed') {
-            const { url, method: resultMethod } = await fileAccessManager.getAccessUrl('signed', 'download');
-            fallbackUrl = url;
-            actualMethod = resultMethod;
-          } else if (fallbackMethod === 'direct') {
-            fallbackUrl = directUrl;
-            actualMethod = 'direct';
-          }
-          
-          if (fallbackUrl && actualMethod) {
-            console.log(`Fallback download URL obtained using ${actualMethod}:`, fallbackUrl);
-            FileAccessManager.executeDownload(fallbackUrl, fileName, fileType, actualMethod);
-            setDownloadMethod(actualMethod);
+      try {
+        if (fallbackMethod === 'secure' && props.deliveryId && props.recipientEmail) {
+          const { url } = await fileAccessManager.getAccessUrl('secure', 'download');
+          if (url) {
+            console.log(`Using fallback secure method`);
+            FileAccessManager.executeDownload(url, fileName, fileType, 'secure');
+            setDownloadMethod('secure');
+            updateMethodStatus('secure', true);
             setHasError(false);
-            updateMethodStatus(actualMethod, true);
+            
             toast({
               title: "Using fallback method",
-              description: `Switched to ${actualMethod === 'secure' ? 'Edge Function' : 
-                actualMethod === 'signed' ? 'Signed URL' : 'Direct URL'} after primary method failed`,
+              description: "Switched to Edge Function after primary method failed",
             });
             return true;
-          } else {
-            updateMethodStatus(fallbackMethod, false);
           }
-        } catch (fallbackError) {
-          console.error(`Error with fallback method ${fallbackMethod}:`, fallbackError);
-          updateMethodStatus(fallbackMethod, false);
+        } else if (fallbackMethod === 'signed') {
+          const { url } = await fileAccessManager.getAccessUrl('signed', 'download');
+          if (url) {
+            console.log(`Using fallback signed method`);
+            FileAccessManager.executeDownload(url, fileName, fileType, 'signed');
+            setDownloadMethod('signed');
+            updateMethodStatus('signed', true);
+            setHasError(false);
+            
+            toast({
+              title: "Using fallback method",
+              description: "Switched to Signed URL after primary method failed",
+            });
+            return true;
+          }
+        } else if (fallbackMethod === 'direct' && directUrl) {
+          console.log(`Using fallback direct method`);
+          FileAccessManager.executeDownload(directUrl, fileName, fileType, 'direct');
+          setDownloadMethod('direct');
+          updateMethodStatus('direct', true);
+          setHasError(false);
+          
+          toast({
+            title: "Using fallback method",
+            description: "Switched to Direct URL after primary method failed",
+          });
+          return true;
         }
+      } catch (fallbackError) {
+        console.error(`Fallback method ${fallbackMethod} also failed:`, fallbackError);
       }
       
       // If all methods fail, show error
       setHasError(true);
       toast({
         title: "Download Error",
-        description: "Could not access the file using any method. Please try again or contact support.",
+        description: "Could not access the file. Please try a different download method.",
         variant: "destructive"
       });
       return false;
