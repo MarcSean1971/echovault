@@ -7,6 +7,7 @@ import { AudioMessageContent } from "./content/AudioMessageContent";
 import { UnknownMessageContent } from "./content/UnknownMessageContent";
 import { WhatsAppIntegration } from "./content/WhatsAppIntegration";
 import { Separator } from "@/components/ui/separator";
+import { MessageAttachments } from "./MessageAttachments";
 
 export interface MessageContentProps {
   message: Message;
@@ -44,6 +45,15 @@ export function MessageContent({
         {renderMessageContent()}
       </div>
       
+      {/* Attachments section - Restored */}
+      {message.attachments && message.attachments.length > 0 && (
+        <MessageAttachments 
+          message={message}
+          deliveryId={deliveryId}
+          recipientEmail={recipientEmail}
+        />
+      )}
+      
       {/* WhatsApp Integration for panic triggers */}
       {isPanicTrigger && hasPanicConfig && (
         <>
@@ -54,8 +64,6 @@ export function MessageContent({
           />
         </>
       )}
-      
-      {/* Note: Removed the MessageAttachments section from here since it's already handled in MessageDisplay.tsx */}
     </div>
   );
 }
