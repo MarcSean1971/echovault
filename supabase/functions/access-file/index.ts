@@ -1,6 +1,7 @@
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { corsHeaders } from "./cors-headers.ts";
-import { createSupabaseAdmin } from "../shared/supabase-client.ts";
+import { createSupabaseClient } from "./supabase-client.ts";
 
 console.log("[AccessFile] Function starting up");
 
@@ -62,8 +63,8 @@ serve(async (req: Request): Promise<Response> => {
       );
     }
     
-    // Create Supabase client using the shared admin client
-    const supabase = createSupabaseAdmin();
+    // Create Supabase client using our dedicated client
+    const supabase = createSupabaseClient();
     console.log(`[AccessFile] Supabase client created successfully`);
     
     // Extract file path from URL based on the detected pattern
@@ -137,18 +138,21 @@ serve(async (req: Request): Promise<Response> => {
           console.log(`[AccessFile] Starting security validation for delivery=${deliveryId}, recipient=${recipientEmail}`);
           
           // Test Supabase connection with a simple query first
-          const testQuery = await supabase.from('delivered_messages').select('count(*)', { count: 'exact', head: true });
-          console.log(`[AccessFile] Connection test: ${testQuery.error ? 'Failed' : 'Successful'}`);
-          
-          if (testQuery.error) {
-            console.error(`[AccessFile] Connection test error: ${testQuery.error.message}`);
-            console.error(`[AccessFile] Error code: ${testQuery.error.code}`);
-            console.error(`[AccessFile] Error details: ${JSON.stringify(testQuery.error.details || {})}`);
+          const { data: connectionTest, error: connectionError } = await supabase
+            .from('delivered_messages')
+            .select('count(*)', { count: 'exact', head: true });
             
-            throw new Error(`Database connection failed: ${testQuery.error.message}`);
+          console.log(`[AccessFile] Connection test: ${connectionError ? 'Failed' : 'Successful'}`);
+          
+          if (connectionError) {
+            console.error(`[AccessFile] Connection test error: ${connectionError.message}`);
+            console.error(`[AccessFile] Error code: ${connectionError.code}`);
+            console.error(`[AccessFile] Error details: ${JSON.stringify(connectionError.details || {})}`);
+            
+            throw new Error(`Database connection failed: ${connectionError.message}`);
           }
 
-          // Validate delivery and recipient using the service role client
+          // Validate delivery and recipient using the supabase client
           console.log("[AccessFile] Validating delivery record...");
           const { data: deliveryData, error: deliveryError } = await supabase
             .from('delivered_messages')
