@@ -12,7 +12,7 @@ export function useContentUpdater() {
   const [isTranscribingVideo, setIsTranscribingVideo] = useState(false);
   
   const { clearAudio, setAudioTranscription, setAudioUrl } = useAudioRecordingHandler();
-  const { clearVideo, setVideoTranscription } = useVideoRecordingHandler();
+  const { clearVideo, setVideoTranscription, setVideoUrl } = useVideoRecordingHandler();
 
   // Handle updating audio content
   const handleAudioContentUpdate = async (audioBlob: Blob, audioBase64: string) => {
