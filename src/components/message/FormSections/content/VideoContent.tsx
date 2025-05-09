@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
 import { useMessageForm } from "../../MessageFormContext";
-import { parseMessageTranscription, parseVideoContent } from "@/services/messages/mediaService";
+import { parseVideoContent } from "@/services/messages/mediaService";
 import { useContentUpdater } from "@/hooks/useContentUpdater";
 
 // Import our component modules

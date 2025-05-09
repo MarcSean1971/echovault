@@ -13,10 +13,7 @@ export function VideoTranscription({
   transcription, 
   isTranscribing 
 }: VideoTranscriptionProps) {
-  if (!transcription && !isTranscribing) {
-    return null;
-  }
-
+  // Always render the component, but show appropriate states based on conditions
   return (
     <div className="mt-4 space-y-2">
       <h3 className="text-sm font-medium">Video Transcription</h3>

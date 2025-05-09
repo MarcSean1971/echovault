@@ -71,7 +71,7 @@ export function VideoPlayer({
   
   return (
     <div className="space-y-2">
-      <div className="relative rounded-md overflow-hidden bg-black">
+      <div className="relative rounded-md overflow-hidden bg-black group">
         <video 
           ref={videoRef}
           src={videoUrl}

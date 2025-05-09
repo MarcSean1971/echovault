@@ -31,12 +31,12 @@ serve(async (req) => {
       bytes[i] = binaryString.charCodeAt(i);
     }
     
-    // Create a blob from the binary data
-    const blob = new Blob([bytes], { type: 'video/webm' });
+    // Create a blob with the CORRECT MIME type - webm audio is supported by Whisper
+    const blob = new Blob([bytes], { type: 'audio/webm' });
     
     // Create FormData for the OpenAI API
     const formData = new FormData();
-    formData.append('file', blob, 'audio.webm');
+    formData.append('file', blob, 'recording.webm'); // Changed filename to indicate audio content
     formData.append('model', 'whisper-1');
     formData.append('language', 'en'); // Assuming English language
     

@@ -55,17 +55,18 @@ export function useContentUpdater() {
       setVideoContent(formattedContent);
       
       // If there's text content, make sure to preserve it in the video content
-      const messageForm = useMessageForm();
-      if (messageForm.textContent && messageForm.textContent.trim() !== '') {
+      const { textContent } = useMessageForm();
+      if (textContent && textContent.trim() !== '') {
         try {
           // Parse the video content to add text content to it
           const videoContentObj = JSON.parse(formattedContent);
-          videoContentObj.additionalText = messageForm.textContent;
+          videoContentObj.additionalText = textContent;
           const combinedContent = JSON.stringify(videoContentObj);
           setVideoContent(combinedContent);
           setContent(combinedContent);
         } catch (error) {
           console.error("Error combining text and video content:", error);
+          setContent(formattedContent);
         }
       } else {
         setContent(formattedContent);

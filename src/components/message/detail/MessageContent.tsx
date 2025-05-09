@@ -41,6 +41,8 @@ export function MessageContent({
           const contentObj = JSON.parse(message.content);
           if (contentObj.additionalText) {
             setAdditionalText(contentObj.additionalText);
+            // If we have additional text with video, we consider it as having text content too
+            setHasTextContent(true);
           }
         } catch (e) {
           console.error("Error parsing additional text from video content:", e);
@@ -77,18 +79,8 @@ export function MessageContent({
           </div>
         )}
         
-        {/* Display additional text if it exists with the video */}
-        {additionalText && (
-          <div className="mt-6 mb-6">
-            <h3 className="text-lg font-medium mb-3">Additional Message</h3>
-            <div className="prose dark:prose-invert">
-              {additionalText}
-            </div>
-          </div>
-        )}
-        
-        {/* If this is a text message type or has normal text content, show text content */}
-        {(message.message_type === "text" || (hasTextContent && !hasVideoContent && !additionalText)) && (
+        {/* If this is text only (not mixed with video), show text content */}
+        {message.message_type === "text" && !hasVideoContent && (
           <TextMessageContent message={message} content={message.content} />
         )}
         

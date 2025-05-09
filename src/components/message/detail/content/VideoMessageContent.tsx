@@ -77,6 +77,15 @@ export function VideoMessageContent({ message }: { message: Message }) {
           </Card>
         </div>
       )}
+      
+      {additionalText && (
+        <div className="mt-4 space-y-2">
+          <h3 className="text-sm font-medium">Additional Text</h3>
+          <Card className="p-3 bg-muted/40">
+            <p className="whitespace-pre-wrap">{additionalText}</p>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
