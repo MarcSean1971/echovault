@@ -13,7 +13,8 @@ export function useVideoRecordingHandler() {
     handleMediaReady: handleMediaReady,
     clearMedia: clearMedia,
     setMediaUrl: setVideoUrl,
-    setTranscription: setVideoTranscription
+    setTranscription: setVideoTranscription,
+    setMediaBase64: setVideoBase64
   } = useMediaRecording("video");
   
   // Wrapper functions with video-specific naming
@@ -36,6 +37,7 @@ export function useVideoRecordingHandler() {
     handleVideoReady,
     clearVideo,
     setVideoUrl,
-    setVideoTranscription
+    setVideoTranscription,
+    setVideoBase64
   };
 }

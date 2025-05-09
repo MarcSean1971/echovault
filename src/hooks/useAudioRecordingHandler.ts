@@ -13,7 +13,8 @@ export function useAudioRecordingHandler() {
     handleMediaReady: handleMediaReady,
     clearMedia: clearMedia,
     setMediaUrl: setAudioUrl,
-    setTranscription: setAudioTranscription
+    setTranscription: setAudioTranscription,
+    setMediaBase64: setAudioBase64
   } = useMediaRecording("audio");
   
   // Wrapper functions with audio-specific naming
@@ -36,6 +37,7 @@ export function useAudioRecordingHandler() {
     handleAudioReady,
     clearAudio,
     setAudioUrl,
-    setAudioTranscription
+    setAudioTranscription,
+    setAudioBase64
   };
 }

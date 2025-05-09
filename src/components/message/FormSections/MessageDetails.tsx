@@ -34,18 +34,18 @@ export function MessageDetails({ message }: MessageDetailsProps) {
   // Use our custom hooks
   const {
     showAudioRecorder, setShowAudioRecorder,
-    audioBlob, audioUrl,
+    audioBlob, audioUrl, audioBase64,
     isTranscribingAudio, audioTranscription,
     handleAudioReady, clearAudio,
-    setAudioUrl, setAudioTranscription
+    setAudioUrl, setAudioTranscription, setAudioBase64
   } = useAudioRecordingHandler();
   
   const {
     showVideoRecorder, setShowVideoRecorder,
-    videoBlob, videoUrl,
+    videoBlob, videoUrl, videoBase64,
     isTranscribingVideo, videoTranscription,
     handleVideoReady, clearVideo,
-    setVideoUrl, setVideoTranscription
+    setVideoUrl, setVideoTranscription, setVideoBase64
   } = useVideoRecordingHandler();
   
   const {
@@ -74,7 +74,11 @@ export function MessageDetails({ message }: MessageDetailsProps) {
           const audioBlob = base64ToBlob(contentObj.audioData, 'audio/webm');
           const url = URL.createObjectURL(audioBlob);
           setAudioUrl(url);
+          setAudioBase64(contentObj.audioData);
           setAudioTranscription(contentObj.transcription || null);
+          
+          // Important: Set the form content to match the audio data
+          setContent(message.content);
         }
         
         // Initialize video content
@@ -82,13 +86,20 @@ export function MessageDetails({ message }: MessageDetailsProps) {
           const videoBlob = base64ToBlob(contentObj.videoData, 'video/webm');
           const url = URL.createObjectURL(videoBlob);
           setVideoUrl(url);
+          setVideoBase64(contentObj.videoData);
           setVideoTranscription(contentObj.transcription || null);
+          
+          // Important: Set the form content to match the video data
+          setContent(message.content);
         }
       } catch (e) {
         console.log("Error parsing message content:", e);
       }
+    } else if (message.message_type === 'text' && message.content) {
+      // For text messages, just set the content directly
+      setContent(message.content);
     }
-  }, [message, setAudioUrl, setAudioTranscription, setVideoUrl, setVideoTranscription]);
+  }, [message, setAudioUrl, setAudioBase64, setAudioTranscription, setVideoUrl, setVideoBase64, setVideoTranscription, setContent]);
 
   // Helper function to convert base64 to blob
   const base64ToBlob = (base64: string, type: string): Blob => {
@@ -100,22 +111,33 @@ export function MessageDetails({ message }: MessageDetailsProps) {
     return new Blob([bytes], { type });
   };
   
-  // Wrapper functions for message type handling - UPDATED ORDER
+  // Wrapper functions for message type handling
   const onTextTypeClick = () => {
-    // First restore the content (this function from useMessageTypeHandler fetches the saved text content)
     handleTextTypeClick();
-    
-    // Wait a brief moment to ensure content is restored before changing the message type
-    // This small delay helps prevent the JSON flash
-    setTimeout(() => {
-      handleMessageTypeChange("text");
-    }, 10);
+    handleMessageTypeChange("text");
   };
   
   // Sync our local messageType with the context
   const handleMessageTypeChange = (type: string) => {
     setMessageType(type);
     setContextMessageType(type);
+    
+    // When changing message type, ensure content is properly formatted
+    if (type === "audio" && audioBase64) {
+      // Format content as JSON with audioData
+      const contentData = {
+        audioData: audioBase64,
+        transcription: audioTranscription
+      };
+      setContent(JSON.stringify(contentData));
+    } else if (type === "video" && videoBase64) {
+      // Format content as JSON with videoData
+      const contentData = {
+        videoData: videoBase64,
+        transcription: videoTranscription
+      };
+      setContent(JSON.stringify(contentData));
+    }
   };
   
   // Wrapper functions to handle content updates
@@ -139,20 +161,34 @@ export function MessageDetails({ message }: MessageDetailsProps) {
     setContent(emptyContent);
   };
   
-  // Handle type selection with our custom hooks - UPDATED ORDER FOR MEDIA TYPES
+  // Handle type selection with our custom hooks
   const onAudioTypeClick = () => {
-    // First set the media content
     handleAudioTypeClick(setShowAudioRecorder, audioBlob);
     
-    // Then update the message type
+    if (audioBase64) {
+      // If we already have audio data, update the content immediately
+      const contentData = {
+        audioData: audioBase64,
+        transcription: audioTranscription
+      };
+      setContent(JSON.stringify(contentData));
+    }
+    
     handleMessageTypeChange("audio");
   };
   
   const onVideoTypeClick = () => {
-    // First set the media content
     handleVideoTypeClick(setShowVideoRecorder, videoBlob);
     
-    // Then update the message type
+    if (videoBase64) {
+      // If we already have video data, update the content immediately
+      const contentData = {
+        videoData: videoBase64,
+        transcription: videoTranscription
+      };
+      setContent(JSON.stringify(contentData));
+    }
+    
     handleMessageTypeChange("video");
   };
 
