@@ -1,8 +1,10 @@
 
-/**
- * Types for attachment components
- */
+// Access methods and modes
+export type AccessMethod = 'secure' | 'signed' | 'direct';
+export type AccessMode = 'view' | 'download';
+export type AccessMethodStatus = 'success' | 'error' | 'idle';
 
+// Attachment properties
 export interface AttachmentProps {
   name: string;
   size: number;
@@ -10,40 +12,13 @@ export interface AttachmentProps {
   path: string;
 }
 
-export type AccessMethod = 'secure' | 'signed' | 'direct';
-export type AccessMode = 'download' | 'view';
-
-export interface AccessMethodData {
-  url: string | null;
-  method: AccessMethod | null;
-}
-
+// Button properties
 export interface AccessButtonProps {
   isLoading: boolean;
   onClick: () => void;
   icon: React.ReactNode;
   tooltipText: string;
-  variant?: "default" | "secondary" | "destructive" | "outline" | "link" | "ghost";
+  variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
   className?: string;
-  disabled?: boolean;  // Add the missing disabled property
-}
-
-export interface AttachmentAccessHookResult {
-  isLoading: boolean;
-  hasError: boolean;
-  retryCount: number;
-  showDebug: boolean;
-  accessUrl: string | null;
-  downloadMethod: AccessMethod;
-  lastSuccessMethod: AccessMethod | null;
-  downloadActive: boolean;
-  attemptedMethods: {[key in AccessMethod]?: boolean};
-  currentMethodStatus: 'idle' | 'success' | 'error';
-  directUrl: string | null;
-  retryAccess: () => Promise<void>;
-  toggleDownloadMethod: () => void;
-  downloadFile: () => Promise<void>;
-  openFile: () => Promise<void>;
-  tryDirectAccess: () => void;
-  toggleDebug: () => void;
+  disabled?: boolean;
 }
