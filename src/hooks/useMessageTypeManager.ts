@@ -8,11 +8,11 @@ export function useMessageTypeManager() {
   const { setMessageType: setContextMessageType } = useMessageForm();
   
   const {
-    audioBase64, audioTranscription, setShowAudioRecorder
+    audioBlob, audioBase64, audioTranscription, setShowAudioRecorder
   } = useAudioRecordingHandler();
   
   const {
-    videoBase64, videoTranscription, setShowVideoRecorder
+    videoBlob, videoBase64, videoTranscription, setShowVideoRecorder
   } = useVideoRecordingHandler();
   
   const {
@@ -51,12 +51,12 @@ export function useMessageTypeManager() {
 
   // Handle type selection with our custom hooks
   const onAudioTypeClick = () => {
-    handleAudioTypeClick(setShowAudioRecorder, audioBase64);
+    handleAudioTypeClick(setShowAudioRecorder, audioBlob);
     handleMessageTypeChange("audio");
   };
   
   const onVideoTypeClick = () => {
-    handleVideoTypeClick(setShowVideoRecorder, videoBase64);
+    handleVideoTypeClick(setShowVideoRecorder, videoBlob);
     handleMessageTypeChange("video");
   };
 

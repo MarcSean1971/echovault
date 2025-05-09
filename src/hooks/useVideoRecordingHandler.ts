@@ -16,7 +16,7 @@ export function useVideoRecordingHandler() {
     setTranscription: setVideoTranscription,
     setMediaBase64: setVideoBase64,
     setMediaBlob: setVideoBlob
-  } = useMediaRecording("audio");
+  } = useMediaRecording("video");
   
   // Wrapper functions with video-specific naming
   const handleVideoReady = async (videoBlob: Blob, videoBase64: string) => {
