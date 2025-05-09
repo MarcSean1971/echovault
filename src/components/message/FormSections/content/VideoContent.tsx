@@ -44,6 +44,8 @@ export function VideoContent({
   useEffect(() => {
     if (content) {
       const extractedTranscription = getTranscriptionFromContent(content);
+      console.log("VideoContent: Extracted transcription from content:", 
+                  extractedTranscription ? extractedTranscription.substring(0, 30) + "..." : "none");
       setTranscription(extractedTranscription);
     }
   }, [content, getTranscriptionFromContent]);
@@ -54,7 +56,7 @@ export function VideoContent({
                 "videoUrl =", videoUrl ? "present" : "null",
                 "previewStream =", previewStream ? "active" : "null",
                 "isRecording =", isRecording,
-                "transcription =", transcription);
+                "transcription =", transcription ? "present" : "null");
     
     // If we have a video URL, we should show the video preview
     if (videoUrl) {

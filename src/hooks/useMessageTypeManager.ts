@@ -5,15 +5,16 @@ import { useVideoRecordingHandler } from "./useVideoRecordingHandler";
 import { useEffect } from "react";
 import { useMessageTypeState } from "./useMessageTypeState";
 import { useVideoCache } from "./useVideoCache";
+import { parseMessageTranscription } from "@/services/messages/mediaService";
 
 export function useMessageTypeManager() {
-  const { messageType, setMessageType: setContextMessageType } = useMessageForm();
+  const { messageType, setMessageType: setContextMessageType, content } = useMessageForm();
   const {
     handleTextTypeClick, handleMediaTypeClick
   } = useMessageTypeHandler();
 
   const { handleMessageTypeChange } = useMessageTypeState();
-  const { cachedVideoBlob, cachedVideoUrl, cacheVideo, clearCache } = useVideoCache();
+  const { cachedVideoBlob, cachedVideoUrl, cachedTranscription, cacheVideo, clearCache } = useVideoCache();
   
   const {
     isRecording,
@@ -31,6 +32,12 @@ export function useMessageTypeManager() {
     restoreVideo
   } = useVideoRecordingHandler();
 
+  // Extract transcription from the current content
+  const getCurrentTranscription = () => {
+    if (!content) return null;
+    return parseMessageTranscription(content);
+  };
+
   // Helper function to stop the media stream without clearing the video
   const stopMediaStream = () => {
     if (previewStream) {
@@ -43,10 +50,13 @@ export function useMessageTypeManager() {
   
   // Wrapper functions for message type handling
   const onTextTypeClick = () => {
-    // Save the current video state before switching to text
+    // Save the current video state and transcription before switching to text
+    const currentTranscription = getCurrentTranscription();
+    console.log("Switching to text mode. Current transcription:", currentTranscription);
+    
     if (videoBlob && videoUrl) {
       console.log("Caching video before switching to text mode");
-      cacheVideo(videoBlob, videoUrl);
+      cacheVideo(videoBlob, videoUrl, currentTranscription);
     }
     
     handleTextTypeClick();
@@ -68,7 +78,8 @@ export function useMessageTypeManager() {
     // If we have cached video, restore it first
     if (cachedVideoBlob && cachedVideoUrl) {
       console.log("Restoring cached video after switching back to video mode");
-      restoreVideo(cachedVideoBlob, cachedVideoUrl);
+      console.log("Cached transcription:", cachedTranscription);
+      restoreVideo(cachedVideoBlob, cachedVideoUrl, cachedTranscription);
       return;
     }
     

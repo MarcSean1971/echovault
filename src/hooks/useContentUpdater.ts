@@ -46,7 +46,10 @@ export function useContentUpdater() {
   // Extract transcription from content JSON
   const getTranscriptionFromContent = (contentJson: string | null): string | null => {
     if (!contentJson) return null;
-    return parseMessageTranscription(contentJson);
+    const transcription = parseMessageTranscription(contentJson);
+    console.log("getTranscriptionFromContent:", 
+                transcription ? transcription.substring(0, 30) + "..." : "none");
+    return transcription;
   };
 
   return {
