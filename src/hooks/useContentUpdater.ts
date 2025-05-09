@@ -33,6 +33,15 @@ export function useContentUpdater() {
     setIsTranscribingAudio(true);
     
     try {
+      // Clean up any existing URL first
+      if (document.querySelector('audio')?.src?.startsWith('blob:')) {
+        try {
+          URL.revokeObjectURL(document.querySelector('audio')!.src);
+        } catch (e) {
+          console.error("Error revoking existing audio URL:", e);
+        }
+      }
+      
       // Create URL for immediate playback and set all related state
       const audioUrl = URL.createObjectURL(audioBlob);
       setAudioUrl(audioUrl);

@@ -34,6 +34,18 @@ export function AudioContent({
     console.log("Opening audio recorder from AudioContent");
     setShowAudioRecorder(true);
   };
+
+  // If we have an audio URL but the player can't load it, let's provide a retry option
+  const handleRetryAudio = () => {
+    console.log("Retrying audio playback");
+    // Force the browser to refresh the audio URL
+    if (audioUrl) {
+      const audio = new Audio(audioUrl);
+      audio.load();
+    }
+    // Re-render component
+    setShowAudioRecorder(false);
+  };
   
   if (audioUrl) {
     return (

@@ -57,6 +57,13 @@ export function AudioRecorderDialog({
   const handleKeepExisting = () => {
     onOpenChange(false);
   };
+
+  // Handle the case where we have existingAudioUrl but no blob
+  useEffect(() => {
+    if (existingAudioUrl && !existingAudioBlob) {
+      console.warn("Have existing audio URL but no blob. This may cause issues with reusing the audio.");
+    }
+  }, [existingAudioUrl, existingAudioBlob]);
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

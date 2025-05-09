@@ -19,10 +19,12 @@ export function useMediaRecording(mediaType: MediaType) {
   const mediaTypeLabel = mediaType.charAt(0).toUpperCase() + mediaType.slice(1);
   const mediaDataKey = `${mediaType}Data`;
   
-  // Clean up URL when component unmounts
+  // Clean up URL when component unmounts or when URL changes
   useEffect(() => {
+    let prevUrl: string | null = null;
+    
     return () => {
-      if (mediaUrl) {
+      if (mediaUrl && mediaUrl !== prevUrl) {
         console.log(`Cleaning up ${mediaType} URL:`, mediaUrl);
         try {
           URL.revokeObjectURL(mediaUrl);
@@ -122,15 +124,16 @@ export function useMediaRecording(mediaType: MediaType) {
     showRecorder,
     setShowRecorder,
     mediaBlob,
+    setMediaBlob,
     mediaBase64,
-    mediaUrl,
-    isTranscribing,
-    transcription,
-    handleMediaReady,
-    clearMedia,
-    setMediaUrl,
-    setTranscription,
     setMediaBase64,
-    setMediaBlob
+    mediaUrl,
+    setMediaUrl,
+    isTranscribing,
+    setIsTranscribing,
+    transcription,
+    setTranscription,
+    handleMediaReady,
+    clearMedia
   };
 }

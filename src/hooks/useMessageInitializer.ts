@@ -51,7 +51,7 @@ export function useMessageInitializer(message?: Message) {
   useEffect(() => {
     if (!message?.content) return;
     
-    console.log("Initializing message content for editing:", message.content);
+    console.log("Initializing message content for editing:", message.content.substring(0, 100) + "...");
     console.log("Message type:", message.message_type);
     
     // Cleanup URLs on unmount or message change
@@ -73,6 +73,16 @@ export function useMessageInitializer(message?: Message) {
             const audioBlob = base64ToBlob(audioData, 'audio/webm');
             console.log("Created audio blob:", audioBlob.size);
             
+            // First clean up any existing URL
+            try {
+              const currentUrl = document.querySelector('audio')?.src;
+              if (currentUrl && currentUrl.startsWith('blob:')) {
+                URL.revokeObjectURL(currentUrl);
+              }
+            } catch (e) {
+              console.error("Error cleaning up existing audio URL:", e);
+            }
+            
             const url = URL.createObjectURL(audioBlob);
             createdUrls.push(url);
             console.log("Created audio URL for editing:", url);
@@ -86,6 +96,20 @@ export function useMessageInitializer(message?: Message) {
               console.log("Setting audio transcription:", transcription);
               setAudioTranscription(transcription);
             }
+            
+            // Verify the URL works
+            const audio = new Audio(url);
+            audio.onloadedmetadata = () => {
+              console.log("Audio loaded successfully with duration:", audio.duration);
+            };
+            audio.onerror = (e) => {
+              console.error("Error loading audio:", e);
+              // Try recreating the URL
+              const newUrl = URL.createObjectURL(audioBlob);
+              createdUrls.push(newUrl);
+              setAudioUrl(newUrl);
+              console.log("Recreated audio URL after error:", newUrl);
+            };
             
             // Show toast to confirm loading
             toast({

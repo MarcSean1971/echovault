@@ -24,6 +24,20 @@ export function useAudioRecordingHandler() {
     console.log("useAudioRecordingHandler: handleAudioReady called with blob size:", audioBlob.size);
     try {
       // Create URL manually first to ensure we have it immediately for playback
+      if (!audioBlob) {
+        throw new Error("Audio blob is null or undefined");
+      }
+      
+      // Revoke any existing URL to prevent memory leaks
+      if (audioUrl) {
+        try {
+          URL.revokeObjectURL(audioUrl);
+          console.log("Revoked previous audio URL:", audioUrl);
+        } catch (e) {
+          console.error("Error revoking previous audio URL:", e);
+        }
+      }
+      
       const newUrl = URL.createObjectURL(audioBlob);
       console.log("Setting audio URL manually first:", newUrl);
       setAudioUrl(newUrl);
@@ -34,6 +48,14 @@ export function useAudioRecordingHandler() {
       
       // Then proceed with media handling (transcription, etc)
       const result = await handleMediaReady(audioBlob, audioBase64);
+      console.log("Audio processing completed with result:", result);
+      
+      // Double-check that we still have a valid URL after processing
+      if (!audioUrl) {
+        console.log("Audio URL was lost during processing, recreating...");
+        const recreatedUrl = URL.createObjectURL(audioBlob);
+        setAudioUrl(recreatedUrl);
+      }
       
       return result;
     } catch (error) {

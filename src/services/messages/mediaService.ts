@@ -45,7 +45,7 @@ export function parseMessageTranscription(content: string | null): string | null
   if (!content) return null;
   
   try {
-    console.log("Parsing message content for transcription:", content);
+    console.log("Parsing message content for transcription:", content.substring(0, 50) + "...");
     const contentObj = JSON.parse(content);
     
     if (contentObj.transcription) {
@@ -135,6 +135,10 @@ export function createMediaUrl(base64Data: string | null, mediaType: 'audio' | '
  */
 export function base64ToBlob(base64Data: string, mimeType: string): Blob | null {
   try {
+    if (!base64Data) {
+      throw new Error("Base64 data is empty");
+    }
+    
     const binaryString = window.atob(base64Data);
     const bytes = new Uint8Array(binaryString.length);
     
