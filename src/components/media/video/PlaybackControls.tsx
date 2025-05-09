@@ -1,16 +1,14 @@
-
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Play, Pause, Trash2, Check } from "lucide-react";
-import { formatDuration } from "@/utils/audioUtils";
-import { BUTTON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { Play, Pause, RotateCcw, Check } from "lucide-react";
+import { formatTime } from "@/utils/mediaUtils";
 
 interface PlaybackControlsProps {
   isPlaying: boolean;
   recordingDuration: number;
   onTogglePlayback: () => void;
   onReset: () => void;
-  onAccept: () => void;
+  onAccept: () => Promise<void>;
 }
 
 export function PlaybackControls({
@@ -21,41 +19,42 @@ export function PlaybackControls({
   onAccept
 }: PlaybackControlsProps) {
   return (
-    <div className="flex items-center justify-between w-full">
-      <Button 
+    <div className="flex items-center space-x-2">
+      <Button
         variant="outline"
         size="sm"
         onClick={onTogglePlayback}
-        className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.outline} hover:scale-105`}
+        className="hover:bg-muted/50 transition-colors duration-200"
       >
         {isPlaying ? (
-          <><Pause className="w-4 h-4 mr-1 hover:scale-110 transition-all duration-200" /> Pause</>
+          <>
+            <Pause className="mr-2 h-4 w-4" />
+            Pause
+          </>
         ) : (
-          <><Play className="w-4 h-4 mr-1 hover:scale-110 transition-all duration-200" /> Play</>
+          <>
+            <Play className="mr-2 h-4 w-4" />
+            Play ({formatTime(recordingDuration)})
+          </>
         )}
       </Button>
-      
-      <span className="text-sm font-medium">
-        {formatDuration(recordingDuration)}
-      </span>
-      
-      <div className="flex items-center gap-2">
-        <Button 
-          size="sm" 
-          variant="outline" 
-          onClick={onReset}
-          className={`text-destructive ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.outline} hover:scale-105`}
-        >
-          <Trash2 className="w-4 h-4 mr-1 hover:scale-110 transition-all duration-200" /> Discard
-        </Button>
-        <Button 
-          size="sm"
-          onClick={onAccept}
-          className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default} hover:scale-105`}
-        >
-          <Check className="w-4 h-4 mr-1 hover:scale-110 transition-all duration-200" /> Accept
-        </Button>
-      </div>
+      <Button
+        variant="secondary"
+        size="sm"
+        onClick={onReset}
+        className="hover:bg-muted/50 transition-colors duration-200"
+      >
+        <RotateCcw className="mr-2 h-4 w-4" />
+        Reset
+      </Button>
+      <Button
+        size="sm"
+        onClick={onAccept}
+        className="hover:bg-primary/90 text-white shadow-sm transition-colors duration-200"
+      >
+        <Check className="mr-2 h-4 w-4" />
+        Accept
+      </Button>
     </div>
   );
 }

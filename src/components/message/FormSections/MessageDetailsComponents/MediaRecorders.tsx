@@ -18,7 +18,6 @@ export function MediaRecorders({
 }: MediaRecordersProps) {
   return (
     <>
-      {/* Video Recorder Dialog */}
       <VideoRecorderDialog 
         open={showVideoRecorder} 
         onOpenChange={setShowVideoRecorder}

@@ -1,404 +1,180 @@
-
-import React, { useState, useRef, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
-import { toast } from "@/components/ui/use-toast";
-import { AlertCircle, Video, Square, RotateCcw, Check } from "lucide-react";
-import { blobToBase64 } from "@/utils/audioUtils";
-import { BUTTON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
+import React, { useRef, useState, useEffect } from "react";
+import { Button } from "../ui/button";
+import { Spinner } from "../ui/spinner";
+import { AlertCircle, Video } from "lucide-react";
+import { formatTime } from "@/utils/mediaUtils";
 
 interface SimpleVideoRecorderProps {
-  onVideoReady: (videoBlob: Blob, videoBase64: string) => Promise<any> | void;
+  onVideoReady: (videoBlob: Blob, videoBase64: string) => void;
   onCancel: () => void;
 }
 
 export function SimpleVideoRecorder({ onVideoReady, onCancel }: SimpleVideoRecorderProps) {
-  // Simple state management
-  const [state, setState] = useState<'idle' | 'requesting' | 'recording' | 'preview'>('idle');
-  const [error, setError] = useState<string | null>(null);
-  const [recordingDuration, setRecordingDuration] = useState(0);
-  
-  // References
-  const videoPreviewRef = useRef<HTMLVideoElement | null>(null);
-  const recordedVideoRef = useRef<HTMLVideoElement | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const timerRef = useRef<number | null>(null);
-  const videoUrlRef = useRef<string | null>(null);
+  const [recording, setRecording] = useState(false);
+  const [recordedChunks, setRecordedChunks] = useState<Blob[]>([]);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [isBrowserSupported, setIsBrowserSupported] = useState(true);
+  const [permissionDenied, setPermissionDenied] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [isInitializing, setIsInitializing] = useState(false);
   
-  // Clean up function to release resources
-  const cleanupResources = () => {
-    // Clear any ongoing timer
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-    
-    // Stop media recorder if active
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-    }
-    
-    // Stop all tracks in the stream
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => {
-        track.stop();
-      });
-      streamRef.current = null;
-    }
-    
-    // Revoke any object URL we've created
-    if (videoUrlRef.current) {
-      URL.revokeObjectURL(videoUrlRef.current);
-      videoUrlRef.current = null;
-    }
-  };
-  
-  // Clean up when component unmounts
   useEffect(() => {
-    return cleanupResources;
+    // Check browser support for MediaRecorder
+    setIsBrowserSupported(typeof MediaRecorder !== "undefined");
   }, []);
   
-  // Request camera access
-  const requestCameraAccess = async () => {
-    setState('requesting');
-    setError(null);
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
     
-    try {
-      // Clean up any existing resources first
-      cleanupResources();
-      
-      // Check if browser supports getUserMedia
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error("Your browser doesn't support video recording");
-      }
-      
-      // Request camera and microphone access
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { 
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        },
-        audio: true
-      });
-      
-      // Store the stream reference
-      streamRef.current = stream;
-      
-      // Connect stream to video preview element
-      if (videoPreviewRef.current) {
-        videoPreviewRef.current.srcObject = stream;
-        videoPreviewRef.current.play().catch(err => {
-          console.error("Error playing video stream:", err);
-          setError("Could not display camera preview");
-        });
-      }
-      
-      // Ready to record
-      setState('idle');
-    } catch (err: any) {
-      console.error("Camera access error:", err);
-      let message = "Could not access your camera";
-      
-      if (err.name === "NotAllowedError") {
-        message = "Camera access was denied. Please check your browser permissions.";
-      } else if (err.name === "NotFoundError") {
-        message = "No camera found on your device.";
-      } else if (err.name === "NotReadableError") {
-        message = "Your camera might be in use by another application.";
-      }
-      
-      setError(message);
-      setState('idle');
-    }
-  };
-  
-  // Start recording video
-  const startRecording = () => {
-    if (!streamRef.current) {
-      requestCameraAccess();
-      return;
-    }
-    
-    try {
-      // Reset recording data
-      chunksRef.current = [];
-      setRecordingDuration(0);
-      
-      // Create a MediaRecorder instance
-      const mimeType = 'video/webm;codecs=vp8,opus';
-      mediaRecorderRef.current = new MediaRecorder(streamRef.current, {
-        mimeType,
-        videoBitsPerSecond: 2500000,
-        audioBitsPerSecond: 128000
-      });
-      
-      // Set up data handlers
-      mediaRecorderRef.current.ondataavailable = (event) => {
-        if (event.data && event.data.size > 0) {
-          chunksRef.current.push(event.data);
-        }
-      };
-      
-      // Handle recording stop
-      mediaRecorderRef.current.onstop = () => {
-        if (chunksRef.current.length === 0) {
-          toast({
-            title: "Recording Error",
-            description: "No data was recorded",
-            variant: "destructive"
-          });
-          return;
-        }
-        
-        try {
-          // Create video blob from chunks
-          const recordedBlob = new Blob(chunksRef.current, { type: 'video/webm' });
-          
-          // Create object URL for playback
-          const videoUrl = URL.createObjectURL(recordedBlob);
-          videoUrlRef.current = videoUrl;
-          
-          // Set up video playback
-          if (recordedVideoRef.current) {
-            recordedVideoRef.current.src = videoUrl;
-          }
-          
-          // Update state to preview
-          setState('preview');
-        } catch (err) {
-          console.error("Error processing recording:", err);
-          toast({
-            title: "Recording Error",
-            description: "Could not process the recording",
-            variant: "destructive"
-          });
-          
-          setState('idle');
-        }
-      };
-      
-      // Handle recording errors
-      mediaRecorderRef.current.onerror = () => {
-        toast({
-          title: "Recording Error",
-          description: "An error occurred during recording",
-          variant: "destructive"
-        });
-        
-        stopRecording();
-      };
-      
-      // Start recording with 1 second data intervals
-      mediaRecorderRef.current.start(1000);
-      
-      // Set up timer to track recording duration
-      timerRef.current = window.setInterval(() => {
+    if (recording) {
+      intervalId = setInterval(() => {
         setRecordingDuration(prev => prev + 1);
       }, 1000);
-      
-      // Update state
-      setState('recording');
-    } catch (err) {
-      console.error("Error starting recording:", err);
-      toast({
-        title: "Recording Error",
-        description: "Could not start recording",
-        variant: "destructive"
-      });
-    }
-  };
-  
-  // Stop recording
-  const stopRecording = () => {
-    // Clear the duration timer
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
+    } else {
+      setRecordingDuration(0);
     }
     
-    // Stop the media recorder if active
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-    }
-  };
-  
-  // Reset and try again
-  const resetRecording = () => {
-    // Clean up any previous recording data
-    if (videoUrlRef.current) {
-      URL.revokeObjectURL(videoUrlRef.current);
-      videoUrlRef.current = null;
-    }
-    
-    setState('idle');
-  };
-  
-  // Accept and process the recording
-  const acceptRecording = async () => {
-    if (!videoUrlRef.current || chunksRef.current.length === 0) {
-      toast({
-        title: "Error",
-        description: "No recording available",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    try {
-      // Create final video blob
-      const recordedBlob = new Blob(chunksRef.current, { type: 'video/webm' });
-      
-      // Convert to base64
-      const base64Video = await blobToBase64(recordedBlob);
-      
-      // Pass the result back
-      onVideoReady(recordedBlob, base64Video);
-    } catch (err) {
-      console.error("Error processing video:", err);
-      toast({
-        title: "Error",
-        description: "Could not process the recorded video",
-        variant: "destructive"
-      });
-    }
-  };
-  
-  // Format time as MM:SS
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-  
-  // Request camera access on first mount
+    return () => clearInterval(intervalId);
+  }, [recording]);
+
   useEffect(() => {
-    requestCameraAccess();
-  }, []);
+    const getMediaStream = async () => {
+      setIsInitializing(true);
+      try {
+        const mediaStream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: { facingMode: "user" },
+        });
+        setStream(mediaStream);
+      } catch (error: any) {
+        console.error("Error accessing media devices:", error);
+        setPermissionDenied(true);
+      } finally {
+        setIsInitializing(false);
+      }
+    };
+    
+    if (isBrowserSupported && !stream) {
+      getMediaStream();
+    }
+  }, [isBrowserSupported, stream]);
+
+  useEffect(() => {
+    if (stream && videoRef.current) {
+      videoRef.current.srcObject = stream;
+    }
+  }, [stream]);
+
+  const startRecording = () => {
+    if (!stream) return;
+
+    setRecordedChunks([]);
+    const recorder = new MediaRecorder(stream, {
+      mimeType: "video/webm;codecs=vp9",
+    });
+
+    recorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        setRecordedChunks((prev) => [...prev, event.data]);
+      }
+    };
+
+    recorder.onstop = async () => {
+      const videoBlob = new Blob(recordedChunks, { type: "video/webm" });
+      const videoBase64 = await blobToBase64(videoBlob);
+      onVideoReady(videoBlob, videoBase64);
+    };
+
+    mediaRecorderRef.current = recorder;
+    recorder.start();
+    setRecording(true);
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+      mediaRecorderRef.current.stop();
+      setRecording(false);
+    }
+  };
+
+  const cancelRecording = () => {
+    stopRecording();
+    if (stream) {
+      stream.getTracks().forEach((track) => track.stop());
+    }
+    onCancel();
+  };
+
+  const blobToBase64 = (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
   
-  // Render different UI based on component state
-  if (state === 'requesting') {
+  if (!isBrowserSupported) {
     return (
-      <div className="p-4 bg-background rounded-lg border">
-        <div className="flex flex-col items-center justify-center py-8">
-          <Spinner className="h-12 w-12 mb-4" />
-          <p>Connecting to camera...</p>
-        </div>
+      <div className="text-center">
+        <AlertCircle className="h-10 w-10 mx-auto mb-2 text-red-500" />
+        <p className="text-red-500">
+          Your browser does not support video recording.
+        </p>
+        <Button onClick={onCancel}>Go Back</Button>
       </div>
     );
   }
   
-  // Error state
-  if (error) {
+  if (permissionDenied) {
     return (
-      <div className="p-4 bg-background rounded-lg border">
-        <div className="flex flex-col items-center justify-center py-6">
-          <AlertCircle className="h-12 w-12 text-destructive mb-4" />
-          <h3 className="font-medium text-lg mb-2">Camera Error</h3>
-          <p className="text-center text-muted-foreground mb-4">{error}</p>
-          <div className="space-x-4">
-            <Button 
-              onClick={requestCameraAccess}
-              className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
-            >
-              Try Again
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={onCancel}
-              className={HOVER_TRANSITION}
-            >
-              Cancel
-            </Button>
-          </div>
-        </div>
+      <div className="text-center">
+        <AlertCircle className="h-10 w-10 mx-auto mb-2 text-red-500" />
+        <p className="text-red-500">
+          Camera permission denied. Please allow camera access to record a video.
+        </p>
+        <Button onClick={onCancel}>Go Back</Button>
       </div>
     );
   }
   
+  if (isInitializing) {
+    return (
+      <div className="flex flex-col items-center justify-center h-48">
+        <Spinner className="h-6 w-6 mb-2" />
+        <p className="text-sm text-muted-foreground">Initializing camera...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="p-4 bg-background rounded-lg border">
-      <div className="flex flex-col items-center justify-center gap-4">
-        {/* Video display area (either preview or recording) */}
-        {state === 'preview' ? (
-          <div className="w-full aspect-video bg-black rounded-md overflow-hidden">
-            <video 
-              ref={recordedVideoRef}
-              className="w-full h-full object-cover"
-              controls
-            />
-          </div>
-        ) : (
-          <div className="relative w-full aspect-video bg-black rounded-md overflow-hidden">
-            <video 
-              ref={videoPreviewRef}
-              className="w-full h-full object-cover"
-              autoPlay 
-              playsInline 
-              muted
-            />
-            
-            {/* Recording indicator */}
-            {state === 'recording' && (
-              <div className="absolute top-2 left-2 right-2 flex justify-between items-center">
-                <span className="text-xs text-white bg-black/50 px-2 py-1 rounded-full">
-                  {formatTime(recordingDuration)}
-                </span>
-                <div className="w-3 h-3 rounded-full bg-red-600 animate-pulse" />
-              </div>
-            )}
-          </div>
-        )}
-        
-        {/* Controls */}
-        <div className="flex justify-center w-full">
-          {state === 'preview' ? (
-            <div className="flex gap-4">
-              <Button 
-                variant="outline"
-                onClick={resetRecording}
-                className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.outline}`}
-              >
-                <RotateCcw className="w-4 h-4 mr-2" /> Retry
-              </Button>
-              <Button 
-                onClick={acceptRecording}
-                className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
-              >
-                <Check className="w-4 h-4 mr-2" /> Accept
-              </Button>
-            </div>
-          ) : state === 'recording' ? (
-            <Button 
-              onClick={stopRecording}
-              variant="destructive"
-              className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
-            >
-              <Square className="w-4 h-4 mr-2" /> Stop Recording
-            </Button>
-          ) : (
-            <Button 
-              onClick={startRecording}
-              className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
-            >
-              <Video className="w-4 h-4 mr-2" /> Start Recording
-            </Button>
-          )}
-        </div>
+    <div className="flex flex-col items-center">
+      <video
+        ref={videoRef}
+        className="w-full aspect-video rounded-md"
+        autoPlay
+        muted
+      />
+      <div className="mt-2 text-sm text-muted-foreground">
+        Recording time: {formatTime(recordingDuration)}
       </div>
-      
-      {/* Footer */}
-      <div className="mt-4 flex justify-end">
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={onCancel}
-          className={HOVER_TRANSITION}
-        >
+      <div className="mt-4 flex gap-2">
+        {!recording ? (
+          <Button onClick={startRecording} disabled={!stream}>
+            {stream ? "Start Recording" : "Camera Not Ready"}
+          </Button>
+        ) : (
+          <Button onClick={stopRecording} variant="destructive">
+            Stop Recording
+          </Button>
+        )}
+        <Button onClick={cancelRecording} variant="secondary">
           Cancel
         </Button>
       </div>
     </div>
   );
 }
+

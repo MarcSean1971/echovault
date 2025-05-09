@@ -94,7 +94,7 @@ export default function MessageEdit() {
       <Button 
         variant="ghost" 
         onClick={() => navigate(`/message/${id}`)}
-        className="mb-6"
+        className="mb-6 hover:bg-muted/80 transition-colors duration-200"
       >
         <ArrowLeft className="mr-2 h-4 w-4" /> Back to Message
       </Button>
