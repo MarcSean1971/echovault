@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { useMessageForm } from "../MessageFormContext";
 import { FileUploader } from "@/components/FileUploader";
@@ -12,7 +13,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMessageInitializer } from "@/hooks/useMessageInitializer";
 import { useContentUpdater } from "@/hooks/useContentUpdater";
 import { useMessageTypeManager } from "@/hooks/useMessageTypeManager";
-import { useEffect, useState } from "react";
 import { TextContent } from "./content/TextContent";
 import { VideoContent } from "./content/VideoContent";
 

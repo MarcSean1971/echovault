@@ -1,15 +1,15 @@
 
-import { useState } from "react";
-import { useVideoRecordingHandler } from "./useVideoRecordingHandler";
-import { useMessageForm } from "@/components/message/MessageFormContext";
+import { useState, useEffect } from 'react';
+import { useVideoRecordingHandler } from './useVideoRecordingHandler';
+import { useMessageForm } from '@/components/message/MessageFormContext';
 
 export function useMessageTypeManager() {
-  const { setMessageType } = useMessageForm();
+  const { setMessageType, videoContent } = useMessageForm();
   const [initializedFromMessage, setInitializedFromMessage] = useState(false);
   
-  // Get video recording handlers
-  const { 
-    isRecording, 
+  // Use our custom hooks
+  const {
+    isRecording,
     isInitializing,
     hasPermission,
     videoBlob,
@@ -26,46 +26,46 @@ export function useMessageTypeManager() {
     stopMediaStream,
     isStreamActive
   } = useVideoRecordingHandler();
-  
-  // Handle video type selection
-  const onVideoTypeClick = async () => {
-    console.log("Video type selected");
-    setMessageType("video");
-  };
-  
-  // Handle text type selection
+
+  // Handle clicking on text tab
   const onTextTypeClick = () => {
-    console.log("Text type selected");
-    setMessageType("text");
+    console.log("Text message type selected");
+    setMessageType('text');
     
-    // If we have a camera stream active, stop it
+    // If we were recording, stop
+    if (isRecording) {
+      stopRecording();
+    }
+    
+    // Stop any active media stream when switching to text mode
     if (isStreamActive()) {
-      console.log("Stopping media stream because text type selected");
       stopMediaStream();
     }
   };
   
-  // Handle initialized video data (for message editing)
+  // Handle clicking on video tab
+  const onVideoTypeClick = () => {
+    console.log("Video message type selected");
+    setMessageType('video');
+  };
+  
+  // Handle initialized video from existing message
   const handleInitializedVideo = (blob: Blob, url: string) => {
-    console.log("Setting initialized video data from message:", { 
-      blobSize: blob.size, 
-      hasUrl: !!url 
-    });
-    
+    console.log("handleInitializedVideo with blob size:", blob.size);
     setInitializedFromMessage(true);
     restoreVideo(blob, url);
   };
-  
+
   return {
     onTextTypeClick,
     onVideoTypeClick,
-    videoBlob,
-    videoUrl,
-    showVideoRecorder,
+    videoBlob, 
+    videoUrl, 
+    showVideoRecorder, 
     setShowVideoRecorder,
-    isRecording,
-    isInitializing,
-    hasPermission,
+    isRecording, 
+    isInitializing, 
+    hasPermission, 
     previewStream,
     initializeStream,
     startRecording,
