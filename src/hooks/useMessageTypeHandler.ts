@@ -1,17 +1,12 @@
 
 import { useState, useEffect, useRef } from "react";
-import { MediaType } from "./useMediaRecording";
 import { useMessageForm } from "@/components/message/MessageFormContext";
 
 // Helper to check if a string is JSON from media content
 const isJsonMediaContent = (content: string): boolean => {
   try {
     const parsed = JSON.parse(content);
-    // Check if it has videoData property (which indicates it's from media)
-    return (
-      typeof parsed === "object" && 
-      (parsed.videoData !== undefined)
-    );
+    return typeof parsed === "object";
   } catch (e) {
     return false;
   }
@@ -24,7 +19,6 @@ export function useMessageTypeHandler() {
   
   // Store content separately for each message type
   const [textContent, setTextContent] = useState("");
-  const [videoContent, setVideoContent] = useState("");
 
   // Effect to save content when it changes
   useEffect(() => {
@@ -36,9 +30,6 @@ export function useMessageTypeHandler() {
           if (!isJsonMediaContent(content)) {
             setTextContent(content);
           }
-          break;
-        case "video":
-          setVideoContent(content);
           break;
         default:
           break;
@@ -57,25 +48,14 @@ export function useMessageTypeHandler() {
     setContent(textContent);
   };
   
-  // Function to handle the media type button click
-  const handleMediaTypeClick = (
-    mediaType: MediaType,
-    setShowRecorder: (show: boolean) => void, 
-    mediaBlob: Blob | null
-  ) => {
-    // Immediately set the appropriate content based on media type
-    if (mediaType === "video") {
-      setContent(videoContent);
-    }
-    
-    // Directly set the recorder to visible - this is the key change
-    console.log(`Setting ${mediaType} recorder to visible`);
-    setShowRecorder(true);
+  // Function to handle the media type button click (stub since functionality is removed)
+  const handleMediaTypeClick = () => {
+    console.log("Media functionality has been removed");
   };
 
-  // Convenience wrapper for video
-  const handleVideoTypeClick = (setShowVideoRecorder: (show: boolean) => void, videoBlob: Blob | null) => {
-    handleMediaTypeClick("video", setShowVideoRecorder, videoBlob);
+  // Convenience wrapper for video (stub)
+  const handleVideoTypeClick = () => {
+    console.log("Video functionality has been removed");
   };
 
   return {
