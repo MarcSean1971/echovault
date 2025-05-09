@@ -9,17 +9,20 @@ export * from './notificationService';
 export * from './whatsApp';
 export * from './mediaService';
 
-// Explicitly re-export from transcriptionService to resolve ambiguity
-import { 
-  transcribeVideoContent, 
-  formatVideoContent, 
-  blobToBase64
-} from './transcriptionService';
+// Explicitly export needed functions
+const blobToBase64 = (blob: Blob): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      const base64 = result.split(',')[1];
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+};
 
 export {
-  transcribeVideoContent,
-  formatVideoContent,
   blobToBase64
-  // parseVideoContent is deliberately not re-exported from here to avoid conflict
-  // with the same named export from mediaService
 };

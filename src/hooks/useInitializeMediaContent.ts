@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { parseMessageTranscription, parseVideoContent } from "@/services/messages/mediaService";
+import { parseVideoContent } from "@/services/messages/mediaService";
 import { Message } from "@/types/message";
 
 /**
@@ -9,11 +9,9 @@ import { Message } from "@/types/message";
 export function useInitializeMediaContent(message: Message | null) {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [audioBase64, setAudioBase64] = useState<string | null>(null);
-  const [audioTranscription, setAudioTranscription] = useState<string | null>(null);
   
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoBase64, setVideoBase64] = useState<string | null>(null); 
-  const [videoTranscription, setVideoTranscription] = useState<string | null>(null);
   const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
   const [hasInitialized, setHasInitialized] = useState(false);
   
@@ -26,7 +24,7 @@ export function useInitializeMediaContent(message: Message | null) {
     try {
       if (message.message_type === "video") {
         console.log("Processing video message type");
-        const { videoData, transcription } = parseVideoContent(message.content);
+        const { videoData } = parseVideoContent(message.content);
         
         if (videoData) {
           // Create a Blob URL for the video player
@@ -44,7 +42,6 @@ export function useInitializeMediaContent(message: Message | null) {
           setVideoUrl(url);
           setVideoBase64(videoData);
           setVideoBlob(blob);
-          setVideoTranscription(transcription || null);
           setHasInitialized(true);
         } else {
           console.log("No video data found in message content");
@@ -65,7 +62,6 @@ export function useInitializeMediaContent(message: Message | null) {
             setVideoUrl(url);
             setVideoBase64(contentObj.videoData);
             setVideoBlob(videoBlob);
-            setVideoTranscription(contentObj.transcription || null);
             setHasInitialized(true);
           }
           
@@ -76,7 +72,6 @@ export function useInitializeMediaContent(message: Message | null) {
             const url = URL.createObjectURL(audioBlob);
             setAudioUrl(url);
             setAudioBase64(contentObj.audioData);
-            setAudioTranscription(contentObj.transcription || null);
           }
         } catch (e) {
           // Not JSON or error parsing, content is likely plain text
@@ -107,10 +102,8 @@ export function useInitializeMediaContent(message: Message | null) {
   return {
     audioUrl,
     audioBase64,
-    audioTranscription,
     videoUrl,
     videoBase64,
-    videoTranscription,
     videoBlob,
     hasInitialized
   };

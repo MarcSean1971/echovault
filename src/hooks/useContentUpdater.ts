@@ -1,54 +1,51 @@
 
 import { useState } from "react";
 import { useMessageForm } from "@/components/message/MessageFormContext";
-import { parseMessageTranscription } from "@/services/messages/mediaService";
-import { transcribeVideoContent, formatVideoContent } from "@/services/messages/transcriptionService";
 import { toast } from "@/components/ui/use-toast";
 
 export function useContentUpdater() {
   const { setContent, setVideoContent, setTextContent, content, textContent } = useMessageForm();
   const [isTranscribingVideo, setIsTranscribingVideo] = useState(false);
-  const [transcriptionError, setTranscriptionError] = useState<string | null>(null);
 
-  // Extract transcription from content
-  const getTranscriptionFromContent = (content: string | null): string | null => {
-    if (!content) return null;
-    
+  // Convert blob to base64 string
+  const blobToBase64 = (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        const base64 = result.split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  };
+
+  // Format video content for storage
+  const formatVideoContent = async (videoBlob: Blob): Promise<string> => {
     try {
-      // First attempt to parse as JSON
-      const parsed = JSON.parse(content);
+      const base64Video = await blobToBase64(videoBlob);
       
-      // Check direct transcription field
-      if (parsed && parsed.transcription) {
-        console.log("Found direct transcription in content:", 
-                    parsed.transcription.substring(0, 30) + "...");
-        return parsed.transcription;
-      }
+      // Create a JSON object with the video data
+      const videoContent = {
+        videoData: base64Video,
+        timestamp: new Date().toISOString()
+      };
       
-      // Check for nested video content structure
-      if (parsed && parsed.videoContent) {
-        try {
-          const videoContentObj = typeof parsed.videoContent === 'string' ? 
-                                 JSON.parse(parsed.videoContent) : 
-                                 parsed.videoContent;
-          
-          if (videoContentObj && videoContentObj.transcription) {
-            console.log("Found transcription in nested videoContent:", 
-                        videoContentObj.transcription.substring(0, 30) + "...");
-            return videoContentObj.transcription;
-          }
-        } catch (e) {
-          console.log("Failed to parse nested videoContent:", e);
-        }
-      }
-    } catch (e) {
-      console.log("Content is not valid JSON, using mediaService parser as fallback");
-      // Not JSON, try using the mediaService parser as fallback
-      return parseMessageTranscription(content);
+      // Log the content structure that will be stored
+      console.log("Formatting video content");
+      console.log("Video content structure:", Object.keys(videoContent).join(", "));
+      
+      return JSON.stringify(videoContent);
+    } catch (error) {
+      console.error("Error formatting video content:", error);
+      toast({
+        title: "Error",
+        description: "Failed to process video content",
+        variant: "destructive"
+      });
+      throw error;
     }
-    
-    console.log("No transcription found in content");
-    return null;
   };
 
   // Check if content contains video data
@@ -63,50 +60,13 @@ export function useContentUpdater() {
   };
 
   // Handle video content update with optional transcription
-  const handleVideoContentUpdate = async (videoBlob: Blob, skipTranscriptionOrBase64: boolean | string = false): Promise<any> => {
+  const handleVideoContentUpdate = async (videoBlob: Blob): Promise<any> => {
     try {
-      setIsTranscribingVideo(true);
-      setTranscriptionError(null);
-      
-      // Determine if the second parameter is a base64 string or a boolean flag
-      const isBase64String = typeof skipTranscriptionOrBase64 === 'string';
-      const skipTranscription = isBase64String ? false : skipTranscriptionOrBase64;
-      
-      let transcription = null;
-      
-      if (!skipTranscription) {
-        // Generate transcription using OpenAI via edge function
-        try {
-          console.log("Starting transcription process for video blob size:", videoBlob.size);
-          console.log("Video blob type:", videoBlob.type);
-          transcription = await transcribeVideoContent(videoBlob);
-          console.log("Transcription generated:", transcription ? transcription.substring(0, 50) + "..." : "none");
-          
-          // Show success notification
-          toast({
-            title: "Video transcribed",
-            description: "Video transcription completed successfully"
-          });
-        } catch (error: any) {
-          console.error("Transcription error:", error);
-          setTranscriptionError(error.message || "Failed to transcribe video");
-          
-          // We'll continue even if transcription fails
-          toast({
-            title: "Transcription Warning",
-            description: "Transcription failed, but your video will still be saved",
-            variant: "default"
-          });
-        }
-      } else {
-        console.log("Skipping transcription as requested");
-      }
-      
       // Format video content for storage
-      const formattedContent = await formatVideoContent(videoBlob, transcription);
+      const formattedContent = await formatVideoContent(videoBlob);
       
       // Log the formatted content structure
-      console.log("Video content formatted with transcription:", !!transcription);
+      console.log("Video content formatted");
       console.log("Formatted content sample:", formattedContent.substring(0, 100) + "...");
       
       // Update the video-specific content
@@ -134,12 +94,10 @@ export function useContentUpdater() {
       
       return { 
         success: true, 
-        transcription, 
         videoContent: formattedContent 
       };
     } catch (error: any) {
       console.error("Error updating video content:", error);
-      setTranscriptionError(error.message || "Failed to process video content");
       
       toast({
         title: "Error",
@@ -148,16 +106,12 @@ export function useContentUpdater() {
       });
       
       return { success: false, error };
-    } finally {
-      setIsTranscribingVideo(false);
     }
   };
 
   return {
     handleVideoContentUpdate,
     isTranscribingVideo,
-    transcriptionError,
-    getTranscriptionFromContent,
     hasVideoData
   };
 }

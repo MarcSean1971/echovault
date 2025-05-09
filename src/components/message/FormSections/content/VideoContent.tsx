@@ -1,10 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
-import { toast } from "@/components/ui/use-toast";
 import { useMessageForm } from "../../MessageFormContext";
-import { parseVideoContent } from "@/services/messages/mediaService";
-import { useContentUpdater } from "@/hooks/useContentUpdater";
 
 // Import our component modules
 import { VideoPlayer } from "./video/VideoPlayer";
@@ -20,7 +17,6 @@ export function VideoContent({
   onStartRecording,
   onStopRecording,
   onClearVideo,
-  onTranscribeVideo,
   inDialog = false
 }: {
   videoUrl: string | null;
@@ -31,14 +27,11 @@ export function VideoContent({
   onStartRecording: () => Promise<void>;
   onStopRecording: () => void;
   onClearVideo: () => void;
-  onTranscribeVideo: () => Promise<void>;
   inDialog?: boolean;
 }) {
-  const { content, messageType } = useMessageForm();
-  const { isTranscribingVideo, getTranscriptionFromContent } = useContentUpdater();
+  const { messageType } = useMessageForm();
   const [permissionError, setPermissionError] = useState<string | null>(null);
   const [showVideoPreview, setShowVideoPreview] = useState(!!videoUrl);
-  const [transcription, setTranscription] = useState<string | null>(null);
   
   // Reset showVideoPreview state whenever videoUrl changes or messageType changes
   useEffect(() => {
@@ -61,16 +54,6 @@ export function VideoContent({
     }
   }, [videoUrl, messageType, previewStream]);
   
-  // Extract transcription from content
-  useEffect(() => {
-    if (content) {
-      const extractedTranscription = getTranscriptionFromContent(content);
-      console.log("VideoContent: Extracted transcription from content:", 
-                  extractedTranscription ? extractedTranscription.substring(0, 30) + "..." : "none");
-      setTranscription(extractedTranscription);
-    }
-  }, [content, getTranscriptionFromContent]);
-  
   // Log for debugging
   useEffect(() => {
     console.log("VideoContent: Rendering state:", { 
@@ -78,29 +61,10 @@ export function VideoContent({
       videoUrl: videoUrl ? "present" : "null",
       previewStream: previewStream ? "active" : "null",
       isRecording,
-      transcription: transcription ? "present" : "null",
       showVideoPreview,
-      messageType,
-      content: content ? "present" : "none"
+      messageType
     });
-  }, [inDialog, videoUrl, previewStream, isRecording, transcription, showVideoPreview, messageType, content]);
-  
-  // Handle transcription
-  const handleTranscribe = async () => {
-    try {
-      await onTranscribeVideo();
-      toast({
-        title: "Transcription completed",
-        description: "Video has been transcribed successfully"
-      });
-    } catch (error) {
-      toast({
-        title: "Transcription failed",
-        description: "Unable to transcribe the video. Please try again.",
-        variant: "destructive"
-      });
-    }
-  };
+  }, [inDialog, videoUrl, previewStream, isRecording, showVideoPreview, messageType]);
   
   // Handle recording with better error handling
   const handleStartRecording = async () => {
@@ -121,9 +85,6 @@ export function VideoContent({
       return (
         <VideoPlayer
           videoUrl={videoUrl}
-          transcription={transcription}
-          onTranscribe={handleTranscribe}
-          isTranscribing={isTranscribingVideo}
           onClearVideo={onClearVideo}
         />
       );

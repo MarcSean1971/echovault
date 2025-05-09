@@ -4,7 +4,6 @@ import { useMediaStream } from "./video/useMediaStream";
 import { useVideoRecorder } from "./video/useVideoRecorder";
 import { useVideoStorage } from "./video/useVideoStorage";
 import { useMessageForm } from "@/components/message/MessageFormContext";
-import { formatVideoContent } from "@/services/messages/transcriptionService";
 
 export function useVideoRecordingHandler() {
   const { setContent, setVideoContent } = useMessageForm();
@@ -45,29 +44,50 @@ export function useVideoRecordingHandler() {
     setVideoContent("");
   };
   
-  // Wrapper function for restoreVideo with transcription support
-  const restoreVideo = async (blob: Blob, url: string, transcription: string | null = null) => {
+  // Wrapper function for restoreVideo
+  const restoreVideo = async (blob: Blob, url: string) => {
     console.log("useVideoRecordingHandler: Restoring video", { 
       hasBlob: !!blob, 
       hasUrl: !!url, 
-      hasTranscription: !!transcription,
       blobSize: blob?.size || 0
     });
     
     restoreVideoBase(blob, url, setVideoBlob, setVideoUrl);
     
-    // If we have a transcription, restore it in the content
+    // If we have a blob, restore it in the content
     if (blob) {
       try {
-        console.log("Restoring video with transcription:", transcription ? transcription.substring(0, 30) + "..." : "none");
-        // Format the content with video data and transcription to update the form
-        const formattedContent = await formatVideoContent(blob, transcription);
+        // Format the video content for the form
+        const formattedContent = await formatVideoContent(blob);
         setVideoContent(formattedContent);
         setContent(formattedContent);
       } catch (err) {
         console.error("Error restoring video content:", err);
       }
     }
+  };
+
+  // Format video content (simplified without transcription)
+  const formatVideoContent = async (blob: Blob): Promise<string> => {
+    const base64 = await blobToBase64(blob);
+    return JSON.stringify({
+      videoData: base64,
+      timestamp: new Date().toISOString()
+    });
+  };
+
+  // Helper function to convert blob to base64
+  const blobToBase64 = (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        const base64 = result.split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
   };
   
   // Force initialize camera - used when switching tabs or when camera needs refresh

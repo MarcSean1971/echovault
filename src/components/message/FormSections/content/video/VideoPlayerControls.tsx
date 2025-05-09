@@ -1,21 +1,17 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Play, Pause, Trash2, Mic } from "lucide-react";
+import { Play, Pause, Trash2 } from "lucide-react";
 
 interface VideoPlayerControlsProps {
   isPlaying: boolean;
   togglePlayback: () => void;
-  handleTranscribe: () => Promise<void>;
-  isTranscribing: boolean;
   onClearVideo: () => void;
 }
 
 export function VideoPlayerControls({
   isPlaying,
   togglePlayback,
-  handleTranscribe,
-  isTranscribing,
   onClearVideo
 }: VideoPlayerControlsProps) {
   return (
@@ -32,17 +28,6 @@ export function VideoPlayerControls({
           ) : (
             <Play className="h-5 w-5" />
           )}
-        </Button>
-        
-        <Button
-          onClick={handleTranscribe}
-          variant="secondary"
-          size="sm"
-          disabled={isTranscribing}
-          className="hover:bg-primary/90 hover:text-primary-foreground transition-colors duration-200"
-        >
-          <Mic className="h-4 w-4 mr-1" />
-          {isTranscribing ? "Transcribing..." : "Transcribe"}
         </Button>
         
         <Button

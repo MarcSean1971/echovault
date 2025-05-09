@@ -3,7 +3,7 @@ import { useEffect, useCallback } from "react";
 import { useMessageForm } from "@/components/message/MessageFormContext";
 import { Message } from "@/types/message";
 import { toast } from "@/components/ui/use-toast";
-import { parseVideoContent, parseMessageTranscription } from '@/services/messages/mediaService';
+import { parseVideoContent } from '@/services/messages/mediaService';
 import { useInitializeMediaContent } from "./useInitializeMediaContent";
 
 /**
@@ -21,7 +21,6 @@ export function useMessageInitializer(message?: Message) {
   const {
     videoUrl,
     videoBlob,
-    videoTranscription,
     hasInitialized
   } = useInitializeMediaContent(message || null);
 
@@ -79,7 +78,6 @@ export function useMessageInitializer(message?: Message) {
   return {
     videoUrl,
     videoBlob,
-    videoTranscription,
     hasInitialized
   };
 }
