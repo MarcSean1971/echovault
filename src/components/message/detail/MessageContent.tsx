@@ -3,7 +3,6 @@ import React, { useEffect } from "react";
 import { Message } from "@/types/message";
 import { TextMessageContent } from "./content/TextMessageContent";
 import { VideoMessageContent } from "./content/VideoMessageContent";
-import { AudioMessageContent } from "./content/AudioMessageContent";
 import { UnknownMessageContent } from "./content/UnknownMessageContent";
 import { WhatsAppIntegration } from "./content/WhatsAppIntegration";
 import { Separator } from "@/components/ui/separator";
@@ -39,9 +38,6 @@ export function MessageContent({
       case "video":
         console.log("MessageContent: Rendering video message with transcription:", transcription);
         return <VideoMessageContent message={message} transcription={transcription} />;
-      case "audio":
-        console.log("MessageContent: Rendering audio message with transcription:", transcription);
-        return <AudioMessageContent message={message} transcription={transcription} />;
       default:
         return <UnknownMessageContent message={message} />;
     }

@@ -1,10 +1,9 @@
 
 import { useEffect, useCallback } from "react";
 import { useMessageForm } from "@/components/message/MessageFormContext";
-import { useAudioRecordingHandler } from "./useAudioRecordingHandler";
 import { useVideoRecordingHandler } from "./useVideoRecordingHandler";
 import { Message } from "@/types/message";
-import { parseAudioContent, parseVideoContent } from "@/services/messages/mediaService";
+import { parseVideoContent } from "@/services/messages/mediaService";
 import { toast } from "@/components/ui/use-toast";
 
 /**
@@ -15,10 +14,6 @@ export function useMessageInitializer(message?: Message) {
     setMessageType: setContextMessageType,
     setContent
   } = useMessageForm();
-  
-  const {
-    setAudioUrl, setAudioBase64, setAudioTranscription, setAudioBlob
-  } = useAudioRecordingHandler();
   
   const {
     setVideoUrl, setVideoBase64, setVideoTranscription, setVideoBlob
@@ -61,71 +56,7 @@ export function useMessageInitializer(message?: Message) {
       // Set form content regardless of message type
       setContent(message.content);
       
-      if (message.message_type === 'audio') {
-        const { audioData, transcription } = parseAudioContent(message.content);
-        
-        console.log("Found audio data:", !!audioData);
-        console.log("Found transcription:", transcription);
-        
-        if (audioData) {
-          try {
-            // Create blob and URL
-            const audioBlob = base64ToBlob(audioData, 'audio/webm');
-            console.log("Created audio blob:", audioBlob.size);
-            
-            // First clean up any existing URL
-            try {
-              const currentUrl = document.querySelector('audio')?.src;
-              if (currentUrl && currentUrl.startsWith('blob:')) {
-                URL.revokeObjectURL(currentUrl);
-              }
-            } catch (e) {
-              console.error("Error cleaning up existing audio URL:", e);
-            }
-            
-            const url = URL.createObjectURL(audioBlob);
-            createdUrls.push(url);
-            console.log("Created audio URL for editing:", url);
-            
-            // Set state
-            setAudioUrl(url);
-            setAudioBase64(audioData);
-            setAudioBlob(audioBlob);
-            
-            if (transcription) {
-              console.log("Setting audio transcription:", transcription);
-              setAudioTranscription(transcription);
-            }
-            
-            // Verify the URL works
-            const audio = new Audio(url);
-            audio.onloadedmetadata = () => {
-              console.log("Audio loaded successfully with duration:", audio.duration);
-            };
-            audio.onerror = (e) => {
-              console.error("Error loading audio:", e);
-              // Try recreating the URL
-              const newUrl = URL.createObjectURL(audioBlob);
-              createdUrls.push(newUrl);
-              setAudioUrl(newUrl);
-              console.log("Recreated audio URL after error:", newUrl);
-            };
-            
-            // Show toast to confirm loading
-            toast({
-              title: "Audio loaded",
-              description: "Your audio message has been loaded successfully."
-            });
-          } catch (error) {
-            console.error("Error processing audio data:", error);
-            toast({
-              title: "Audio Error",
-              description: "Failed to load audio data. You may need to re-record.",
-              variant: "destructive"
-            });
-          }
-        }
-      } else if (message.message_type === 'video') {
+      if (message.message_type === 'video') {
         const { videoData, transcription } = parseVideoContent(message.content);
         
         console.log("Found video data:", !!videoData);
@@ -185,6 +116,5 @@ export function useMessageInitializer(message?: Message) {
         }
       });
     };
-  }, [message, setContent, base64ToBlob, setAudioUrl, setAudioBase64, setAudioTranscription, setAudioBlob,
-      setVideoUrl, setVideoBase64, setVideoTranscription, setVideoBlob]);
+  }, [message, setContent, base64ToBlob, setVideoUrl, setVideoBase64, setVideoTranscription, setVideoBlob]);
 }

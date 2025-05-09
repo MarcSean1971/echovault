@@ -7,13 +7,11 @@ import { FileUploader } from "@/components/FileUploader";
 import { TitleInput } from "./TitleInput";
 import { MessageTypeSelector } from "./MessageTypeSelector";
 import { TextContent } from "./content/TextContent";
-import { AudioContent } from "./content/AudioContent";
 import { VideoContent } from "./content/VideoContent";
 import { LocationSection } from "./LocationSection";
 import { MediaRecorders } from "./MessageDetailsComponents/MediaRecorders";
 
 // Import custom hooks
-import { useAudioRecordingHandler } from "@/hooks/useAudioRecordingHandler";
 import { useVideoRecordingHandler } from "@/hooks/useVideoRecordingHandler";
 import { useMessageInitializer } from "@/hooks/useMessageInitializer";
 import { useContentUpdater } from "@/hooks/useContentUpdater";
@@ -28,22 +26,17 @@ export function MessageDetails({ message }: MessageDetailsProps) {
   
   // Use our custom hooks
   const {
-    audioUrl, audioTranscription, isTranscribingAudio,
-    showAudioRecorder, setShowAudioRecorder, audioBlob
-  } = useAudioRecordingHandler();
-  
-  const {
     videoUrl, videoTranscription, isTranscribingVideo,
     showVideoRecorder, setShowVideoRecorder, videoBlob
   } = useVideoRecordingHandler();
   
   const {
-    messageType, onTextTypeClick, onAudioTypeClick, onVideoTypeClick
+    messageType, onTextTypeClick, onVideoTypeClick
   } = useMessageTypeManager();
 
   const {
-    handleAudioContentUpdate, handleVideoContentUpdate,
-    handleClearAudio, handleClearVideo
+    handleVideoContentUpdate,
+    handleClearVideo
   } = useContentUpdater();
 
   // Initialize message data when editing an existing message
@@ -57,7 +50,6 @@ export function MessageDetails({ message }: MessageDetailsProps) {
       {/* Message type selector */}
       <MessageTypeSelector 
         onTextTypeClick={onTextTypeClick}
-        onAudioTypeClick={onAudioTypeClick}
         onVideoTypeClick={onVideoTypeClick}
       />
 
@@ -65,15 +57,6 @@ export function MessageDetails({ message }: MessageDetailsProps) {
       <div className="space-y-2">
         {messageType === "text" ? (
           <TextContent />
-        ) : messageType === "audio" ? (
-          <AudioContent 
-            audioUrl={audioUrl}
-            audioTranscription={audioTranscription}
-            isTranscribingAudio={isTranscribingAudio}
-            onRecordClick={() => onAudioTypeClick()}
-            onClearAudio={handleClearAudio}
-            setShowAudioRecorder={setShowAudioRecorder}
-          />
         ) : messageType === "video" ? (
           <VideoContent 
             videoUrl={videoUrl}
@@ -104,14 +87,9 @@ export function MessageDetails({ message }: MessageDetailsProps) {
 
       {/* Media recorder dialogs */}
       <MediaRecorders 
-        showAudioRecorder={showAudioRecorder}
-        setShowAudioRecorder={setShowAudioRecorder}
         showVideoRecorder={showVideoRecorder}
         setShowVideoRecorder={setShowVideoRecorder}
-        onAudioContentUpdate={handleAudioContentUpdate}
         onVideoContentUpdate={handleVideoContentUpdate}
-        audioUrl={audioUrl}
-        audioBlob={audioBlob}
         videoUrl={videoUrl}
         videoBlob={videoBlob}
       />

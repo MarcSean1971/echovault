@@ -6,11 +6,10 @@ import { useMessageForm } from "../MessageFormContext";
 
 interface MessageTypeSelectorProps {
   onTextTypeClick: () => void;
-  onAudioTypeClick: () => void;
   onVideoTypeClick: () => void;
 }
 
-export function MessageTypeSelector({ onTextTypeClick, onAudioTypeClick, onVideoTypeClick }: MessageTypeSelectorProps) {
+export function MessageTypeSelector({ onTextTypeClick, onVideoTypeClick }: MessageTypeSelectorProps) {
   const { messageType } = useMessageForm();
   
   return (
@@ -24,14 +23,6 @@ export function MessageTypeSelector({ onTextTypeClick, onAudioTypeClick, onVideo
           className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
         >
           Text
-        </Button>
-        <Button
-          type="button"
-          variant={messageType === "audio" ? "default" : "outline"}
-          onClick={onAudioTypeClick}
-          className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
-        >
-          Audio
         </Button>
         <Button
           type="button"

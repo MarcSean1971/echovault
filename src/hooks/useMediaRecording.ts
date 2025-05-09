@@ -1,9 +1,9 @@
 
 import { useState, useCallback, useEffect } from "react";
-import { transcribeAudio, transcribeVideo } from '@/services/messages/transcriptionService';
+import { transcribeVideo } from '@/services/messages/transcriptionService';
 import { toast } from "@/components/ui/use-toast";
 
-export type MediaType = "audio" | "video";
+export type MediaType = "video";
 
 export function useMediaRecording(mediaType: MediaType) {
   // Media recording states
@@ -14,8 +14,8 @@ export function useMediaRecording(mediaType: MediaType) {
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcription, setTranscription] = useState<string | null>(null);
   
-  // Determine which transcription function to use based on media type
-  const transcribeMedia = mediaType === "audio" ? transcribeAudio : transcribeVideo;
+  // Only video transcription is supported now
+  const transcribeMedia = transcribeVideo;
   const mediaTypeLabel = mediaType.charAt(0).toUpperCase() + mediaType.slice(1);
   const mediaDataKey = `${mediaType}Data`;
   
@@ -65,7 +65,7 @@ export function useMediaRecording(mediaType: MediaType) {
     // Start transcribing the media
     setIsTranscribing(true);
     try {
-      const mimeType = mediaType === "audio" ? 'audio/webm' : 'video/webm';
+      const mimeType = 'video/webm';
       const transcriptionText = await transcribeMedia(base64, mimeType);
       setTranscription(transcriptionText);
       console.log(`${mediaTypeLabel} transcription completed:`, transcriptionText);
