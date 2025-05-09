@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { useMessageForm } from "../MessageFormContext";
@@ -16,7 +15,7 @@ import {
   createMessageCondition 
 } from "@/services/messages/conditionService";
 
-// Import the new component files
+// Import the component files
 import { EditMessageHeader } from "./EditMessageHeader";
 import { EditMessageContent } from "./EditMessageContent";
 import { EditMessageFooter } from "./EditMessageFooter";
