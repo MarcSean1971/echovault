@@ -27,6 +27,7 @@ export const transcribeVideoContent = async (videoBlob: Blob): Promise<string> =
     const loadingToast = toast({
       title: "Processing video",
       description: "Transcribing your video, this may take a moment...",
+      duration: 10000, // Show for 10 seconds at least
     });
     
     // Convert video blob to base64
@@ -46,9 +47,9 @@ export const transcribeVideoContent = async (videoBlob: Blob): Promise<string> =
       throw new Error(`Transcription error: ${error.message}`);
     }
     
-    if (!data.success) {
-      console.error("Transcription failed:", data.error);
-      throw new Error(`Transcription failed: ${data.error}`);
+    if (!data || !data.success) {
+      console.error("Transcription failed:", data?.error || "Unknown error");
+      throw new Error(`Transcription failed: ${data?.error || "Unknown error"}`);
     }
     
     console.log("Transcription successful:", data.transcription);
@@ -60,7 +61,7 @@ export const transcribeVideoContent = async (videoBlob: Blob): Promise<string> =
       description: error.message || "Failed to transcribe video content",
       variant: "destructive"
     });
-    throw new Error("Failed to transcribe video content");
+    throw error;
   }
 };
 

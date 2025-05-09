@@ -31,14 +31,15 @@ serve(async (req) => {
       bytes[i] = binaryString.charCodeAt(i);
     }
     
-    // Create a blob with the CORRECT MIME type - webm audio is supported by Whisper
-    const blob = new Blob([bytes], { type: 'audio/webm' });
+    // Create a blob with the PROPER MIME type - mp3/mp4/wav for Whisper API
+    // Whisper API supports: flac, m4a, mp3, mp4, mpeg, mpga, oga, ogg, wav, webm
+    const blob = new Blob([bytes], { type: 'audio/webm' }); // webm is in the supported list
     
     // Create FormData for the OpenAI API
     const formData = new FormData();
-    formData.append('file', blob, 'recording.webm'); // Changed filename to indicate audio content
+    formData.append('file', blob, 'audio.webm'); // Use audio extension to signal audio content
     formData.append('model', 'whisper-1');
-    formData.append('language', 'en'); // Assuming English language
+    formData.append('language', 'en');
     
     console.log("Sending request to OpenAI Whisper API...");
     
@@ -58,7 +59,7 @@ serve(async (req) => {
     }
     
     const data = await response.json();
-    console.log("Transcription successful!");
+    console.log("Transcription successful, text:", data.text.substring(0, 50) + "...");
     
     return new Response(JSON.stringify({ 
       transcription: data.text,

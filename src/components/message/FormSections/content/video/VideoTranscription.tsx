@@ -13,7 +13,6 @@ export function VideoTranscription({
   transcription, 
   isTranscribing 
 }: VideoTranscriptionProps) {
-  // Always render the component, but show appropriate states based on conditions
   return (
     <div className="mt-4 space-y-2">
       <h3 className="text-sm font-medium">Video Transcription</h3>
@@ -27,7 +26,7 @@ export function VideoTranscription({
           <Textarea
             value={transcription || ""}
             readOnly
-            className="min-h-[100px] bg-transparent border-0 focus-visible:ring-0 resize-none"
+            className="min-h-[100px] bg-transparent border-0 focus-visible:ring-0 resize-none hover:bg-muted/20 transition-colors"
             placeholder="Transcription will appear here after processing..."
           />
         )}

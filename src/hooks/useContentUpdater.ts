@@ -6,13 +6,24 @@ import { transcribeVideoContent, formatVideoContent } from "@/services/messages/
 import { toast } from "@/components/ui/use-toast";
 
 export function useContentUpdater() {
-  const { setContent, setVideoContent, setTextContent } = useMessageForm();
+  const { setContent, setVideoContent, setTextContent, content } = useMessageForm();
   const [isTranscribingVideo, setIsTranscribingVideo] = useState(false);
 
   // Extract transcription from content
   const getTranscriptionFromContent = (content: string | null): string | null => {
     if (!content) return null;
-    return parseMessageTranscription(content);
+    
+    try {
+      const parsed = JSON.parse(content);
+      if (parsed && parsed.transcription) {
+        return parsed.transcription;
+      }
+    } catch (e) {
+      // Not JSON, try using the mediaService parser as fallback
+      return parseMessageTranscription(content);
+    }
+    
+    return null;
   };
 
   // Check if content contains video data
@@ -39,13 +50,26 @@ export function useContentUpdater() {
       
       if (!skipTranscription) {
         // Generate transcription using OpenAI via edge function
-        transcription = await transcribeVideoContent(videoBlob);
-        
-        // Show success notification
-        toast({
-          title: "Video transcribed",
-          description: "Video transcription completed successfully"
-        });
+        try {
+          transcription = await transcribeVideoContent(videoBlob);
+          console.log("Transcription generated:", transcription ? transcription.substring(0, 50) + "..." : "none");
+          
+          // Show success notification
+          toast({
+            title: "Video transcribed",
+            description: "Video transcription completed successfully"
+          });
+        } catch (error) {
+          console.error("Transcription error:", error);
+          // We'll continue even if transcription fails
+          toast({
+            title: "Transcription Warning",
+            description: "Transcription failed, but your video will still be saved",
+            variant: "default"
+          });
+        }
+      } else {
+        console.log("Skipping transcription as requested");
       }
       
       // Format video content for storage
@@ -77,8 +101,8 @@ export function useContentUpdater() {
       console.error("Error updating video content:", error);
       
       toast({
-        title: "Transcription Error",
-        description: "Failed to transcribe the video",
+        title: "Error",
+        description: "Failed to process video content",
         variant: "destructive"
       });
       

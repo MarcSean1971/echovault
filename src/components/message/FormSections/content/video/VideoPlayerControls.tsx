@@ -1,6 +1,7 @@
 
+import React from "react";
 import { Button } from "@/components/ui/button";
-import { Pause, Play, Captions, Trash2 } from "lucide-react";
+import { Play, Pause, Trash2, Mic } from "lucide-react";
 
 interface VideoPlayerControlsProps {
   isPlaying: boolean;
@@ -18,40 +19,39 @@ export function VideoPlayerControls({
   onClearVideo
 }: VideoPlayerControlsProps) {
   return (
-    <div className="absolute bottom-0 left-0 right-0 p-2 bg-black/60 flex justify-between items-center gap-2 transition-opacity hover:opacity-100 group-hover:opacity-100 opacity-90">
-      <Button
-        type="button"
-        size="sm"
-        variant="ghost"
-        onClick={togglePlayback}
-        className="text-white hover:bg-white/20 transition-colors"
-      >
-        {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-        <span className="ml-1">{isPlaying ? "Pause" : "Play"}</span>
-      </Button>
-      
-      <div className="flex gap-2">
+    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+      <div className="flex gap-2 items-center">
         <Button 
-          type="button"
-          size="sm"
-          variant="outline"
+          onClick={togglePlayback} 
+          variant="secondary" 
+          size="icon"
+          className="rounded-full hover:bg-primary/90 transition-colors"
+        >
+          {isPlaying ? (
+            <Pause className="h-5 w-5" />
+          ) : (
+            <Play className="h-5 w-5" />
+          )}
+        </Button>
+        
+        <Button
           onClick={handleTranscribe}
+          variant="secondary"
+          size="sm"
           disabled={isTranscribing}
           className="hover:bg-primary/90 transition-colors"
         >
-          <Captions className="w-4 h-4 mr-1" />
+          <Mic className="h-4 w-4 mr-1" />
           {isTranscribing ? "Transcribing..." : "Transcribe"}
         </Button>
         
-        <Button 
-          type="button" 
-          size="sm" 
-          variant="destructive"
+        <Button
           onClick={onClearVideo}
+          variant="ghost"
+          size="icon"
           className="hover:bg-destructive/90 transition-colors"
         >
-          <Trash2 className="w-4 h-4 mr-1" />
-          Delete
+          <Trash2 className="h-4 w-4" />
         </Button>
       </div>
     </div>
