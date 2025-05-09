@@ -44,9 +44,7 @@ export function VideoContent({
   useEffect(() => {
     if (content) {
       const extractedTranscription = getTranscriptionFromContent(content);
-      if (extractedTranscription) {
-        setTranscription(extractedTranscription);
-      }
+      setTranscription(extractedTranscription);
     }
   }, [content, getTranscriptionFromContent]);
   
