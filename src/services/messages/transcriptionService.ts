@@ -19,24 +19,47 @@ export const blobToBase64 = (blob: Blob): Promise<string> => {
 };
 
 /**
- * Transcribe video content using the server
+ * Transcribe video content using OpenAI via edge function
  */
 export const transcribeVideoContent = async (videoBlob: Blob): Promise<string> => {
   try {
+    // Show a toast to indicate transcription has started
+    const loadingToast = toast({
+      title: "Processing video",
+      description: "Transcribing your video, this may take a moment...",
+    });
+    
     // Convert video blob to base64
     const base64Video = await blobToBase64(videoBlob);
+    console.log("Video converted to base64, size:", base64Video.length);
     
-    // For now, we'll return a placeholder transcription
-    // In a real implementation, you would send this to a server for processing
-    console.log("Video transcription would be processed server-side");
+    // Call the edge function
+    const { data, error } = await supabase.functions.invoke("transcribe-video", {
+      body: { videoBase64: base64Video },
+    });
     
-    // Simulate server processing time
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    // Dismiss the loading toast
+    loadingToast.dismiss?.();
     
-    // Return a placeholder transcription
-    return "This is a placeholder transcription. In a real implementation, the video would be processed by a speech-to-text service.";
+    if (error) {
+      console.error("Edge function error:", error);
+      throw new Error(`Transcription error: ${error.message}`);
+    }
+    
+    if (!data.success) {
+      console.error("Transcription failed:", data.error);
+      throw new Error(`Transcription failed: ${data.error}`);
+    }
+    
+    console.log("Transcription successful:", data.transcription);
+    return data.transcription;
   } catch (error) {
     console.error("Error transcribing video:", error);
+    toast({
+      title: "Transcription failed",
+      description: error.message || "Failed to transcribe video content",
+      variant: "destructive"
+    });
     throw new Error("Failed to transcribe video content");
   }
 };

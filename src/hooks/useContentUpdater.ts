@@ -38,7 +38,7 @@ export function useContentUpdater() {
       let transcription = null;
       
       if (!skipTranscription) {
-        // Generate transcription
+        // Generate transcription using OpenAI via edge function
         transcription = await transcribeVideoContent(videoBlob);
         
         // Show success notification
@@ -53,6 +53,23 @@ export function useContentUpdater() {
       
       // Update the video-specific content
       setVideoContent(formattedContent);
+      
+      // If there's text content, make sure to preserve it in the video content
+      const messageForm = useMessageForm();
+      if (messageForm.textContent && messageForm.textContent.trim() !== '') {
+        try {
+          // Parse the video content to add text content to it
+          const videoContentObj = JSON.parse(formattedContent);
+          videoContentObj.additionalText = messageForm.textContent;
+          const combinedContent = JSON.stringify(videoContentObj);
+          setVideoContent(combinedContent);
+          setContent(combinedContent);
+        } catch (error) {
+          console.error("Error combining text and video content:", error);
+        }
+      } else {
+        setContent(formattedContent);
+      }
       
       return { success: true, transcription, videoContent: formattedContent };
     } catch (error) {

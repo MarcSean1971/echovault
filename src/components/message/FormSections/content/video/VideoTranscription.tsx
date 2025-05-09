@@ -2,6 +2,7 @@
 import React from "react";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
+import { Loader2 } from "lucide-react";
 
 interface VideoTranscriptionProps {
   transcription: string | null;
@@ -19,9 +20,10 @@ export function VideoTranscription({
   return (
     <div className="mt-4 space-y-2">
       <h3 className="text-sm font-medium">Video Transcription</h3>
-      <Card className="p-3 bg-muted/40">
+      <Card className="p-3 bg-muted/40 relative">
         {isTranscribing ? (
-          <div className="flex items-center justify-center p-4 text-muted-foreground">
+          <div className="flex items-center justify-center p-8 text-muted-foreground">
+            <Loader2 className="h-6 w-6 mr-2 animate-spin" />
             <div className="animate-pulse">Transcribing video...</div>
           </div>
         ) : (

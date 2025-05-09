@@ -18,7 +18,7 @@ export function VideoPlayerControls({
   onClearVideo
 }: VideoPlayerControlsProps) {
   return (
-    <div className="absolute bottom-0 left-0 right-0 p-2 bg-black/60 flex justify-between items-center gap-2">
+    <div className="absolute bottom-0 left-0 right-0 p-2 bg-black/60 flex justify-between items-center gap-2 transition-opacity hover:opacity-100 group-hover:opacity-100 opacity-90">
       <Button
         type="button"
         size="sm"
@@ -27,7 +27,7 @@ export function VideoPlayerControls({
         className="text-white hover:bg-white/20 transition-colors"
       >
         {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-        {isPlaying ? "Pause" : "Play"}
+        <span className="ml-1">{isPlaying ? "Pause" : "Play"}</span>
       </Button>
       
       <div className="flex gap-2">
