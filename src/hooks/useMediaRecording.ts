@@ -24,7 +24,11 @@ export function useMediaRecording(mediaType: MediaType) {
     return () => {
       if (mediaUrl) {
         console.log(`Cleaning up ${mediaType} URL:`, mediaUrl);
-        URL.revokeObjectURL(mediaUrl);
+        try {
+          URL.revokeObjectURL(mediaUrl);
+        } catch (e) {
+          console.error(`Error revoking ${mediaType} URL:`, e);
+        }
       }
     };
   }, [mediaUrl, mediaType]);
@@ -33,17 +37,28 @@ export function useMediaRecording(mediaType: MediaType) {
   const handleMediaReady = useCallback(async (blob: Blob, base64: string) => {
     console.log(`Processing new ${mediaType}, blob size: ${blob.size} bytes`);
     
+    // Set state immediately for UI updates
     setMediaBlob(blob);
     setMediaBase64(base64);
     
-    // Important: Create URL using the blob for playback
-    if (mediaUrl) {
-      URL.revokeObjectURL(mediaUrl);
+    // Ensure we have a proper URL for playback
+    try {
+      // Clean up previous URL if exists
+      if (mediaUrl) {
+        URL.revokeObjectURL(mediaUrl);
+      }
+      
+      const url = URL.createObjectURL(blob);
+      setMediaUrl(url);
+      console.log(`Created new URL for ${mediaType}: ${url}`);
+    } catch (e) {
+      console.error(`Error creating URL for ${mediaType}:`, e);
+      toast({
+        title: "Media Error",
+        description: `Failed to create ${mediaType} playback URL`,
+        variant: "destructive"
+      });
     }
-    
-    const url = URL.createObjectURL(blob);
-    setMediaUrl(url);
-    console.log(`Created new URL for ${mediaType}: ${url}`);
     
     // Start transcribing the media
     setIsTranscribing(true);
@@ -89,7 +104,11 @@ export function useMediaRecording(mediaType: MediaType) {
   const clearMedia = useCallback(() => {
     if (mediaUrl) {
       console.log(`Clearing ${mediaType} URL:`, mediaUrl);
-      URL.revokeObjectURL(mediaUrl);
+      try {
+        URL.revokeObjectURL(mediaUrl);
+      } catch (e) {
+        console.error(`Error revoking ${mediaType} URL:`, e);
+      }
     }
     
     setMediaBlob(null);

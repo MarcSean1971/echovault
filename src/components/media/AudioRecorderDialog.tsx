@@ -27,19 +27,27 @@ export function AudioRecorderDialog({
   useEffect(() => {
     if (open) {
       console.log("AudioRecorderDialog opened, existing audio URL:", existingAudioUrl);
+      console.log("Has existing audio blob:", !!existingAudioBlob);
       setShowRecorder(!existingAudioUrl);
     }
-  }, [open, existingAudioUrl]);
+  }, [open, existingAudioUrl, existingAudioBlob]);
   
   const handleCancel = () => {
     onOpenChange(false);
-    setShowRecorder(!existingAudioUrl);
+    // Reset to show existing audio if available
+    if (existingAudioUrl) {
+      setShowRecorder(false);
+    }
   };
   
   const handleAudioReady = async (audioBlob: Blob, audioBase64: string) => {
     console.log("AudioRecorderDialog: Audio ready, blob size:", audioBlob.size);
-    await onAudioReady(audioBlob, audioBase64);
-    onOpenChange(false);
+    try {
+      await onAudioReady(audioBlob, audioBase64);
+      onOpenChange(false);
+    } catch (error) {
+      console.error("Error handling audio in dialog:", error);
+    }
   };
   
   const handleRecordNew = () => {

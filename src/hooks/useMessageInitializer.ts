@@ -4,7 +4,7 @@ import { useMessageForm } from "@/components/message/MessageFormContext";
 import { useAudioRecordingHandler } from "./useAudioRecordingHandler";
 import { useVideoRecordingHandler } from "./useVideoRecordingHandler";
 import { Message } from "@/types/message";
-import { parseAudioContent, parseVideoContent, createMediaUrl } from "@/services/messages/mediaService";
+import { parseAudioContent, parseVideoContent } from "@/services/messages/mediaService";
 import { toast } from "@/components/ui/use-toast";
 
 /**
@@ -51,7 +51,7 @@ export function useMessageInitializer(message?: Message) {
   useEffect(() => {
     if (!message?.content) return;
     
-    console.log("Initializing message content:", message.content);
+    console.log("Initializing message content for editing:", message.content);
     console.log("Message type:", message.message_type);
     
     // Cleanup URLs on unmount or message change
@@ -68,28 +68,38 @@ export function useMessageInitializer(message?: Message) {
         console.log("Found transcription:", transcription);
         
         if (audioData) {
-          // Create blob and URL
-          const audioBlob = base64ToBlob(audioData, 'audio/webm');
-          console.log("Created audio blob:", audioBlob.size);
-          
-          const url = URL.createObjectURL(audioBlob);
-          createdUrls.push(url);
-          console.log("Created audio URL:", url);
-          
-          // Set state
-          setAudioUrl(url);
-          setAudioBase64(audioData);
-          setAudioBlob(audioBlob);
-          
-          if (transcription) {
-            setAudioTranscription(transcription);
+          try {
+            // Create blob and URL
+            const audioBlob = base64ToBlob(audioData, 'audio/webm');
+            console.log("Created audio blob:", audioBlob.size);
+            
+            const url = URL.createObjectURL(audioBlob);
+            createdUrls.push(url);
+            console.log("Created audio URL for editing:", url);
+            
+            // Set state
+            setAudioUrl(url);
+            setAudioBase64(audioData);
+            setAudioBlob(audioBlob);
+            
+            if (transcription) {
+              console.log("Setting audio transcription:", transcription);
+              setAudioTranscription(transcription);
+            }
+            
+            // Show toast to confirm loading
+            toast({
+              title: "Audio loaded",
+              description: "Your audio message has been loaded successfully."
+            });
+          } catch (error) {
+            console.error("Error processing audio data:", error);
+            toast({
+              title: "Audio Error",
+              description: "Failed to load audio data. You may need to re-record.",
+              variant: "destructive"
+            });
           }
-          
-          // Show toast to confirm loading
-          toast({
-            title: "Audio loaded",
-            description: "Your audio message has been loaded successfully."
-          });
         }
       } else if (message.message_type === 'video') {
         const { videoData, transcription } = parseVideoContent(message.content);
@@ -98,28 +108,37 @@ export function useMessageInitializer(message?: Message) {
         console.log("Found transcription:", transcription);
         
         if (videoData) {
-          // Create blob and URL
-          const videoBlob = base64ToBlob(videoData, 'video/webm');
-          console.log("Created video blob:", videoBlob.size);
-          
-          const url = URL.createObjectURL(videoBlob);
-          createdUrls.push(url);
-          console.log("Created video URL:", url);
-          
-          // Set state
-          setVideoUrl(url);
-          setVideoBase64(videoData);
-          setVideoBlob(videoBlob);
-          
-          if (transcription) {
-            setVideoTranscription(transcription);
+          try {
+            // Create blob and URL
+            const videoBlob = base64ToBlob(videoData, 'video/webm');
+            console.log("Created video blob:", videoBlob.size);
+            
+            const url = URL.createObjectURL(videoBlob);
+            createdUrls.push(url);
+            console.log("Created video URL:", url);
+            
+            // Set state
+            setVideoUrl(url);
+            setVideoBase64(videoData);
+            setVideoBlob(videoBlob);
+            
+            if (transcription) {
+              setVideoTranscription(transcription);
+            }
+            
+            // Show toast to confirm loading
+            toast({
+              title: "Video loaded",
+              description: "Your video message has been loaded successfully."
+            });
+          } catch (error) {
+            console.error("Error processing video data:", error);
+            toast({
+              title: "Video Error",
+              description: "Failed to load video data. You may need to re-record.",
+              variant: "destructive"
+            });
           }
-          
-          // Show toast to confirm loading
-          toast({
-            title: "Video loaded",
-            description: "Your video message has been loaded successfully."
-          });
         }
       }
     } catch (e) {

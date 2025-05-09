@@ -68,6 +68,7 @@ export function parseAudioContent(content: string | null) {
   if (!content) return { audioData: null, transcription: null };
   
   try {
+    console.log("Parsing audio content from message:", content.substring(0, 50) + "...");
     const contentObj = JSON.parse(content);
     return {
       audioData: contentObj.audioData || null,
@@ -86,6 +87,7 @@ export function parseVideoContent(content: string | null) {
   if (!content) return { videoData: null, transcription: null };
   
   try {
+    console.log("Parsing video content from message:", content.substring(0, 50) + "...");
     const contentObj = JSON.parse(content);
     return {
       videoData: contentObj.videoData || null,
@@ -119,6 +121,35 @@ export function createMediaUrl(base64Data: string | null, mediaType: 'audio' | '
     return url;
   } catch (e) {
     console.error(`Error creating ${mediaType} URL from base64:`, e);
+    toast({
+      title: "Media Error",
+      description: `Could not create ${mediaType} playback. Please try again.`,
+      variant: "destructive"
+    });
+    return null;
+  }
+}
+
+/**
+ * Convert base64 to blob object
+ */
+export function base64ToBlob(base64Data: string, mimeType: string): Blob | null {
+  try {
+    const binaryString = window.atob(base64Data);
+    const bytes = new Uint8Array(binaryString.length);
+    
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    
+    return new Blob([bytes], { type: mimeType });
+  } catch (e) {
+    console.error("Error converting base64 to blob:", e);
+    toast({
+      title: "Processing Error",
+      description: "Failed to process media data",
+      variant: "destructive"
+    });
     return null;
   }
 }

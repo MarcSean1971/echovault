@@ -23,16 +23,17 @@ export function useAudioRecordingHandler() {
   const handleAudioReady = async (audioBlob: Blob, audioBase64: string) => {
     console.log("useAudioRecordingHandler: handleAudioReady called with blob size:", audioBlob.size);
     try {
-      const result = await handleMediaReady(audioBlob, audioBase64);
+      // Create URL manually first to ensure we have it immediately for playback
+      const newUrl = URL.createObjectURL(audioBlob);
+      console.log("Setting audio URL manually first:", newUrl);
+      setAudioUrl(newUrl);
       
-      // Verify that audio URL was set
-      console.log("Audio URL after handleMediaReady:", audioUrl);
-      if (!audioUrl) {
-        // Create URL manually if needed
-        const newUrl = URL.createObjectURL(audioBlob);
-        console.log("Setting audio URL manually:", newUrl);
-        setAudioUrl(newUrl);
-      }
+      // Also set the blob and base64 immediately
+      setAudioBlob(audioBlob);
+      setAudioBase64(audioBase64);
+      
+      // Then proceed with media handling (transcription, etc)
+      const result = await handleMediaReady(audioBlob, audioBase64);
       
       return result;
     } catch (error) {

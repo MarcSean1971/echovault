@@ -4,6 +4,7 @@ import { AudioPlayer } from "@/components/media/AudioPlayer";
 import { BUTTON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { Spinner } from "@/components/ui/spinner";
 import { Mic } from "lucide-react";
+import { useEffect } from "react";
 
 interface AudioContentProps {
   audioUrl: string | null;
@@ -22,16 +23,17 @@ export function AudioContent({
   onClearAudio,
   setShowAudioRecorder
 }: AudioContentProps) {
+  // Add debug logging
+  useEffect(() => {
+    console.log("AudioContent rendered with URL:", audioUrl);
+    console.log("AudioContent has transcription:", !!audioTranscription);
+    console.log("AudioContent isTranscribing:", isTranscribingAudio);
+  }, [audioUrl, audioTranscription, isTranscribingAudio]);
+  
   const handleOpenRecorder = () => {
     console.log("Opening audio recorder from AudioContent");
     setShowAudioRecorder(true);
   };
-  
-  console.log("AudioContent rendered with:", { 
-    audioUrl, 
-    hasTranscription: !!audioTranscription, 
-    isTranscribing: isTranscribingAudio 
-  });
   
   if (audioUrl) {
     return (

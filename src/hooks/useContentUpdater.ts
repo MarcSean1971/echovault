@@ -11,8 +11,21 @@ export function useContentUpdater() {
   const [isTranscribingAudio, setIsTranscribingAudio] = useState(false);
   const [isTranscribingVideo, setIsTranscribingVideo] = useState(false);
   
-  const { clearAudio, setAudioTranscription, setAudioUrl } = useAudioRecordingHandler();
-  const { clearVideo, setVideoTranscription, setVideoUrl } = useVideoRecordingHandler();
+  const { 
+    clearAudio, 
+    setAudioTranscription, 
+    setAudioUrl, 
+    setAudioBase64, 
+    setAudioBlob 
+  } = useAudioRecordingHandler();
+  
+  const { 
+    clearVideo, 
+    setVideoTranscription, 
+    setVideoUrl, 
+    setVideoBase64, 
+    setVideoBlob 
+  } = useVideoRecordingHandler();
 
   // Handle updating audio content
   const handleAudioContentUpdate = async (audioBlob: Blob, audioBase64: string) => {
@@ -20,9 +33,11 @@ export function useContentUpdater() {
     setIsTranscribingAudio(true);
     
     try {
-      // Create URL for immediate playback
+      // Create URL for immediate playback and set all related state
       const audioUrl = URL.createObjectURL(audioBlob);
       setAudioUrl(audioUrl);
+      setAudioBlob(audioBlob);
+      setAudioBase64(audioBase64);
       console.log("Created audio URL for playback:", audioUrl);
       
       // Start transcribing the audio
@@ -71,9 +86,11 @@ export function useContentUpdater() {
     setIsTranscribingVideo(true);
     
     try {
-      // Create URL for immediate playback
+      // Create URL for immediate playback and set all related state
       const videoUrl = URL.createObjectURL(videoBlob);
       setVideoUrl(videoUrl);
+      setVideoBlob(videoBlob);
+      setVideoBase64(videoBase64);
       console.log("Created video URL for playback:", videoUrl);
       
       // Start transcribing the video
