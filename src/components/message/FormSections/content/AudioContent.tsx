@@ -42,6 +42,7 @@ export function AudioContent({
         
         <div className="flex justify-end">
           <Button 
+            type="button"
             size="sm" 
             variant="outline" 
             onClick={onRecordClick}
@@ -50,6 +51,7 @@ export function AudioContent({
             Record New
           </Button>
           <Button 
+            type="button"
             size="sm" 
             variant="destructive" 
             onClick={onClearAudio}
@@ -65,6 +67,7 @@ export function AudioContent({
   return (
     <div className="flex items-center justify-center h-[150px] border-2 border-dashed rounded-md border-gray-300 bg-gray-50 p-6">
       <Button 
+        type="button"
         onClick={onRecordClick}
         className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
       >

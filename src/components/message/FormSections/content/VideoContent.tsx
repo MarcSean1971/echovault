@@ -41,6 +41,7 @@ export function VideoContent({
         
         <div className="flex justify-end">
           <Button 
+            type="button"
             size="sm" 
             variant="outline" 
             onClick={onRecordClick}
@@ -49,6 +50,7 @@ export function VideoContent({
             Record New
           </Button>
           <Button 
+            type="button"
             size="sm" 
             variant="destructive" 
             onClick={onClearVideo}
@@ -74,6 +76,7 @@ export function VideoContent({
         </p>
       </div>
       <Button 
+        type="button"
         onClick={onRecordClick}
         className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
       >
