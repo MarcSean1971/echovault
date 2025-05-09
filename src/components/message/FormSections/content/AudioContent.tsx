@@ -11,6 +11,7 @@ interface AudioContentProps {
   isTranscribingAudio?: boolean;
   onRecordClick: () => void;
   onClearAudio: () => void;
+  setShowAudioRecorder?: (show: boolean) => void;
 }
 
 export function AudioContent({ 
@@ -18,12 +19,19 @@ export function AudioContent({
   audioTranscription, 
   isTranscribingAudio = false,
   onRecordClick, 
-  onClearAudio 
+  onClearAudio,
+  setShowAudioRecorder
 }: AudioContentProps) {
   // Create a direct handler function that ensures the recorder opens
   const handleOpenRecorder = () => {
     console.log("Opening audio recorder from AudioContent");
-    onRecordClick();
+    // Directly set the recorder to visible if the prop is available
+    if (setShowAudioRecorder) {
+      setShowAudioRecorder(true);
+    } else {
+      // Fallback to the original method
+      onRecordClick();
+    }
   };
   
   if (audioUrl) {

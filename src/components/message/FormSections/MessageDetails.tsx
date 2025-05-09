@@ -28,11 +28,13 @@ export function MessageDetails({ message }: MessageDetailsProps) {
   
   // Use our custom hooks
   const {
-    audioUrl, audioTranscription, isTranscribingAudio
+    audioUrl, audioTranscription, isTranscribingAudio,
+    showAudioRecorder, setShowAudioRecorder
   } = useAudioRecordingHandler();
   
   const {
-    videoUrl, videoTranscription, isTranscribingVideo
+    videoUrl, videoTranscription, isTranscribingVideo,
+    showVideoRecorder, setShowVideoRecorder
   } = useVideoRecordingHandler();
   
   const {
@@ -70,6 +72,7 @@ export function MessageDetails({ message }: MessageDetailsProps) {
             isTranscribingAudio={isTranscribingAudio}
             onRecordClick={() => onAudioTypeClick()}
             onClearAudio={handleClearAudio}
+            setShowAudioRecorder={setShowAudioRecorder}
           />
         ) : messageType === "video" ? (
           <VideoContent 
@@ -78,6 +81,7 @@ export function MessageDetails({ message }: MessageDetailsProps) {
             isTranscribingVideo={isTranscribingVideo}
             onRecordClick={() => onVideoTypeClick()}
             onClearVideo={handleClearVideo}
+            setShowVideoRecorder={setShowVideoRecorder}
           />
         ) : (
           <div className="p-4 bg-muted rounded-md text-center">
