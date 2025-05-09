@@ -80,29 +80,14 @@ export function useFileDownloadHandler({ props, utilities }: DownloadHandlerProp
       }
       
       // If current method fails, try one fallback
-      // FIX: Changed the conditional to properly check the method type
       const fallbackMethod: AccessMethod = 
         method === 'secure' ? 'signed' : 
         method === 'signed' ? 'direct' : 'signed';
       
       try {
-        // FIX: Update the comparison to check if fallbackMethod is 'secure' instead of comparing method to 'secure'
-        if (fallbackMethod === 'secure' && props.deliveryId && props.recipientEmail) {
-          const { url } = await fileAccessManager.getAccessUrl('secure', 'download');
-          if (url) {
-            console.log(`Using fallback secure method`);
-            FileAccessManager.executeDownload(url, fileName, fileType, 'secure');
-            setDownloadMethod('secure');
-            updateMethodStatus('secure', true);
-            setHasError(false);
-            
-            toast({
-              title: "Using fallback method",
-              description: "Switched to Edge Function after primary method failed",
-            });
-            return true;
-          }
-        } else if (fallbackMethod === 'signed') {
+        // FIX: Remove the impossible condition check for fallbackMethod being 'secure'
+        // and handle fallback methods directly based on their actual values
+        if (fallbackMethod === 'signed') {
           const { url } = await fileAccessManager.getAccessUrl('signed', 'download');
           if (url) {
             console.log(`Using fallback signed method`);
