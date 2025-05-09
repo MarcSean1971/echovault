@@ -333,7 +333,7 @@ function MessageEditForm({ message, onCancel }: EditMessageFormProps) {
                 <FileText className="h-5 w-5 mr-2" />
                 <h2 className="text-xl font-medium">Message Content</h2>
               </div>
-              <MessageDetails />
+              <MessageDetails message={message} />
             </div>
             
             <Separator />

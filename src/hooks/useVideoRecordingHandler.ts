@@ -11,7 +11,9 @@ export function useVideoRecordingHandler() {
     isTranscribing: isTranscribingVideo,
     transcription: videoTranscription,
     handleMediaReady: handleMediaReady,
-    clearMedia: clearMedia
+    clearMedia: clearMedia,
+    setMediaUrl: setVideoUrl,
+    setTranscription: setVideoTranscription
   } = useMediaRecording("video");
   
   // Wrapper functions with video-specific naming
@@ -32,6 +34,8 @@ export function useVideoRecordingHandler() {
     isTranscribingVideo,
     videoTranscription,
     handleVideoReady,
-    clearVideo
+    clearVideo,
+    setVideoUrl,
+    setVideoTranscription
   };
 }

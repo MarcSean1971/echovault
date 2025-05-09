@@ -86,6 +86,8 @@ export function useMediaRecording(mediaType: MediaType) {
     isTranscribing,
     transcription,
     handleMediaReady,
-    clearMedia
+    clearMedia,
+    setMediaUrl,
+    setTranscription
   };
 }

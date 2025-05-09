@@ -5,6 +5,7 @@ import { FileUploader } from "@/components/FileUploader";
 import { AudioRecorderDialog } from "@/components/media/AudioRecorderDialog";
 import { VideoRecorderDialog } from "@/components/media/VideoRecorderDialog";
 import { BUTTON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { useEffect } from "react";
 
 // Import our new components
 import { TitleInput } from "./TitleInput";
@@ -19,7 +20,11 @@ import { useAudioRecordingHandler } from "@/hooks/useAudioRecordingHandler";
 import { useVideoRecordingHandler } from "@/hooks/useVideoRecordingHandler";
 import { useMessageTypeHandler } from "@/hooks/useMessageTypeHandler";
 
-export function MessageDetails() {
+interface MessageDetailsProps {
+  message?: any;  // Optional message prop for editing
+}
+
+export function MessageDetails({ message }: MessageDetailsProps) {
   const { 
     content, setContent, 
     setMessageType: setContextMessageType,
@@ -31,20 +36,69 @@ export function MessageDetails() {
     showAudioRecorder, setShowAudioRecorder,
     audioBlob, audioUrl,
     isTranscribingAudio, audioTranscription,
-    handleAudioReady, clearAudio
+    handleAudioReady, clearAudio,
+    setAudioUrl, setAudioTranscription
   } = useAudioRecordingHandler();
   
   const {
     showVideoRecorder, setShowVideoRecorder,
     videoBlob, videoUrl,
     isTranscribingVideo, videoTranscription,
-    handleVideoReady, clearVideo
+    handleVideoReady, clearVideo,
+    setVideoUrl, setVideoTranscription
   } = useVideoRecordingHandler();
   
   const {
     messageType, setMessageType,
     handleTextTypeClick, handleAudioTypeClick, handleVideoTypeClick
   } = useMessageTypeHandler();
+
+  // Set initial message type based on the message being edited
+  useEffect(() => {
+    if (message?.message_type) {
+      setMessageType(message.message_type);
+      setContextMessageType(message.message_type);
+    }
+  }, [message, setMessageType, setContextMessageType]);
+
+  // Initialize media content from the message being edited
+  useEffect(() => {
+    if (!message?.content) return;
+    
+    if (message.message_type === 'audio' || message.message_type === 'video') {
+      try {
+        const contentObj = JSON.parse(message.content);
+        
+        // Initialize audio content
+        if (message.message_type === 'audio' && contentObj.audioData) {
+          const audioBlob = base64ToBlob(contentObj.audioData, 'audio/webm');
+          const url = URL.createObjectURL(audioBlob);
+          setAudioUrl(url);
+          setAudioTranscription(contentObj.transcription || null);
+        }
+        
+        // Initialize video content
+        if (message.message_type === 'video' && contentObj.videoData) {
+          const videoBlob = base64ToBlob(contentObj.videoData, 'video/webm');
+          const url = URL.createObjectURL(videoBlob);
+          setVideoUrl(url);
+          setVideoTranscription(contentObj.transcription || null);
+        }
+      } catch (e) {
+        console.log("Error parsing message content:", e);
+      }
+    }
+  }, [message, setAudioUrl, setAudioTranscription, setVideoUrl, setVideoTranscription]);
+
+  // Helper function to convert base64 to blob
+  const base64ToBlob = (base64: string, type: string): Blob => {
+    const binaryString = window.atob(base64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    return new Blob([bytes], { type });
+  };
   
   // Wrapper functions for message type handling - UPDATED ORDER
   const onTextTypeClick = () => {
