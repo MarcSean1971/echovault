@@ -19,7 +19,8 @@ export function useMessageInitializer(message?: Message) {
   const {
     videoUrl,
     videoBlob,
-    videoTranscription
+    videoTranscription,
+    hasInitialized
   } = useInitializeMediaContent(message || null);
 
   // Set initial message type based on the message being edited
@@ -34,7 +35,8 @@ export function useMessageInitializer(message?: Message) {
   useEffect(() => {
     if (!message?.content) return;
     
-    console.log("Initializing message content for editing:", message.content.substring(0, 100) + "...");
+    console.log("Initializing message content for editing:", 
+                message.content.substring(0, 100) + "...");
     console.log("Message type:", message.message_type);
     
     // Set form content regardless of message type
@@ -45,6 +47,7 @@ export function useMessageInitializer(message?: Message) {
   return {
     videoUrl,
     videoBlob,
-    videoTranscription
+    videoTranscription,
+    hasInitialized
   };
 }

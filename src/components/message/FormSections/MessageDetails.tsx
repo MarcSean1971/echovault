@@ -31,13 +31,24 @@ export function MessageDetails({ message }: MessageDetailsProps) {
     videoBlob, videoUrl, showVideoRecorder, setShowVideoRecorder,
     isRecording, isInitializing, hasPermission, previewStream,
     initializeStream, startRecording, stopRecording, clearVideo,
-    forceInitializeCamera
+    forceInitializeCamera, handleInitializedVideo, initializedFromMessage
   } = useMessageTypeManager();
   
   const { handleVideoContentUpdate, isTranscribingVideo } = useContentUpdater();
 
   // Initialize message data when editing an existing message
-  useMessageInitializer(message);
+  const { videoUrl: initialVideoUrl, videoBlob: initialVideoBlob, videoTranscription, hasInitialized } = useMessageInitializer(message);
+
+  // Connect initialized video data to our message type manager
+  useEffect(() => {
+    if (hasInitialized && initialVideoBlob && initialVideoUrl && !initializedFromMessage) {
+      console.log("MessageDetails: Connecting initialized video to message type manager");
+      console.log("Initial video blob size:", initialVideoBlob.size);
+      console.log("Initial video transcription:", videoTranscription ? "present" : "none");
+      
+      handleInitializedVideo(initialVideoBlob, initialVideoUrl, videoTranscription);
+    }
+  }, [hasInitialized, initialVideoBlob, initialVideoUrl, videoTranscription, handleInitializedVideo, initializedFromMessage]);
 
   // Initialize the camera when switching to video mode
   useEffect(() => {
@@ -51,7 +62,10 @@ export function MessageDetails({ message }: MessageDetailsProps) {
 
   // Initialize camera preview when showing inline recording UI
   useEffect(() => {
-    console.log("MessageDetails: showInlineRecording:", showInlineRecording, "messageType:", messageType);
+    console.log("MessageDetails: showInlineRecording:", showInlineRecording, 
+                "messageType:", messageType, 
+                "videoUrl:", videoUrl ? "present" : "none",
+                "previewStream:", previewStream ? "present" : "none");
     
     if (showInlineRecording && messageType === "video" && !videoUrl && !previewStream) {
       console.log("Initializing camera preview for inline recording");

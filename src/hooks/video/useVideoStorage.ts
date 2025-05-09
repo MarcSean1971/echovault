@@ -8,8 +8,12 @@ export function useVideoStorage() {
   const clearVideo = (videoUrl: string | null, setVideoBlob: (blob: Blob | null) => void, setVideoUrl: (url: string | null) => void) => {
     console.log("Clearing video...");
     if (videoUrl) {
-      URL.revokeObjectURL(videoUrl);
-      console.log("Revoked video URL");
+      try {
+        URL.revokeObjectURL(videoUrl);
+        console.log("Revoked video URL");
+      } catch (e) {
+        console.warn("Failed to revoke video URL:", e);
+      }
     }
     setVideoBlob(null);
     setVideoUrl(null);

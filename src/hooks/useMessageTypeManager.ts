@@ -1,4 +1,3 @@
-
 import { useMessageTypeHandler } from "./useMessageTypeHandler";
 import { useMessageForm } from "@/components/message/MessageFormContext";
 import { useVideoRecordingHandler } from "./useVideoRecordingHandler";
@@ -36,6 +35,8 @@ export function useMessageTypeManager() {
   const [prevMessageType, setPrevMessageType] = useState<string | null>(null);
   // Flag to track if we need to force refresh camera on next tab switch
   const [needsCameraRefresh, setNeedsCameraRefresh] = useState(false);
+  // Flag to track if we're initializing from an existing message
+  const [initializedFromMessage, setInitializedFromMessage] = useState(false);
   
   // Log state changes for debugging
   useEffect(() => {
@@ -45,16 +46,37 @@ export function useMessageTypeManager() {
         videoUrl: videoUrl ? "present" : "none",
         cachedVideoUrl: cachedVideoUrl ? "present" : "none",
         previewStreamActive: previewStream ? (isStreamActive() ? "active" : "inactive") : "none",
-        hasCachedVideo: hasCachedVideo()
+        hasCachedVideo: hasCachedVideo(),
+        initializedFromMessage
       });
       setPrevMessageType(messageType);
     }
-  }, [messageType, videoUrl, cachedVideoUrl, hasCachedVideo, previewStream, prevMessageType, isStreamActive]);
+  }, [messageType, videoUrl, cachedVideoUrl, hasCachedVideo, previewStream, prevMessageType, isStreamActive, initializedFromMessage]);
 
   // Extract transcription from the current content
   const getCurrentTranscription = () => {
     if (!content) return null;
     return parseMessageTranscription(content);
+  };
+
+  // Function to handle initialized video data from a message being edited
+  const handleInitializedVideo = (blob: Blob, url: string, transcription: string | null) => {
+    console.log("useMessageTypeManager: Handling initialized video data", {
+      blobSize: blob.size,
+      hasTranscription: !!transcription
+    });
+    
+    setInitializedFromMessage(true);
+    
+    // If we're already in video mode, restore the video directly
+    if (messageType === "video") {
+      console.log("Already in video mode, restoring video immediately");
+      restoreVideo(blob, url, transcription);
+    } else {
+      // Otherwise, cache it for later when user switches to video mode
+      console.log("Not in video mode, caching video for later");
+      cacheVideo(blob, url, transcription);
+    }
   };
   
   // Wrapper functions for message type handling
@@ -140,6 +162,8 @@ export function useMessageTypeManager() {
     startRecording,
     stopRecording,
     clearVideo,
-    forceInitializeCamera
+    forceInitializeCamera,
+    handleInitializedVideo,
+    initializedFromMessage
   };
 }

@@ -15,6 +15,7 @@ export function useInitializeMediaContent(message: Message | null) {
   const [videoBase64, setVideoBase64] = useState<string | null>(null); 
   const [videoTranscription, setVideoTranscription] = useState<string | null>(null);
   const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
+  const [hasInitialized, setHasInitialized] = useState(false);
   
   // Parse the message content when the message changes
   useEffect(() => {
@@ -39,10 +40,12 @@ export function useInitializeMediaContent(message: Message | null) {
           const url = URL.createObjectURL(blob);
           
           console.log("Created video blob URL:", url);
+          console.log("Video blob size:", blob.size);
           setVideoUrl(url);
           setVideoBase64(videoData);
           setVideoBlob(blob);
           setVideoTranscription(transcription || null);
+          setHasInitialized(true);
         } else {
           console.log("No video data found in message content");
         }
@@ -50,6 +53,21 @@ export function useInitializeMediaContent(message: Message | null) {
         try {
           // Try to parse the content as JSON (for media content)
           const contentObj = JSON.parse(message.content);
+          
+          // Check for video data
+          if (contentObj.videoData) {
+            // Create a Blob URL for the video player
+            console.log("Found video data in JSON content");
+            const videoBlob = base64ToBlob(contentObj.videoData, 'video/webm');
+            const url = URL.createObjectURL(videoBlob);
+            console.log("Created video blob URL from JSON:", url);
+            console.log("Video blob size from JSON:", videoBlob.size);
+            setVideoUrl(url);
+            setVideoBase64(contentObj.videoData);
+            setVideoBlob(videoBlob);
+            setVideoTranscription(contentObj.transcription || null);
+            setHasInitialized(true);
+          }
           
           // Check for audio data
           if (contentObj.audioData) {
@@ -59,17 +77,6 @@ export function useInitializeMediaContent(message: Message | null) {
             setAudioUrl(url);
             setAudioBase64(contentObj.audioData);
             setAudioTranscription(contentObj.transcription || null);
-          }
-          
-          // Check for video data
-          if (contentObj.videoData) {
-            // Create a Blob URL for the video player
-            const videoBlob = base64ToBlob(contentObj.videoData, 'video/webm');
-            const url = URL.createObjectURL(videoBlob);
-            setVideoUrl(url);
-            setVideoBase64(contentObj.videoData);
-            setVideoBlob(videoBlob);
-            setVideoTranscription(contentObj.transcription || null);
           }
         } catch (e) {
           // Not JSON or error parsing, content is likely plain text
@@ -104,6 +111,7 @@ export function useInitializeMediaContent(message: Message | null) {
     videoUrl,
     videoBase64,
     videoTranscription,
-    videoBlob
+    videoBlob,
+    hasInitialized
   };
 }

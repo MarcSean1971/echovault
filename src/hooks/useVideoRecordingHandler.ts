@@ -40,6 +40,10 @@ export function useVideoRecordingHandler() {
   const clearVideo = () => {
     console.log("useVideoRecordingHandler: Clearing video");
     clearVideoBase(videoUrl, setVideoBlob, setVideoUrl);
+    
+    // Also clear the content if we're clearing the video
+    // This prevents out-of-sync state between video blob and content
+    setContent("");
   };
   
   // Wrapper function for restoreVideo with transcription support
@@ -47,7 +51,8 @@ export function useVideoRecordingHandler() {
     console.log("useVideoRecordingHandler: Restoring video", { 
       hasBlob: !!blob, 
       hasUrl: !!url, 
-      hasTranscription: !!transcription 
+      hasTranscription: !!transcription,
+      blobSize: blob?.size || 0
     });
     
     restoreVideoBase(blob, url, setVideoBlob, setVideoUrl);
@@ -61,6 +66,15 @@ export function useVideoRecordingHandler() {
         setContent(formattedContent);
       } catch (err) {
         console.error("Error restoring video transcription:", err);
+      }
+    } else if (blob) {
+      // Even without transcription, update content with video data
+      try {
+        console.log("Restoring video without transcription");
+        const formattedContent = await formatVideoContent(blob, null);
+        setContent(formattedContent);
+      } catch (err) {
+        console.error("Error formatting video content:", err);
       }
     }
   };

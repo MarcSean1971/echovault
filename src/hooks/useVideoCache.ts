@@ -43,7 +43,11 @@ export function useVideoCache() {
   const clearCache = () => {
     if (cachedVideoUrl) {
       console.log("Revoking cached video URL");
-      URL.revokeObjectURL(cachedVideoUrl);
+      try {
+        URL.revokeObjectURL(cachedVideoUrl);
+      } catch (e) {
+        console.warn("Error revoking cached URL:", e);
+      }
     }
     console.log("Clearing video cache");
     setCachedVideoBlob(null);
