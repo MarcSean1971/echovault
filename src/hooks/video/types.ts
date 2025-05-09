@@ -14,7 +14,7 @@ export interface VideoRecorderHookResult {
   isRecording: boolean;
   isPaused: boolean;
   isPlaying: boolean;
-  recordingDuration: number;
+  recordingDuration: string;
   videoURL: string | null;
   videoBlob: Blob | null;
   isBrowserSupported: boolean;

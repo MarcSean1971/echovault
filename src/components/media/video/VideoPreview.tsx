@@ -1,14 +1,16 @@
-import React, { RefObject } from "react";
+
+import React from "react";
+import { MutableRefObject } from "react";
 import { RecordingIndicator } from "./RecordingIndicator";
-import { formatTime } from "@/utils/mediaUtils";
+import { Spinner } from "@/components/ui/spinner";
 
 interface VideoPreviewProps {
-  videoPreviewRef: RefObject<HTMLVideoElement>;
+  videoPreviewRef: MutableRefObject<HTMLVideoElement | null>;
   isRecording: boolean;
   isPaused: boolean;
-  recordingDuration: number;
-  isInitializing: boolean;
-  permissionDenied: boolean;
+  recordingDuration: string;
+  isInitializing?: boolean;
+  permissionDenied?: boolean;
 }
 
 export function VideoPreview({
@@ -16,26 +18,43 @@ export function VideoPreview({
   isRecording,
   isPaused,
   recordingDuration,
-  isInitializing,
-  permissionDenied
+  isInitializing = false,
+  permissionDenied = false
 }: VideoPreviewProps) {
   return (
-    <div className="relative w-full aspect-video bg-gray-100 overflow-hidden rounded-md">
+    <div className="relative w-full aspect-video rounded-lg overflow-hidden bg-black/10 flex items-center justify-center">
+      {/* Video preview element */}
       <video
         ref={videoPreviewRef}
-        className="absolute top-0 left-0 w-full h-full object-cover"
-        muted
+        className={`w-full h-full object-cover ${isInitializing || permissionDenied ? 'opacity-0' : 'opacity-100'}`}
         autoPlay
+        muted
+        playsInline
       />
-      {(isRecording || isPaused) && !permissionDenied && !isInitializing && (
-        <div className="absolute top-2 left-2">
-          <RecordingIndicator isRecording={isRecording} isPaused={isPaused} />
-          <span className="ml-2 text-sm text-white shadow-md">{formatTime(recordingDuration)}</span>
+      
+      {/* Loading indicator */}
+      {isInitializing && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Spinner className="w-8 h-8" />
         </div>
       )}
-      <div className="absolute bottom-2 right-2 bg-black/50 text-white text-xs px-2 py-1 rounded shadow-md">
-        Preview
-      </div>
+      
+      {/* Recording indicator */}
+      {(isRecording || isPaused) && (
+        <div className="absolute top-2 right-2">
+          <RecordingIndicator 
+            isRecording={isRecording} 
+            isPaused={isPaused} 
+          />
+        </div>
+      )}
+      
+      {/* Recording duration */}
+      {(isRecording || isPaused) && (
+        <div className="absolute bottom-2 left-2 bg-black/50 text-white px-2 py-1 rounded text-sm font-mono">
+          {recordingDuration}
+        </div>
+      )}
     </div>
   );
 }

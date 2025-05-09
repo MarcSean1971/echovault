@@ -22,7 +22,7 @@ export const useVideoRecordingControls = ({
   streamReady = false,
   startRecording,
   resetRecording,
-  videoBlob,
+  videoBlob: existingVideoBlob, // Renamed to avoid duplicate declaration
   stopStream,
   initializeStream,
   onRecordingComplete,
@@ -111,7 +111,10 @@ export const useVideoRecordingControls = ({
 
   const handleAccept = useCallback(async (): Promise<{ videoBlob: Blob; base64Video: string } | null> => {
     return new Promise((resolve) => {
-      if (!videoBlob) {
+      // Use the existing videoBlob from props if available, otherwise use state
+      const blobToUse = existingVideoBlob || videoBlob;
+      
+      if (!blobToUse) {
         console.warn("No video blob available to accept.");
         resolve(null);
         return;
@@ -121,15 +124,15 @@ export const useVideoRecordingControls = ({
       const reader = new FileReader();
       reader.onloadend = () => {
         const base64data = reader.result as string;
-        resolve({ videoBlob, base64Video: base64data });
+        resolve({ videoBlob: blobToUse, base64Video: base64data });
       };
       reader.onerror = () => {
         console.error("Failed to read blob as data URL");
         resolve(null);
       };
-      reader.readAsDataURL(videoBlob);
+      reader.readAsDataURL(blobToUse);
     });
-  }, [videoBlob]);
+  }, [videoBlob, existingVideoBlob]);
 
   return {
     isRecording,
