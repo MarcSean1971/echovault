@@ -7,12 +7,12 @@ import { useMessageTypeState } from "./useMessageTypeState";
 import { useVideoCache } from "./useVideoCache";
 
 export function useMessageTypeManager() {
-  const { setMessageType: setContextMessageType } = useMessageForm();
+  const { messageType, setMessageType: setContextMessageType } = useMessageForm();
   const {
     handleTextTypeClick, handleMediaTypeClick
   } = useMessageTypeHandler();
 
-  const { messageType, handleMessageTypeChange } = useMessageTypeState();
+  const { handleMessageTypeChange } = useMessageTypeState();
   const { cachedVideoBlob, cachedVideoUrl, cacheVideo, clearCache } = useVideoCache();
   
   const {
@@ -51,6 +51,7 @@ export function useMessageTypeManager() {
     
     handleTextTypeClick();
     handleMessageTypeChange("text");
+    setContextMessageType("text");
     
     // If we were in video mode, clean up the camera stream but don't clear the video
     if (previewStream) {
@@ -61,9 +62,8 @@ export function useMessageTypeManager() {
   // When switching to video type, initialize the camera stream or restore video
   const onVideoTypeClick = () => {
     handleMediaTypeClick();
-    if (messageType !== "video") {
-      handleMessageTypeChange("video");
-    }
+    handleMessageTypeChange("video");
+    setContextMessageType("video");
     
     // If we have cached video, restore it first
     if (cachedVideoBlob && cachedVideoUrl) {

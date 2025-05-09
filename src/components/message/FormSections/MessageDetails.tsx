@@ -1,33 +1,32 @@
-
 import { Label } from "@/components/ui/label";
 import { useMessageForm } from "../MessageFormContext";
 import { FileUploader } from "@/components/FileUploader";
 
 // Import our components
 import { TitleInput } from "./TitleInput";
-import { MessageTypeSelector } from "./MessageTypeSelector";
-import { TextContent } from "./content/TextContent";
-import { VideoContent } from "./content/VideoContent";
 import { LocationSection } from "./LocationSection";
 import { MediaRecorders } from "./MessageDetailsComponents/MediaRecorders";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Import custom hooks
 import { useMessageInitializer } from "@/hooks/useMessageInitializer";
 import { useContentUpdater } from "@/hooks/useContentUpdater";
 import { useMessageTypeManager } from "@/hooks/useMessageTypeManager";
 import { useEffect, useState } from "react";
+import { TextContent } from "./content/TextContent";
+import { VideoContent } from "./content/VideoContent";
 
 interface MessageDetailsProps {
   message?: any;  // Optional message prop for editing
 }
 
 export function MessageDetails({ message }: MessageDetailsProps) {
-  const { files, setFiles, content } = useMessageForm();
+  const { files, setFiles, content, messageType } = useMessageForm();
   const [showInlineRecording, setShowInlineRecording] = useState(false);
   
   // Use our custom hooks
   const { 
-    messageType, onTextTypeClick, onVideoTypeClick,
+    onTextTypeClick, onVideoTypeClick,
     videoBlob, videoUrl, showVideoRecorder, setShowVideoRecorder,
     isRecording, isInitializing, hasPermission, previewStream,
     initializeStream, startRecording, stopRecording, clearVideo 
@@ -46,16 +45,6 @@ export function MessageDetails({ message }: MessageDetailsProps) {
     }
   }, [messageType, videoUrl, previewStream, showInlineRecording]);
 
-  // Debug log to track state changes
-  useEffect(() => {
-    console.log("MessageDetails: messageType =", messageType, 
-                "showVideoRecorder =", showVideoRecorder,
-                "isRecording =", isRecording,
-                "videoUrl =", videoUrl ? "present" : "null",
-                "content =", content ? content.substring(0, 30) + "..." : "empty",
-                "previewStream =", previewStream ? "active" : "null");
-  }, [messageType, showVideoRecorder, isRecording, videoUrl, previewStream, content]);
-
   // Initialize camera preview when showing inline recording UI
   useEffect(() => {
     if (showInlineRecording && messageType === "video" && !videoUrl && !previewStream) {
@@ -66,26 +55,65 @@ export function MessageDetails({ message }: MessageDetailsProps) {
     }
   }, [showInlineRecording, messageType, videoUrl, previewStream, initializeStream]);
 
+  // Handle tab change
+  const handleTabChange = (value: string) => {
+    console.log("Tab changed to:", value);
+    if (value === "text") {
+      onTextTypeClick();
+    } else if (value === "video") {
+      onVideoTypeClick();
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Title field */}
       <TitleInput />
 
-      {/* Message type selector */}
-      <MessageTypeSelector 
-        onTextTypeClick={onTextTypeClick}
-        onVideoTypeClick={onVideoTypeClick}
-      />
+      {/* Message type selector as tabs */}
+      <div>
+        <Label className="mb-2 block">Message Type</Label>
+        <Tabs 
+          defaultValue="text" 
+          value={messageType} 
+          onValueChange={handleTabChange}
+          className="w-full"
+        >
+          <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsTrigger 
+              value="text" 
+              className="flex items-center justify-center transition-all hover:bg-primary/10"
+            >
+              <span className="flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-text">
+                  <path d="M17 6.1H3"/>
+                  <path d="M21 12.1H3"/>
+                  <path d="M15.1 18H3"/>
+                </svg>
+                Text
+              </span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="video" 
+              className="flex items-center justify-center transition-all hover:bg-primary/10"
+            >
+              <span className="flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-video">
+                  <path d="m22 8-6 4 6 4V8Z"/>
+                  <rect width="14" height="12" x="2" y="6" rx="2" ry="2"/>
+                </svg>
+                Video
+              </span>
+            </TabsTrigger>
+          </TabsList>
 
-      {/* Content field based on message type */}
-      <div className="space-y-4">
-        {/* Text content is always shown */}
-        <TextContent />
-        
-        {/* Video content section */}
-        {messageType === "video" && (
-          <div>
-            {/* Show the video content component */}
+          {/* Text content tab */}
+          <TabsContent value="text" className="mt-0">
+            <TextContent />
+          </TabsContent>
+
+          {/* Video content tab */}
+          <TabsContent value="video" className="mt-0">
             <VideoContent
               videoUrl={videoUrl}
               isRecording={isRecording}
@@ -104,8 +132,8 @@ export function MessageDetails({ message }: MessageDetailsProps) {
                 }
               }}
             />
-          </div>
-        )}
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Location section */}

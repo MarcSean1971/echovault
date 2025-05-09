@@ -10,6 +10,8 @@ interface MessageTypeSelectorProps {
   onVideoTypeClick: () => void;
 }
 
+// This component is now deprecated and replaced by tabs in MessageDetails.tsx
+// Kept for backward compatibility with other components that might still reference it
 export function MessageTypeSelector({ onTextTypeClick, onVideoTypeClick }: MessageTypeSelectorProps) {
   const { messageType } = useMessageForm();
   
