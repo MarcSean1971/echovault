@@ -69,43 +69,68 @@ serve(async (req: Request) => {
     
     const supabase = createClient(supabaseUrl, supabaseKey);
     
-    // Single query to validate access - joining all necessary tables
-    const { data: validationData, error: validationError } = await supabase
+    // FIXED: Replace the join with two separate queries
+    // First, get the delivered_message record
+    const { data: deliveryData, error: deliveryError } = await supabase
       .from('delivered_messages')
-      .select(`
-        message_id,
-        recipients:recipients(email),
-        message:messages(attachments)
-      `)
+      .select('message_id, recipient_id, condition_id')
       .eq('delivery_id', deliveryId)
       .single();
       
-    if (validationError) {
-      console.error(`[AccessFile] Validation error: ${validationError.message}`);
+    if (deliveryError) {
+      console.error(`[AccessFile] Delivery error: ${deliveryError.message}`);
       return new Response(
         JSON.stringify({ error: "Invalid delivery ID" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
     
-    if (!validationData) {
+    if (!deliveryData) {
       return new Response(
         JSON.stringify({ error: "Delivery ID not found" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
     
+    // Second, get the recipient record using recipient_id
+    const { data: recipientData, error: recipientError } = await supabase
+      .from('recipients')
+      .select('email')
+      .eq('id', deliveryData.recipient_id)
+      .single();
+      
+    if (recipientError || !recipientData) {
+      console.error(`[AccessFile] Recipient error: ${recipientError?.message || "Recipient not found"}`);
+      return new Response(
+        JSON.stringify({ error: "Invalid recipient" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
     // Verify the recipient email
-    if (!validationData.recipients || 
-        validationData.recipients.email.toLowerCase() !== recipientEmail.toLowerCase()) {
+    if (recipientData.email.toLowerCase() !== recipientEmail.toLowerCase()) {
       return new Response(
         JSON.stringify({ error: "Recipient email does not match" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
     
+    // Get the message to verify the attachment exists
+    const { data: messageData, error: messageError } = await supabase
+      .from('messages')
+      .select('attachments')
+      .eq('id', deliveryData.message_id)
+      .single();
+      
+    if (messageError || !messageData) {
+      return new Response(
+        JSON.stringify({ error: "Message not found" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
     // Verify the attachment exists in the message
-    const attachments = validationData.message?.attachments || [];
+    const attachments = messageData.attachments || [];
     
     // Find the matching attachment
     const requestedAttachment = attachments.find((att: any) => {
