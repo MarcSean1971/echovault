@@ -20,6 +20,12 @@ export function AudioContent({
   onRecordClick, 
   onClearAudio 
 }: AudioContentProps) {
+  // Create a direct handler function that ensures the recorder opens
+  const handleOpenRecorder = () => {
+    console.log("Opening audio recorder from AudioContent");
+    onRecordClick();
+  };
+  
   if (audioUrl) {
     return (
       <div className="space-y-3">
@@ -45,7 +51,7 @@ export function AudioContent({
             type="button"
             size="sm" 
             variant="outline" 
-            onClick={onRecordClick}
+            onClick={handleOpenRecorder}
             className={`mr-2 ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.outline}`}
           >
             Record New
@@ -68,7 +74,7 @@ export function AudioContent({
     <div className="flex items-center justify-center h-[150px] border-2 border-dashed rounded-md border-gray-300 bg-gray-50 p-6">
       <Button 
         type="button"
-        onClick={onRecordClick}
+        onClick={handleOpenRecorder}
         className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
       >
         <Mic className="mr-2 h-4 w-4" /> Record Audio Message

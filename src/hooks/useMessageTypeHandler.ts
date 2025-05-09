@@ -74,8 +74,8 @@ export function useMessageTypeHandler() {
       setContent(videoContent);
     }
     
-    // Always show the recorder dialog when switching to media type
-    // We'll let the dialog decide what to do based on existing media
+    // Directly set the recorder to visible - this is the key change
+    console.log(`Setting ${mediaType} recorder to visible`);
     setShowRecorder(true);
   };
 

@@ -20,6 +20,12 @@ export function VideoContent({
   onRecordClick, 
   onClearVideo 
 }: VideoContentProps) {
+  // Create a direct handler function that ensures the recorder opens
+  const handleOpenRecorder = () => {
+    console.log("Opening video recorder from VideoContent");
+    onRecordClick();
+  };
+  
   if (videoUrl) {
     return (
       <div className="space-y-3">
@@ -44,7 +50,7 @@ export function VideoContent({
             type="button"
             size="sm" 
             variant="outline" 
-            onClick={onRecordClick}
+            onClick={handleOpenRecorder}
             className={`mr-2 ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.outline}`}
           >
             Record New
@@ -77,7 +83,7 @@ export function VideoContent({
       </div>
       <Button 
         type="button"
-        onClick={onRecordClick}
+        onClick={handleOpenRecorder}
         className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
       >
         <Camera className="mr-2 h-4 w-4" /> Record Video Message
