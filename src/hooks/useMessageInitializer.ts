@@ -24,7 +24,8 @@ export function useMessageInitializer(message?: Message) {
     videoBlob,
     audioUrl,
     audioBlob,
-    hasInitialized
+    hasInitialized,
+    additionalText
   } = useInitializeMediaContent(message || null);
 
   // Set initial message type based on the message being edited
@@ -105,6 +106,7 @@ export function useMessageInitializer(message?: Message) {
     videoBlob,
     audioUrl,
     audioBlob,
-    hasInitialized
+    hasInitialized,
+    additionalText
   };
 }
