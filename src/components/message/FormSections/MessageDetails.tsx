@@ -13,7 +13,6 @@ import { TextContent } from "./content/TextContent";
 import { AudioContent } from "./content/AudioContent";
 import { VideoContent } from "./content/VideoContent";
 import { LocationSection } from "./LocationSection";
-import { EditMessageAttachments } from "./EditMessageAttachments";
 
 // Import custom hooks
 import { useAudioRecordingHandler } from "@/hooks/useAudioRecordingHandler";
@@ -102,16 +101,6 @@ export function MessageDetails() {
     // Then update the message type
     handleMessageTypeChange("video");
   };
-  
-  // Extract existing attachments from files that are already uploaded
-  const existingAttachments = files
-    .filter(file => file.isUploaded && file.path)
-    .map(file => ({
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      path: file.path
-    }));
 
   return (
     <div className="space-y-6">
@@ -158,11 +147,6 @@ export function MessageDetails() {
       {/* File attachments */}
       <div className="space-y-2">
         <Label>File Attachments</Label>
-        
-        {/* Display existing attachments with download/view capabilities */}
-        <EditMessageAttachments attachments={existingAttachments} />
-        
-        {/* File uploader for adding new files */}
         <FileUploader 
           files={files} 
           onChange={setFiles} 
