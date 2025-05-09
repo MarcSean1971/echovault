@@ -14,13 +14,16 @@ export function useMessageInitializer(message?: Message) {
     setMessageType: setContextMessageType,
     setContent,
     setTextContent,
-    setVideoContent
+    setVideoContent,
+    setAudioContent
   } = useMessageForm();
   
   // Use our media content initializer hook
   const {
     videoUrl,
     videoBlob,
+    audioUrl,
+    audioBlob,
     hasInitialized
   } = useInitializeMediaContent(message || null);
 
@@ -43,12 +46,16 @@ export function useMessageInitializer(message?: Message) {
     // Set form content regardless of message type
     setContent(message.content);
     
-    // Check if the content has video data
+    // Check if the content has video or audio data
     let hasVideo = false;
+    let hasAudio = false;
+    
     try {
+      // Check for video content
       const { videoData } = parseVideoContent(message.content);
       hasVideo = !!videoData;
       
+      // If we have video content, store it
       if (hasVideo) {
         console.log("Message contains video content");
         setVideoContent(message.content);
@@ -64,20 +71,40 @@ export function useMessageInitializer(message?: Message) {
           console.error("Error parsing additional text from video content:", e);
         }
       }
+      
+      // Check for audio content
+      try {
+        const contentObj = JSON.parse(message.content);
+        if (contentObj.audioData) {
+          console.log("Message contains audio content");
+          hasAudio = true;
+          setAudioContent(message.content);
+          
+          // Check for additional text in the audio content
+          if (contentObj.additionalText) {
+            console.log("Message contains additional text with audio:", contentObj.additionalText);
+            setTextContent(contentObj.additionalText);
+          }
+        }
+      } catch (e) {
+        console.error("Error parsing audio content:", e);
+      }
     } catch (e) {
       hasVideo = false;
     }
     
-    // If content is plain text or message type is text, set text content
-    if (!hasVideo || message.message_type === "text") {
+    // For text content, we consider any non-JSON content or message type="text" as text
+    if ((!hasVideo && !hasAudio) || message.message_type === "text") {
       setTextContent(message.content);
     }
     
-  }, [message, setContent, setTextContent, setVideoContent]);
+  }, [message, setContent, setTextContent, setVideoContent, setAudioContent]);
 
   return {
     videoUrl,
     videoBlob,
+    audioUrl,
+    audioBlob,
     hasInitialized
   };
 }

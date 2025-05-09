@@ -2,6 +2,11 @@
 import { useState, useRef, useEffect } from "react";
 import { toast } from "@/components/ui/use-toast";
 
+interface MediaOptions {
+  video?: boolean;
+  audio?: boolean;
+}
+
 export function useMediaStream() {
   const [previewStream, setPreviewStream] = useState<MediaStream | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
@@ -38,7 +43,7 @@ export function useMediaStream() {
   };
 
   // Initialize the media stream for preview before recording
-  const initializeStream = async (forceNew = false) => {
+  const initializeStream = async (forceNew = false, options: MediaOptions = { video: true, audio: true }) => {
     try {
       // If we already have an active stream and don't need to force new, return it
       if (!forceNew && streamRef.current && isStreamActive()) {
@@ -47,34 +52,31 @@ export function useMediaStream() {
       }
       
       setIsInitializing(true);
-      console.log("Initializing camera for preview...");
+      console.log(`Initializing ${options.video ? 'camera' : 'microphone'} for preview...`);
       
       // Always stop any existing stream first
       stopMediaStream();
       
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: true,
-        audio: true
-      });
+      const stream = await navigator.mediaDevices.getUserMedia(options);
       
-      console.log("Camera preview initialized successfully");
+      console.log(`${options.video ? 'Camera' : 'Microphone'} preview initialized successfully`);
       streamRef.current = stream;
       setPreviewStream(stream);
       setHasPermission(true);
       return stream;
     } catch (error: any) {
-      console.error("Error initializing camera:", error);
+      console.error(`Error initializing ${options.video ? 'camera' : 'microphone'}:`, error);
       setHasPermission(false);
       
       // More specific error messages based on common issues
-      let errorMessage = "Error accessing camera or microphone";
+      let errorMessage = `Error accessing ${options.video ? 'camera' : 'microphone'}`;
       
       if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-        errorMessage = "Camera or microphone access was denied. Please check your browser permissions.";
+        errorMessage = `${options.video ? 'Camera' : 'Microphone'} access was denied. Please check your browser permissions.`;
       } else if (error.name === 'NotFoundError') {
-        errorMessage = "Camera or microphone not found. Please check your device.";
+        errorMessage = `${options.video ? 'Camera' : 'Microphone'} not found. Please check your device.`;
       } else if (error.name === 'NotReadableError' || error.name === 'AbortError') {
-        errorMessage = "Could not access your camera or microphone. It might be in use by another application.";
+        errorMessage = `Could not access your ${options.video ? 'camera' : 'microphone'}. It might be in use by another application.`;
       } else if (error.name === 'SecurityError') {
         errorMessage = "Media access is not allowed in this context. Please check your settings.";
       }

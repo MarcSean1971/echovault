@@ -9,6 +9,7 @@ import { Message } from "@/types/message";
 export function useInitializeMediaContent(message: Message | null) {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const [audioBase64, setAudioBase64] = useState<string | null>(null);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoBase64, setVideoBase64] = useState<string | null>(null); 
@@ -46,6 +47,28 @@ export function useInitializeMediaContent(message: Message | null) {
         } else {
           console.log("No video data found in message content");
         }
+      } else if (message.message_type === "audio") {
+        console.log("Processing audio message type");
+        try {
+          const contentObj = JSON.parse(message.content);
+          
+          if (contentObj.audioData) {
+            // Create a Blob URL for the audio player
+            const audioBlob = base64ToBlob(contentObj.audioData, 'audio/webm');
+            const url = URL.createObjectURL(audioBlob);
+            
+            console.log("Created audio blob URL:", url);
+            console.log("Audio blob size:", audioBlob.size);
+            setAudioUrl(url);
+            setAudioBase64(contentObj.audioData);
+            setAudioBlob(audioBlob);
+            setHasInitialized(true);
+          } else {
+            console.log("No audio data found in message content");
+          }
+        } catch (e) {
+          console.error("Error parsing audio content:", e);
+        }
       } else {
         try {
           // Try to parse the content as JSON (for media content)
@@ -68,10 +91,15 @@ export function useInitializeMediaContent(message: Message | null) {
           // Check for audio data
           if (contentObj.audioData) {
             // Create a Blob URL for the audio player
+            console.log("Found audio data in JSON content");
             const audioBlob = base64ToBlob(contentObj.audioData, 'audio/webm');
             const url = URL.createObjectURL(audioBlob);
+            console.log("Created audio blob URL from JSON:", url);
+            console.log("Audio blob size from JSON:", audioBlob.size);
             setAudioUrl(url);
             setAudioBase64(contentObj.audioData);
+            setAudioBlob(audioBlob);
+            setHasInitialized(true);
           }
         } catch (e) {
           // Not JSON or error parsing, content is likely plain text
@@ -102,6 +130,7 @@ export function useInitializeMediaContent(message: Message | null) {
   return {
     audioUrl,
     audioBase64,
+    audioBlob,
     videoUrl,
     videoBase64,
     videoBlob,

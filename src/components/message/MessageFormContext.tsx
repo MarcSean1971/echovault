@@ -12,6 +12,8 @@ interface MessageFormContextType {
   setTextContent: (content: string) => void;
   videoContent: string;
   setVideoContent: (content: string) => void;
+  audioContent: string;
+  setAudioContent: (content: string) => void;
   messageType: string;
   setMessageType: (type: string) => void;
   files: FileAttachment[];
@@ -66,6 +68,7 @@ export const MessageFormProvider = ({ children }: { children: React.ReactNode })
   const [content, setContent] = useState("");
   const [textContent, setTextContent] = useState("");
   const [videoContent, setVideoContent] = useState("");
+  const [audioContent, setAudioContent] = useState("");
   const [messageType, setMessageType] = useState("text");
   const [files, setFiles] = useState<FileAttachment[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -110,6 +113,8 @@ export const MessageFormProvider = ({ children }: { children: React.ReactNode })
     setTextContent,
     videoContent,
     setVideoContent,
+    audioContent,
+    setAudioContent,
     messageType,
     setMessageType,
     files,

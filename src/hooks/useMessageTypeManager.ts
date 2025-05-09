@@ -1,45 +1,77 @@
 
 import { useState, useEffect } from 'react';
 import { useVideoRecordingHandler } from './useVideoRecordingHandler';
+import { useAudioRecordingHandler } from './useAudioRecordingHandler';
 import { useMessageForm } from '@/components/message/MessageFormContext';
 
 export function useMessageTypeManager() {
-  const { setMessageType, videoContent } = useMessageForm();
+  const { setMessageType, videoContent, audioContent } = useMessageForm();
   const [initializedFromMessage, setInitializedFromMessage] = useState(false);
   
   // Use our custom hooks
   const {
-    isRecording,
-    isInitializing,
-    hasPermission,
+    isRecording: isVideoRecording,
+    isInitializing: isVideoInitializing,
+    hasPermission: hasVideoPermission,
     videoBlob,
     videoUrl,
     showVideoRecorder,
     setShowVideoRecorder,
-    previewStream,
-    initializeStream,
+    previewStream: videoPreviewStream,
+    initializeStream: initializeVideoStream,
     forceInitializeCamera,
-    startRecording,
-    stopRecording,
+    startRecording: startVideoRecording,
+    stopRecording: stopVideoRecording,
     clearVideo,
     restoreVideo,
-    stopMediaStream,
-    isStreamActive
+    stopMediaStream: stopVideoStream,
+    isStreamActive: isVideoStreamActive
   } = useVideoRecordingHandler();
+
+  // Use our audio recording hook
+  const {
+    isRecording: isAudioRecording,
+    isInitializing: isAudioInitializing,
+    hasPermission: hasAudioPermission,
+    audioBlob,
+    audioUrl,
+    audioDuration,
+    showAudioRecorder,
+    setShowAudioRecorder,
+    previewStream: audioPreviewStream,
+    initializeStream: initializeAudioStream,
+    forceInitializeMicrophone,
+    startRecording: startAudioRecording,
+    stopRecording: stopAudioRecording,
+    clearAudio,
+    restoreAudio,
+    stopMediaStream: stopAudioStream,
+    isStreamActive: isAudioStreamActive,
+    transcribeAudio
+  } = useAudioRecordingHandler();
 
   // Handle clicking on text tab
   const onTextTypeClick = () => {
     console.log("Text message type selected");
     setMessageType('text');
     
-    // If we were recording, stop
-    if (isRecording) {
-      stopRecording();
+    // If we were recording video, stop
+    if (isVideoRecording) {
+      stopVideoRecording();
     }
     
-    // Stop any active media stream when switching to text mode
-    if (isStreamActive()) {
-      stopMediaStream();
+    // If we were recording audio, stop
+    if (isAudioRecording) {
+      stopAudioRecording();
+    }
+    
+    // Stop any active media streams when switching to text mode
+    if (isVideoStreamActive()) {
+      stopVideoStream();
+    }
+    
+    if (isAudioStreamActive()) {
+      stopAudioStream();
     }
   };
   
@@ -47,6 +79,32 @@ export function useMessageTypeManager() {
   const onVideoTypeClick = () => {
     console.log("Video message type selected");
     setMessageType('video');
+    
+    // If we were recording audio, stop
+    if (isAudioRecording) {
+      stopAudioRecording();
+    }
+    
+    // Stop any active audio streams when switching to video mode
+    if (isAudioStreamActive()) {
+      stopAudioStream();
+    }
+  };
+  
+  // Handle clicking on audio tab
+  const onAudioTypeClick = () => {
+    console.log("Audio message type selected");
+    setMessageType('audio');
+    
+    // If we were recording video, stop
+    if (isVideoRecording) {
+      stopVideoRecording();
+    }
+    
+    // Stop any active video streams when switching to audio mode
+    if (isVideoStreamActive()) {
+      stopVideoStream();
+    }
   };
   
   // Handle initialized video from existing message
@@ -56,23 +114,54 @@ export function useMessageTypeManager() {
     restoreVideo(blob, url);
   };
 
+  // Handle initialized audio from existing message
+  const handleInitializedAudio = (blob: Blob, url: string) => {
+    console.log("handleInitializedAudio with blob size:", blob.size);
+    setInitializedFromMessage(true);
+    restoreAudio(blob, url);
+  };
+
   return {
+    // Common
+    initializedFromMessage,
+    
+    // Text
     onTextTypeClick,
+    
+    // Video
     onVideoTypeClick,
     videoBlob, 
     videoUrl, 
     showVideoRecorder, 
     setShowVideoRecorder,
-    isRecording, 
-    isInitializing, 
-    hasPermission, 
-    previewStream,
-    initializeStream,
-    startRecording,
-    stopRecording,
+    isVideoRecording, 
+    isVideoInitializing, 
+    hasVideoPermission, 
+    videoPreviewStream,
+    initializeVideoStream,
+    startVideoRecording,
+    stopVideoRecording,
     clearVideo,
     forceInitializeCamera,
     handleInitializedVideo,
-    initializedFromMessage
+    
+    // Audio
+    onAudioTypeClick,
+    audioBlob,
+    audioUrl,
+    audioDuration,
+    showAudioRecorder,
+    setShowAudioRecorder,
+    isAudioRecording,
+    isAudioInitializing,
+    hasAudioPermission,
+    audioPreviewStream,
+    initializeAudioStream,
+    startAudioRecording,
+    stopAudioRecording,
+    clearAudio,
+    forceInitializeMicrophone,
+    handleInitializedAudio,
+    transcribeAudio
   };
 }

@@ -7,14 +7,12 @@ import { FileUploader } from "@/components/FileUploader";
 import { TitleInput } from "./TitleInput";
 import { LocationSection } from "./LocationSection";
 import { MediaRecorders } from "./MessageDetailsComponents/MediaRecorders";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MessageTypeTabSelector } from "./MessageTypeTabSelector";
 
 // Import custom hooks
 import { useMessageInitializer } from "@/hooks/useMessageInitializer";
 import { useContentUpdater } from "@/hooks/useContentUpdater";
-import { useMessageTypeManager } from "@/hooks/useMessageTypeManager";
-import { TextContent } from "./content/TextContent";
-import { VideoContent } from "./content/VideoContent";
+import { useMessageVideoHandler } from "@/hooks/useMessageVideoHandler";
 
 interface MessageDetailsProps {
   message?: any;  // Optional message prop for editing
@@ -23,56 +21,63 @@ interface MessageDetailsProps {
 export function MessageDetails({ message }: MessageDetailsProps) {
   const { files, setFiles, content, messageType } = useMessageForm();
   const [showInlineRecording, setShowInlineRecording] = useState(false);
+  const [audioTranscription, setAudioTranscription] = useState<string | null>(null);
   
-  // Use our custom hooks
-  const { 
-    onTextTypeClick, onVideoTypeClick,
-    videoBlob, videoUrl, showVideoRecorder, setShowVideoRecorder,
-    isRecording, isInitializing, hasPermission, previewStream,
-    initializeStream, startRecording, stopRecording, clearVideo,
-    forceInitializeCamera, handleInitializedVideo, initializedFromMessage
-  } = useMessageTypeManager();
-  
-  const { handleVideoContentUpdate, isTranscribingVideo } = useContentUpdater();
+  // Use our custom hook for handling media
+  const {
+    // Text handling
+    onTextTypeClick,
+    
+    // Video handling
+    onVideoTypeClick,
+    videoUrl, videoBlob, showVideoRecorder, setShowVideoRecorder,
+    isVideoRecording, isVideoInitializing, hasVideoPermission, videoPreviewStream,
+    startVideoRecording, stopVideoRecording, clearVideo, forceInitializeCamera, 
+    
+    // Audio handling
+    onAudioTypeClick,
+    audioUrl, audioBlob, audioDuration, 
+    isAudioRecording, isAudioInitializing, hasAudioPermission,
+    startAudioRecording, stopAudioRecording, clearAudio, forceInitializeMicrophone,
+    transcribeAudio,
+    
+    handleVideoContentUpdate,
+    handleAudioContentUpdate
+  } = useMessageVideoHandler(message);
 
-  // Initialize message data when editing an existing message
-  const { videoUrl: initialVideoUrl, videoBlob: initialVideoBlob, hasInitialized } = useMessageInitializer(message);
-
-  // Connect initialized video data to our message type manager
-  useEffect(() => {
-    if (hasInitialized && initialVideoBlob && initialVideoUrl && !initializedFromMessage) {
-      console.log("MessageDetails: Connecting initialized video to message type manager");
-      console.log("Initial video blob size:", initialVideoBlob.size);
-      
-      handleInitializedVideo(initialVideoBlob, initialVideoUrl);
-    }
-  }, [hasInitialized, initialVideoBlob, initialVideoUrl, handleInitializedVideo, initializedFromMessage]);
-
-  // Initialize the camera when switching to video mode
+  // Initialize the camera or microphone when switching to media mode
   useEffect(() => {
     console.log("MessageDetails: messageType changed to", messageType);
     
-    if (messageType === "video" && !videoUrl && !previewStream && !showInlineRecording) {
+    if (messageType === "video" && !videoUrl && !videoPreviewStream && !showInlineRecording) {
       console.log("Video mode detected. Setting showInlineRecording to true");
       setShowInlineRecording(true);
     }
-  }, [messageType, videoUrl, previewStream, showInlineRecording]);
+    
+    if (messageType === "audio" && !audioUrl && !showInlineRecording) {
+      console.log("Audio mode detected. Setting showInlineRecording to true");
+      setShowInlineRecording(true);
+    }
+  }, [messageType, videoUrl, videoPreviewStream, audioUrl, showInlineRecording]);
 
   // Initialize camera preview when showing inline recording UI
   useEffect(() => {
-    console.log("MessageDetails: showInlineRecording:", showInlineRecording, 
-                "messageType:", messageType, 
-                "videoUrl:", videoUrl ? "present" : "none",
-                "previewStream:", previewStream ? "present" : "none");
-    
-    if (showInlineRecording && messageType === "video" && !videoUrl && !previewStream) {
+    if (showInlineRecording && messageType === "video" && !videoUrl && !videoPreviewStream) {
       console.log("Initializing camera preview for inline recording");
       // Use forceInitializeCamera to ensure we get a fresh stream
       forceInitializeCamera().catch(error => {
         console.error("Failed to initialize camera stream:", error);
       });
     }
-  }, [showInlineRecording, messageType, videoUrl, previewStream, forceInitializeCamera]);
+    
+    if (showInlineRecording && messageType === "audio" && !audioUrl) {
+      console.log("Initializing microphone for inline recording");
+      // Use forceInitializeMicrophone to ensure we get a fresh stream
+      forceInitializeMicrophone().catch(error => {
+        console.error("Failed to initialize microphone stream:", error);
+      });
+    }
+  }, [showInlineRecording, messageType, videoUrl, videoPreviewStream, audioUrl, forceInitializeCamera, forceInitializeMicrophone]);
 
   // Handle tab change
   const handleTabChange = (value: string) => {
@@ -81,12 +86,35 @@ export function MessageDetails({ message }: MessageDetailsProps) {
       onTextTypeClick();
     } else if (value === "video") {
       onVideoTypeClick();
+    } else if (value === "audio") {
+      onAudioTypeClick();
     }
   };
 
-  // Generate a key for the VideoContent to force remount when needed
+  // Generate keys for content components to force remount when needed
   const getVideoContentKey = () => {
     return `video-content-${messageType === 'video' ? 'active' : 'inactive'}-${videoUrl ? 'has-video' : 'no-video'}-${Date.now()}`;
+  };
+  
+  const getAudioContentKey = () => {
+    return `audio-content-${messageType === 'audio' ? 'active' : 'inactive'}-${audioUrl ? 'has-audio' : 'no-audio'}-${Date.now()}`;
+  };
+  
+  // Handle audio transcription
+  const handleTranscribeAudio = async () => {
+    if (!audioBlob) return;
+    
+    try {
+      const transcription = await transcribeAudio();
+      setAudioTranscription(transcription);
+      
+      // Update the audio content with transcription
+      if (audioBlob) {
+        await handleAudioContentUpdate(audioBlob, transcription);
+      }
+    } catch (error) {
+      console.error("Error transcribing audio:", error);
+    }
   };
 
   return (
@@ -97,63 +125,43 @@ export function MessageDetails({ message }: MessageDetailsProps) {
       {/* Message type selector as tabs */}
       <div>
         <Label className="mb-2 block">Message Type</Label>
-        <Tabs 
-          defaultValue="text" 
-          value={messageType} 
-          onValueChange={handleTabChange}
-          className="w-full"
-        >
-          <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger 
-              value="text" 
-              className="flex items-center justify-center transition-all hover:bg-primary/10"
-            >
-              <span className="flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-text">
-                  <path d="M17 6.1H3"/>
-                  <path d="M21 12.1H3"/>
-                  <path d="M15.1 18H3"/>
-                </svg>
-                Text
-              </span>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="video" 
-              className="flex items-center justify-center transition-all hover:bg-primary/10"
-            >
-              <span className="flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-video">
-                  <path d="m22 8-6 4 6 4V8Z"/>
-                  <rect width="14" height="12" x="2" y="6" rx="2" ry="2"/>
-                </svg>
-                Video
-              </span>
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Text content tab */}
-          <TabsContent value="text" className="mt-0">
-            <TextContent />
-          </TabsContent>
-
-          {/* Video content tab */}
-          <TabsContent value="video" className="mt-0">
-            <VideoContent
-              key={getVideoContentKey()}
-              videoUrl={videoUrl}
-              isRecording={isRecording}
-              isInitializing={isInitializing}
-              hasPermission={hasPermission}
-              previewStream={previewStream}
-              onStartRecording={startRecording}
-              onStopRecording={stopRecording}
-              onClearVideo={() => {
-                clearVideo();
-                setShowInlineRecording(false);
-              }}
-            />
-          </TabsContent>
-        </Tabs>
+        <MessageTypeTabSelector
+          messageType={messageType}
+          onTabChange={handleTabChange}
+          
+          // Video props
+          videoUrl={videoUrl}
+          isVideoRecording={isVideoRecording}
+          isVideoInitializing={isVideoInitializing}
+          hasVideoPermission={hasVideoPermission}
+          videoPreviewStream={videoPreviewStream}
+          onStartVideoRecording={startVideoRecording}
+          onStopVideoRecording={stopVideoRecording}
+          onClearVideo={() => {
+            clearVideo();
+            setShowInlineRecording(false);
+          }}
+          
+          // Audio props
+          audioUrl={audioUrl}
+          audioDuration={audioDuration}
+          isAudioRecording={isAudioRecording}
+          isAudioInitializing={isAudioInitializing}
+          hasAudioPermission={hasAudioPermission}
+          audioTranscription={audioTranscription}
+          onStartAudioRecording={startAudioRecording}
+          onStopAudioRecording={stopAudioRecording}
+          onClearAudio={() => {
+            clearAudio();
+            setAudioTranscription(null);
+            setShowInlineRecording(false);
+          }}
+          onTranscribeAudio={handleTranscribeAudio}
+          
+          // Keys for component remounting
+          getVideoContentKey={getVideoContentKey}
+          getAudioContentKey={getAudioContentKey}
+        />
       </div>
 
       {/* Location section */}
@@ -175,12 +183,12 @@ export function MessageDetails({ message }: MessageDetailsProps) {
         onVideoContentUpdate={handleVideoContentUpdate}
         videoUrl={videoUrl}
         videoBlob={videoBlob}
-        isRecording={isRecording}
-        isInitializing={isInitializing}
-        hasPermission={hasPermission}
-        previewStream={previewStream}
-        startRecording={startRecording}
-        stopRecording={stopRecording}
+        isRecording={isVideoRecording}
+        isInitializing={isVideoInitializing}
+        hasPermission={hasVideoPermission}
+        previewStream={videoPreviewStream}
+        startRecording={startVideoRecording}
+        stopRecording={stopVideoRecording}
         clearVideo={clearVideo}
       />
     </div>
