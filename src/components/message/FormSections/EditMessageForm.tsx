@@ -1,32 +1,32 @@
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { MessageFormProvider, useMessageForm } from "./MessageFormContext";
-import { MessageDetails } from "./FormSections/MessageDetails";
-import { UploadProgressDialog } from "./FormSections/UploadProgressDialog";
-import { DeadManSwitch } from "./FormSections/DeadManSwitch";
-import { Separator } from "@/components/ui/separator";
-import { FileText, Users } from "lucide-react";
-import { RecipientSelector } from "./FormSections/RecipientSelector";
-import { useEffect, useState } from "react";
-import { Message, MessageCondition, Recipient, TriggerType } from "@/types/message";
-import { 
-  fetchMessageConditions, 
-  updateMessageCondition,
-  createMessageCondition 
-} from "@/services/messages/conditionService";
+
+import { useState, useEffect } from "react";
+import { Card } from "@/components/ui/card";
+import { useMessageForm } from "../MessageFormContext";
+import { UploadProgressDialog } from "./UploadProgressDialog";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadAttachments } from "@/services/messages/fileService";
 import { Spinner } from "@/components/ui/spinner";
 import { fetchRecipients } from "@/services/messages/recipientService";
+import { Message, MessageCondition, Recipient, TriggerType } from "@/types/message";
+import { 
+  fetchMessageConditions, 
+  updateMessageCondition,
+  createMessageCondition 
+} from "@/services/messages/conditionService";
 
-interface EditMessageFormProps {
+// Import the new component files
+import { EditMessageHeader } from "./EditMessageHeader";
+import { EditMessageContent } from "./EditMessageContent";
+import { EditMessageFooter } from "./EditMessageFooter";
+
+interface EditMessageFormComponentProps {
   message: Message;
   onCancel: () => void;
 }
 
-function MessageEditForm({ message, onCancel }: EditMessageFormProps) {
+function MessageEditForm({ message, onCancel }: EditMessageFormComponentProps) {
   const { 
     isLoading, 
     setIsLoading,
@@ -324,52 +324,19 @@ function MessageEditForm({ message, onCancel }: EditMessageFormProps) {
     <>
       <Card>
         <form onSubmit={handleSubmit}>
-          <CardHeader>
-            <CardTitle>Edit Message</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-8">
-            <div>
-              <div className="flex items-center mb-4">
-                <FileText className="h-5 w-5 mr-2" />
-                <h2 className="text-xl font-medium">Message Content</h2>
-              </div>
-              <MessageDetails message={message} />
-            </div>
-            
-            <Separator />
-            
-            <div>
-              <DeadManSwitch />
-            </div>
-            
-            <Separator />
-            
-            <div>
-              <div className="flex items-center mb-4">
-                <Users className="h-5 w-5 mr-2" />
-                <h2 className="text-xl font-medium">Recipients</h2>
-              </div>
-              <div className="space-y-4">
-                <p className="text-muted-foreground">Select who will receive this message if triggered.</p>
-                
-                <RecipientSelector 
-                  selectedRecipients={selectedRecipients}
-                  onSelectRecipient={handleToggleRecipient}
-                />
-              </div>
-            </div>
-          </CardContent>
-          <CardFooter className="flex justify-between">
-            <Button variant="outline" type="button" onClick={onCancel}>
-              Cancel
-            </Button>
-            <Button 
-              type="submit" 
-              disabled={isLoading || !isFormValid}
-            >
-              {isLoading ? "Saving..." : "Save Changes"}
-            </Button>
-          </CardFooter>
+          <EditMessageHeader onCancel={onCancel} />
+          
+          <EditMessageContent 
+            message={message}
+            selectedRecipients={selectedRecipients}
+            handleToggleRecipient={handleToggleRecipient}
+          />
+          
+          <EditMessageFooter 
+            onCancel={onCancel}
+            isLoading={isLoading}
+            isFormValid={isFormValid}
+          />
         </form>
       </Card>
 
@@ -384,10 +351,13 @@ function MessageEditForm({ message, onCancel }: EditMessageFormProps) {
   );
 }
 
-export function EditMessageForm({ message, onCancel }: EditMessageFormProps) {
+export function EditMessageForm({ message, onCancel }: EditMessageFormComponentProps) {
   return (
     <MessageFormProvider>
       <MessageEditForm message={message} onCancel={onCancel} />
     </MessageFormProvider>
   );
 }
+
+// Import MessageFormProvider here so it's available for the exported component
+import { MessageFormProvider } from "../MessageFormContext";

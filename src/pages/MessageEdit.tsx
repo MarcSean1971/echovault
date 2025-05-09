@@ -7,7 +7,7 @@ import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { Message } from "@/types/message";
-import { EditMessageForm } from "@/components/message/EditMessageForm";
+import { EditMessageForm } from "@/components/message/FormSections/EditMessageForm";
 import { Spinner } from "@/components/ui/spinner";
 import { getConditionByMessageId } from "@/services/messages/conditionService";
 
