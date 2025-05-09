@@ -82,7 +82,7 @@ export function useVideoRecorder(options?: UseVideoRecorderOptions): VideoRecord
   
   // Recording controls
   const { 
-    safeStartRecording, 
+    startRecording: safeStartRecording, 
     reset, 
     handleAccept 
   } = useVideoRecordingControls({

@@ -3,17 +3,18 @@ import React, { useState, useEffect } from "react";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface RecordingIndicatorProps {
+  isRecording: boolean;  // Add this property that was missing
   isPaused: boolean;
 }
 
-export function RecordingIndicator({ isPaused }: RecordingIndicatorProps) {
+export function RecordingIndicator({ isRecording, isPaused }: RecordingIndicatorProps) {
   const [isVisible, setIsVisible] = useState(true);
   
   // Add a blinking effect when recording is active
   useEffect(() => {
     let interval: number | null = null;
     
-    if (!isPaused) {
+    if (!isPaused && isRecording) {
       // Faster blink rate for better visibility
       interval = window.setInterval(() => {
         setIsVisible(prev => !prev);
@@ -27,7 +28,7 @@ export function RecordingIndicator({ isPaused }: RecordingIndicatorProps) {
         clearInterval(interval);
       }
     };
-  }, [isPaused]);
+  }, [isPaused, isRecording]);
   
   return (
     <div className="w-5 h-5 rounded-full border border-red-500 flex items-center justify-center bg-black/30 p-0.5">

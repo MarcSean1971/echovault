@@ -1,6 +1,8 @@
 
 import { MutableRefObject } from "react";
 
+export type MediaStreamType = MediaStream | null;
+
 export interface VideoRecordingOptions {
   timeslice?: number;
   videoBitsPerSecond?: number;
@@ -59,4 +61,3 @@ export interface RecordingOptions {
   videoBitsPerSecond?: number;
   audioBitsPerSecond?: number;
 }
-

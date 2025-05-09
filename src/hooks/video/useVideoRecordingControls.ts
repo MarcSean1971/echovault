@@ -1,17 +1,30 @@
+
 import { useState, useCallback, useRef } from 'react';
 import { useVideoTimer } from './useVideoTimer';
 import { MediaStreamType } from './types';
 import { formatTime } from '@/utils/mediaUtils';
 
 interface UseVideoRecordingControlsProps {
-  mediaType?: 'video' | 'audio';
+  mediaType?: 'video';
   stream?: MediaStreamType;
+  streamReady?: boolean;
+  startRecording?: () => void;
+  resetRecording?: () => void;
+  videoBlob?: Blob | null; 
+  stopStream?: () => void;
+  initializeStream?: () => Promise<boolean>;
   onRecordingComplete?: (blob: Blob, base64: string) => void;
 }
 
 export const useVideoRecordingControls = ({
   mediaType = 'video',
   stream,
+  streamReady = false,
+  startRecording,
+  resetRecording,
+  videoBlob,
+  stopStream,
+  initializeStream,
   onRecordingComplete,
 }: UseVideoRecordingControlsProps = {}) => {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -26,56 +39,15 @@ export const useVideoRecordingControls = ({
 
   const recordedVideoRef = useRef<HTMLVideoElement>(null);
 
-  const startRecording = useCallback(async () => {
-    if (!stream) {
-      console.error('No stream available to record.');
+  const safeStartRecording = useCallback(() => {
+    if (!streamReady || !startRecording) {
+      console.log('Stream not ready or startRecording function not provided');
       return;
     }
 
-    recordedChunksRef.current = [];
-    const options: MediaRecorderOptions = { mimeType: 'video/webm;codecs=vp9,opus' };
-
-    try {
-      mediaRecorderRef.current = new MediaRecorder(stream, options);
-    } catch (e: any) {
-      console.error('MediaRecorder creation error:', e);
-      return;
-    }
-
-    mediaRecorderRef.current.ondataavailable = (event) => {
-      if (event.data.size > 0) {
-        recordedChunksRef.current.push(event.data);
-      }
-    };
-
-    mediaRecorderRef.current.onstop = async () => {
-      if (recordedChunksRef.current.length > 0) {
-        const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
-        setVideoBlob(blob);
-        const url = URL.createObjectURL(blob);
-        setVideoURL(url);
-
-        // Convert Blob to Base64
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64data = reader.result as string;
-          if (onRecordingComplete) {
-            onRecordingComplete(blob, base64data);
-          }
-        };
-        reader.readAsDataURL(blob);
-      }
-    };
-
-    mediaRecorderRef.current.onerror = (event) => {
-      console.error("MediaRecorder error:", event.error);
-    };
-
-    mediaRecorderRef.current.start();
-    setIsRecording(true);
-    setIsPaused(false);
-    startTimer();
-  }, [stream, startTimer, onRecordingComplete]);
+    console.log('Starting recording safely');
+    startRecording();
+  }, [streamReady, startRecording]);
 
   const pauseRecording = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
@@ -105,8 +77,13 @@ export const useVideoRecordingControls = ({
   const togglePlayback = useCallback(() => {
     if (recordedVideoRef.current) {
       if (recordedVideoRef.current.paused) {
-        recordedVideoRef.current.play();
-        setIsPlaying(true);
+        recordedVideoRef.current.play()
+          .then(() => {
+            setIsPlaying(true);
+          })
+          .catch((err) => {
+            console.error("Error playing video:", err);
+          });
       } else {
         recordedVideoRef.current.pause();
         setIsPlaying(false);
@@ -126,7 +103,11 @@ export const useVideoRecordingControls = ({
     setVideoBlob(null);
     setIsPlaying(false);
     resetTimer();
-  }, [resetTimer, videoURL]);
+    
+    if (resetRecording) {
+      resetRecording();
+    }
+  }, [resetTimer, videoURL, resetRecording]);
 
   const handleAccept = useCallback(async (): Promise<{ videoBlob: Blob; base64Video: string } | null> => {
     return new Promise((resolve) => {
@@ -158,7 +139,7 @@ export const useVideoRecordingControls = ({
     videoURL,
     videoBlob,
     recordedVideoRef,
-    startRecording,
+    startRecording: safeStartRecording,
     pauseRecording,
     resumeRecording,
     stopRecording,
