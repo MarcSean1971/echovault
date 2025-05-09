@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
@@ -13,6 +13,14 @@ export function VideoTranscription({
   transcription, 
   isTranscribing 
 }: VideoTranscriptionProps) {
+  // Log the transcription for debugging
+  useEffect(() => {
+    console.log("VideoTranscription rendered with:", { 
+      transcription: transcription ? transcription.substring(0, 30) + '...' : 'null',
+      isTranscribing
+    });
+  }, [transcription, isTranscribing]);
+
   return (
     <div className="mt-4 space-y-2">
       <h3 className="text-sm font-medium">Video Transcription</h3>

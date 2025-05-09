@@ -82,6 +82,10 @@ export const formatVideoContent = async (
       timestamp: new Date().toISOString()
     };
     
+    // Log the content structure that will be stored
+    console.log("Formatting video content with transcription:", !!transcription);
+    console.log("Video content structure:", Object.keys(videoContent).join(", "));
+    
     return JSON.stringify(videoContent);
   } catch (error) {
     console.error("Error formatting video content:", error);
@@ -92,30 +96,4 @@ export const formatVideoContent = async (
     });
     throw error;
   }
-};
-
-/**
- * Parse video content from string
- */
-export const parseVideoContent = (content: string | null): {
-  videoData: string | null;
-  transcription: string | null;
-} => {
-  if (!content) return { videoData: null, transcription: null };
-  
-  try {
-    const parsedContent = JSON.parse(content);
-    
-    if (parsedContent.videoData) {
-      return {
-        videoData: parsedContent.videoData,
-        transcription: parsedContent.transcription || null
-      };
-    }
-  } catch (e) {
-    // Not JSON or invalid format
-    console.log("Content is not video format:", e);
-  }
-  
-  return { videoData: null, transcription: null };
 };

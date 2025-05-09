@@ -14,15 +14,39 @@ export function useContentUpdater() {
     if (!content) return null;
     
     try {
+      // First attempt to parse as JSON
       const parsed = JSON.parse(content);
+      
+      // Check direct transcription field
       if (parsed && parsed.transcription) {
+        console.log("Found direct transcription in content:", 
+                    parsed.transcription.substring(0, 30) + "...");
         return parsed.transcription;
       }
+      
+      // Check for nested video content structure
+      if (parsed && parsed.videoContent) {
+        try {
+          const videoContentObj = typeof parsed.videoContent === 'string' ? 
+                                 JSON.parse(parsed.videoContent) : 
+                                 parsed.videoContent;
+          
+          if (videoContentObj && videoContentObj.transcription) {
+            console.log("Found transcription in nested videoContent:", 
+                        videoContentObj.transcription.substring(0, 30) + "...");
+            return videoContentObj.transcription;
+          }
+        } catch (e) {
+          console.log("Failed to parse nested videoContent:", e);
+        }
+      }
     } catch (e) {
+      console.log("Content is not valid JSON, using mediaService parser as fallback");
       // Not JSON, try using the mediaService parser as fallback
       return parseMessageTranscription(content);
     }
     
+    console.log("No transcription found in content");
     return null;
   };
 
@@ -78,6 +102,7 @@ export function useContentUpdater() {
       
       // Log the formatted content structure
       console.log("Video content formatted with transcription:", !!transcription);
+      console.log("Formatted content sample:", formattedContent.substring(0, 100) + "...");
       
       // Update the video-specific content
       setVideoContent(formattedContent);
@@ -102,7 +127,11 @@ export function useContentUpdater() {
         setContent(formattedContent);
       }
       
-      return { success: true, transcription, videoContent: formattedContent };
+      return { 
+        success: true, 
+        transcription, 
+        videoContent: formattedContent 
+      };
     } catch (error) {
       console.error("Error updating video content:", error);
       
