@@ -16,21 +16,32 @@ export function AudioMessageContent({ mediaUrl, transcription, loading, message 
   const [audioUrl, setAudioUrl] = useState<string | null>(mediaUrl || null);
   const [audioTranscription, setAudioTranscription] = useState<string | null>(transcription || null);
   
-  // Parse message content on component mount
+  // Parse message content on component mount or when message changes
   useEffect(() => {
+    console.log("AudioMessageContent: Processing message content");
+    
+    // Cleanup function to revoke object URL on unmount or message change
+    let urlToRevoke: string | null = null;
+    
     if (!audioUrl && message.content) {
       try {
         const contentObj = JSON.parse(message.content);
+        console.log("AudioMessageContent: Parsed content:", contentObj);
+        
         if (contentObj.audioData) {
           // Create a blob URL for playback
           const audioBlob = base64ToBlob(contentObj.audioData, 'audio/webm');
+          console.log("AudioMessageContent: Created blob:", audioBlob.size);
+          
           const url = URL.createObjectURL(audioBlob);
-          console.log("Generated audio URL from content:", url);
+          console.log("AudioMessageContent: Created URL:", url);
+          urlToRevoke = url;
+          
           setAudioUrl(url);
           
           // Get transcription if available
           if (contentObj.transcription && !audioTranscription) {
-            console.log("Found audio transcription in content:", contentObj.transcription);
+            console.log("AudioMessageContent: Found transcription:", contentObj.transcription);
             setAudioTranscription(contentObj.transcription);
           }
         }
@@ -41,8 +52,9 @@ export function AudioMessageContent({ mediaUrl, transcription, loading, message 
     
     // Cleanup effect
     return () => {
-      if (audioUrl && !mediaUrl) {
-        URL.revokeObjectURL(audioUrl);
+      if (urlToRevoke) {
+        console.log("AudioMessageContent: Revoking URL:", urlToRevoke);
+        URL.revokeObjectURL(urlToRevoke);
       }
     };
   }, [message.content, audioUrl, audioTranscription, mediaUrl]);
@@ -94,11 +106,16 @@ export function AudioMessageContent({ mediaUrl, transcription, loading, message 
   
   // Helper function to convert base64 to blob
   function base64ToBlob(base64: string, type: string): Blob {
-    const binaryString = window.atob(base64);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
+    try {
+      const binaryString = window.atob(base64);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      return new Blob([bytes], { type });
+    } catch (e) {
+      console.error("Error converting base64 to blob:", e);
+      return new Blob([], { type });
     }
-    return new Blob([bytes], { type });
   }
 }

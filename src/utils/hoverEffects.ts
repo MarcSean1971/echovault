@@ -1,31 +1,18 @@
 
-// Constants for hover effects and transitions
-export const HOVER_TRANSITION = "transition-all duration-200 ease-in-out";
+// Common hover transition classes
+export const HOVER_TRANSITION = "transition-all duration-200";
 
-// Button hover effects
+// Hover effects for different button variants
 export const BUTTON_HOVER_EFFECTS = {
-  default: "hover:shadow-sm hover:brightness-110",
-  destructive: "hover:shadow-sm hover:brightness-110 hover:scale-105",
-  outline: "hover:bg-accent hover:border-primary/20",
-  subtle: "hover:brightness-110",
-  download: "hover:translate-y-[-2px]"
+  default: "hover:scale-105 hover:shadow-md",
+  outline: "hover:bg-accent hover:text-accent-foreground hover:scale-105",
+  ghost: "hover:bg-accent/50 hover:text-accent-foreground",
+  destructive: "hover:bg-destructive/90 hover:scale-105",
+  link: "hover:underline"
 };
 
-// Icon hover effects
-export const ICON_HOVER_EFFECTS = {
-  default: "hover:scale-110 hover:opacity-80",
-  muted: "hover:opacity-100",
-  primary: "hover:text-primary hover:scale-105",
-  destructive: "hover:text-destructive hover:scale-105"
-};
+// Hover effects for icons
+export const ICON_HOVER_EFFECTS = "hover:scale-110 text-muted-foreground hover:text-foreground";
 
-// Add a specific keyframe animation for attention-grabbing elements
-export const ATTENTION_ANIMATION = "animate-pulse";
-
-// Confirmation animation
-export const CONFIRMATION_ANIMATION = {
-  pulse: "animate-pulse",
-  bounce: "animate-bounce",
-  shake: "animate-shake",
-  highlight: "animate-highlight"
-};
+// Hover effects for media controls
+export const MEDIA_CONTROL_HOVER = "hover:bg-black/20 active:bg-black/30";

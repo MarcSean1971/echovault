@@ -21,9 +21,18 @@ export function useMediaRecording(mediaType: MediaType) {
   
   // Function to handle media recording completion
   const handleMediaReady = async (blob: Blob, base64: string) => {
+    console.log(`Processing new ${mediaType}, blob size: ${blob.size} bytes`);
+    
     setMediaBlob(blob);
     setMediaBase64(base64);
-    setMediaUrl(URL.createObjectURL(blob));
+    
+    // Important: Create URL using the blob for playback
+    if (mediaUrl) {
+      URL.revokeObjectURL(mediaUrl);
+    }
+    const url = URL.createObjectURL(blob);
+    setMediaUrl(url);
+    console.log(`Created new URL for ${mediaType}: ${url}`);
     
     // Start transcribing the media
     setIsTranscribing(true);
@@ -31,9 +40,9 @@ export function useMediaRecording(mediaType: MediaType) {
       const mimeType = mediaType === "audio" ? 'audio/webm' : 'video/webm';
       const transcriptionText = await transcribeMedia(base64, mimeType);
       setTranscription(transcriptionText);
+      console.log(`${mediaTypeLabel} transcription completed:`, transcriptionText);
       
       // Store both media data and transcription in content as JSON
-      // But we don't want to display this JSON in text inputs
       const contentData = {
         [mediaDataKey]: base64,
         transcription: transcriptionText

@@ -45,13 +45,18 @@ export function parseMessageTranscription(content: string | null): string | null
   if (!content) return null;
   
   try {
+    console.log("Parsing message content for transcription:", content);
     const contentObj = JSON.parse(content);
+    
     if (contentObj.transcription) {
+      console.log("Found transcription in content:", contentObj.transcription);
       return contentObj.transcription;
+    } else {
+      console.log("No transcription found in content");
+      return null;
     }
-    return content; // Use content as fallback
   } catch (e) {
-    // Not JSON or no transcription, use content as is
-    return content;
+    console.log("Content is not valid JSON or has no transcription");
+    return null;
   }
 }

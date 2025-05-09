@@ -35,6 +35,10 @@ export function useMessageInitializer(message?: Message) {
     if (!message?.content) return;
     
     console.log("Initializing message content:", message.content);
+    console.log("Message type:", message.message_type);
+    
+    // Cleanup URLs on unmount or message change
+    const createdUrls: string[] = [];
     
     if (message.message_type === 'audio' || message.message_type === 'video') {
       try {
@@ -45,14 +49,20 @@ export function useMessageInitializer(message?: Message) {
         if (message.message_type === 'audio' && contentObj.audioData) {
           console.log("Found audio data, initializing audio content");
           const audioBlob = base64ToBlob(contentObj.audioData, 'audio/webm');
+          console.log("Created audio blob:", audioBlob.size);
+          
           const url = URL.createObjectURL(audioBlob);
+          createdUrls.push(url);
+          console.log("Created audio URL:", url);
+          
           setAudioUrl(url);
           setAudioBase64(contentObj.audioData);
+          setAudioBlob(audioBlob);
+          
           if (contentObj.transcription) {
             console.log("Found audio transcription:", contentObj.transcription);
             setAudioTranscription(contentObj.transcription);
           }
-          setAudioBlob(audioBlob); // Also set the audio blob for use in the recorder
           
           // Important: Set the form content to match the audio data
           setContent(message.content);
@@ -62,14 +72,20 @@ export function useMessageInitializer(message?: Message) {
         if (message.message_type === 'video' && contentObj.videoData) {
           console.log("Found video data, initializing video content");
           const videoBlob = base64ToBlob(contentObj.videoData, 'video/webm');
+          console.log("Created video blob:", videoBlob.size);
+          
           const url = URL.createObjectURL(videoBlob);
+          createdUrls.push(url);
+          console.log("Created video URL:", url);
+          
           setVideoUrl(url);
           setVideoBase64(contentObj.videoData);
+          setVideoBlob(videoBlob);
+          
           if (contentObj.transcription) {
             console.log("Found video transcription:", contentObj.transcription);
             setVideoTranscription(contentObj.transcription);
           }
-          setVideoBlob(videoBlob); // Also set the video blob for use in the recorder
           
           // Important: Set the form content to match the video data
           setContent(message.content);
@@ -82,9 +98,16 @@ export function useMessageInitializer(message?: Message) {
       setContent(message.content);
     }
     
-    // Cleanup function to revoke object URLs when unmounting
+    // Cleanup function to revoke object URLs when unmounting or when message changes
     return () => {
-      // Cleanup will happen in the individual hooks
+      console.log("Cleaning up URLs:", createdUrls);
+      createdUrls.forEach(url => {
+        try {
+          URL.revokeObjectURL(url);
+        } catch (e) {
+          console.error("Error revoking URL:", e);
+        }
+      });
     };
   }, [message, setAudioUrl, setAudioBase64, setAudioTranscription, setAudioBlob,
       setVideoUrl, setVideoBase64, setVideoTranscription, setVideoBlob, setContent]);

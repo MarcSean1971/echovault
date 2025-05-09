@@ -24,30 +24,29 @@ export function MessageContent({
   // Extract transcription from message content
   const transcription = parseMessageTranscription(message.content);
   
+  // Log for debugging purposes
+  useEffect(() => {
+    console.log(`MessageContent: Rendering message of type: ${message.message_type}`);
+    console.log("MessageContent: Message content:", message.content);
+    console.log("MessageContent: Extracted transcription:", transcription);
+  }, [message, transcription]);
+  
   // Choose the appropriate content component based on message type
   const renderMessageContent = () => {
     switch (message.message_type) {
       case "text":
         return <TextMessageContent message={message} content={message.content} />;
       case "video":
-        console.log("Rendering video message content with transcription:", transcription);
+        console.log("MessageContent: Rendering video message with transcription:", transcription);
         return <VideoMessageContent message={message} transcription={transcription} />;
       case "audio":
-        console.log("Rendering audio message content with transcription:", transcription);
+        console.log("MessageContent: Rendering audio message with transcription:", transcription);
         return <AudioMessageContent message={message} transcription={transcription} />;
       default:
         return <UnknownMessageContent message={message} />;
     }
   };
-  
-  // Log the message content and type for debugging
-  useEffect(() => {
-    console.log(`Rendering message content of type: ${message.message_type}`);
-    if (message.message_type === "video" || message.message_type === "audio") {
-      console.log("Media message content:", message.content);
-    }
-  }, [message]);
-  
+
   // Check if this is a panic trigger message with WhatsApp configuration
   const isPanicTrigger = message.message_type === "panic_trigger";
   const hasPanicConfig = message.panic_config || message.panic_trigger_config;

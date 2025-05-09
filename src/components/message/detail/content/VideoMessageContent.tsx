@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { FileIcon } from "lucide-react";
 import { VideoPlayer } from "@/components/media/VideoPlayer";
 import { Message } from "@/types/message";
@@ -13,31 +13,51 @@ interface VideoMessageContentProps {
 
 export function VideoMessageContent({ mediaUrl, transcription, loading, message }: VideoMessageContentProps) {
   const [showTranscription, setShowTranscription] = useState(false);
+  const [videoUrl, setVideoUrl] = useState<string | null>(mediaUrl || null);
+  const [videoTranscription, setVideoTranscription] = useState<string | null>(transcription || null);
   
-  // Extract video URL and transcription from message content if not provided directly
-  let videoUrl = mediaUrl;
-  let videoTranscription = transcription;
-  
-  // Parse message content if we don't have media URL or transcription yet
-  if (!videoUrl && message.content) {
-    try {
-      const contentObj = JSON.parse(message.content);
-      if (contentObj.videoData) {
-        // Create a blob URL for playback
-        const videoBlob = base64ToBlob(contentObj.videoData, 'video/webm');
-        videoUrl = URL.createObjectURL(videoBlob);
-        console.log("Generated video URL from content:", videoUrl);
+  // Parse message content on component mount or when message changes
+  useEffect(() => {
+    console.log("VideoMessageContent: Processing message content");
+    
+    // Cleanup function to revoke object URL on unmount or message change
+    let urlToRevoke: string | null = null;
+    
+    if (!videoUrl && message.content) {
+      try {
+        const contentObj = JSON.parse(message.content);
+        console.log("VideoMessageContent: Parsed content:", contentObj);
         
-        // Get transcription if available
-        if (contentObj.transcription && !videoTranscription) {
-          videoTranscription = contentObj.transcription;
-          console.log("Found video transcription in content:", videoTranscription);
+        if (contentObj.videoData) {
+          // Create a blob URL for playback
+          const videoBlob = base64ToBlob(contentObj.videoData, 'video/webm');
+          console.log("VideoMessageContent: Created blob:", videoBlob.size);
+          
+          const url = URL.createObjectURL(videoBlob);
+          console.log("VideoMessageContent: Created URL:", url);
+          urlToRevoke = url;
+          
+          setVideoUrl(url);
+          
+          // Get transcription if available
+          if (contentObj.transcription && !videoTranscription) {
+            console.log("VideoMessageContent: Found transcription:", contentObj.transcription);
+            setVideoTranscription(contentObj.transcription);
+          }
         }
+      } catch (e) {
+        console.error("Error parsing video content:", e);
       }
-    } catch (e) {
-      console.error("Error parsing video content:", e);
     }
-  }
+    
+    // Cleanup effect
+    return () => {
+      if (urlToRevoke) {
+        console.log("VideoMessageContent: Revoking URL:", urlToRevoke);
+        URL.revokeObjectURL(urlToRevoke);
+      }
+    };
+  }, [message.content, videoUrl, videoTranscription, mediaUrl]);
 
   if (loading) {
     return (
@@ -89,11 +109,16 @@ export function VideoMessageContent({ mediaUrl, transcription, loading, message 
   
   // Helper function to convert base64 to blob
   function base64ToBlob(base64: string, type: string): Blob {
-    const binaryString = window.atob(base64);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
+    try {
+      const binaryString = window.atob(base64);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      return new Blob([bytes], { type });
+    } catch (e) {
+      console.error("Error converting base64 to blob:", e);
+      return new Blob([], { type });
     }
-    return new Blob([bytes], { type });
   }
 }
