@@ -53,7 +53,7 @@ export function AudioContent({
             size="sm" 
             variant="outline" 
             onClick={handleOpenRecorder}
-            className={`mr-2 ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.outline}`}
+            className={`mr-2 ${HOVER_TRANSITION} hover:scale-105 ${BUTTON_HOVER_EFFECTS.outline}`}
           >
             Record New
           </Button>
@@ -62,7 +62,7 @@ export function AudioContent({
             size="sm" 
             variant="destructive" 
             onClick={onClearAudio}
-            className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
+            className={`${HOVER_TRANSITION} hover:scale-105 ${BUTTON_HOVER_EFFECTS.default}`}
           >
             Clear Audio
           </Button>
@@ -76,9 +76,9 @@ export function AudioContent({
       <Button 
         type="button"
         onClick={handleOpenRecorder}
-        className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
+        className={`${HOVER_TRANSITION} hover:scale-105 ${BUTTON_HOVER_EFFECTS.default}`}
       >
-        <Mic className="mr-2 h-4 w-4" /> Record Audio Message
+        <Mic className="mr-2 h-4 w-4 hover:scale-110 transition-all duration-200" /> Record Audio Message
       </Button>
     </div>
   );

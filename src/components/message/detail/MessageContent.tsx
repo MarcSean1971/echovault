@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { Message } from "@/types/message";
 import { TextMessageContent } from "./content/TextMessageContent";
 import { VideoMessageContent } from "./content/VideoMessageContent";
@@ -8,6 +8,7 @@ import { UnknownMessageContent } from "./content/UnknownMessageContent";
 import { WhatsAppIntegration } from "./content/WhatsAppIntegration";
 import { Separator } from "@/components/ui/separator";
 import { MessageAttachments } from "./MessageAttachments";
+import { parseMessageTranscription } from "@/services/messages/mediaService";
 
 export interface MessageContentProps {
   message: Message;
@@ -20,19 +21,32 @@ export function MessageContent({
   deliveryId,
   recipientEmail
 }: MessageContentProps) {
+  // Extract transcription from message content
+  const transcription = parseMessageTranscription(message.content);
+  
   // Choose the appropriate content component based on message type
   const renderMessageContent = () => {
     switch (message.message_type) {
       case "text":
         return <TextMessageContent message={message} content={message.content} />;
       case "video":
-        return <VideoMessageContent message={message} />;
+        console.log("Rendering video message content with transcription:", transcription);
+        return <VideoMessageContent message={message} transcription={transcription} />;
       case "audio":
-        return <AudioMessageContent message={message} />;
+        console.log("Rendering audio message content with transcription:", transcription);
+        return <AudioMessageContent message={message} transcription={transcription} />;
       default:
         return <UnknownMessageContent message={message} />;
     }
   };
+  
+  // Log the message content and type for debugging
+  useEffect(() => {
+    console.log(`Rendering message content of type: ${message.message_type}`);
+    if (message.message_type === "video" || message.message_type === "audio") {
+      console.log("Media message content:", message.content);
+    }
+  }, [message]);
   
   // Check if this is a panic trigger message with WhatsApp configuration
   const isPanicTrigger = message.message_type === "panic_trigger";

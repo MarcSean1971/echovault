@@ -52,7 +52,7 @@ export function VideoContent({
             size="sm" 
             variant="outline" 
             onClick={handleOpenRecorder}
-            className={`mr-2 ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.outline}`}
+            className={`mr-2 ${HOVER_TRANSITION} hover:scale-105 ${BUTTON_HOVER_EFFECTS.outline}`}
           >
             Record New
           </Button>
@@ -61,7 +61,7 @@ export function VideoContent({
             size="sm" 
             variant="destructive" 
             onClick={onClearVideo}
-            className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
+            className={`${HOVER_TRANSITION} hover:scale-105 ${BUTTON_HOVER_EFFECTS.default}`}
           >
             Clear Video
           </Button>
@@ -73,7 +73,7 @@ export function VideoContent({
   return (
     <div className="flex flex-col items-center justify-center h-[200px] border-2 border-dashed rounded-md border-gray-300 bg-gray-50 p-6">
       <div className="text-center mb-4">
-        <Video className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
+        <Video className="h-12 w-12 text-muted-foreground mx-auto mb-2 hover:scale-110 transition-all duration-200" />
         <p className="text-sm text-muted-foreground mb-1">
           Record a video message
         </p>
@@ -85,7 +85,7 @@ export function VideoContent({
       <Button 
         type="button"
         onClick={handleOpenRecorder}
-        className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
+        className={`${HOVER_TRANSITION} hover:scale-105 ${BUTTON_HOVER_EFFECTS.default}`}
       >
         <Camera className="mr-2 h-4 w-4" /> Record Video Message
       </Button>
