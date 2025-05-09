@@ -6,7 +6,7 @@ import { useEffect } from "react";
 interface MediaRecordersProps {
   showVideoRecorder: boolean;
   setShowVideoRecorder: (show: boolean) => void;
-  onVideoContentUpdate: (videoBlob: Blob, videoBase64: string) => Promise<any>;
+  onVideoContentUpdate: (videoBlob: Blob, skipTranscriptionOrBase64: boolean | string) => Promise<any>;
   videoUrl: string | null;
   videoBlob: Blob | null;
   isRecording?: boolean;
@@ -35,8 +35,8 @@ export function MediaRecorders({
   // Handle video transcription
   const handleTranscribeVideo = async () => {
     if (videoBlob) {
-      const base64 = await blobToBase64(videoBlob);
-      return onVideoContentUpdate(videoBlob, base64);
+      // Pass false to indicate we want transcription (don't skip it)
+      return onVideoContentUpdate(videoBlob, false);
     }
     return Promise.resolve({});
   };
@@ -73,7 +73,7 @@ export function MediaRecorders({
   );
 }
 
-// Helper function to convert blob to base64
+// Helper function to convert blob to base64 (can be used if needed)
 const blobToBase64 = (blob: Blob): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();

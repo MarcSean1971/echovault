@@ -155,7 +155,8 @@ export function MessageDetails({ message }: MessageDetailsProps) {
               }}
               onTranscribeVideo={async (): Promise<void> => {
                 if (videoBlob) {
-                  await handleVideoContentUpdate(videoBlob);
+                  // Pass false to indicate we want transcription (don't skip it)
+                  await handleVideoContentUpdate(videoBlob, false);
                 }
               }}
             />

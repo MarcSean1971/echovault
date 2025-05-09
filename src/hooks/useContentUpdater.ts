@@ -16,9 +16,13 @@ export function useContentUpdater() {
   };
 
   // Handle video content update with optional transcription
-  const handleVideoContentUpdate = async (videoBlob: Blob, skipTranscription = false): Promise<any> => {
+  const handleVideoContentUpdate = async (videoBlob: Blob, skipTranscriptionOrBase64: boolean | string = false): Promise<any> => {
     try {
       setIsTranscribingVideo(true);
+      
+      // Determine if the second parameter is a base64 string or a boolean flag
+      const isBase64String = typeof skipTranscriptionOrBase64 === 'string';
+      const skipTranscription = isBase64String ? false : skipTranscriptionOrBase64;
       
       let transcription = null;
       
