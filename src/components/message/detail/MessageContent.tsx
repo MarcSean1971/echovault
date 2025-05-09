@@ -6,7 +6,7 @@ import { UnknownMessageContent } from "./content/UnknownMessageContent";
 import { WhatsAppIntegration } from "./content/WhatsAppIntegration";
 import { Separator } from "@/components/ui/separator";
 import { MessageAttachments } from "./MessageAttachments";
-import { parseMessageTranscription, parseVideoContent } from "@/services/messages/mediaService";
+import { parseVideoContent } from "@/services/messages/mediaService";
 import { VideoMessageContent } from "./content/VideoMessageContent";
 
 export interface MessageContentProps {
@@ -20,8 +20,7 @@ export function MessageContent({
   deliveryId,
   recipientEmail
 }: MessageContentProps) {
-  // Extract transcription from message content
-  const transcription = parseMessageTranscription(message.content);
+  // Remove transcription reference
   const [hasVideoContent, setHasVideoContent] = useState(false);
   const [hasTextContent, setHasTextContent] = useState(false);
   const [additionalText, setAdditionalText] = useState<string | null>(null);
@@ -62,11 +61,10 @@ export function MessageContent({
   useEffect(() => {
     console.log(`MessageContent: Rendering message of type: ${message.message_type}`);
     console.log("MessageContent: Message content:", message.content ? message.content.substring(0, 100) + "..." : null);
-    console.log("MessageContent: Extracted transcription:", transcription);
     console.log("MessageContent: Has video content:", hasVideoContent);
     console.log("MessageContent: Has text content:", hasTextContent);
     console.log("MessageContent: Additional text:", additionalText);
-  }, [message, transcription, hasVideoContent, hasTextContent, additionalText]);
+  }, [message, hasVideoContent, hasTextContent, additionalText]);
 
   // Choose the appropriate content components based on message type and content
   const renderMessageContent = () => {
