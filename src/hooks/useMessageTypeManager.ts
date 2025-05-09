@@ -2,7 +2,7 @@
 import { useMessageTypeHandler } from "./useMessageTypeHandler";
 import { useMessageForm } from "@/components/message/MessageFormContext";
 import { useVideoRecordingHandler } from "./useVideoRecordingHandler";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export function useMessageTypeManager() {
   const { setMessageType: setContextMessageType } = useMessageForm();
@@ -10,6 +10,10 @@ export function useMessageTypeManager() {
     messageType, setMessageType,
     handleTextTypeClick, handleMediaTypeClick
   } = useMessageTypeHandler();
+  
+  // Add state to store video info when switching tabs
+  const [cachedVideoBlob, setCachedVideoBlob] = useState<Blob | null>(null);
+  const [cachedVideoUrl, setCachedVideoUrl] = useState<string | null>(null);
   
   const {
     isRecording,
@@ -23,17 +27,35 @@ export function useMessageTypeManager() {
     initializeStream,
     startRecording,
     stopRecording,
-    clearVideo
+    clearVideo,
+    restoreVideo
   } = useVideoRecordingHandler();
 
   // Wrapper functions for message type handling
   const onTextTypeClick = () => {
+    // Save the current video state before switching to text
+    if (videoBlob && videoUrl) {
+      console.log("Caching video before switching to text mode");
+      setCachedVideoBlob(videoBlob);
+      setCachedVideoUrl(videoUrl);
+    }
+    
     handleTextTypeClick();
     handleMessageTypeChange("text");
     
-    // If we were in video mode, clean up the camera stream
+    // If we were in video mode, clean up the camera stream but don't clear the video
     if (previewStream) {
-      clearVideo();
+      stopMediaStream();
+    }
+  };
+  
+  // Helper function to stop the media stream without clearing the video
+  const stopMediaStream = () => {
+    if (previewStream) {
+      previewStream.getTracks().forEach(track => {
+        console.log("Stopping track:", track.kind);
+        track.stop();
+      });
     }
   };
   
@@ -43,11 +65,18 @@ export function useMessageTypeManager() {
     setContextMessageType(type);
   };
   
-  // When switching to video type, initialize the camera stream
+  // When switching to video type, initialize the camera stream or restore video
   const onVideoTypeClick = () => {
     handleMediaTypeClick();
     if (messageType !== "video") {
       handleMessageTypeChange("video");
+    }
+    
+    // If we have cached video, restore it first
+    if (cachedVideoBlob && cachedVideoUrl) {
+      console.log("Restoring cached video after switching back to video mode");
+      restoreVideo(cachedVideoBlob, cachedVideoUrl);
+      return;
     }
     
     // Don't show the dialog, instead initialize the preview stream directly
@@ -64,6 +93,11 @@ export function useMessageTypeManager() {
     return () => {
       if (previewStream) {
         clearVideo();
+      }
+      
+      // Clean up cached URLs
+      if (cachedVideoUrl) {
+        URL.revokeObjectURL(cachedVideoUrl);
       }
     };
   }, []);

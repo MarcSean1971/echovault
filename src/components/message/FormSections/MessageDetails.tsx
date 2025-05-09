@@ -22,7 +22,7 @@ interface MessageDetailsProps {
 }
 
 export function MessageDetails({ message }: MessageDetailsProps) {
-  const { files, setFiles } = useMessageForm();
+  const { files, setFiles, content } = useMessageForm();
   const [showInlineRecording, setShowInlineRecording] = useState(false);
   
   // Use our custom hooks
@@ -52,8 +52,9 @@ export function MessageDetails({ message }: MessageDetailsProps) {
                 "showVideoRecorder =", showVideoRecorder,
                 "isRecording =", isRecording,
                 "videoUrl =", videoUrl ? "present" : "null",
+                "content =", content ? content.substring(0, 30) + "..." : "empty",
                 "previewStream =", previewStream ? "active" : "null");
-  }, [messageType, showVideoRecorder, isRecording, videoUrl, previewStream]);
+  }, [messageType, showVideoRecorder, isRecording, videoUrl, previewStream, content]);
 
   // Initialize camera preview when showing inline recording UI
   useEffect(() => {

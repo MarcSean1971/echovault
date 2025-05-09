@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { toast } from "@/components/ui/use-toast";
 
@@ -182,6 +181,14 @@ export function useVideoRecordingHandler() {
     console.log("Video cleared");
   };
   
+  // New function to restore video from blob and url
+  const restoreVideo = (blob: Blob, url: string) => {
+    console.log("Restoring video from blob:", blob.size, "bytes");
+    setVideoBlob(blob);
+    setVideoUrl(url);
+    console.log("Video restored");
+  };
+  
   return {
     isRecording,
     isInitializing,
@@ -194,6 +201,7 @@ export function useVideoRecordingHandler() {
     initializeStream,
     startRecording,
     stopRecording,
-    clearVideo
+    clearVideo,
+    restoreVideo
   };
 }
