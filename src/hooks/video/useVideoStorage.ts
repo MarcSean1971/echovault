@@ -9,6 +9,7 @@ export function useVideoStorage() {
     console.log("Clearing video...");
     if (videoUrl) {
       URL.revokeObjectURL(videoUrl);
+      console.log("Revoked video URL");
     }
     setVideoBlob(null);
     setVideoUrl(null);
@@ -20,7 +21,7 @@ export function useVideoStorage() {
     console.log("Restoring video from blob:", blob.size, "bytes");
     setVideoBlob(blob);
     setVideoUrl(url);
-    console.log("Video restored");
+    console.log("Video restored successfully");
   };
   
   return {

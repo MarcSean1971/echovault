@@ -2,7 +2,7 @@
 import { useMessageTypeHandler } from "./useMessageTypeHandler";
 import { useMessageForm } from "@/components/message/MessageFormContext";
 import { useVideoRecordingHandler } from "./useVideoRecordingHandler";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useMessageTypeState } from "./useMessageTypeState";
 import { useVideoCache } from "./useVideoCache";
 import { parseMessageTranscription } from "@/services/messages/mediaService";
@@ -14,7 +14,7 @@ export function useMessageTypeManager() {
   } = useMessageTypeHandler();
 
   const { handleMessageTypeChange } = useMessageTypeState();
-  const { cachedVideoBlob, cachedVideoUrl, cachedTranscription, cacheVideo, clearCache } = useVideoCache();
+  const { cachedVideoBlob, cachedVideoUrl, cachedTranscription, cacheVideo, clearCache, hasCachedVideo } = useVideoCache();
   
   const {
     isRecording,
@@ -31,6 +31,22 @@ export function useMessageTypeManager() {
     clearVideo,
     restoreVideo
   } = useVideoRecordingHandler();
+
+  // Tracking the previous message type for debugging
+  const [prevMessageType, setPrevMessageType] = useState<string | null>(null);
+  
+  // Log state changes for debugging
+  useEffect(() => {
+    if (prevMessageType !== messageType) {
+      console.log(`useMessageTypeManager: Tab changed from ${prevMessageType} to ${messageType}`);
+      console.log("useMessageTypeManager: Current video state:", {
+        videoUrl: videoUrl ? "present" : "none",
+        cachedVideoUrl: cachedVideoUrl ? "present" : "none",
+        hasCachedVideo: hasCachedVideo()
+      });
+      setPrevMessageType(messageType);
+    }
+  }, [messageType, videoUrl, cachedVideoUrl, hasCachedVideo, prevMessageType]);
 
   // Extract transcription from the current content
   const getCurrentTranscription = () => {
@@ -71,6 +87,7 @@ export function useMessageTypeManager() {
   
   // When switching to video type, initialize the camera stream or restore video
   const onVideoTypeClick = () => {
+    console.log("Switching to video mode");
     handleMediaTypeClick();
     handleMessageTypeChange("video");
     setContextMessageType("video");
@@ -89,6 +106,8 @@ export function useMessageTypeManager() {
       initializeStream().catch(err => {
         console.error("Failed to initialize camera preview:", err);
       });
+    } else {
+      console.log("Video mode: No need to initialize camera - videoUrl or previewStream exists");
     }
   };
 

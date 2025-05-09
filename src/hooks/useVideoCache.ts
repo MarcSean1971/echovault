@@ -19,13 +19,16 @@ export function useVideoCache() {
       setCachedVideoBlob(blob);
       setCachedVideoUrl(url);
       setCachedTranscription(transcription);
+      console.log("Video successfully cached");
       return true;
     }
+    console.log("Failed to cache video - missing blob or URL");
     return false;
   };
   
   const clearCache = () => {
     if (cachedVideoUrl) {
+      console.log("Revoking cached video URL");
       URL.revokeObjectURL(cachedVideoUrl);
     }
     console.log("Clearing video cache");
@@ -34,11 +37,16 @@ export function useVideoCache() {
     setCachedTranscription(null);
   };
   
+  const hasCachedVideo = () => {
+    return !!(cachedVideoBlob && cachedVideoUrl);
+  };
+  
   return {
     cachedVideoBlob,
     cachedVideoUrl,
     cachedTranscription,
     cacheVideo,
-    clearCache
+    clearCache,
+    hasCachedVideo
   };
 }

@@ -37,11 +37,18 @@ export function useVideoRecordingHandler() {
   
   // Wrapper function for clearVideo
   const clearVideo = () => {
+    console.log("useVideoRecordingHandler: Clearing video");
     clearVideoBase(videoUrl, setVideoBlob, setVideoUrl);
   };
   
   // Wrapper function for restoreVideo with transcription support
   const restoreVideo = async (blob: Blob, url: string, transcription: string | null = null) => {
+    console.log("useVideoRecordingHandler: Restoring video", { 
+      hasBlob: !!blob, 
+      hasUrl: !!url, 
+      hasTranscription: !!transcription 
+    });
+    
     restoreVideoBase(blob, url, setVideoBlob, setVideoUrl);
     
     // If we have a transcription, restore it in the content

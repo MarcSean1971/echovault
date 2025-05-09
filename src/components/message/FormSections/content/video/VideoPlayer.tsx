@@ -21,11 +21,14 @@ export function VideoPlayer({
   const [isPlaying, setIsPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   
-  // Log when transcription changes for debugging
+  // Log when props change for debugging
   useEffect(() => {
-    console.log("VideoPlayer: Transcription updated:", 
-                transcription ? transcription.substring(0, 30) + "..." : "none");
-  }, [transcription]);
+    console.log("VideoPlayer: Props updated:", { 
+      videoUrl: videoUrl ? "present" : "none",
+      transcription: transcription ? transcription.substring(0, 30) + "..." : "none",
+      isTranscribing
+    });
+  }, [videoUrl, transcription, isTranscribing]);
   
   const togglePlayback = () => {
     if (!videoRef.current) return;

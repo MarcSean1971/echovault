@@ -34,11 +34,25 @@ export function VideoContent({
   onTranscribeVideo: () => Promise<void>;
   inDialog?: boolean;
 }) {
-  const { content } = useMessageForm();
+  const { content, messageType } = useMessageForm();
   const { isTranscribingVideo, getTranscriptionFromContent } = useContentUpdater();
   const [permissionError, setPermissionError] = useState<string | null>(null);
-  const [showVideoPreview, setShowVideoPreview] = useState(false);
+  const [showVideoPreview, setShowVideoPreview] = useState(!!videoUrl);
   const [transcription, setTranscription] = useState<string | null>(null);
+  
+  // Reset showVideoPreview state whenever videoUrl changes or tab changes
+  useEffect(() => {
+    console.log("VideoContent: videoUrl or messageType changed:", { 
+      videoUrl: videoUrl ? "present" : "null", 
+      messageType 
+    });
+    
+    // If we have a video URL, we should always show the video preview
+    if (videoUrl) {
+      console.log("VideoContent: Setting showVideoPreview to true because videoUrl exists");
+      setShowVideoPreview(true);
+    }
+  }, [videoUrl, messageType]);
   
   // Extract transcription from content
   useEffect(() => {
@@ -52,17 +66,15 @@ export function VideoContent({
   
   // Log for debugging
   useEffect(() => {
-    console.log("VideoContent: inDialog =", inDialog, 
-                "videoUrl =", videoUrl ? "present" : "null",
-                "previewStream =", previewStream ? "active" : "null",
-                "isRecording =", isRecording,
-                "transcription =", transcription ? "present" : "null");
-    
-    // If we have a video URL, we should show the video preview
-    if (videoUrl) {
-      setShowVideoPreview(true);
-    }
-  }, [inDialog, videoUrl, previewStream, isRecording, transcription]);
+    console.log("VideoContent: Rendering state:", { 
+      inDialog, 
+      videoUrl: videoUrl ? "present" : "null",
+      previewStream: previewStream ? "active" : "null",
+      isRecording,
+      transcription: transcription ? "present" : "null",
+      showVideoPreview
+    });
+  }, [inDialog, videoUrl, previewStream, isRecording, transcription, showVideoPreview]);
   
   // Handle transcription
   const handleTranscribe = async () => {
