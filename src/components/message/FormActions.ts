@@ -82,10 +82,26 @@ export function useFormActions() {
     try {
       // Determine which content to use based on message type
       let messageContent;
-      if (messageType === "text") {
-        messageContent = textContent;
-      } else if (messageType === "video") {
+      
+      // Special handling for combined content
+      if (messageType === "video" && videoContent) {
+        // Start with video content
         messageContent = videoContent;
+        
+        // If there's text content, combine it with the video
+        if (textContent && textContent.trim() !== '') {
+          try {
+            // Parse the video content to add text content to it
+            const videoContentObj = JSON.parse(videoContent);
+            videoContentObj.additionalText = textContent;
+            messageContent = JSON.stringify(videoContentObj);
+          } catch (error) {
+            console.error("Error combining text and video content:", error);
+            messageContent = videoContent; // Fall back to just video content
+          }
+        }
+      } else if (messageType === "text") {
+        messageContent = textContent;
       } else {
         messageContent = content;
       }

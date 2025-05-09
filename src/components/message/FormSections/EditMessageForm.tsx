@@ -212,11 +212,26 @@ function MessageEditForm({ message, onCancel }: EditMessageFormComponentProps) {
       }
       
       // Determine which content to use based on message type
+      // For combined content support, we'll use a special approach
       let contentToSave = content;
-      if (messageType === "text") {
-        contentToSave = textContent;
-      } else if (messageType === "video") {
+      
+      // If we have video content, we'll use that as the primary content
+      if (messageType === "video" && videoContent) {
         contentToSave = videoContent;
+        
+        // If we also have text content, add it to the video content
+        if (textContent && textContent.trim() !== '') {
+          try {
+            // Parse the video content to add text content to it
+            const videoContentObj = JSON.parse(videoContent);
+            videoContentObj.additionalText = textContent;
+            contentToSave = JSON.stringify(videoContentObj);
+          } catch (error) {
+            console.error("Error combining text and video content:", error);
+          }
+        }
+      } else if (messageType === "text") {
+        contentToSave = textContent;
       }
 
       // Update message in database

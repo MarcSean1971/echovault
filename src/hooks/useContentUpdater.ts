@@ -6,13 +6,24 @@ import { transcribeVideoContent, formatVideoContent } from "@/services/messages/
 import { toast } from "@/components/ui/use-toast";
 
 export function useContentUpdater() {
-  const { setContent, setVideoContent } = useMessageForm();
+  const { setContent, setVideoContent, setTextContent } = useMessageForm();
   const [isTranscribingVideo, setIsTranscribingVideo] = useState(false);
 
   // Extract transcription from content
   const getTranscriptionFromContent = (content: string | null): string | null => {
     if (!content) return null;
     return parseMessageTranscription(content);
+  };
+
+  // Check if content contains video data
+  const hasVideoData = (content: string | null): boolean => {
+    if (!content) return false;
+    try {
+      const parsed = JSON.parse(content);
+      return !!parsed.videoData;
+    } catch (e) {
+      return false;
+    }
   };
 
   // Handle video content update with optional transcription
@@ -40,11 +51,10 @@ export function useContentUpdater() {
       // Format video content for storage
       const formattedContent = await formatVideoContent(videoBlob, transcription);
       
-      // Update both the combined content and video-specific content
-      setContent(formattedContent);
+      // Update the video-specific content
       setVideoContent(formattedContent);
       
-      return { success: true, transcription };
+      return { success: true, transcription, videoContent: formattedContent };
     } catch (error) {
       console.error("Error updating video content:", error);
       
@@ -63,6 +73,7 @@ export function useContentUpdater() {
   return {
     handleVideoContentUpdate,
     isTranscribingVideo,
-    getTranscriptionFromContent
+    getTranscriptionFromContent,
+    hasVideoData
   };
 }

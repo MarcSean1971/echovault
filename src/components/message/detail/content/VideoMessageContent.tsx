@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 export function VideoMessageContent({ message }: { message: Message }) {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [transcription, setTranscription] = useState<string | null>(null);
+  const [additionalText, setAdditionalText] = useState<string | null>(null);
   
   useEffect(() => {
     if (message.content) {
@@ -27,6 +28,16 @@ export function VideoMessageContent({ message }: { message: Message }) {
         }
         
         setTranscription(extractedTranscription);
+        
+        // Check for additional text in the content
+        try {
+          const contentObj = JSON.parse(message.content);
+          if (contentObj.additionalText) {
+            setAdditionalText(contentObj.additionalText);
+          }
+        } catch (e) {
+          console.error("Error parsing additional text:", e);
+        }
       } catch (e) {
         console.error("Error parsing video content:", e);
       }

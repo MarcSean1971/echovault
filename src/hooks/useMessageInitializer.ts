@@ -3,7 +3,7 @@ import { useEffect, useCallback } from "react";
 import { useMessageForm } from "@/components/message/MessageFormContext";
 import { Message } from "@/types/message";
 import { toast } from "@/components/ui/use-toast";
-import { parseVideoContent } from '@/services/messages/mediaService';
+import { parseVideoContent, parseMessageTranscription } from '@/services/messages/mediaService';
 import { useInitializeMediaContent } from "./useInitializeMediaContent";
 
 /**
@@ -44,10 +44,33 @@ export function useMessageInitializer(message?: Message) {
     // Set form content regardless of message type
     setContent(message.content);
     
-    // Set the appropriate content type based on the message type
-    if (message.message_type === "video") {
-      setVideoContent(message.content);
-    } else {
+    // Check if the content has video data
+    let hasVideo = false;
+    try {
+      const { videoData } = parseVideoContent(message.content);
+      hasVideo = !!videoData;
+      
+      if (hasVideo) {
+        console.log("Message contains video content");
+        setVideoContent(message.content);
+        
+        // Check for additional text in the video content
+        try {
+          const contentObj = JSON.parse(message.content);
+          if (contentObj.additionalText) {
+            console.log("Message contains additional text with video:", contentObj.additionalText);
+            setTextContent(contentObj.additionalText);
+          }
+        } catch (e) {
+          console.error("Error parsing additional text from video content:", e);
+        }
+      }
+    } catch (e) {
+      hasVideo = false;
+    }
+    
+    // If content is plain text or message type is text, set text content
+    if (!hasVideo || message.message_type === "text") {
       setTextContent(message.content);
     }
     

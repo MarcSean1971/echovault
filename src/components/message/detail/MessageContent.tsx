@@ -24,6 +24,7 @@ export function MessageContent({
   const transcription = parseMessageTranscription(message.content);
   const [hasVideoContent, setHasVideoContent] = useState(false);
   const [hasTextContent, setHasTextContent] = useState(false);
+  const [additionalText, setAdditionalText] = useState<string | null>(null);
   
   // Check for different types of content
   useEffect(() => {
@@ -33,6 +34,18 @@ export function MessageContent({
     try {
       const { videoData } = parseVideoContent(message.content);
       setHasVideoContent(!!videoData);
+      
+      // If we have video content, check for additional text
+      if (videoData) {
+        try {
+          const contentObj = JSON.parse(message.content);
+          if (contentObj.additionalText) {
+            setAdditionalText(contentObj.additionalText);
+          }
+        } catch (e) {
+          console.error("Error parsing additional text from video content:", e);
+        }
+      }
     } catch (e) {
       setHasVideoContent(false);
     }
@@ -50,7 +63,8 @@ export function MessageContent({
     console.log("MessageContent: Extracted transcription:", transcription);
     console.log("MessageContent: Has video content:", hasVideoContent);
     console.log("MessageContent: Has text content:", hasTextContent);
-  }, [message, transcription, hasVideoContent, hasTextContent]);
+    console.log("MessageContent: Additional text:", additionalText);
+  }, [message, transcription, hasVideoContent, hasTextContent, additionalText]);
 
   // Choose the appropriate content components based on message type and content
   const renderMessageContent = () => {
@@ -63,13 +77,23 @@ export function MessageContent({
           </div>
         )}
         
+        {/* Display additional text if it exists with the video */}
+        {additionalText && (
+          <div className="mt-6 mb-6">
+            <h3 className="text-lg font-medium mb-3">Additional Message</h3>
+            <div className="prose dark:prose-invert">
+              {additionalText}
+            </div>
+          </div>
+        )}
+        
         {/* If this is a text message type or has normal text content, show text content */}
-        {(message.message_type === "text" || (hasTextContent && !hasVideoContent)) && (
+        {(message.message_type === "text" || (hasTextContent && !hasVideoContent && !additionalText)) && (
           <TextMessageContent message={message} content={message.content} />
         )}
         
         {/* If we don't recognize the content type, use the unknown component */}
-        {!hasVideoContent && !hasTextContent && (
+        {!hasVideoContent && !hasTextContent && !additionalText && (
           <UnknownMessageContent message={message} />
         )}
       </>
