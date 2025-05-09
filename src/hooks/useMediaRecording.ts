@@ -89,6 +89,7 @@ export function useMediaRecording(mediaType: MediaType) {
     clearMedia,
     setMediaUrl,
     setTranscription,
-    setMediaBase64
+    setMediaBase64,
+    setMediaBlob
   };
 }

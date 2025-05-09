@@ -10,12 +10,13 @@ export function useVideoRecordingHandler() {
     mediaUrl: videoUrl,
     isTranscribing: isTranscribingVideo,
     transcription: videoTranscription,
-    handleMediaReady: handleMediaReady,
-    clearMedia: clearMedia,
+    handleMediaReady,
+    clearMedia,
     setMediaUrl: setVideoUrl,
     setTranscription: setVideoTranscription,
-    setMediaBase64: setVideoBase64
-  } = useMediaRecording("video");
+    setMediaBase64: setVideoBase64,
+    setMediaBlob: setVideoBlob
+  } = useMediaRecording("audio");
   
   // Wrapper functions with video-specific naming
   const handleVideoReady = async (videoBlob: Blob, videoBase64: string) => {
@@ -38,6 +39,7 @@ export function useVideoRecordingHandler() {
     clearVideo,
     setVideoUrl,
     setVideoTranscription,
-    setVideoBase64
+    setVideoBase64,
+    setVideoBlob
   };
 }
