@@ -54,7 +54,7 @@ export const transcribeVideoContent = async (videoBlob: Blob): Promise<string> =
     
     console.log("Transcription successful:", data.transcription);
     return data.transcription;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error transcribing video:", error);
     toast({
       title: "Transcription failed",

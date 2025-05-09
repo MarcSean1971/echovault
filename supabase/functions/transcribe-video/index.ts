@@ -31,13 +31,13 @@ serve(async (req) => {
       bytes[i] = binaryString.charCodeAt(i);
     }
     
-    // Create a blob with the PROPER MIME type - mp3/mp4/wav for Whisper API
+    // Create a blob with the PROPER MIME type for Whisper API
     // Whisper API supports: flac, m4a, mp3, mp4, mpeg, mpga, oga, ogg, wav, webm
-    const blob = new Blob([bytes], { type: 'audio/webm' }); // webm is in the supported list
+    const blob = new Blob([bytes], { type: 'video/webm' }); // Changed from audio/webm to video/webm
     
     // Create FormData for the OpenAI API
     const formData = new FormData();
-    formData.append('file', blob, 'audio.webm'); // Use audio extension to signal audio content
+    formData.append('file', blob, 'video.webm'); // Changed extension to .webm since it's supported
     formData.append('model', 'whisper-1');
     formData.append('language', 'en');
     

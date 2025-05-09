@@ -80,9 +80,10 @@ export function VideoContent({
       isRecording,
       transcription: transcription ? "present" : "null",
       showVideoPreview,
-      messageType
+      messageType,
+      content: content ? "present" : "none"
     });
-  }, [inDialog, videoUrl, previewStream, isRecording, transcription, showVideoPreview, messageType]);
+  }, [inDialog, videoUrl, previewStream, isRecording, transcription, showVideoPreview, messageType, content]);
   
   // Handle transcription
   const handleTranscribe = async () => {

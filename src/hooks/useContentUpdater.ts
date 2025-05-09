@@ -6,7 +6,7 @@ import { transcribeVideoContent, formatVideoContent } from "@/services/messages/
 import { toast } from "@/components/ui/use-toast";
 
 export function useContentUpdater() {
-  const { setContent, setVideoContent, setTextContent, content } = useMessageForm();
+  const { setContent, setVideoContent, setTextContent, content, textContent } = useMessageForm();
   const [isTranscribingVideo, setIsTranscribingVideo] = useState(false);
 
   // Extract transcription from content
@@ -51,6 +51,7 @@ export function useContentUpdater() {
       if (!skipTranscription) {
         // Generate transcription using OpenAI via edge function
         try {
+          console.log("Starting transcription process for video blob size:", videoBlob.size);
           transcription = await transcribeVideoContent(videoBlob);
           console.log("Transcription generated:", transcription ? transcription.substring(0, 50) + "..." : "none");
           
@@ -75,17 +76,22 @@ export function useContentUpdater() {
       // Format video content for storage
       const formattedContent = await formatVideoContent(videoBlob, transcription);
       
+      // Log the formatted content structure
+      console.log("Video content formatted with transcription:", !!transcription);
+      
       // Update the video-specific content
       setVideoContent(formattedContent);
       
-      // If there's text content, make sure to preserve it in the video content
-      const { textContent } = useMessageForm();
-      if (textContent && textContent.trim() !== '') {
+      // Get current text content to preserve it
+      const currentTextContent = textContent;
+      
+      if (currentTextContent && currentTextContent.trim() !== '') {
         try {
           // Parse the video content to add text content to it
           const videoContentObj = JSON.parse(formattedContent);
-          videoContentObj.additionalText = textContent;
+          videoContentObj.additionalText = currentTextContent;
           const combinedContent = JSON.stringify(videoContentObj);
+          console.log("Combined content created with additional text");
           setVideoContent(combinedContent);
           setContent(combinedContent);
         } catch (error) {

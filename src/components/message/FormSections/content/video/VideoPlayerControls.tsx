@@ -25,7 +25,7 @@ export function VideoPlayerControls({
           onClick={togglePlayback} 
           variant="secondary" 
           size="icon"
-          className="rounded-full hover:bg-primary/90 transition-colors"
+          className="rounded-full hover:bg-primary/90 hover:text-primary-foreground transition-colors duration-200"
         >
           {isPlaying ? (
             <Pause className="h-5 w-5" />
@@ -39,7 +39,7 @@ export function VideoPlayerControls({
           variant="secondary"
           size="sm"
           disabled={isTranscribing}
-          className="hover:bg-primary/90 transition-colors"
+          className="hover:bg-primary/90 hover:text-primary-foreground transition-colors duration-200"
         >
           <Mic className="h-4 w-4 mr-1" />
           {isTranscribing ? "Transcribing..." : "Transcribe"}
@@ -49,7 +49,7 @@ export function VideoPlayerControls({
           onClick={onClearVideo}
           variant="ghost"
           size="icon"
-          className="hover:bg-destructive/90 transition-colors"
+          className="hover:bg-destructive/90 hover:text-destructive-foreground transition-colors duration-200"
         >
           <Trash2 className="h-4 w-4" />
         </Button>

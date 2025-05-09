@@ -27,7 +27,7 @@ export function VideoTranscription({
             value={transcription || ""}
             readOnly
             className="min-h-[100px] bg-transparent border-0 focus-visible:ring-0 resize-none hover:bg-muted/20 transition-colors"
-            placeholder="Transcription will appear here after processing..."
+            placeholder={transcription === null ? "Transcription will appear here after processing..." : ""}
           />
         )}
       </Card>
