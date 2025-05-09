@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { AudioPlayer } from "@/components/media/AudioPlayer";
 import { BUTTON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { Spinner } from "@/components/ui/spinner";
+import { Mic } from "lucide-react";
 
 interface AudioContentProps {
   audioUrl: string | null;
@@ -67,7 +68,7 @@ export function AudioContent({
         onClick={onRecordClick}
         className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
       >
-        Record Audio Message
+        <Mic className="mr-2 h-4 w-4" /> Record Audio Message
       </Button>
     </div>
   );

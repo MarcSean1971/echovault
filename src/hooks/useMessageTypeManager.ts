@@ -30,32 +30,17 @@ export function useMessageTypeManager() {
   const handleMessageTypeChange = (type: string) => {
     setMessageType(type);
     setContextMessageType(type);
-    
-    // When changing message type, ensure content is properly formatted
-    if (type === "audio" && audioBase64) {
-      // Format content as JSON with audioData
-      const contentData = {
-        audioData: audioBase64,
-        transcription: audioTranscription
-      };
-      // No need to call setContent here as that will be done in the message type handler
-    } else if (type === "video" && videoBase64) {
-      // Format content as JSON with videoData
-      const contentData = {
-        videoData: videoBase64,
-        transcription: videoTranscription
-      };
-      // No need to call setContent here as that will be done in the message type handler
-    }
   };
 
   // Handle type selection with our custom hooks
   const onAudioTypeClick = () => {
+    // Always show the audio recorder when clicking audio type
     handleAudioTypeClick(setShowAudioRecorder, audioBlob);
     handleMessageTypeChange("audio");
   };
   
   const onVideoTypeClick = () => {
+    // Always show the video recorder when clicking video type
     handleVideoTypeClick(setShowVideoRecorder, videoBlob);
     handleMessageTypeChange("video");
   };

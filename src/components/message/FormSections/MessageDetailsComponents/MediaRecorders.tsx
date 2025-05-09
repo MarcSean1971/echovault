@@ -13,10 +13,12 @@ interface MediaRecordersProps {
 export function MediaRecorders({ onAudioContentUpdate, onVideoContentUpdate }: MediaRecordersProps) {
   const {
     showAudioRecorder, setShowAudioRecorder,
+    audioBlob, audioUrl
   } = useAudioRecordingHandler();
   
   const {
     showVideoRecorder, setShowVideoRecorder,
+    videoBlob, videoUrl
   } = useVideoRecordingHandler();
 
   return (
@@ -24,14 +26,18 @@ export function MediaRecorders({ onAudioContentUpdate, onVideoContentUpdate }: M
       {/* Audio Recorder Dialog */}
       <AudioRecorderDialog 
         open={showAudioRecorder} 
-        onOpenChange={setShowAudioRecorder} 
+        onOpenChange={setShowAudioRecorder}
+        existingAudioUrl={audioUrl}
+        existingAudioBlob={audioBlob}
         onAudioReady={onAudioContentUpdate}
       />
       
       {/* Video Recorder Dialog */}
       <VideoRecorderDialog 
         open={showVideoRecorder} 
-        onOpenChange={setShowVideoRecorder} 
+        onOpenChange={setShowVideoRecorder}
+        existingVideoUrl={videoUrl}
+        existingVideoBlob={videoBlob} 
         onVideoReady={onVideoContentUpdate}
       />
     </>

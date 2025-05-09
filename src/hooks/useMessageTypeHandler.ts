@@ -74,9 +74,9 @@ export function useMessageTypeHandler() {
       setContent(videoContent);
     }
     
-    if (!mediaBlob) {
-      setShowRecorder(true);
-    }
+    // Always show the recorder dialog when switching to media type
+    // We'll let the dialog decide what to do based on existing media
+    setShowRecorder(true);
   };
 
   // Convenience wrappers for audio and video

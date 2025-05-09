@@ -15,11 +15,11 @@ export function useMessageInitializer(message?: Message) {
   } = useMessageForm();
   
   const {
-    setAudioUrl, setAudioBase64, setAudioTranscription
+    setAudioUrl, setAudioBase64, setAudioTranscription, setAudioBlob
   } = useAudioRecordingHandler();
   
   const {
-    setVideoUrl, setVideoBase64, setVideoTranscription
+    setVideoUrl, setVideoBase64, setVideoTranscription, setVideoBlob
   } = useVideoRecordingHandler();
 
   // Set initial message type based on the message being edited
@@ -44,6 +44,7 @@ export function useMessageInitializer(message?: Message) {
           setAudioUrl(url);
           setAudioBase64(contentObj.audioData);
           setAudioTranscription(contentObj.transcription || null);
+          setAudioBlob(audioBlob); // Also set the audio blob for use in the recorder
           
           // Important: Set the form content to match the audio data
           setContent(message.content);
@@ -56,6 +57,7 @@ export function useMessageInitializer(message?: Message) {
           setVideoUrl(url);
           setVideoBase64(contentObj.videoData);
           setVideoTranscription(contentObj.transcription || null);
+          setVideoBlob(videoBlob); // Also set the video blob for use in the recorder
           
           // Important: Set the form content to match the video data
           setContent(message.content);
@@ -67,15 +69,26 @@ export function useMessageInitializer(message?: Message) {
       // For text messages, just set the content directly
       setContent(message.content);
     }
-  }, [message, setAudioUrl, setAudioBase64, setAudioTranscription, setVideoUrl, setVideoBase64, setVideoTranscription, setContent]);
+    
+    // Cleanup function to revoke object URLs when unmounting
+    return () => {
+      // Cleanup will happen in the individual hooks
+    };
+  }, [message, setAudioUrl, setAudioBase64, setAudioTranscription, setAudioBlob,
+      setVideoUrl, setVideoBase64, setVideoTranscription, setVideoBlob, setContent]);
 
   // Helper function to convert base64 to blob
   const base64ToBlob = (base64: string, type: string): Blob => {
-    const binaryString = window.atob(base64);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
+    try {
+      const binaryString = window.atob(base64);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      return new Blob([bytes], { type });
+    } catch (e) {
+      console.error("Error converting base64 to blob:", e);
+      return new Blob([], { type });
     }
-    return new Blob([bytes], { type });
   };
 }
