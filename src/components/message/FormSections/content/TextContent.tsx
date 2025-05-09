@@ -6,27 +6,22 @@ import { AIEnhancer } from "@/components/AIEnhancer";
 import { useState, useEffect } from "react";
 
 export function TextContent() {
-  const { content, setContent, messageType } = useMessageForm();
-  const [displayContent, setDisplayContent] = useState(content);
+  const { textContent, setTextContent, messageType, setContent } = useMessageForm();
+  const [displayContent, setDisplayContent] = useState(textContent);
 
-  // Update display content based on message type
+  // Update display content when text content changes
   useEffect(() => {
-    if (messageType === "video") {
-      // For video messages, just show a placeholder or empty content
-      setDisplayContent("");
-    } else {
-      // For all other types, show the actual content
-      setDisplayContent(content);
-    }
-  }, [content, messageType]);
+    setDisplayContent(textContent);
+  }, [textContent]);
 
-  // Handle content changes, but only when not in video mode
+  // Handle content changes for text
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newContent = e.target.value;
+    setTextContent(newContent);
+    setDisplayContent(newContent);
+    
+    // Also update the main content field for compatibility with other components
     setContent(newContent);
-    if (messageType !== "video") {
-      setDisplayContent(newContent);
-    }
   };
 
   return (
@@ -37,15 +32,14 @@ export function TextContent() {
         value={displayContent}
         onChange={handleContentChange}
         className={`w-full p-2 border rounded-md min-h-[150px] ${HOVER_TRANSITION} focus:ring-2 focus:ring-primary/20 focus:border-primary hover:border-primary/50`}
-        placeholder={
-          messageType === "video"
-            ? "Text content is not used when in video message mode"
-            : "Enter your message content"
-        }
-        readOnly={messageType === "video"} // Make readonly when in video mode
+        placeholder="Enter your message content"
       />
       <div className="flex justify-end mt-2">
-        <AIEnhancer content={displayContent} onChange={setContent} />
+        <AIEnhancer content={displayContent} onChange={(enhancedContent) => {
+          setTextContent(enhancedContent);
+          setContent(enhancedContent);
+          setDisplayContent(enhancedContent);
+        }} />
       </div>
     </>
   );

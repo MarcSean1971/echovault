@@ -7,7 +7,7 @@ import { useMessageForm } from "@/components/message/MessageFormContext";
 import { formatVideoContent } from "@/services/messages/transcriptionService";
 
 export function useVideoRecordingHandler() {
-  const { setContent } = useMessageForm();
+  const { setContent, setVideoContent } = useMessageForm();
   // Use our custom hooks
   const {
     previewStream,
@@ -41,9 +41,8 @@ export function useVideoRecordingHandler() {
     console.log("useVideoRecordingHandler: Clearing video");
     clearVideoBase(videoUrl, setVideoBlob, setVideoUrl);
     
-    // Also clear the content if we're clearing the video
-    // This prevents out-of-sync state between video blob and content
-    setContent("");
+    // Clear the videoContent in the form context
+    setVideoContent("");
   };
   
   // Wrapper function for restoreVideo with transcription support
@@ -58,23 +57,15 @@ export function useVideoRecordingHandler() {
     restoreVideoBase(blob, url, setVideoBlob, setVideoUrl);
     
     // If we have a transcription, restore it in the content
-    if (transcription && blob) {
+    if (blob) {
       try {
-        console.log("Restoring video with transcription:", transcription.substring(0, 30) + "...");
+        console.log("Restoring video with transcription:", transcription ? transcription.substring(0, 30) + "..." : "none");
         // Format the content with video data and transcription to update the form
         const formattedContent = await formatVideoContent(blob, transcription);
+        setVideoContent(formattedContent);
         setContent(formattedContent);
       } catch (err) {
-        console.error("Error restoring video transcription:", err);
-      }
-    } else if (blob) {
-      // Even without transcription, update content with video data
-      try {
-        console.log("Restoring video without transcription");
-        const formattedContent = await formatVideoContent(blob, null);
-        setContent(formattedContent);
-      } catch (err) {
-        console.error("Error formatting video content:", err);
+        console.error("Error restoring video content:", err);
       }
     }
   };

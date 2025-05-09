@@ -1,5 +1,5 @@
 
-import { useEffect, useCallback, useState } from "react";
+import { useEffect, useCallback } from "react";
 import { useMessageForm } from "@/components/message/MessageFormContext";
 import { Message } from "@/types/message";
 import { toast } from "@/components/ui/use-toast";
@@ -12,7 +12,9 @@ import { useInitializeMediaContent } from "./useInitializeMediaContent";
 export function useMessageInitializer(message?: Message) {
   const { 
     setMessageType: setContextMessageType,
-    setContent
+    setContent,
+    setTextContent,
+    setVideoContent
   } = useMessageForm();
   
   // Use our media content initializer hook
@@ -42,7 +44,14 @@ export function useMessageInitializer(message?: Message) {
     // Set form content regardless of message type
     setContent(message.content);
     
-  }, [message, setContent]);
+    // Set the appropriate content type based on the message type
+    if (message.message_type === "video") {
+      setVideoContent(message.content);
+    } else {
+      setTextContent(message.content);
+    }
+    
+  }, [message, setContent, setTextContent, setVideoContent]);
 
   return {
     videoUrl,

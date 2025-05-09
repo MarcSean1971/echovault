@@ -1,12 +1,12 @@
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { Message } from "@/types/message";
 import { TextMessageContent } from "./content/TextMessageContent";
 import { UnknownMessageContent } from "./content/UnknownMessageContent";
 import { WhatsAppIntegration } from "./content/WhatsAppIntegration";
 import { Separator } from "@/components/ui/separator";
 import { MessageAttachments } from "./MessageAttachments";
-import { parseMessageTranscription } from "@/services/messages/mediaService";
+import { parseMessageTranscription, parseVideoContent } from "@/services/messages/mediaService";
 import { VideoMessageContent } from "./content/VideoMessageContent";
 
 export interface MessageContentProps {
@@ -22,24 +22,58 @@ export function MessageContent({
 }: MessageContentProps) {
   // Extract transcription from message content
   const transcription = parseMessageTranscription(message.content);
+  const [hasVideoContent, setHasVideoContent] = useState(false);
+  const [hasTextContent, setHasTextContent] = useState(false);
+  
+  // Check for different types of content
+  useEffect(() => {
+    if (!message.content) return;
+    
+    // Check for video content
+    try {
+      const { videoData } = parseVideoContent(message.content);
+      setHasVideoContent(!!videoData);
+    } catch (e) {
+      setHasVideoContent(false);
+    }
+    
+    // For text content, we consider any non-JSON content or message type="text" as text
+    if (message.message_type === "text" || !message.content.trim().startsWith("{")) {
+      setHasTextContent(true);
+    }
+  }, [message.content, message.message_type]);
   
   // Log for debugging purposes
   useEffect(() => {
     console.log(`MessageContent: Rendering message of type: ${message.message_type}`);
-    console.log("MessageContent: Message content:", message.content);
+    console.log("MessageContent: Message content:", message.content ? message.content.substring(0, 100) + "..." : null);
     console.log("MessageContent: Extracted transcription:", transcription);
-  }, [message, transcription]);
-  
-  // Choose the appropriate content component based on message type
+    console.log("MessageContent: Has video content:", hasVideoContent);
+    console.log("MessageContent: Has text content:", hasTextContent);
+  }, [message, transcription, hasVideoContent, hasTextContent]);
+
+  // Choose the appropriate content components based on message type and content
   const renderMessageContent = () => {
-    switch (message.message_type) {
-      case "text":
-        return <TextMessageContent message={message} content={message.content} />;
-      case "video":
-        return <VideoMessageContent message={message} />;
-      default:
-        return <UnknownMessageContent message={message} />;
-    }
+    return (
+      <>
+        {/* If this is a video message type or contains video data, show video content */}
+        {(message.message_type === "video" || hasVideoContent) && (
+          <div className="mb-6">
+            <VideoMessageContent message={message} />
+          </div>
+        )}
+        
+        {/* If this is a text message type or has normal text content, show text content */}
+        {(message.message_type === "text" || (hasTextContent && !hasVideoContent)) && (
+          <TextMessageContent message={message} content={message.content} />
+        )}
+        
+        {/* If we don't recognize the content type, use the unknown component */}
+        {!hasVideoContent && !hasTextContent && (
+          <UnknownMessageContent message={message} />
+        )}
+      </>
+    );
   };
 
   // Check if this is a panic trigger message with WhatsApp configuration

@@ -1,4 +1,3 @@
-
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/components/ui/use-toast";
@@ -17,6 +16,8 @@ export function useFormActions() {
   const {
     title,
     content,
+    textContent,
+    videoContent,
     messageType,
     files,
     setIsLoading,
@@ -38,13 +39,15 @@ export function useFormActions() {
     shareLocation,
     locationLatitude,
     locationLongitude,
-    locationName
+    locationName,
+    checkInCode
   } = useMessageForm();
 
   // Check if the form has valid required inputs
   const isFormValid = 
     title.trim() !== "" && 
-    (messageType !== "text" || content.trim() !== "") &&
+    ((messageType === "text" && textContent.trim() !== "") || 
+     (messageType === "video" && videoContent.trim() !== "")) &&
     selectedRecipients.length > 0;
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -77,9 +80,15 @@ export function useFormActions() {
     }
     
     try {
-      // For non-text message types, content is already a stringified JSON
-      // For text messages, content is just a string
-      const messageContent = content;
+      // Determine which content to use based on message type
+      let messageContent;
+      if (messageType === "text") {
+        messageContent = textContent;
+      } else if (messageType === "video") {
+        messageContent = videoContent;
+      } else {
+        messageContent = content;
+      }
       
       // Create the basic message with location data if enabled
       const message = await createMessage(
@@ -139,6 +148,7 @@ export function useFormActions() {
               panicTriggerConfig,
               
               // Recipients - now using the actual recipient objects
+              checkInCode: checkInCode || undefined,
               recipients
             }
           );

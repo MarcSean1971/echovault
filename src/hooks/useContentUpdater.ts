@@ -1,62 +1,64 @@
 
 import { useState } from "react";
 import { useMessageForm } from "@/components/message/MessageFormContext";
-import { formatVideoContent, transcribeVideoContent } from "@/services/messages/transcriptionService";
-import { toast } from "@/components/ui/use-toast";
 import { parseMessageTranscription } from "@/services/messages/mediaService";
+import { transcribeVideoContent, formatVideoContent } from "@/services/messages/transcriptionService";
+import { toast } from "@/components/ui/use-toast";
 
 export function useContentUpdater() {
-  const { setContent, messageType } = useMessageForm();
+  const { setContent, setVideoContent } = useMessageForm();
   const [isTranscribingVideo, setIsTranscribingVideo] = useState(false);
-  const [videoTranscriptionText, setVideoTranscriptionText] = useState<string | null>(null);
 
-  // Process video content - transcribe and update the form content
-  const handleVideoContentUpdate = async (blob: Blob) => {
+  // Extract transcription from content
+  const getTranscriptionFromContent = (content: string | null): string | null => {
+    if (!content) return null;
+    return parseMessageTranscription(content);
+  };
+
+  // Handle video content update with optional transcription
+  const handleVideoContentUpdate = async (videoBlob: Blob, skipTranscription = false): Promise<any> => {
     try {
       setIsTranscribingVideo(true);
       
-      // Transcribe the video
-      console.log("Transcribing video...");
-      const transcription = await transcribeVideoContent(blob);
-      console.log("Video transcription complete:", transcription);
+      let transcription = null;
       
-      // Format the content with the video data and transcription
-      const formattedContent = await formatVideoContent(blob, transcription);
+      if (!skipTranscription) {
+        // Generate transcription
+        transcription = await transcribeVideoContent(videoBlob);
+        
+        // Show success notification
+        toast({
+          title: "Video transcribed",
+          description: "Video transcription completed successfully"
+        });
+      }
       
-      // Update the form content (this stores the complete JSON with video data)
+      // Format video content for storage
+      const formattedContent = await formatVideoContent(videoBlob, transcription);
+      
+      // Update both the combined content and video-specific content
       setContent(formattedContent);
+      setVideoContent(formattedContent);
       
-      // Store the transcription text separately for display
-      setVideoTranscriptionText(transcription);
-      
-      return transcription;
+      return { success: true, transcription };
     } catch (error) {
       console.error("Error updating video content:", error);
+      
       toast({
-        title: "Error",
-        description: "Failed to process video content",
+        title: "Transcription Error",
+        description: "Failed to transcribe the video",
         variant: "destructive"
       });
-      throw error;
+      
+      return { success: false, error };
     } finally {
       setIsTranscribingVideo(false);
     }
   };
 
-  // Extract transcription from content JSON
-  const getTranscriptionFromContent = (contentJson: string | null): string | null => {
-    if (!contentJson) return null;
-    const transcription = parseMessageTranscription(contentJson);
-    console.log("getTranscriptionFromContent:", 
-                transcription ? transcription.substring(0, 30) + "..." : "none");
-    return transcription;
-  };
-
   return {
     handleVideoContentUpdate,
     isTranscribingVideo,
-    videoTranscriptionText,
-    setVideoTranscriptionText,
     getTranscriptionFromContent
   };
 }

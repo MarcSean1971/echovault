@@ -1,3 +1,4 @@
+
 import { useMessageTypeHandler } from "./useMessageTypeHandler";
 import { useMessageForm } from "@/components/message/MessageFormContext";
 import { useVideoRecordingHandler } from "./useVideoRecordingHandler";
@@ -7,7 +8,16 @@ import { useVideoCache } from "./useVideoCache";
 import { parseMessageTranscription } from "@/services/messages/mediaService";
 
 export function useMessageTypeManager() {
-  const { messageType, setMessageType: setContextMessageType, content } = useMessageForm();
+  const { 
+    messageType, 
+    setMessageType: setContextMessageType, 
+    content,
+    videoContent,
+    textContent, 
+    setTextContent,
+    setVideoContent 
+  } = useMessageForm();
+  
   const { handleTextTypeClick, handleMediaTypeClick } = useMessageTypeHandler();
   const { handleMessageTypeChange } = useMessageTypeState();
   const { cachedVideoBlob, cachedVideoUrl, cachedTranscription, cacheVideo, clearCache, hasCachedVideo } = useVideoCache();
@@ -42,7 +52,9 @@ export function useMessageTypeManager() {
   useEffect(() => {
     if (prevMessageType !== messageType) {
       console.log(`useMessageTypeManager: Tab changed from ${prevMessageType} to ${messageType}`);
-      console.log("useMessageTypeManager: Current video state:", {
+      console.log("useMessageTypeManager: Current content state:", {
+        textContent: textContent ? "present" : "none",
+        videoContent: videoContent ? "present" : "none",
         videoUrl: videoUrl ? "present" : "none",
         cachedVideoUrl: cachedVideoUrl ? "present" : "none",
         previewStreamActive: previewStream ? (isStreamActive() ? "active" : "inactive") : "none",
@@ -51,12 +63,12 @@ export function useMessageTypeManager() {
       });
       setPrevMessageType(messageType);
     }
-  }, [messageType, videoUrl, cachedVideoUrl, hasCachedVideo, previewStream, prevMessageType, isStreamActive, initializedFromMessage]);
+  }, [messageType, videoUrl, cachedVideoUrl, hasCachedVideo, previewStream, prevMessageType, isStreamActive, initializedFromMessage, textContent, videoContent]);
 
   // Extract transcription from the current content
   const getCurrentTranscription = () => {
-    if (!content) return null;
-    return parseMessageTranscription(content);
+    if (!videoContent) return null;
+    return parseMessageTranscription(videoContent);
   };
 
   // Function to handle initialized video data from a message being edited

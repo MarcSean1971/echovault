@@ -37,6 +37,8 @@ function MessageEditForm({ message, onCancel }: EditMessageFormComponentProps) {
     setContent,
     messageType,
     setMessageType,
+    textContent,
+    videoContent,
     showUploadDialog, 
     setShowUploadDialog, 
     uploadProgress,
@@ -209,12 +211,20 @@ function MessageEditForm({ message, onCancel }: EditMessageFormComponentProps) {
         ];
       }
       
+      // Determine which content to use based on message type
+      let contentToSave = content;
+      if (messageType === "text") {
+        contentToSave = textContent;
+      } else if (messageType === "video") {
+        contentToSave = videoContent;
+      }
+
       // Update message in database
       const { error } = await supabase
         .from('messages')
         .update({
           title,
-          content,
+          content: contentToSave,
           message_type: messageType,
           attachments: attachmentsToSave.length > 0 ? attachmentsToSave : null,
           updated_at: new Date().toISOString()
