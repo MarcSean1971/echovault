@@ -1,76 +1,45 @@
 
-import { useState } from 'react';
-import { useMessageForm } from '@/components/message/MessageFormContext';
-import { toast } from '@/components/ui/use-toast';
-import { transcribeVideoContent, formatVideoContent, blobToBase64 } from '@/services/messages/transcriptionService';
+import { useState } from "react";
+import { useMessageForm } from "@/components/message/MessageFormContext";
+import { formatVideoContent, transcribeVideoContent } from "@/services/messages/transcriptionService";
+import { toast } from "@/components/ui/use-toast";
 
 export function useContentUpdater() {
   const { setContent } = useMessageForm();
   const [isTranscribingVideo, setIsTranscribingVideo] = useState(false);
-  
-  // Handle updating video content with transcription
-  const handleVideoContentUpdate = async (videoBlob: Blob, videoBase64?: string) => {
-    if (!videoBlob) {
-      toast({
-        title: "No video",
-        description: "There is no video to transcribe",
-        variant: "destructive"
-      });
-      return {};
-    }
 
-    setIsTranscribingVideo(true);
-    console.log("Processing video content for update...");
-    
+  // Process video content - transcribe and update the form content
+  const handleVideoContentUpdate = async (blob: Blob) => {
     try {
-      let base64Data = videoBase64;
+      setIsTranscribingVideo(true);
       
-      // Convert blob to base64 if not provided
-      if (!base64Data) {
-        console.log("Converting video blob to base64...");
-        base64Data = await blobToBase64(videoBlob);
-      }
+      // Transcribe the video
+      console.log("Transcribing video...");
+      const transcription = await transcribeVideoContent(blob);
+      console.log("Video transcription complete:", transcription);
       
-      // Get transcription
-      console.log("Getting transcription for video...");
-      const transcription = await transcribeVideoContent(videoBlob);
+      // Format the content with the video data and transcription
+      const formattedContent = await formatVideoContent(blob, transcription);
       
-      // Format content for storage
-      console.log("Formatting video content for storage...");
-      const videoContent = await formatVideoContent(videoBlob, transcription);
+      // Update the form content
+      setContent(formattedContent);
       
-      // Update form content
-      console.log("Updating form content with video data...");
-      setContent(videoContent);
-      
-      toast({
-        title: "Video transcribed",
-        description: "Your video has been successfully transcribed"
-      });
-      
-      return { transcription };
+      return transcription;
     } catch (error) {
       console.error("Error updating video content:", error);
       toast({
-        title: "Transcription failed",
-        description: "Failed to transcribe the video",
+        title: "Error",
+        description: "Failed to process video content",
         variant: "destructive"
       });
-      return {};
+      throw error;
     } finally {
       setIsTranscribingVideo(false);
     }
   };
-  
-  // Clear video content
-  const handleClearVideo = () => {
-    console.log("Clearing video content...");
-    setContent("");
-  };
-  
+
   return {
     handleVideoContentUpdate,
-    handleClearVideo,
     isTranscribingVideo
   };
 }

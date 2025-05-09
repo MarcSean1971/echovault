@@ -7,6 +7,7 @@ import { WhatsAppIntegration } from "./content/WhatsAppIntegration";
 import { Separator } from "@/components/ui/separator";
 import { MessageAttachments } from "./MessageAttachments";
 import { parseMessageTranscription } from "@/services/messages/mediaService";
+import { VideoMessageContent } from "./content/VideoMessageContent";
 
 export interface MessageContentProps {
   message: Message;
@@ -34,6 +35,8 @@ export function MessageContent({
     switch (message.message_type) {
       case "text":
         return <TextMessageContent message={message} content={message.content} />;
+      case "video":
+        return <VideoMessageContent message={message} />;
       default:
         return <UnknownMessageContent message={message} />;
     }

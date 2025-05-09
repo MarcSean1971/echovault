@@ -1,9 +1,10 @@
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState } from "react";
 import { useMessageForm } from "@/components/message/MessageFormContext";
 import { Message } from "@/types/message";
 import { toast } from "@/components/ui/use-toast";
 import { parseVideoContent } from '@/services/messages/mediaService';
+import { useInitializeMediaContent } from "./useInitializeMediaContent";
 
 /**
  * Hook to initialize message data when editing an existing message
@@ -13,6 +14,13 @@ export function useMessageInitializer(message?: Message) {
     setMessageType: setContextMessageType,
     setContent
   } = useMessageForm();
+  
+  // Use our media content initializer hook
+  const {
+    videoUrl,
+    videoBlob,
+    videoTranscription
+  } = useInitializeMediaContent(message || null);
 
   // Set initial message type based on the message being edited
   useEffect(() => {
@@ -33,4 +41,10 @@ export function useMessageInitializer(message?: Message) {
     setContent(message.content);
     
   }, [message, setContent]);
+
+  return {
+    videoUrl,
+    videoBlob,
+    videoTranscription
+  };
 }

@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from "react";
-import { parseMessageTranscription } from "@/services/messages/mediaService";
+import { parseMessageTranscription, parseVideoContent } from "@/services/messages/mediaService";
 import { Message } from "@/types/message";
 
 /**
@@ -14,37 +14,70 @@ export function useInitializeMediaContent(message: Message | null) {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [videoBase64, setVideoBase64] = useState<string | null>(null); 
   const [videoTranscription, setVideoTranscription] = useState<string | null>(null);
+  const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
   
   // Parse the message content when the message changes
   useEffect(() => {
     if (!message?.content) return;
     
+    console.log("useInitializeMediaContent: Initializing content for message type:", message.message_type);
+    
     try {
-      // Try to parse the content as JSON (for media content)
-      const contentObj = JSON.parse(message.content);
-      
-      // Check for audio data
-      if (contentObj.audioData) {
-        // Create a Blob URL for the audio player
-        const audioBlob = base64ToBlob(contentObj.audioData, 'audio/webm');
-        const url = URL.createObjectURL(audioBlob);
-        setAudioUrl(url);
-        setAudioBase64(contentObj.audioData);
-        setAudioTranscription(contentObj.transcription || null);
-      }
-      
-      // Check for video data
-      if (contentObj.videoData) {
-        // Create a Blob URL for the video player
-        const videoBlob = base64ToBlob(contentObj.videoData, 'video/webm');
-        const url = URL.createObjectURL(videoBlob);
-        setVideoUrl(url);
-        setVideoBase64(contentObj.videoData);
-        setVideoTranscription(contentObj.transcription || null);
+      if (message.message_type === "video") {
+        console.log("Processing video message type");
+        const { videoData, transcription } = parseVideoContent(message.content);
+        
+        if (videoData) {
+          // Create a Blob URL for the video player
+          const binaryString = window.atob(videoData);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          
+          const blob = new Blob([bytes], { type: 'video/webm' });
+          const url = URL.createObjectURL(blob);
+          
+          console.log("Created video blob URL:", url);
+          setVideoUrl(url);
+          setVideoBase64(videoData);
+          setVideoBlob(blob);
+          setVideoTranscription(transcription || null);
+        } else {
+          console.log("No video data found in message content");
+        }
+      } else {
+        try {
+          // Try to parse the content as JSON (for media content)
+          const contentObj = JSON.parse(message.content);
+          
+          // Check for audio data
+          if (contentObj.audioData) {
+            // Create a Blob URL for the audio player
+            const audioBlob = base64ToBlob(contentObj.audioData, 'audio/webm');
+            const url = URL.createObjectURL(audioBlob);
+            setAudioUrl(url);
+            setAudioBase64(contentObj.audioData);
+            setAudioTranscription(contentObj.transcription || null);
+          }
+          
+          // Check for video data
+          if (contentObj.videoData) {
+            // Create a Blob URL for the video player
+            const videoBlob = base64ToBlob(contentObj.videoData, 'video/webm');
+            const url = URL.createObjectURL(videoBlob);
+            setVideoUrl(url);
+            setVideoBase64(contentObj.videoData);
+            setVideoBlob(videoBlob);
+            setVideoTranscription(contentObj.transcription || null);
+          }
+        } catch (e) {
+          // Not JSON or error parsing, content is likely plain text
+          console.log("Content is not in JSON format or there was an error:", e);
+        }
       }
     } catch (e) {
-      // Not JSON or error parsing, content is likely plain text
-      console.log("Content is not in JSON format or there was an error:", e);
+      console.error("Error initializing media content:", e);
     }
     
     // Cleanup function to revoke object URLs when unmounting
@@ -70,6 +103,7 @@ export function useInitializeMediaContent(message: Message | null) {
     audioTranscription,
     videoUrl,
     videoBase64,
-    videoTranscription
+    videoTranscription,
+    videoBlob
   };
 }

@@ -1,9 +1,11 @@
 
 import { useRef, useState, useEffect } from "react";
 import { VideoPlayerControls } from "./VideoPlayerControls";
+import { VideoTranscription } from "./VideoTranscription";
 
 interface VideoPlayerProps {
   videoUrl: string;
+  transcription?: string | null;
   onTranscribe: () => Promise<void>;
   isTranscribing: boolean;
   onClearVideo: () => void;
@@ -11,6 +13,7 @@ interface VideoPlayerProps {
 
 export function VideoPlayer({
   videoUrl,
+  transcription = null,
   onTranscribe,
   isTranscribing,
   onClearVideo
@@ -45,20 +48,27 @@ export function VideoPlayer({
   }, [videoRef]);
   
   return (
-    <div className="relative rounded-md overflow-hidden bg-black">
-      <video 
-        ref={videoRef}
-        src={videoUrl}
-        className="w-full h-full max-h-[300px]"
-        onEnded={() => setIsPlaying(false)}
-      />
+    <div className="space-y-2">
+      <div className="relative rounded-md overflow-hidden bg-black">
+        <video 
+          ref={videoRef}
+          src={videoUrl}
+          className="w-full h-full max-h-[300px]"
+          onEnded={() => setIsPlaying(false)}
+        />
+        
+        <VideoPlayerControls
+          isPlaying={isPlaying}
+          togglePlayback={togglePlayback}
+          handleTranscribe={onTranscribe}
+          isTranscribing={isTranscribing}
+          onClearVideo={onClearVideo}
+        />
+      </div>
       
-      <VideoPlayerControls
-        isPlaying={isPlaying}
-        togglePlayback={togglePlayback}
-        handleTranscribe={onTranscribe}
-        isTranscribing={isTranscribing}
-        onClearVideo={onClearVideo}
+      <VideoTranscription 
+        transcription={transcription} 
+        isTranscribing={isTranscribing} 
       />
     </div>
   );
