@@ -2,14 +2,14 @@
 import { useState } from 'react';
 import { useMessageForm } from '@/components/message/MessageFormContext';
 import { toast } from '@/components/ui/use-toast';
-import { transcribeVideoContent, formatVideoContent } from '@/services/messages/transcriptionService';
+import { transcribeVideoContent, formatVideoContent, blobToBase64 } from '@/services/messages/transcriptionService';
 
 export function useContentUpdater() {
   const { setContent } = useMessageForm();
   const [isTranscribingVideo, setIsTranscribingVideo] = useState(false);
   
   // Handle updating video content with transcription
-  const handleVideoContentUpdate = async (videoBlob: Blob) => {
+  const handleVideoContentUpdate = async (videoBlob: Blob, videoBase64?: string) => {
     if (!videoBlob) {
       toast({
         title: "No video",
@@ -20,15 +20,27 @@ export function useContentUpdater() {
     }
 
     setIsTranscribingVideo(true);
+    console.log("Processing video content for update...");
     
     try {
+      let base64Data = videoBase64;
+      
+      // Convert blob to base64 if not provided
+      if (!base64Data) {
+        console.log("Converting video blob to base64...");
+        base64Data = await blobToBase64(videoBlob);
+      }
+      
       // Get transcription
+      console.log("Getting transcription for video...");
       const transcription = await transcribeVideoContent(videoBlob);
       
       // Format content for storage
+      console.log("Formatting video content for storage...");
       const videoContent = await formatVideoContent(videoBlob, transcription);
       
       // Update form content
+      console.log("Updating form content with video data...");
       setContent(videoContent);
       
       toast({
@@ -52,6 +64,7 @@ export function useContentUpdater() {
   
   // Clear video content
   const handleClearVideo = () => {
+    console.log("Clearing video content...");
     setContent("");
   };
   

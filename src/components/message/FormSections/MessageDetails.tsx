@@ -15,6 +15,7 @@ import { MediaRecorders } from "./MessageDetailsComponents/MediaRecorders";
 import { useMessageInitializer } from "@/hooks/useMessageInitializer";
 import { useContentUpdater } from "@/hooks/useContentUpdater";
 import { useMessageTypeManager } from "@/hooks/useMessageTypeManager";
+import { useEffect } from "react";
 
 interface MessageDetailsProps {
   message?: any;  // Optional message prop for editing
@@ -35,6 +36,11 @@ export function MessageDetails({ message }: MessageDetailsProps) {
   // Initialize message data when editing an existing message
   useMessageInitializer(message);
 
+  // Debug log to track state changes
+  useEffect(() => {
+    console.log("MessageDetails: messageType =", messageType, "showVideoRecorder =", showVideoRecorder);
+  }, [messageType, showVideoRecorder]);
+
   return (
     <div className="space-y-6">
       {/* Title field */}
@@ -51,8 +57,8 @@ export function MessageDetails({ message }: MessageDetailsProps) {
         {/* Text content is always shown */}
         <TextContent />
         
-        {/* Video content is shown when video type is selected */}
-        {messageType === "video" && (
+        {/* Video content preview is shown when video type is selected and we have a video */}
+        {messageType === "video" && videoUrl && (
           <VideoContent
             videoUrl={videoUrl}
             isRecording={false}
@@ -65,6 +71,26 @@ export function MessageDetails({ message }: MessageDetailsProps) {
               }
             }}
           />
+        )}
+        
+        {/* Show record button when video type is selected but no video is available */}
+        {messageType === "video" && !videoUrl && !showVideoRecorder && (
+          <div className="space-y-2">
+            <Label>Video Message</Label>
+            <div className="flex flex-col items-center border-2 border-dashed border-muted-foreground/30 rounded-md p-6">
+              <Button
+                type="button"
+                onClick={() => {
+                  console.log("Opening video recorder dialog...");
+                  setShowVideoRecorder(true);
+                }}
+                className="flex items-center"
+              >
+                <Video className="mr-2 h-4 w-4" />
+                Record Video
+              </Button>
+            </div>
+          </div>
         )}
       </div>
 
@@ -95,3 +121,7 @@ export function MessageDetails({ message }: MessageDetailsProps) {
     </div>
   );
 }
+
+// Import Button from UI components for Record Video button
+import { Button } from "@/components/ui/button";
+import { Video } from "lucide-react";

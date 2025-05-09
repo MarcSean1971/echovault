@@ -1,5 +1,7 @@
 
 import { VideoContent } from "../content/VideoContent";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useEffect } from "react";
 
 interface MediaRecordersProps {
   showVideoRecorder: boolean;
@@ -33,20 +35,29 @@ export function MediaRecorders({
     return Promise.resolve({});
   };
   
-  // Only show video recorder if it's visible
-  if (!showVideoRecorder) return null;
+  // Log state changes for debugging
+  useEffect(() => {
+    console.log("MediaRecorders: showVideoRecorder state changed:", showVideoRecorder);
+  }, [showVideoRecorder]);
   
   return (
-    <>
-      <VideoContent
-        videoUrl={videoUrl}
-        isRecording={isRecording}
-        onStartRecording={startRecording}
-        onStopRecording={stopRecording}
-        onClearVideo={clearVideo}
-        onTranscribeVideo={handleTranscribeVideo}
-      />
-    </>
+    <Dialog open={showVideoRecorder} onOpenChange={setShowVideoRecorder}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Record Video Message</DialogTitle>
+        </DialogHeader>
+        
+        <VideoContent
+          videoUrl={videoUrl}
+          isRecording={isRecording}
+          onStartRecording={startRecording}
+          onStopRecording={stopRecording}
+          onClearVideo={clearVideo}
+          onTranscribeVideo={handleTranscribeVideo}
+          inDialog={true}
+        />
+      </DialogContent>
+    </Dialog>
   );
 }
 

@@ -11,6 +11,11 @@ export function useVideoRecordingHandler() {
   const videoChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
 
+  // Debug logs for state changes
+  useEffect(() => {
+    console.log("useVideoRecordingHandler: showVideoRecorder =", showVideoRecorder);
+  }, [showVideoRecorder]);
+
   // Clean up video URL when component unmounts
   useEffect(() => {
     return () => {
@@ -32,12 +37,15 @@ export function useVideoRecordingHandler() {
   // Function to start recording
   const startRecording = async () => {
     try {
+      console.log("Requesting media devices...");
       videoChunksRef.current = [];
+      
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: true,
         audio: true
       });
       
+      console.log("Media stream obtained successfully");
       streamRef.current = stream;
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
@@ -59,30 +67,51 @@ export function useVideoRecordingHandler() {
       
       mediaRecorder.start();
       setIsRecording(true);
-    } catch (error) {
+      console.log("Recording started");
+    } catch (error: any) {
       console.error("Error starting video recording:", error);
+      
+      let errorMessage = "Error accessing camera or microphone";
+      
+      // More specific error messages based on common issues
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        errorMessage = "Camera or microphone access was denied. Please check your browser permissions.";
+      } else if (error.name === 'NotFoundError') {
+        errorMessage = "Camera or microphone not found. Please check your device.";
+      } else if (error.name === 'NotReadableError' || error.name === 'AbortError') {
+        errorMessage = "Could not access your camera or microphone. It might be in use by another application.";
+      } else if (error.name === 'SecurityError') {
+        errorMessage = "Media access is not allowed in this context. Please check your settings.";
+      }
+      
       toast({
         title: "Permission Error",
-        description: "Please allow camera and microphone access to record video.",
+        description: errorMessage,
         variant: "destructive"
       });
+      
+      throw new Error(errorMessage);
     }
   };
   
   // Function to stop recording
   const stopRecording = () => {
+    console.log("Stopping recording...");
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
+      console.log("Recording stopped");
     }
   };
   
   // Function to clear recorded video
   const clearVideo = () => {
+    console.log("Clearing video...");
     if (videoUrl) {
       URL.revokeObjectURL(videoUrl);
     }
     setVideoBlob(null);
     setVideoUrl(null);
+    console.log("Video cleared");
   };
   
   return {
