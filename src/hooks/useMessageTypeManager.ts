@@ -30,6 +30,11 @@ export function useMessageTypeManager() {
   const onTextTypeClick = () => {
     handleTextTypeClick();
     handleMessageTypeChange("text");
+    
+    // If we were in video mode, clean up the camera stream
+    if (previewStream) {
+      clearVideo();
+    }
   };
   
   // Sync our local messageType with the context
@@ -47,11 +52,21 @@ export function useMessageTypeManager() {
     
     // Don't show the dialog, instead initialize the preview stream directly
     if (!videoUrl && !previewStream) {
+      console.log("Video mode selected, initializing camera preview");
       initializeStream().catch(err => {
         console.error("Failed to initialize camera preview:", err);
       });
     }
   };
+
+  // Effect to clean up video resources when component unmounts
+  useEffect(() => {
+    return () => {
+      if (previewStream) {
+        clearVideo();
+      }
+    };
+  }, []);
 
   return {
     messageType,

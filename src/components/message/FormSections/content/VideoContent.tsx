@@ -50,13 +50,14 @@ export function VideoContent({
   useEffect(() => {
     console.log("VideoContent: inDialog =", inDialog, 
                 "videoUrl =", videoUrl ? "present" : "null",
-                "previewStream =", previewStream ? "active" : "null");
+                "previewStream =", previewStream ? "active" : "null",
+                "isRecording =", isRecording);
     
     // If we have a video URL, we should show the video preview
     if (videoUrl) {
       setShowVideoPreview(true);
     }
-  }, [inDialog, videoUrl, previewStream]);
+  }, [inDialog, videoUrl, previewStream, isRecording]);
   
   // Connect preview stream to video element
   useEffect(() => {
@@ -177,8 +178,8 @@ export function VideoContent({
         </div>
       )}
       
-      {/* Show preview stream if no recorded video */}
-      {!videoUrl && previewStream && !isRecording && (
+      {/* Show live camera preview (before recording or during recording) */}
+      {!videoUrl && previewStream && (
         <div className="relative rounded-md overflow-hidden bg-black">
           <video 
             ref={previewRef}
@@ -187,47 +188,41 @@ export function VideoContent({
             muted
             className="w-full h-full max-h-[300px]"
           />
-          <div className="absolute bottom-0 left-0 right-0 p-2 bg-black/60 flex justify-center">
-            <Button
-              type="button"
-              onClick={handleStartRecording}
-              variant="default"
-              disabled={isInitializing}
-              className="hover:bg-primary/90 transition-colors"
-            >
-              <Camera className="mr-2 h-4 w-4" />
-              {isInitializing ? "Preparing..." : "Start Recording"}
-            </Button>
-          </div>
-        </div>
-      )}
-      
-      {/* Show recording controls if we're recording */}
-      {!videoUrl && isRecording && (
-        <div className="relative rounded-md overflow-hidden bg-black">
-          <video 
-            ref={previewRef}
-            autoPlay
-            playsInline
-            muted
-            className="w-full h-full max-h-[300px]"
-          />
-          <div className="absolute top-0 left-0 right-0 p-2 bg-black/30 flex justify-center">
-            <div className="flex items-center justify-center gap-2 text-white">
-              <span className="animate-pulse h-3 w-3 rounded-full bg-red-500"></span>
-              <span className="text-sm font-medium">Recording in progress...</span>
+          
+          {/* Recording indicator overlay - only show when recording */}
+          {isRecording && (
+            <div className="absolute top-0 left-0 right-0 p-2 bg-black/30 flex justify-center">
+              <div className="flex items-center justify-center gap-2 text-white">
+                <span className="animate-pulse h-3 w-3 rounded-full bg-red-500"></span>
+                <span className="text-sm font-medium">Recording in progress...</span>
+              </div>
             </div>
-          </div>
+          )}
+          
+          {/* Button controls */}
           <div className="absolute bottom-0 left-0 right-0 p-2 bg-black/60 flex justify-center">
-            <Button
-              type="button"
-              onClick={onStopRecording}
-              variant="destructive"
-              className="hover:bg-destructive/90 transition-colors"
-            >
-              <CameraOff className="mr-2 h-4 w-4" />
-              Stop Recording
-            </Button>
+            {!isRecording ? (
+              <Button
+                type="button"
+                onClick={handleStartRecording}
+                variant="default"
+                disabled={isInitializing}
+                className="hover:bg-primary/90 transition-colors"
+              >
+                <Camera className="mr-2 h-4 w-4" />
+                {isInitializing ? "Preparing..." : "Start Recording"}
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                onClick={onStopRecording}
+                variant="destructive"
+                className="hover:bg-destructive/90 transition-colors"
+              >
+                <CameraOff className="mr-2 h-4 w-4" />
+                Stop Recording
+              </Button>
+            )}
           </div>
         </div>
       )}

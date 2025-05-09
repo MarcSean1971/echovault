@@ -1,3 +1,4 @@
+
 import { Label } from "@/components/ui/label";
 import { useMessageForm } from "../MessageFormContext";
 import { FileUploader } from "@/components/FileUploader";
@@ -33,13 +34,14 @@ export function MessageDetails({ message }: MessageDetailsProps) {
   } = useMessageTypeManager();
   
   const { handleVideoContentUpdate, isTranscribingVideo } = useContentUpdater();
-  
+
   // Initialize message data when editing an existing message
   useMessageInitializer(message);
 
   // Initialize the camera when switching to video mode
   useEffect(() => {
     if (messageType === "video" && !videoUrl && !previewStream && !showInlineRecording) {
+      console.log("Video mode detected. Setting showInlineRecording to true");
       setShowInlineRecording(true);
     }
   }, [messageType, videoUrl, previewStream, showInlineRecording]);
@@ -56,6 +58,7 @@ export function MessageDetails({ message }: MessageDetailsProps) {
   // Initialize camera preview when showing inline recording UI
   useEffect(() => {
     if (showInlineRecording && messageType === "video" && !videoUrl && !previewStream) {
+      console.log("Initializing camera preview for inline recording");
       initializeStream().catch(error => {
         console.error("Failed to initialize camera stream:", error);
       });
