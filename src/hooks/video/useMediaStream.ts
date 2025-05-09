@@ -37,6 +37,8 @@ export function useMediaStream() {
     
     // Check if all tracks are active
     const allTracks = streamRef.current.getTracks();
+    if (allTracks.length === 0) return false;
+    
     const activeTracks = allTracks.filter(track => track.readyState === "live");
     
     return activeTracks.length > 0 && activeTracks.length === allTracks.length;
@@ -53,11 +55,25 @@ export function useMediaStream() {
       
       setIsInitializing(true);
       console.log(`Initializing ${options.video ? 'camera' : 'microphone'} for preview...`);
+      console.log("Stream options:", options);
       
       // Always stop any existing stream first
       stopMediaStream();
       
+      // Try to get user media with specified options
       const stream = await navigator.mediaDevices.getUserMedia(options);
+      
+      // Log the tracks we got
+      const tracks = stream.getTracks();
+      console.log("Obtained media tracks:", tracks.map(t => `${t.kind} (${t.readyState})`));
+      
+      if (options.audio && stream.getAudioTracks().length === 0) {
+        console.warn("No audio tracks found in the stream despite requesting audio");
+      }
+      
+      if (options.video && stream.getVideoTracks().length === 0) {
+        console.warn("No video tracks found in the stream despite requesting video");
+      }
       
       console.log(`${options.video ? 'Camera' : 'Microphone'} preview initialized successfully`);
       streamRef.current = stream;
@@ -79,6 +95,11 @@ export function useMediaStream() {
         errorMessage = `Could not access your ${options.video ? 'camera' : 'microphone'}. It might be in use by another application.`;
       } else if (error.name === 'SecurityError') {
         errorMessage = "Media access is not allowed in this context. Please check your settings.";
+      } else if (error.name === 'TypeError') {
+        errorMessage = "Incorrect media constraints specified.";
+      } else if (error.message) {
+        // Include the actual error message for better debugging
+        errorMessage = `${errorMessage}: ${error.message}`;
       }
       
       toast({

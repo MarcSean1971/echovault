@@ -24,7 +24,14 @@ export function useAudioRecordingHandler() {
   
   // Initialize stream specifically for audio
   const initializeStream = async (forceNew = false) => {
-    return initializeVideoStream(forceNew, { audio: true, video: false });
+    try {
+      console.log("Audio recorder: initializing audio stream with forceNew =", forceNew);
+      // Always force new when explicitly requesting a new stream
+      return await initializeVideoStream(forceNew, { audio: true, video: false });
+    } catch (err) {
+      console.error("Audio recorder: failed to initialize audio stream:", err);
+      throw err;
+    }
   };
   
   const {
@@ -55,6 +62,11 @@ export function useAudioRecordingHandler() {
     
     // Reset initialization tracking when clearing
     setIsInitializationAttempted(false);
+    
+    // Stop any active audio streams when clearing
+    if (isStreamActive()) {
+      stopMediaStream();
+    }
   };
   
   // Wrapper function for restoreAudio
@@ -112,7 +124,14 @@ export function useAudioRecordingHandler() {
       // Set the flag to prevent re-initialization
       setIsInitializationAttempted(true);
       
+      // Make sure any existing streams are stopped first
+      if (isStreamActive()) {
+        console.log("Stopping existing media stream before microphone initialization");
+        stopMediaStream();
+      }
+      
       console.log("Forcing microphone initialization...");
+      // Request a new stream with audio only
       await initializeStream(true);
       console.log("Force microphone initialization successful");
       return true;

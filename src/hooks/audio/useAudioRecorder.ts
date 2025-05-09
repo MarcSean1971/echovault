@@ -26,11 +26,20 @@ export function useAudioRecorder(audioStream: MediaStream | null, streamRef: Rea
       console.log("Starting audio recording...");
       audioChunksRef.current = [];
       
-      let stream = audioStream;
+      // Check stream from both sources (streamRef is the most reliable)
+      let stream = streamRef.current || audioStream;
       
       // If we don't have an audio stream, we can't record
       if (!stream) {
-        throw new Error("No audio stream available");
+        console.error("No audio stream available for recording");
+        throw new Error("Microphone not available. Please allow microphone access and try again.");
+      }
+      
+      console.log("Audio stream tracks:", stream.getTracks().map(t => `${t.kind}: ${t.readyState}`));
+      
+      if (stream.getAudioTracks().length === 0) {
+        console.error("No audio tracks in the stream");
+        throw new Error("No audio tracks available. Please check your microphone.");
       }
       
       // Create and configure the media recorder
@@ -46,6 +55,16 @@ export function useAudioRecorder(audioStream: MediaStream | null, streamRef: Rea
       
       mediaRecorder.onstop = () => {
         console.log("Media recorder stopped, processing audio...");
+        if (audioChunksRef.current.length === 0) {
+          console.error("No audio chunks recorded");
+          toast({
+            title: "Recording Error",
+            description: "No audio data was recorded. Please try again.",
+            variant: "destructive"
+          });
+          return;
+        }
+        
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         console.log("Created audio blob:", audioBlob.size, "bytes");
         setAudioBlob(audioBlob);
@@ -81,13 +100,20 @@ export function useAudioRecorder(audioStream: MediaStream | null, streamRef: Rea
     } catch (error: any) {
       console.error("Error starting audio recording:", error);
       
-      let errorMessage = "Error starting recording";
+      let errorMessage = error.message || "Error starting recording";
       
       toast({
         title: "Recording Error",
         description: errorMessage,
         variant: "destructive"
       });
+      
+      // Reset recording state
+      setIsRecording(false);
+      if (durationTimerRef.current) {
+        window.clearInterval(durationTimerRef.current);
+        durationTimerRef.current = null;
+      }
     }
   };
   

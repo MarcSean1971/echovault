@@ -37,6 +37,7 @@ export function AudioContent({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [isStartingRecording, setIsStartingRecording] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const animationRef = useRef<number>();
   
@@ -102,6 +103,16 @@ export function AudioContent({
     }
   };
   
+  // Handle starting recording with loading state
+  const handleStartRecording = async () => {
+    setIsStartingRecording(true);
+    try {
+      await onStartRecording();
+    } finally {
+      setIsStartingRecording(false);
+    }
+  };
+  
   // Render empty state when no audio
   if (!audioUrl && !isRecording) {
     return (
@@ -118,12 +129,21 @@ export function AudioContent({
             <>
               <p className="mb-2">Record an audio message</p>
               <Button 
-                onClick={onStartRecording}
-                disabled={isInitializing}
+                onClick={handleStartRecording}
+                disabled={isInitializing || isStartingRecording}
                 className="flex items-center space-x-2 hover:bg-primary/90 hover:scale-105 transition-all"
               >
-                <Mic className="h-4 w-4" />
-                <span>Start Recording</span>
+                {isStartingRecording ? (
+                  <>
+                    <Spinner size="sm" className="mr-2" />
+                    <span>Starting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Mic className="h-4 w-4 mr-2" />
+                    <span>Start Recording</span>
+                  </>
+                )}
               </Button>
             </>
           )}
@@ -199,7 +219,7 @@ export function AudioContent({
             <div className="w-full space-y-1">
               <div className="relative w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
                 <div 
-                  className="absolute top-0 left-0 h-full bg-primary rounded-full"
+                  className="absolute top-0 left-0 h-full bg-primary rounded-full transition-all"
                   style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
                 />
               </div>

@@ -68,10 +68,12 @@ export function useMessageTypeManager() {
     
     // Stop any active media streams when switching to text mode
     if (isVideoStreamActive()) {
+      console.log("Stopping active video stream when switching to text mode");
       stopVideoStream();
     }
     
     if (isAudioStreamActive()) {
+      console.log("Stopping active audio stream when switching to text mode");
       stopAudioStream();
     }
   };
@@ -88,6 +90,7 @@ export function useMessageTypeManager() {
     
     // Stop any active audio streams when switching to video mode
     if (isAudioStreamActive()) {
+      console.log("Stopping active audio stream when switching to video mode");
       stopAudioStream();
     }
   };
@@ -104,6 +107,7 @@ export function useMessageTypeManager() {
     
     // Stop any active video streams when switching to audio mode
     if (isVideoStreamActive()) {
+      console.log("Stopping active video stream when switching to audio mode");
       stopVideoStream();
     }
   };
