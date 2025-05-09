@@ -12,6 +12,7 @@ import { PageLoader } from "@/components/ui/page-loader";
 import ProtectedLayout from "@/components/layout/ProtectedLayout";
 import { MainLayout } from "@/components/layout/MainLayout";
 import AppLayout from "@/components/layout/AppLayout";
+import PublicAppLayout from "@/components/layout/PublicAppLayout";
 
 // Create a client for React Query
 const queryClient = new QueryClient({
@@ -58,8 +59,8 @@ export default function App() {
                 <Route path="register" element={<RegisterPage />} />
               </Route>
               
-              {/* Public message access route - ensure correct path with leading slash */}
-              <Route path="/access/message/:id" element={<AppLayout isLoggedIn={false} />}>
+              {/* Public message access route - using PublicAppLayout */}
+              <Route path="/access/message/:id" element={<PublicAppLayout />}>
                 <Route index element={<PublicMessageAccess />} />
               </Route>
               
