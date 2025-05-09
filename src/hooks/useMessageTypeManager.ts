@@ -2,18 +2,18 @@
 import { useMessageTypeHandler } from "./useMessageTypeHandler";
 import { useMessageForm } from "@/components/message/MessageFormContext";
 import { useVideoRecordingHandler } from "./useVideoRecordingHandler";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useMessageTypeState } from "./useMessageTypeState";
+import { useVideoCache } from "./useVideoCache";
 
 export function useMessageTypeManager() {
   const { setMessageType: setContextMessageType } = useMessageForm();
   const {
-    messageType, setMessageType,
     handleTextTypeClick, handleMediaTypeClick
   } = useMessageTypeHandler();
-  
-  // Add state to store video info when switching tabs
-  const [cachedVideoBlob, setCachedVideoBlob] = useState<Blob | null>(null);
-  const [cachedVideoUrl, setCachedVideoUrl] = useState<string | null>(null);
+
+  const { messageType, handleMessageTypeChange } = useMessageTypeState();
+  const { cachedVideoBlob, cachedVideoUrl, cacheVideo, clearCache } = useVideoCache();
   
   const {
     isRecording,
@@ -31,24 +31,6 @@ export function useMessageTypeManager() {
     restoreVideo
   } = useVideoRecordingHandler();
 
-  // Wrapper functions for message type handling
-  const onTextTypeClick = () => {
-    // Save the current video state before switching to text
-    if (videoBlob && videoUrl) {
-      console.log("Caching video before switching to text mode");
-      setCachedVideoBlob(videoBlob);
-      setCachedVideoUrl(videoUrl);
-    }
-    
-    handleTextTypeClick();
-    handleMessageTypeChange("text");
-    
-    // If we were in video mode, clean up the camera stream but don't clear the video
-    if (previewStream) {
-      stopMediaStream();
-    }
-  };
-  
   // Helper function to stop the media stream without clearing the video
   const stopMediaStream = () => {
     if (previewStream) {
@@ -59,10 +41,21 @@ export function useMessageTypeManager() {
     }
   };
   
-  // Sync our local messageType with the context
-  const handleMessageTypeChange = (type: string) => {
-    setMessageType(type);
-    setContextMessageType(type);
+  // Wrapper functions for message type handling
+  const onTextTypeClick = () => {
+    // Save the current video state before switching to text
+    if (videoBlob && videoUrl) {
+      console.log("Caching video before switching to text mode");
+      cacheVideo(videoBlob, videoUrl);
+    }
+    
+    handleTextTypeClick();
+    handleMessageTypeChange("text");
+    
+    // If we were in video mode, clean up the camera stream but don't clear the video
+    if (previewStream) {
+      stopMediaStream();
+    }
   };
   
   // When switching to video type, initialize the camera stream or restore video
@@ -95,10 +88,7 @@ export function useMessageTypeManager() {
         clearVideo();
       }
       
-      // Clean up cached URLs
-      if (cachedVideoUrl) {
-        URL.revokeObjectURL(cachedVideoUrl);
-      }
+      clearCache();
     };
   }, []);
 
