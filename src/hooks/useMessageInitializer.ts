@@ -3,6 +3,7 @@ import { useEffect, useCallback } from "react";
 import { useMessageForm } from "@/components/message/MessageFormContext";
 import { Message } from "@/types/message";
 import { toast } from "@/components/ui/use-toast";
+import { parseVideoContent } from '@/services/messages/mediaService';
 
 /**
  * Hook to initialize message data when editing an existing message

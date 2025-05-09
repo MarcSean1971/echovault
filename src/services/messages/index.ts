@@ -6,4 +6,6 @@ export * from './recipientService';
 export * from './fileService';
 export * from './reminderService';
 export * from './notificationService';
+export * from './transcriptionService';
 export * from './whatsApp';
+export * from './mediaService';

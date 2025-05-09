@@ -19,6 +19,7 @@ export function useMessageTypeHandler() {
   
   // Store content separately for each message type
   const [textContent, setTextContent] = useState("");
+  const [videoContent, setVideoContent] = useState("");
 
   // Effect to save content when it changes
   useEffect(() => {
@@ -30,6 +31,10 @@ export function useMessageTypeHandler() {
           if (!isJsonMediaContent(content)) {
             setTextContent(content);
           }
+          break;
+        case "video":
+          // Save video content (JSON format)
+          setVideoContent(content);
           break;
         default:
           break;
@@ -48,21 +53,17 @@ export function useMessageTypeHandler() {
     setContent(textContent);
   };
   
-  // Function to handle the media type button click (stub since functionality is removed)
+  // Function to handle the media type button click
   const handleMediaTypeClick = () => {
-    console.log("Media functionality has been removed");
-  };
-
-  // Convenience wrapper for video (stub)
-  const handleVideoTypeClick = () => {
-    console.log("Video functionality has been removed");
+    if (videoContent) {
+      setContent(videoContent);
+    }
   };
 
   return {
     messageType,
     setMessageType,
     handleTextTypeClick,
-    handleVideoTypeClick,
     handleMediaTypeClick
   };
 }

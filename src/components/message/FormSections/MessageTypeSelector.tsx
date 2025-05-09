@@ -3,13 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { BUTTON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { useMessageForm } from "../MessageFormContext";
+import { FileText, Video } from "lucide-react";
 
 interface MessageTypeSelectorProps {
   onTextTypeClick: () => void;
   onVideoTypeClick: () => void;
 }
 
-export function MessageTypeSelector({ onTextTypeClick }: MessageTypeSelectorProps) {
+export function MessageTypeSelector({ onTextTypeClick, onVideoTypeClick }: MessageTypeSelectorProps) {
   const { messageType } = useMessageForm();
   
   return (
@@ -18,11 +19,22 @@ export function MessageTypeSelector({ onTextTypeClick }: MessageTypeSelectorProp
       <div className="flex flex-wrap gap-2">
         <Button
           type="button"
-          variant={messageType === "text" ? "default" : "outline"}
+          variant={messageType === "text" || messageType === "video" ? "default" : "outline"}
           onClick={onTextTypeClick}
-          className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
+          className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default} flex gap-2 items-center`}
         >
+          <FileText className="h-4 w-4" />
           Text
+        </Button>
+        
+        <Button
+          type="button"
+          variant={messageType === "video" ? "default" : "outline"}
+          onClick={onVideoTypeClick}
+          className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default} flex gap-2 items-center`}
+        >
+          <Video className="h-4 w-4" />
+          Video
         </Button>
       </div>
     </div>

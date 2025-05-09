@@ -1,14 +1,24 @@
 
 import { useMessageTypeHandler } from "./useMessageTypeHandler";
 import { useMessageForm } from "@/components/message/MessageFormContext";
+import { useVideoRecordingHandler } from "./useVideoRecordingHandler";
 
 export function useMessageTypeManager() {
   const { setMessageType: setContextMessageType } = useMessageForm();
-  
   const {
     messageType, setMessageType,
-    handleTextTypeClick, handleVideoTypeClick
+    handleTextTypeClick, handleMediaTypeClick
   } = useMessageTypeHandler();
+  
+  const {
+    videoBlob, 
+    videoUrl,
+    showVideoRecorder,
+    setShowVideoRecorder,
+    startRecording,
+    stopRecording,
+    clearVideo
+  } = useVideoRecordingHandler();
 
   // Wrapper functions for message type handling
   const onTextTypeClick = () => {
@@ -23,15 +33,23 @@ export function useMessageTypeManager() {
   };
   
   const onVideoTypeClick = () => {
-    // Stub for removed video functionality
-    console.log("Video functionality has been removed");
-    handleVideoTypeClick();
-    handleMessageTypeChange("text"); // Default to text since video is removed
+    handleMediaTypeClick();
+    setShowVideoRecorder(true);
+    if (messageType !== "video") {
+      handleMessageTypeChange("video");
+    }
   };
 
   return {
     messageType,
     onTextTypeClick,
-    onVideoTypeClick
+    onVideoTypeClick,
+    videoBlob,
+    videoUrl,
+    showVideoRecorder,
+    setShowVideoRecorder,
+    startRecording,
+    stopRecording,
+    clearVideo
   };
 }

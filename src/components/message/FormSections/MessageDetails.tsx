@@ -7,6 +7,7 @@ import { FileUploader } from "@/components/FileUploader";
 import { TitleInput } from "./TitleInput";
 import { MessageTypeSelector } from "./MessageTypeSelector";
 import { TextContent } from "./content/TextContent";
+import { VideoContent } from "./content/VideoContent";
 import { LocationSection } from "./LocationSection";
 import { MediaRecorders } from "./MessageDetailsComponents/MediaRecorders";
 
@@ -23,8 +24,13 @@ export function MessageDetails({ message }: MessageDetailsProps) {
   const { files, setFiles } = useMessageForm();
   
   // Use our custom hooks
-  const { messageType, onTextTypeClick } = useMessageTypeManager();
-  const { handleClearVideo } = useContentUpdater();
+  const { 
+    messageType, onTextTypeClick, onVideoTypeClick,
+    videoBlob, videoUrl, showVideoRecorder, setShowVideoRecorder,
+    startRecording, stopRecording, clearVideo 
+  } = useMessageTypeManager();
+  
+  const { handleVideoContentUpdate, isTranscribingVideo } = useContentUpdater();
   
   // Initialize message data when editing an existing message
   useMessageInitializer(message);
@@ -37,17 +43,29 @@ export function MessageDetails({ message }: MessageDetailsProps) {
       {/* Message type selector */}
       <MessageTypeSelector 
         onTextTypeClick={onTextTypeClick}
-        onVideoTypeClick={() => {}} // Empty function since video functionality is removed
+        onVideoTypeClick={onVideoTypeClick}
       />
 
       {/* Content field based on message type */}
-      <div className="space-y-2">
-        {messageType === "text" ? (
-          <TextContent />
-        ) : (
-          <div className="p-4 bg-muted rounded-md text-center">
-            Please select a message type
-          </div>
+      <div className="space-y-4">
+        {/* Text content is always shown */}
+        <TextContent />
+        
+        {/* Video content is shown when video type is selected */}
+        {messageType === "video" && (
+          <VideoContent
+            videoUrl={videoUrl}
+            isRecording={false}
+            onStartRecording={startRecording}
+            onStopRecording={stopRecording}
+            onClearVideo={clearVideo}
+            onTranscribeVideo={async () => {
+              if (videoBlob) {
+                return handleVideoContentUpdate(videoBlob);
+              }
+              return Promise.resolve({});
+            }}
+          />
         )}
       </div>
 
@@ -65,11 +83,15 @@ export function MessageDetails({ message }: MessageDetailsProps) {
 
       {/* Media recorder dialogs */}
       <MediaRecorders 
-        showVideoRecorder={false}
-        setShowVideoRecorder={() => {}}
-        onVideoContentUpdate={async () => ({})}
-        videoUrl={null}
-        videoBlob={null}
+        showVideoRecorder={showVideoRecorder}
+        setShowVideoRecorder={setShowVideoRecorder}
+        onVideoContentUpdate={handleVideoContentUpdate}
+        videoUrl={videoUrl}
+        videoBlob={videoBlob}
+        isRecording={false}
+        startRecording={startRecording}
+        stopRecording={stopRecording}
+        clearVideo={clearVideo}
       />
     </div>
   );
