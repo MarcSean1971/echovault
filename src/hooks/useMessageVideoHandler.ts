@@ -29,6 +29,7 @@ export function useMessageVideoHandler(message?: Message) {
     isAudioRecording, isAudioInitializing, hasAudioPermission, audioPreviewStream,
     initializeAudioStream, startAudioRecording, stopAudioRecording, clearAudio,
     forceInitializeMicrophone, handleInitializedAudio, transcribeAudio,
+    isAudioInitializationAttempted,
     
     initializedFromMessage
   } = useMessageTypeManager();
@@ -94,6 +95,7 @@ export function useMessageVideoHandler(message?: Message) {
     forceInitializeMicrophone,
     transcribeAudio,
     handleAudioContentUpdate,
+    isAudioInitializationAttempted,
     
     onTextTypeClick,
     onVideoTypeClick,

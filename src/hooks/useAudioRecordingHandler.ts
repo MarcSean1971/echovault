@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useMediaStream } from "./video/useMediaStream";
 import { useAudioRecorder } from "./audio/useAudioRecorder";
 import { useAudioStorage } from "./audio/useAudioStorage";
@@ -18,6 +18,9 @@ export function useAudioRecordingHandler() {
     stopMediaStream,
     isStreamActive
   } = useMediaStream();
+  
+  // Track whether we've already attempted initialization to prevent loops
+  const [isInitializationAttempted, setIsInitializationAttempted] = useState(false);
   
   // Initialize stream specifically for audio
   const initializeStream = async (forceNew = false) => {
@@ -49,6 +52,9 @@ export function useAudioRecordingHandler() {
     
     // Clear the audioContent in the form context
     setAudioContent("");
+    
+    // Reset initialization tracking when clearing
+    setIsInitializationAttempted(false);
   };
   
   // Wrapper function for restoreAudio
@@ -72,6 +78,9 @@ export function useAudioRecordingHandler() {
         console.error("Error restoring audio content:", err);
       }
     }
+    
+    // Mark initialization as attempted since we've restored content
+    setIsInitializationAttempted(true);
   };
 
   // Format audio content with transcription
@@ -100,6 +109,9 @@ export function useAudioRecordingHandler() {
   // Force initialize microphone
   const forceInitializeMicrophone = async () => {
     try {
+      // Set the flag to prevent re-initialization
+      setIsInitializationAttempted(true);
+      
       console.log("Forcing microphone initialization...");
       await initializeStream(true);
       console.log("Force microphone initialization successful");
@@ -146,6 +158,7 @@ export function useAudioRecordingHandler() {
     restoreAudio,
     stopMediaStream,
     isStreamActive,
-    transcribeAudio
+    transcribeAudio,
+    isInitializationAttempted
   };
 }

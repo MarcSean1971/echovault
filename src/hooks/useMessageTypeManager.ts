@@ -47,7 +47,8 @@ export function useMessageTypeManager() {
     restoreAudio,
     stopMediaStream: stopAudioStream,
     isStreamActive: isAudioStreamActive,
-    transcribeAudio
+    transcribeAudio,
+    isInitializationAttempted: isAudioInitializationAttempted
   } = useAudioRecordingHandler();
 
   // Handle clicking on text tab
@@ -162,6 +163,7 @@ export function useMessageTypeManager() {
     clearAudio,
     forceInitializeMicrophone,
     handleInitializedAudio,
-    transcribeAudio
+    transcribeAudio,
+    isAudioInitializationAttempted
   };
 }

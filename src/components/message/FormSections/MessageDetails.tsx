@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { useMessageForm } from "../MessageFormContext";
@@ -39,7 +40,7 @@ export function MessageDetails({ message }: MessageDetailsProps) {
     audioUrl, audioBlob, audioDuration, 
     isAudioRecording, isAudioInitializing, hasAudioPermission,
     startAudioRecording, stopAudioRecording, clearAudio, forceInitializeMicrophone,
-    transcribeAudio,
+    transcribeAudio, isAudioInitializationAttempted,
     
     handleVideoContentUpdate,
     handleAudioContentUpdate
@@ -62,6 +63,7 @@ export function MessageDetails({ message }: MessageDetailsProps) {
 
   // Initialize camera preview when showing inline recording UI
   useEffect(() => {
+    // For video mode
     if (showInlineRecording && messageType === "video" && !videoUrl && !videoPreviewStream) {
       console.log("Initializing camera preview for inline recording");
       // Use forceInitializeCamera to ensure we get a fresh stream
@@ -70,14 +72,24 @@ export function MessageDetails({ message }: MessageDetailsProps) {
       });
     }
     
-    if (showInlineRecording && messageType === "audio" && !audioUrl) {
+    // For audio mode - only initialize if not already attempted
+    if (showInlineRecording && messageType === "audio" && !audioUrl && !isAudioInitializationAttempted) {
       console.log("Initializing microphone for inline recording");
       // Use forceInitializeMicrophone to ensure we get a fresh stream
       forceInitializeMicrophone().catch(error => {
         console.error("Failed to initialize microphone stream:", error);
       });
     }
-  }, [showInlineRecording, messageType, videoUrl, videoPreviewStream, audioUrl, forceInitializeCamera, forceInitializeMicrophone]);
+  }, [
+    showInlineRecording, 
+    messageType, 
+    videoUrl, 
+    videoPreviewStream, 
+    audioUrl, 
+    forceInitializeCamera, 
+    forceInitializeMicrophone,
+    isAudioInitializationAttempted
+  ]);
 
   // Handle tab change
   const handleTabChange = (value: string) => {
