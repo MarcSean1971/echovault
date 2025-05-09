@@ -3,7 +3,8 @@ import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/use-toast";
 import { useMessageForm } from "../../MessageFormContext";
-import { parseVideoContent } from "@/services/messages/mediaService";
+import { parseMessageTranscription, parseVideoContent } from "@/services/messages/mediaService";
+import { useContentUpdater } from "@/hooks/useContentUpdater";
 
 // Import our component modules
 import { VideoPlayer } from "./video/VideoPlayer";
@@ -34,7 +35,7 @@ export function VideoContent({
   inDialog?: boolean;
 }) {
   const { content } = useMessageForm();
-  const [isTranscribing, setIsTranscribing] = useState(false);
+  const { isTranscribingVideo, getTranscriptionFromContent } = useContentUpdater();
   const [permissionError, setPermissionError] = useState<string | null>(null);
   const [showVideoPreview, setShowVideoPreview] = useState(false);
   const [transcription, setTranscription] = useState<string | null>(null);
@@ -42,16 +43,12 @@ export function VideoContent({
   // Extract transcription from content
   useEffect(() => {
     if (content) {
-      try {
-        const { transcription: extractedTranscription } = parseVideoContent(content);
-        if (extractedTranscription) {
-          setTranscription(extractedTranscription);
-        }
-      } catch (e) {
-        console.error("Error parsing video content:", e);
+      const extractedTranscription = getTranscriptionFromContent(content);
+      if (extractedTranscription) {
+        setTranscription(extractedTranscription);
       }
     }
-  }, [content]);
+  }, [content, getTranscriptionFromContent]);
   
   // Log for debugging
   useEffect(() => {
@@ -69,27 +66,18 @@ export function VideoContent({
   
   // Handle transcription
   const handleTranscribe = async () => {
-    setIsTranscribing(true);
     try {
       await onTranscribeVideo();
       toast({
         title: "Transcription completed",
         description: "Video has been transcribed successfully"
       });
-      
-      // Re-parse content to update transcription after transcribing
-      if (content) {
-        const { transcription: newTranscription } = parseVideoContent(content);
-        setTranscription(newTranscription);
-      }
     } catch (error) {
       toast({
         title: "Transcription failed",
         description: "Unable to transcribe the video. Please try again.",
         variant: "destructive"
       });
-    } finally {
-      setIsTranscribing(false);
     }
   };
   
@@ -116,7 +104,7 @@ export function VideoContent({
           videoUrl={videoUrl}
           transcription={transcription}
           onTranscribe={handleTranscribe}
-          isTranscribing={isTranscribing}
+          isTranscribing={isTranscribingVideo}
           onClearVideo={onClearVideo}
         />
       )}

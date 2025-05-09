@@ -3,10 +3,12 @@ import { useState } from "react";
 import { useMessageForm } from "@/components/message/MessageFormContext";
 import { formatVideoContent, transcribeVideoContent } from "@/services/messages/transcriptionService";
 import { toast } from "@/components/ui/use-toast";
+import { parseMessageTranscription } from "@/services/messages/mediaService";
 
 export function useContentUpdater() {
-  const { setContent } = useMessageForm();
+  const { setContent, messageType } = useMessageForm();
   const [isTranscribingVideo, setIsTranscribingVideo] = useState(false);
+  const [videoTranscriptionText, setVideoTranscriptionText] = useState<string | null>(null);
 
   // Process video content - transcribe and update the form content
   const handleVideoContentUpdate = async (blob: Blob) => {
@@ -21,8 +23,11 @@ export function useContentUpdater() {
       // Format the content with the video data and transcription
       const formattedContent = await formatVideoContent(blob, transcription);
       
-      // Update the form content
+      // Update the form content (this stores the complete JSON with video data)
       setContent(formattedContent);
+      
+      // Store the transcription text separately for display
+      setVideoTranscriptionText(transcription);
       
       return transcription;
     } catch (error) {
@@ -38,8 +43,17 @@ export function useContentUpdater() {
     }
   };
 
+  // Extract transcription from content JSON
+  const getTranscriptionFromContent = (contentJson: string | null): string | null => {
+    if (!contentJson) return null;
+    return parseMessageTranscription(contentJson);
+  };
+
   return {
     handleVideoContentUpdate,
-    isTranscribingVideo
+    isTranscribingVideo,
+    videoTranscriptionText,
+    setVideoTranscriptionText,
+    getTranscriptionFromContent
   };
 }
