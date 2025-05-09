@@ -8,6 +8,7 @@ import { toast } from "@/components/ui/use-toast";
 export function useContentUpdater() {
   const { setContent, setVideoContent, setTextContent, content, textContent } = useMessageForm();
   const [isTranscribingVideo, setIsTranscribingVideo] = useState(false);
+  const [transcriptionError, setTranscriptionError] = useState<string | null>(null);
 
   // Extract transcription from content
   const getTranscriptionFromContent = (content: string | null): string | null => {
@@ -65,6 +66,7 @@ export function useContentUpdater() {
   const handleVideoContentUpdate = async (videoBlob: Blob, skipTranscriptionOrBase64: boolean | string = false): Promise<any> => {
     try {
       setIsTranscribingVideo(true);
+      setTranscriptionError(null);
       
       // Determine if the second parameter is a base64 string or a boolean flag
       const isBase64String = typeof skipTranscriptionOrBase64 === 'string';
@@ -76,6 +78,7 @@ export function useContentUpdater() {
         // Generate transcription using OpenAI via edge function
         try {
           console.log("Starting transcription process for video blob size:", videoBlob.size);
+          console.log("Video blob type:", videoBlob.type);
           transcription = await transcribeVideoContent(videoBlob);
           console.log("Transcription generated:", transcription ? transcription.substring(0, 50) + "..." : "none");
           
@@ -84,8 +87,10 @@ export function useContentUpdater() {
             title: "Video transcribed",
             description: "Video transcription completed successfully"
           });
-        } catch (error) {
+        } catch (error: any) {
           console.error("Transcription error:", error);
+          setTranscriptionError(error.message || "Failed to transcribe video");
+          
           // We'll continue even if transcription fails
           toast({
             title: "Transcription Warning",
@@ -132,8 +137,9 @@ export function useContentUpdater() {
         transcription, 
         videoContent: formattedContent 
       };
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating video content:", error);
+      setTranscriptionError(error.message || "Failed to process video content");
       
       toast({
         title: "Error",
@@ -150,6 +156,7 @@ export function useContentUpdater() {
   return {
     handleVideoContentUpdate,
     isTranscribingVideo,
+    transcriptionError,
     getTranscriptionFromContent,
     hasVideoData
   };

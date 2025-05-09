@@ -19,6 +19,7 @@ export function VideoPlayer({
   onClearVideo
 }: VideoPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [transcriptionError, setTranscriptionError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   
   // Log when props change for debugging
@@ -69,6 +70,17 @@ export function VideoPlayer({
     }
   }, [videoRef]);
   
+  // Handle transcription with error handling
+  const handleTranscribe = async () => {
+    setTranscriptionError(null);
+    try {
+      await onTranscribe();
+    } catch (error: any) {
+      console.error("Transcription error in VideoPlayer:", error);
+      setTranscriptionError(error.message || "Failed to transcribe video");
+    }
+  };
+  
   return (
     <div className="space-y-2">
       <div className="relative rounded-md overflow-hidden bg-black group">
@@ -83,7 +95,7 @@ export function VideoPlayer({
         <VideoPlayerControls
           isPlaying={isPlaying}
           togglePlayback={togglePlayback}
-          handleTranscribe={onTranscribe}
+          handleTranscribe={handleTranscribe}
           isTranscribing={isTranscribing}
           onClearVideo={onClearVideo}
         />
@@ -92,6 +104,7 @@ export function VideoPlayer({
       <VideoTranscription 
         transcription={transcription} 
         isTranscribing={isTranscribing} 
+        error={transcriptionError}
       />
     </div>
   );
