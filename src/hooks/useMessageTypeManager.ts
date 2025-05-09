@@ -5,7 +5,7 @@ import { useAudioRecordingHandler } from './useAudioRecordingHandler';
 import { useMessageForm } from '@/components/message/MessageFormContext';
 
 export function useMessageTypeManager() {
-  const { setMessageType, videoContent, audioContent } = useMessageForm();
+  const { setMessageType, videoContent, audioContent, textContent } = useMessageForm();
   const [initializedFromMessage, setInitializedFromMessage] = useState(false);
   
   // Use our custom hooks
@@ -67,6 +67,7 @@ export function useMessageTypeManager() {
     }
     
     // Stop any active media streams when switching to text mode
+    // but don't clear the content - this is the critical fix
     if (isVideoStreamActive()) {
       console.log("Stopping active video stream when switching to text mode");
       stopVideoStream();
@@ -76,6 +77,9 @@ export function useMessageTypeManager() {
       console.log("Stopping active audio stream when switching to text mode");
       stopAudioStream();
     }
+    
+    // We do NOT clear the video or audio content here anymore
+    // This preserves the content when switching tabs
   };
   
   // Handle clicking on video tab
@@ -93,6 +97,8 @@ export function useMessageTypeManager() {
       console.log("Stopping active audio stream when switching to video mode");
       stopAudioStream();
     }
+    
+    // We do NOT clear the audio content here anymore
   };
   
   // Handle clicking on audio tab
@@ -110,6 +116,8 @@ export function useMessageTypeManager() {
       console.log("Stopping active video stream when switching to audio mode");
       stopVideoStream();
     }
+    
+    // We do NOT clear the video content here anymore
   };
   
   // Handle initialized video from existing message
@@ -129,6 +137,7 @@ export function useMessageTypeManager() {
   return {
     // Common
     initializedFromMessage,
+    setInitializedFromMessage,
     
     // Text
     onTextTypeClick,

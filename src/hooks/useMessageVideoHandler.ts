@@ -9,7 +9,7 @@ import { Message } from "@/types/message";
 import { useMessageTypeManager } from "./useMessageTypeManager";
 
 export function useMessageVideoHandler(message?: Message) {
-  const { messageType } = useMessageForm();
+  const { messageType, setContent, setTextContent, setVideoContent, setAudioContent } = useMessageForm();
   
   // Use our custom hooks
   const { 
@@ -31,7 +31,9 @@ export function useMessageVideoHandler(message?: Message) {
     forceInitializeMicrophone, handleInitializedAudio, transcribeAudio,
     isAudioInitializationAttempted,
     
-    initializedFromMessage
+    // Common
+    initializedFromMessage,
+    setInitializedFromMessage
   } = useMessageTypeManager();
   
   const { handleVideoContentUpdate, handleAudioContentUpdate } = useContentUpdater();
@@ -42,7 +44,8 @@ export function useMessageVideoHandler(message?: Message) {
     videoBlob: initialVideoBlob,
     audioUrl: initialAudioUrl,
     audioBlob: initialAudioBlob,
-    hasInitialized 
+    hasInitialized,
+    additionalText 
   } = useMessageInitializer(message);
 
   // Connect initialized video data to our message type manager
@@ -51,9 +54,11 @@ export function useMessageVideoHandler(message?: Message) {
       console.log("MessageVideoHandler: Connecting initialized video to message type manager");
       console.log("Initial video blob size:", initialVideoBlob.size);
       
+      // Set the flag first to prevent double initialization
+      setInitializedFromMessage(true);
       handleInitializedVideo(initialVideoBlob, initialVideoUrl);
     }
-  }, [hasInitialized, initialVideoBlob, initialVideoUrl, handleInitializedVideo, initializedFromMessage]);
+  }, [hasInitialized, initialVideoBlob, initialVideoUrl, handleInitializedVideo, initializedFromMessage, setInitializedFromMessage]);
 
   // Connect initialized audio data to our message type manager
   useEffect(() => {
@@ -61,9 +66,19 @@ export function useMessageVideoHandler(message?: Message) {
       console.log("MessageVideoHandler: Connecting initialized audio to message type manager");
       console.log("Initial audio blob size:", initialAudioBlob.size);
       
+      // Set the flag first to prevent double initialization
+      setInitializedFromMessage(true);
       handleInitializedAudio(initialAudioBlob, initialAudioUrl);
     }
-  }, [hasInitialized, initialAudioBlob, initialAudioUrl, handleInitializedAudio, initializedFromMessage]);
+  }, [hasInitialized, initialAudioBlob, initialAudioUrl, handleInitializedAudio, initializedFromMessage, setInitializedFromMessage]);
+
+  // Handle additional text from message initialization
+  useEffect(() => {
+    if (additionalText && hasInitialized) {
+      console.log("MessageVideoHandler: Setting additional text from message:", additionalText.substring(0, 50));
+      setTextContent(additionalText);
+    }
+  }, [additionalText, setTextContent, hasInitialized]);
 
   return {
     videoBlob,

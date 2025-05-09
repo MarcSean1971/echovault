@@ -15,6 +15,7 @@ export function useInitializeMediaContent(message: Message | null) {
   const [videoBase64, setVideoBase64] = useState<string | null>(null); 
   const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
   const [hasInitialized, setHasInitialized] = useState(false);
+  const [additionalText, setAdditionalText] = useState<string | null>(null);
   
   // Parse the message content when the message changes
   useEffect(() => {
@@ -43,6 +44,18 @@ export function useInitializeMediaContent(message: Message | null) {
           setVideoUrl(url);
           setVideoBase64(videoData);
           setVideoBlob(blob);
+          
+          // Check for additional text
+          try {
+            const contentObj = JSON.parse(message.content);
+            if (contentObj.additionalText) {
+              console.log("Found additional text with video:", contentObj.additionalText.substring(0, 50));
+              setAdditionalText(contentObj.additionalText);
+            }
+          } catch (e) {
+            console.error("Error parsing additional text from video content:", e);
+          }
+          
           setHasInitialized(true);
         } else {
           console.log("No video data found in message content");
@@ -62,6 +75,13 @@ export function useInitializeMediaContent(message: Message | null) {
             setAudioUrl(url);
             setAudioBase64(contentObj.audioData);
             setAudioBlob(audioBlob);
+            
+            // Check for additional text
+            if (contentObj.additionalText) {
+              console.log("Found additional text with audio:", contentObj.additionalText.substring(0, 50));
+              setAdditionalText(contentObj.additionalText);
+            }
+            
             setHasInitialized(true);
           } else {
             console.log("No audio data found in message content");
@@ -69,6 +89,10 @@ export function useInitializeMediaContent(message: Message | null) {
         } catch (e) {
           console.error("Error parsing audio content:", e);
         }
+      } else if (message.message_type === "text") {
+        // For text messages, just set the content as additionalText
+        setAdditionalText(message.content);
+        setHasInitialized(true);
       } else {
         try {
           // Try to parse the content as JSON (for media content)
@@ -85,6 +109,13 @@ export function useInitializeMediaContent(message: Message | null) {
             setVideoUrl(url);
             setVideoBase64(contentObj.videoData);
             setVideoBlob(videoBlob);
+            
+            // Check for additional text
+            if (contentObj.additionalText) {
+              console.log("Found additional text with JSON video:", contentObj.additionalText.substring(0, 50));
+              setAdditionalText(contentObj.additionalText);
+            }
+            
             setHasInitialized(true);
           }
           
@@ -99,11 +130,22 @@ export function useInitializeMediaContent(message: Message | null) {
             setAudioUrl(url);
             setAudioBase64(contentObj.audioData);
             setAudioBlob(audioBlob);
+            
+            // Check for additional text
+            if (contentObj.additionalText) {
+              console.log("Found additional text with JSON audio:", contentObj.additionalText.substring(0, 50));
+              setAdditionalText(contentObj.additionalText);
+            }
+            
             setHasInitialized(true);
           }
         } catch (e) {
           // Not JSON or error parsing, content is likely plain text
           console.log("Content is not in JSON format or there was an error:", e);
+          
+          // For non-JSON content, just set it as text
+          setAdditionalText(message.content);
+          setHasInitialized(true);
         }
       }
     } catch (e) {
@@ -134,6 +176,7 @@ export function useInitializeMediaContent(message: Message | null) {
     videoUrl,
     videoBase64,
     videoBlob,
-    hasInitialized
+    hasInitialized,
+    additionalText
   };
 }

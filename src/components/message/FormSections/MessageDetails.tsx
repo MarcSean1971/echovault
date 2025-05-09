@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Label } from "@/components/ui/label";
 import { useMessageForm } from "../MessageFormContext";
 import { FileUploader } from "@/components/FileUploader";
@@ -20,7 +20,7 @@ interface MessageDetailsProps {
 }
 
 export function MessageDetails({ message }: MessageDetailsProps) {
-  const { files, setFiles, content, messageType } = useMessageForm();
+  const { files, setFiles, content, messageType, textContent, videoContent, audioContent } = useMessageForm();
   const [showInlineRecording, setShowInlineRecording] = useState(false);
   const [audioTranscription, setAudioTranscription] = useState<string | null>(null);
   
@@ -103,14 +103,17 @@ export function MessageDetails({ message }: MessageDetailsProps) {
     }
   };
 
-  // Generate keys for content components to force remount when needed
-  const getVideoContentKey = () => {
-    return `video-content-${messageType === 'video' ? 'active' : 'inactive'}-${videoUrl ? 'has-video' : 'no-video'}-${Date.now()}`;
-  };
+  // Generate stable content keys to avoid unnecessary remounts
+  // Generate keys for content components based on content not just type
+  const videoContentKey = useMemo(() => {
+    const hasContent = Boolean(videoUrl || videoBlob);
+    return `video-content-${hasContent ? 'has-video' : 'no-video'}`;
+  }, [videoUrl, videoBlob]);
   
-  const getAudioContentKey = () => {
-    return `audio-content-${messageType === 'audio' ? 'active' : 'inactive'}-${audioUrl ? 'has-audio' : 'no-audio'}-${Date.now()}`;
-  };
+  const audioContentKey = useMemo(() => {
+    const hasContent = Boolean(audioUrl || audioBlob);
+    return `audio-content-${hasContent ? 'has-audio' : 'no-audio'}`;
+  }, [audioUrl, audioBlob]);
   
   // Handle audio transcription
   const handleTranscribeAudio = async () => {
@@ -171,8 +174,8 @@ export function MessageDetails({ message }: MessageDetailsProps) {
           onTranscribeAudio={handleTranscribeAudio}
           
           // Keys for component remounting
-          getVideoContentKey={getVideoContentKey}
-          getAudioContentKey={getAudioContentKey}
+          getVideoContentKey={() => videoContentKey}
+          getAudioContentKey={() => audioContentKey}
         />
       </div>
 
