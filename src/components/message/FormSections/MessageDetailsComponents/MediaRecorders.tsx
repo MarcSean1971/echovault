@@ -7,8 +7,8 @@ interface MediaRecordersProps {
   setShowAudioRecorder: (show: boolean) => void;
   showVideoRecorder: boolean;
   setShowVideoRecorder: (show: boolean) => void;
-  onAudioContentUpdate: (audioBlob: Blob, audioBase64: string) => Promise<void>;
-  onVideoContentUpdate: (videoBlob: Blob, videoBase64: string) => Promise<void>;
+  onAudioContentUpdate: (audioBlob: Blob, audioBase64: string) => Promise<any>;
+  onVideoContentUpdate: (videoBlob: Blob, videoBase64: string) => Promise<any>;
   audioUrl: string | null;
   audioBlob: Blob | null;
   videoUrl: string | null;

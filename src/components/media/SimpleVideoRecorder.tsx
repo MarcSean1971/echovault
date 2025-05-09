@@ -8,7 +8,7 @@ import { blobToBase64 } from "@/utils/audioUtils";
 import { BUTTON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface SimpleVideoRecorderProps {
-  onVideoReady: (videoBlob: Blob, videoBase64: string) => void;
+  onVideoReady: (videoBlob: Blob, videoBase64: string) => Promise<any> | void;
   onCancel: () => void;
 }
 

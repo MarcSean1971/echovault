@@ -9,7 +9,7 @@ import { BUTTON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
 interface AudioRecorderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAudioReady: (audioBlob: Blob, audioBase64: string) => void;
+  onAudioReady: (audioBlob: Blob, audioBase64: string) => Promise<any> | void;
   existingAudioUrl?: string | null;
   existingAudioBlob?: Blob | null;
 }

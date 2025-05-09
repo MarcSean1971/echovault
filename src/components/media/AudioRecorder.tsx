@@ -11,7 +11,7 @@ import { blobToBase64, formatDuration } from "@/utils/audioUtils";
 import { HOVER_TRANSITION, BUTTON_HOVER_EFFECTS } from "@/utils/hoverEffects";
 
 interface AudioRecorderProps {
-  onAudioReady: (audioBlob: Blob, audioBase64: string) => void;
+  onAudioReady: (audioBlob: Blob, audioBase64: string) => Promise<any> | void;
   onCancel: () => void;
 }
 

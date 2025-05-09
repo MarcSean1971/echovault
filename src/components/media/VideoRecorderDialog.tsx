@@ -9,7 +9,7 @@ import { BUTTON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
 interface VideoRecorderDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onVideoReady: (videoBlob: Blob, videoBase64: string) => void;
+  onVideoReady: (videoBlob: Blob, videoBase64: string) => Promise<any> | void;
   existingVideoUrl?: string | null;
   existingVideoBlob?: Blob | null;
 }
