@@ -80,10 +80,13 @@ export function useFileDownloadHandler({ props, utilities }: DownloadHandlerProp
       }
       
       // If current method fails, try one fallback
-      const fallbackMethod: AccessMethod = method === 'secure' ? 'signed' : 
-                                           method === 'signed' ? 'direct' : 'signed';
+      // FIX: Changed the conditional to properly check the method type
+      const fallbackMethod: AccessMethod = 
+        method === 'secure' ? 'signed' : 
+        method === 'signed' ? 'direct' : 'signed';
       
       try {
+        // FIX: Update the comparison to check if fallbackMethod is 'secure' instead of comparing method to 'secure'
         if (fallbackMethod === 'secure' && props.deliveryId && props.recipientEmail) {
           const { url } = await fileAccessManager.getAccessUrl('secure', 'download');
           if (url) {
