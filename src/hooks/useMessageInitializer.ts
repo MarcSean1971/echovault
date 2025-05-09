@@ -1,9 +1,11 @@
 
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import { useMessageForm } from "@/components/message/MessageFormContext";
 import { useAudioRecordingHandler } from "./useAudioRecordingHandler";
 import { useVideoRecordingHandler } from "./useVideoRecordingHandler";
 import { Message } from "@/types/message";
+import { parseAudioContent, parseVideoContent, createMediaUrl } from "@/services/messages/mediaService";
+import { toast } from "@/components/ui/use-toast";
 
 /**
  * Hook to initialize message data when editing an existing message
@@ -29,6 +31,21 @@ export function useMessageInitializer(message?: Message) {
       setContextMessageType(message.message_type);
     }
   }, [message, setContextMessageType]);
+  
+  // Helper function to convert base64 to blob
+  const base64ToBlob = useCallback((base64: string, type: string): Blob => {
+    try {
+      const binaryString = window.atob(base64);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      return new Blob([bytes], { type });
+    } catch (e) {
+      console.error("Error converting base64 to blob:", e);
+      return new Blob([], { type });
+    }
+  }, []);
 
   // Initialize media content from the message being edited
   useEffect(() => {
@@ -40,62 +57,78 @@ export function useMessageInitializer(message?: Message) {
     // Cleanup URLs on unmount or message change
     const createdUrls: string[] = [];
     
-    if (message.message_type === 'audio' || message.message_type === 'video') {
-      try {
-        const contentObj = JSON.parse(message.content);
-        console.log("Parsed content object:", contentObj);
+    try {
+      // Set form content regardless of message type
+      setContent(message.content);
+      
+      if (message.message_type === 'audio') {
+        const { audioData, transcription } = parseAudioContent(message.content);
         
-        // Initialize audio content
-        if (message.message_type === 'audio' && contentObj.audioData) {
-          console.log("Found audio data, initializing audio content");
-          const audioBlob = base64ToBlob(contentObj.audioData, 'audio/webm');
+        console.log("Found audio data:", !!audioData);
+        console.log("Found transcription:", transcription);
+        
+        if (audioData) {
+          // Create blob and URL
+          const audioBlob = base64ToBlob(audioData, 'audio/webm');
           console.log("Created audio blob:", audioBlob.size);
           
           const url = URL.createObjectURL(audioBlob);
           createdUrls.push(url);
           console.log("Created audio URL:", url);
           
+          // Set state
           setAudioUrl(url);
-          setAudioBase64(contentObj.audioData);
+          setAudioBase64(audioData);
           setAudioBlob(audioBlob);
           
-          if (contentObj.transcription) {
-            console.log("Found audio transcription:", contentObj.transcription);
-            setAudioTranscription(contentObj.transcription);
+          if (transcription) {
+            setAudioTranscription(transcription);
           }
           
-          // Important: Set the form content to match the audio data
-          setContent(message.content);
+          // Show toast to confirm loading
+          toast({
+            title: "Audio loaded",
+            description: "Your audio message has been loaded successfully."
+          });
         }
+      } else if (message.message_type === 'video') {
+        const { videoData, transcription } = parseVideoContent(message.content);
         
-        // Initialize video content
-        if (message.message_type === 'video' && contentObj.videoData) {
-          console.log("Found video data, initializing video content");
-          const videoBlob = base64ToBlob(contentObj.videoData, 'video/webm');
+        console.log("Found video data:", !!videoData);
+        console.log("Found transcription:", transcription);
+        
+        if (videoData) {
+          // Create blob and URL
+          const videoBlob = base64ToBlob(videoData, 'video/webm');
           console.log("Created video blob:", videoBlob.size);
           
           const url = URL.createObjectURL(videoBlob);
           createdUrls.push(url);
           console.log("Created video URL:", url);
           
+          // Set state
           setVideoUrl(url);
-          setVideoBase64(contentObj.videoData);
+          setVideoBase64(videoData);
           setVideoBlob(videoBlob);
           
-          if (contentObj.transcription) {
-            console.log("Found video transcription:", contentObj.transcription);
-            setVideoTranscription(contentObj.transcription);
+          if (transcription) {
+            setVideoTranscription(transcription);
           }
           
-          // Important: Set the form content to match the video data
-          setContent(message.content);
+          // Show toast to confirm loading
+          toast({
+            title: "Video loaded",
+            description: "Your video message has been loaded successfully."
+          });
         }
-      } catch (e) {
-        console.error("Error parsing message content:", e);
       }
-    } else if (message.message_type === 'text' && message.content) {
-      // For text messages, just set the content directly
-      setContent(message.content);
+    } catch (e) {
+      console.error("Error initializing message content:", e);
+      toast({
+        title: "Error",
+        description: "There was a problem loading your message content",
+        variant: "destructive"
+      });
     }
     
     // Cleanup function to revoke object URLs when unmounting or when message changes
@@ -109,21 +142,6 @@ export function useMessageInitializer(message?: Message) {
         }
       });
     };
-  }, [message, setAudioUrl, setAudioBase64, setAudioTranscription, setAudioBlob,
-      setVideoUrl, setVideoBase64, setVideoTranscription, setVideoBlob, setContent]);
-
-  // Helper function to convert base64 to blob
-  const base64ToBlob = (base64: string, type: string): Blob => {
-    try {
-      const binaryString = window.atob(base64);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-      return new Blob([bytes], { type });
-    } catch (e) {
-      console.error("Error converting base64 to blob:", e);
-      return new Blob([], { type });
-    }
-  };
+  }, [message, setContent, base64ToBlob, setAudioUrl, setAudioBase64, setAudioTranscription, setAudioBlob,
+      setVideoUrl, setVideoBase64, setVideoTranscription, setVideoBlob]);
 }

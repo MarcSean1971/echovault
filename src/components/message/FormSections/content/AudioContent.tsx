@@ -27,6 +27,12 @@ export function AudioContent({
     setShowAudioRecorder(true);
   };
   
+  console.log("AudioContent rendered with:", { 
+    audioUrl, 
+    hasTranscription: !!audioTranscription, 
+    isTranscribing: isTranscribingAudio 
+  });
+  
   if (audioUrl) {
     return (
       <div className="space-y-3">

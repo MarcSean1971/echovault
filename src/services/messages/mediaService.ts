@@ -60,3 +60,65 @@ export function parseMessageTranscription(content: string | null): string | null
     return null;
   }
 }
+
+/**
+ * Parse audio content from message
+ */
+export function parseAudioContent(content: string | null) {
+  if (!content) return { audioData: null, transcription: null };
+  
+  try {
+    const contentObj = JSON.parse(content);
+    return {
+      audioData: contentObj.audioData || null,
+      transcription: contentObj.transcription || null
+    };
+  } catch (e) {
+    console.error("Error parsing audio content:", e);
+    return { audioData: null, transcription: null };
+  }
+}
+
+/**
+ * Parse video content from message
+ */
+export function parseVideoContent(content: string | null) {
+  if (!content) return { videoData: null, transcription: null };
+  
+  try {
+    const contentObj = JSON.parse(content);
+    return {
+      videoData: contentObj.videoData || null,
+      transcription: contentObj.transcription || null
+    };
+  } catch (e) {
+    console.error("Error parsing video content:", e);
+    return { videoData: null, transcription: null };
+  }
+}
+
+/**
+ * Create audio/video blob URL from base64 data
+ */
+export function createMediaUrl(base64Data: string | null, mediaType: 'audio' | 'video'): string | null {
+  if (!base64Data) return null;
+  
+  try {
+    // Convert base64 to blob
+    const binaryString = window.atob(base64Data);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    
+    const type = mediaType === 'audio' ? 'audio/webm' : 'video/webm';
+    const blob = new Blob([bytes], { type });
+    const url = URL.createObjectURL(blob);
+    
+    console.log(`Created ${mediaType} URL from base64:`, url);
+    return url;
+  } catch (e) {
+    console.error(`Error creating ${mediaType} URL from base64:`, e);
+    return null;
+  }
+}

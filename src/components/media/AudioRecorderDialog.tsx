@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { AudioRecorder } from "./AudioRecorder";
 import { AudioPlayer } from "./AudioPlayer";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { BUTTON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface AudioRecorderDialogProps {
@@ -23,15 +23,23 @@ export function AudioRecorderDialog({
 }: AudioRecorderDialogProps) {
   const [showRecorder, setShowRecorder] = useState(!existingAudioUrl);
   
+  // Reset state when dialog opens/closes
+  useEffect(() => {
+    if (open) {
+      console.log("AudioRecorderDialog opened, existing audio URL:", existingAudioUrl);
+      setShowRecorder(!existingAudioUrl);
+    }
+  }, [open, existingAudioUrl]);
+  
   const handleCancel = () => {
     onOpenChange(false);
     setShowRecorder(!existingAudioUrl);
   };
   
-  const handleAudioReady = (audioBlob: Blob, audioBase64: string) => {
-    onAudioReady(audioBlob, audioBase64);
+  const handleAudioReady = async (audioBlob: Blob, audioBase64: string) => {
+    console.log("AudioRecorderDialog: Audio ready, blob size:", audioBlob.size);
+    await onAudioReady(audioBlob, audioBase64);
     onOpenChange(false);
-    setShowRecorder(false);
   };
   
   const handleRecordNew = () => {

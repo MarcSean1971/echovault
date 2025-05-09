@@ -11,17 +11,23 @@ export function useContentUpdater() {
   const [isTranscribingAudio, setIsTranscribingAudio] = useState(false);
   const [isTranscribingVideo, setIsTranscribingVideo] = useState(false);
   
-  const { clearAudio, setAudioTranscription } = useAudioRecordingHandler();
+  const { clearAudio, setAudioTranscription, setAudioUrl } = useAudioRecordingHandler();
   const { clearVideo, setVideoTranscription } = useVideoRecordingHandler();
 
   // Handle updating audio content
   const handleAudioContentUpdate = async (audioBlob: Blob, audioBase64: string) => {
-    console.log("Handling audio content update");
+    console.log("Handling audio content update, blob size:", audioBlob.size);
     setIsTranscribingAudio(true);
     
     try {
+      // Create URL for immediate playback
+      const audioUrl = URL.createObjectURL(audioBlob);
+      setAudioUrl(audioUrl);
+      console.log("Created audio URL for playback:", audioUrl);
+      
       // Start transcribing the audio
       const transcription = await transcribeAudio(audioBase64);
+      console.log("Audio transcription completed:", transcription);
       setAudioTranscription(transcription);
       
       // Create audio content object with transcription
@@ -38,7 +44,6 @@ export function useContentUpdater() {
         description: "Your audio has been successfully transcribed.",
       });
       
-      console.log("Audio transcription completed:", transcription);
       return contentObj;
     } catch (error) {
       console.error("Error transcribing audio:", error);
@@ -62,12 +67,18 @@ export function useContentUpdater() {
   
   // Handle updating video content
   const handleVideoContentUpdate = async (videoBlob: Blob, videoBase64: string) => {
-    console.log("Handling video content update");
+    console.log("Handling video content update, blob size:", videoBlob.size);
     setIsTranscribingVideo(true);
     
     try {
+      // Create URL for immediate playback
+      const videoUrl = URL.createObjectURL(videoBlob);
+      setVideoUrl(videoUrl);
+      console.log("Created video URL for playback:", videoUrl);
+      
       // Start transcribing the video
       const transcription = await transcribeVideo(videoBase64);
+      console.log("Video transcription completed:", transcription);
       setVideoTranscription(transcription);
       
       // Create video content object with transcription
@@ -84,7 +95,6 @@ export function useContentUpdater() {
         description: "Your video has been successfully transcribed.",
       });
       
-      console.log("Video transcription completed:", transcription);
       return contentObj;
     } catch (error) {
       console.error("Error transcribing video:", error);

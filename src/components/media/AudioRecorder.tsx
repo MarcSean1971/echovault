@@ -67,6 +67,11 @@ export function AudioRecorder({ onAudioReady, onCancel }: AudioRecorderProps) {
   const handleAccept = async () => {
     if (!audioBlob) {
       console.error("No audio blob available");
+      toast({
+        title: "Error",
+        description: "No audio recording found. Please try again.",
+        variant: "destructive"
+      });
       return;
     }
     
@@ -74,7 +79,17 @@ export function AudioRecorder({ onAudioReady, onCancel }: AudioRecorderProps) {
       console.log("Processing audio blob:", audioBlob.size);
       const base64Audio = await blobToBase64(audioBlob);
       console.log("Audio converted to base64, length:", base64Audio.length);
-      onAudioReady(audioBlob, base64Audio);
+      
+      // Log the audio URL for debugging
+      console.log("Current audio URL before passing to parent:", audioURL);
+      
+      // Pass both blob and base64 to parent
+      await onAudioReady(audioBlob, base64Audio);
+      
+      toast({
+        title: "Audio saved",
+        description: "Your audio recording has been saved successfully.",
+      });
     } catch (err) {
       console.error("Error processing audio:", err);
       toast({

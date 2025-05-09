@@ -1,6 +1,6 @@
 
-import { useState } from "react";
-import { transcribeAudio, transcribeVideo } from "@/services/messages/transcriptionService";
+import { useState, useCallback, useEffect } from "react";
+import { transcribeAudio, transcribeVideo } from '@/services/messages/transcriptionService';
 import { toast } from "@/components/ui/use-toast";
 
 export type MediaType = "audio" | "video";
@@ -19,8 +19,18 @@ export function useMediaRecording(mediaType: MediaType) {
   const mediaTypeLabel = mediaType.charAt(0).toUpperCase() + mediaType.slice(1);
   const mediaDataKey = `${mediaType}Data`;
   
+  // Clean up URL when component unmounts
+  useEffect(() => {
+    return () => {
+      if (mediaUrl) {
+        console.log(`Cleaning up ${mediaType} URL:`, mediaUrl);
+        URL.revokeObjectURL(mediaUrl);
+      }
+    };
+  }, [mediaUrl, mediaType]);
+  
   // Function to handle media recording completion
-  const handleMediaReady = async (blob: Blob, base64: string) => {
+  const handleMediaReady = useCallback(async (blob: Blob, base64: string) => {
     console.log(`Processing new ${mediaType}, blob size: ${blob.size} bytes`);
     
     setMediaBlob(blob);
@@ -30,6 +40,7 @@ export function useMediaRecording(mediaType: MediaType) {
     if (mediaUrl) {
       URL.revokeObjectURL(mediaUrl);
     }
+    
     const url = URL.createObjectURL(blob);
     setMediaUrl(url);
     console.log(`Created new URL for ${mediaType}: ${url}`);
@@ -72,19 +83,21 @@ export function useMediaRecording(mediaType: MediaType) {
     } finally {
       setIsTranscribing(false);
     }
-  };
+  }, [mediaUrl, mediaType, mediaDataKey, mediaTypeLabel, transcribeMedia]);
   
   // Function to clear recorded media
-  const clearMedia = () => {
+  const clearMedia = useCallback(() => {
     if (mediaUrl) {
+      console.log(`Clearing ${mediaType} URL:`, mediaUrl);
       URL.revokeObjectURL(mediaUrl);
     }
+    
     setMediaBlob(null);
     setMediaBase64(null);
     setMediaUrl(null);
     setTranscription(null);
     return "";
-  };
+  }, [mediaUrl, mediaType]);
 
   return {
     showRecorder,
