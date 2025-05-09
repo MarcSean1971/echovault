@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { AlertCircle, MapPin } from "lucide-react";
-import { HOVER_TRANSITION, BUTTON_HOVER_EFFECTS, CONFIRMATION_ANIMATION } from "@/utils/hoverEffects";
+import { HOVER_TRANSITION, BUTTON_HOVER_EFFECTS } from "@/utils/hoverEffects";
 
 interface EmergencyButtonProps {
   isPanicMode: boolean;
@@ -25,7 +25,7 @@ export function EmergencyButton({
       disabled={disabled}
       className={`w-full ${HOVER_TRANSITION} ${
         isConfirming 
-          ? `${BUTTON_HOVER_EFFECTS.destructive} ${CONFIRMATION_ANIMATION.pulse}` 
+          ? `${BUTTON_HOVER_EFFECTS.destructive} animate-pulse` 
           : BUTTON_HOVER_EFFECTS.default
       }`}
     >
