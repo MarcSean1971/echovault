@@ -7,6 +7,9 @@ export function useVideoRecordingHandler() {
   const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [showVideoRecorder, setShowVideoRecorder] = useState(false);
+  const [previewStream, setPreviewStream] = useState<MediaStream | null>(null);
+  const [isInitializing, setIsInitializing] = useState(false);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const videoChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
@@ -15,10 +18,11 @@ export function useVideoRecordingHandler() {
   useEffect(() => {
     console.log("useVideoRecordingHandler: isRecording =", isRecording, 
                 "videoBlob =", videoBlob ? "present" : "null", 
-                "videoUrl =", videoUrl ? "present" : "null");
-  }, [isRecording, videoBlob, videoUrl, showVideoRecorder]);
+                "videoUrl =", videoUrl ? "present" : "null",
+                "previewStream =", previewStream ? "active" : "null");
+  }, [isRecording, videoBlob, videoUrl, showVideoRecorder, previewStream]);
 
-  // Clean up video URL when component unmounts
+  // Clean up video URL and stream when component unmounts
   useEffect(() => {
     return () => {
       if (videoUrl) {
@@ -36,17 +40,18 @@ export function useVideoRecordingHandler() {
         track.stop();
       });
       streamRef.current = null;
+      setPreviewStream(null);
       console.log("Media stream stopped");
     }
   };
 
-  // Function to start recording
-  const startRecording = async () => {
+  // Initialize the media stream for preview before recording
+  const initializeStream = async () => {
     try {
-      console.log("Requesting media devices...");
-      videoChunksRef.current = [];
+      setIsInitializing(true);
+      console.log("Initializing camera for preview...");
       
-      // Stop any existing stream first to prevent conflicts
+      // Stop any existing stream first
       stopMediaStream();
       
       const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -54,8 +59,56 @@ export function useVideoRecordingHandler() {
         audio: true
       });
       
-      console.log("Media stream obtained successfully:", stream);
+      console.log("Camera preview initialized successfully");
       streamRef.current = stream;
+      setPreviewStream(stream);
+      setHasPermission(true);
+      return stream;
+    } catch (error: any) {
+      console.error("Error initializing camera:", error);
+      setHasPermission(false);
+      
+      // More specific error messages based on common issues
+      let errorMessage = "Error accessing camera or microphone";
+      
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        errorMessage = "Camera or microphone access was denied. Please check your browser permissions.";
+      } else if (error.name === 'NotFoundError') {
+        errorMessage = "Camera or microphone not found. Please check your device.";
+      } else if (error.name === 'NotReadableError' || error.name === 'AbortError') {
+        errorMessage = "Could not access your camera or microphone. It might be in use by another application.";
+      } else if (error.name === 'SecurityError') {
+        errorMessage = "Media access is not allowed in this context. Please check your settings.";
+      }
+      
+      toast({
+        title: "Permission Error",
+        description: errorMessage,
+        variant: "destructive"
+      });
+      
+      throw new Error(errorMessage);
+    } finally {
+      setIsInitializing(false);
+    }
+  };
+
+  // Function to start recording
+  const startRecording = async () => {
+    try {
+      console.log("Starting recording...");
+      videoChunksRef.current = [];
+      
+      let stream = previewStream;
+      
+      // If we don't have a preview stream, initialize it
+      if (!stream) {
+        try {
+          stream = await initializeStream();
+        } catch (error) {
+          return; // Exit if we can't initialize the stream
+        }
+      }
       
       // Create and configure the media recorder
       const mediaRecorder = new MediaRecorder(stream);
@@ -78,7 +131,6 @@ export function useVideoRecordingHandler() {
         console.log("Created video URL:", videoUrl);
         setVideoUrl(videoUrl);
         setIsRecording(false);
-        stopMediaStream();
       };
       
       // Start the recorder
@@ -94,26 +146,13 @@ export function useVideoRecordingHandler() {
     } catch (error: any) {
       console.error("Error starting video recording:", error);
       
-      let errorMessage = "Error accessing camera or microphone";
-      
-      // More specific error messages based on common issues
-      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-        errorMessage = "Camera or microphone access was denied. Please check your browser permissions.";
-      } else if (error.name === 'NotFoundError') {
-        errorMessage = "Camera or microphone not found. Please check your device.";
-      } else if (error.name === 'NotReadableError' || error.name === 'AbortError') {
-        errorMessage = "Could not access your camera or microphone. It might be in use by another application.";
-      } else if (error.name === 'SecurityError') {
-        errorMessage = "Media access is not allowed in this context. Please check your settings.";
-      }
+      let errorMessage = "Error starting recording";
       
       toast({
-        title: "Permission Error",
+        title: "Recording Error",
         description: errorMessage,
         variant: "destructive"
       });
-      
-      throw new Error(errorMessage);
     }
   };
   
@@ -145,10 +184,14 @@ export function useVideoRecordingHandler() {
   
   return {
     isRecording,
+    isInitializing,
+    hasPermission,
     videoBlob,
     videoUrl,
     showVideoRecorder,
     setShowVideoRecorder,
+    previewStream,
+    initializeStream,
     startRecording,
     stopRecording,
     clearVideo

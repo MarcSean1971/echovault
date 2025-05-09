@@ -1,6 +1,6 @@
 
 import { VideoContent } from "../content/VideoContent";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useEffect } from "react";
 
 interface MediaRecordersProps {
@@ -10,6 +10,9 @@ interface MediaRecordersProps {
   videoUrl: string | null;
   videoBlob: Blob | null;
   isRecording?: boolean;
+  isInitializing?: boolean;
+  hasPermission?: boolean | null;
+  previewStream?: MediaStream | null;
   startRecording?: () => Promise<void>;
   stopRecording?: () => void;
   clearVideo?: () => void;
@@ -22,6 +25,9 @@ export function MediaRecorders({
   videoUrl,
   videoBlob,
   isRecording = false,
+  isInitializing = false,
+  hasPermission = null,
+  previewStream = null,
   startRecording = async () => {},
   stopRecording = () => {},
   clearVideo = () => {}
@@ -45,11 +51,17 @@ export function MediaRecorders({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Record Video Message</DialogTitle>
+          <DialogDescription>
+            Record a video to include in your message
+          </DialogDescription>
         </DialogHeader>
         
         <VideoContent
           videoUrl={videoUrl}
           isRecording={isRecording}
+          isInitializing={isInitializing}
+          hasPermission={hasPermission}
+          previewStream={previewStream}
           onStartRecording={startRecording}
           onStopRecording={stopRecording}
           onClearVideo={clearVideo}

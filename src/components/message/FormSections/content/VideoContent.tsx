@@ -6,8 +6,8 @@ import { toast } from "@/components/ui/use-toast";
 import { 
   Play, 
   Pause, 
-  Mic, 
-  MicOff, 
+  Camera, 
+  CameraOff, 
   Trash2, 
   Video,
   Captions
@@ -18,6 +18,9 @@ import { useMessageForm } from "../../MessageFormContext";
 export function VideoContent({ 
   videoUrl,
   isRecording,
+  isInitializing,
+  hasPermission,
+  previewStream,
   onStartRecording,
   onStopRecording,
   onClearVideo,
@@ -26,6 +29,9 @@ export function VideoContent({
 }: {
   videoUrl: string | null;
   isRecording: boolean;
+  isInitializing?: boolean;
+  hasPermission?: boolean | null;
+  previewStream?: MediaStream | null;
   onStartRecording: () => Promise<void>;
   onStopRecording: () => void;
   onClearVideo: () => void;
@@ -37,17 +43,39 @@ export function VideoContent({
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [permissionError, setPermissionError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const previewRef = useRef<HTMLVideoElement>(null);
   const [showVideoPreview, setShowVideoPreview] = useState(false);
   
   // Log for debugging
   useEffect(() => {
-    console.log("VideoContent: inDialog =", inDialog, "videoUrl =", videoUrl ? "present" : "null");
+    console.log("VideoContent: inDialog =", inDialog, 
+                "videoUrl =", videoUrl ? "present" : "null",
+                "previewStream =", previewStream ? "active" : "null");
     
     // If we have a video URL, we should show the video preview
     if (videoUrl) {
       setShowVideoPreview(true);
     }
-  }, [inDialog, videoUrl]);
+  }, [inDialog, videoUrl, previewStream]);
+  
+  // Connect preview stream to video element
+  useEffect(() => {
+    if (previewStream && previewRef.current && !videoUrl) {
+      console.log("Connecting preview stream to video element");
+      previewRef.current.srcObject = previewStream;
+      
+      // Play the preview (will be silent since we're not enabling audio)
+      previewRef.current.play().catch(err => {
+        console.error("Error playing preview:", err);
+      });
+    }
+    
+    return () => {
+      if (previewRef.current) {
+        previewRef.current.srcObject = null;
+      }
+    };
+  }, [previewStream, videoUrl]);
   
   // Toggle video playback
   const togglePlayback = () => {
@@ -92,11 +120,6 @@ export function VideoContent({
     } catch (error: any) {
       console.error("Error starting recording:", error);
       setPermissionError(error.message || "Unable to access camera or microphone");
-      toast({
-        title: "Permission Error",
-        description: "Please allow camera and microphone access to record video.",
-        variant: "destructive"
-      });
     }
   };
   
@@ -154,8 +177,63 @@ export function VideoContent({
         </div>
       )}
       
-      {/* Show recording controls if no video is available or we're recording */}
-      {(!videoUrl || isRecording) && (
+      {/* Show preview stream if no recorded video */}
+      {!videoUrl && previewStream && !isRecording && (
+        <div className="relative rounded-md overflow-hidden bg-black">
+          <video 
+            ref={previewRef}
+            autoPlay
+            playsInline
+            muted
+            className="w-full h-full max-h-[300px]"
+          />
+          <div className="absolute bottom-0 left-0 right-0 p-2 bg-black/60 flex justify-center">
+            <Button
+              type="button"
+              onClick={handleStartRecording}
+              variant="default"
+              disabled={isInitializing}
+              className="hover:bg-primary/90 transition-colors"
+            >
+              <Camera className="mr-2 h-4 w-4" />
+              {isInitializing ? "Preparing..." : "Start Recording"}
+            </Button>
+          </div>
+        </div>
+      )}
+      
+      {/* Show recording controls if we're recording */}
+      {!videoUrl && isRecording && (
+        <div className="relative rounded-md overflow-hidden bg-black">
+          <video 
+            ref={previewRef}
+            autoPlay
+            playsInline
+            muted
+            className="w-full h-full max-h-[300px]"
+          />
+          <div className="absolute top-0 left-0 right-0 p-2 bg-black/30 flex justify-center">
+            <div className="flex items-center justify-center gap-2 text-white">
+              <span className="animate-pulse h-3 w-3 rounded-full bg-red-500"></span>
+              <span className="text-sm font-medium">Recording in progress...</span>
+            </div>
+          </div>
+          <div className="absolute bottom-0 left-0 right-0 p-2 bg-black/60 flex justify-center">
+            <Button
+              type="button"
+              onClick={onStopRecording}
+              variant="destructive"
+              className="hover:bg-destructive/90 transition-colors"
+            >
+              <CameraOff className="mr-2 h-4 w-4" />
+              Stop Recording
+            </Button>
+          </div>
+        </div>
+      )}
+      
+      {/* Show initial setup UI if we have no video and no preview stream */}
+      {!videoUrl && !previewStream && !isRecording && (
         <div className={`flex flex-col items-center ${!inDialog ? "border-2 border-dashed border-muted-foreground/30" : ""} rounded-md p-6 space-y-4`}>
           <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
             <Video className="h-8 w-8 text-primary" />
@@ -172,28 +250,28 @@ export function VideoContent({
             </div>
           )}
           
-          {isRecording && (
-            <div className="flex items-center justify-center gap-2 text-destructive">
-              <span className="animate-pulse h-3 w-3 rounded-full bg-destructive"></span>
-              <span className="text-sm font-medium">Recording in progress...</span>
+          {hasPermission === false && (
+            <div className="bg-destructive/10 p-3 rounded-md text-sm text-destructive">
+              Camera access was denied. Please check your browser permissions.
             </div>
           )}
           
           <Button
             type="button"
-            onClick={isRecording ? onStopRecording : handleStartRecording}
-            variant={isRecording ? "destructive" : "default"}
+            onClick={handleStartRecording}
+            variant="default"
+            disabled={isInitializing}
             className="hover:opacity-90 transition-all"
           >
-            {isRecording ? (
+            {isInitializing ? (
               <>
-                <MicOff className="mr-2 h-4 w-4" />
-                Stop Recording
+                <CameraOff className="mr-2 h-4 w-4" />
+                Preparing Camera...
               </>
             ) : (
               <>
-                <Mic className="mr-2 h-4 w-4" />
-                Start Recording
+                <Camera className="mr-2 h-4 w-4" />
+                Enable Camera
               </>
             )}
           </Button>

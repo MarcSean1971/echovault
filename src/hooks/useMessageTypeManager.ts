@@ -2,6 +2,7 @@
 import { useMessageTypeHandler } from "./useMessageTypeHandler";
 import { useMessageForm } from "@/components/message/MessageFormContext";
 import { useVideoRecordingHandler } from "./useVideoRecordingHandler";
+import { useEffect } from "react";
 
 export function useMessageTypeManager() {
   const { setMessageType: setContextMessageType } = useMessageForm();
@@ -12,10 +13,14 @@ export function useMessageTypeManager() {
   
   const {
     isRecording,
+    isInitializing,
+    hasPermission,
     videoBlob, 
     videoUrl,
     showVideoRecorder,
     setShowVideoRecorder,
+    previewStream,
+    initializeStream,
     startRecording,
     stopRecording,
     clearVideo
@@ -33,11 +38,18 @@ export function useMessageTypeManager() {
     setContextMessageType(type);
   };
   
+  // When switching to video type, initialize the camera stream
   const onVideoTypeClick = () => {
     handleMediaTypeClick();
-    setShowVideoRecorder(true);
     if (messageType !== "video") {
       handleMessageTypeChange("video");
+    }
+    
+    // Don't show the dialog, instead initialize the preview stream directly
+    if (!videoUrl && !previewStream) {
+      initializeStream().catch(err => {
+        console.error("Failed to initialize camera preview:", err);
+      });
     }
   };
 
@@ -46,10 +58,14 @@ export function useMessageTypeManager() {
     onTextTypeClick,
     onVideoTypeClick,
     isRecording,
+    isInitializing,
+    hasPermission,
     videoBlob,
     videoUrl,
     showVideoRecorder,
     setShowVideoRecorder,
+    previewStream,
+    initializeStream,
     startRecording,
     stopRecording,
     clearVideo

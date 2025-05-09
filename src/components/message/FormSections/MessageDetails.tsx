@@ -28,7 +28,8 @@ export function MessageDetails({ message }: MessageDetailsProps) {
   const { 
     messageType, onTextTypeClick, onVideoTypeClick,
     videoBlob, videoUrl, showVideoRecorder, setShowVideoRecorder,
-    isRecording, startRecording, stopRecording, clearVideo 
+    isRecording, isInitializing, hasPermission, previewStream,
+    initializeStream, startRecording, stopRecording, clearVideo 
   } = useMessageTypeManager();
   
   const { handleVideoContentUpdate, isTranscribingVideo } = useContentUpdater();
@@ -36,13 +37,30 @@ export function MessageDetails({ message }: MessageDetailsProps) {
   // Initialize message data when editing an existing message
   useMessageInitializer(message);
 
+  // Initialize the camera when switching to video mode
+  useEffect(() => {
+    if (messageType === "video" && !videoUrl && !previewStream && !showInlineRecording) {
+      setShowInlineRecording(true);
+    }
+  }, [messageType, videoUrl, previewStream, showInlineRecording]);
+
   // Debug log to track state changes
   useEffect(() => {
     console.log("MessageDetails: messageType =", messageType, 
                 "showVideoRecorder =", showVideoRecorder,
                 "isRecording =", isRecording,
-                "videoUrl =", videoUrl ? "present" : "null");
-  }, [messageType, showVideoRecorder, isRecording, videoUrl]);
+                "videoUrl =", videoUrl ? "present" : "null",
+                "previewStream =", previewStream ? "active" : "null");
+  }, [messageType, showVideoRecorder, isRecording, videoUrl, previewStream]);
+
+  // Initialize camera preview when showing inline recording UI
+  useEffect(() => {
+    if (showInlineRecording && messageType === "video" && !videoUrl && !previewStream) {
+      initializeStream().catch(error => {
+        console.error("Failed to initialize camera stream:", error);
+      });
+    }
+  }, [showInlineRecording, messageType, videoUrl, previewStream, initializeStream]);
 
   return (
     <div className="space-y-6">
@@ -52,10 +70,7 @@ export function MessageDetails({ message }: MessageDetailsProps) {
       {/* Message type selector */}
       <MessageTypeSelector 
         onTextTypeClick={onTextTypeClick}
-        onVideoTypeClick={() => {
-          onVideoTypeClick();
-          setShowInlineRecording(true);
-        }}
+        onVideoTypeClick={onVideoTypeClick}
       />
 
       {/* Content field based on message type */}
@@ -66,62 +81,25 @@ export function MessageDetails({ message }: MessageDetailsProps) {
         {/* Video content section */}
         {messageType === "video" && (
           <div>
-            {/* Show existing video if available */}
-            {videoUrl && (
-              <VideoContent
-                videoUrl={videoUrl}
-                isRecording={isRecording}
-                onStartRecording={startRecording}
-                onStopRecording={stopRecording}
-                onClearVideo={clearVideo}
-                onTranscribeVideo={async (): Promise<void> => {
-                  if (videoBlob) {
-                    await handleVideoContentUpdate(videoBlob);
-                  }
-                }}
-              />
-            )}
-            
-            {/* Show record button when no video is available */}
-            {!videoUrl && !isRecording && !showInlineRecording && (
-              <div className="space-y-2">
-                <Label>Video Message</Label>
-                <div className="flex flex-col items-center border-2 border-dashed border-muted-foreground/30 rounded-md p-6">
-                  <Button
-                    type="button"
-                    onClick={() => {
-                      console.log("Starting inline recording experience...");
-                      setShowInlineRecording(true);
-                    }}
-                    className="flex items-center hover:bg-primary/90 transition-colors"
-                  >
-                    <Video className="mr-2 h-4 w-4" />
-                    Record Video
-                  </Button>
-                </div>
-              </div>
-            )}
-            
-            {/* Show inline recording UI */}
-            {!videoUrl && showInlineRecording && (
-              <div className="mt-4">
-                <VideoContent
-                  videoUrl={null}
-                  isRecording={isRecording}
-                  onStartRecording={startRecording}
-                  onStopRecording={stopRecording}
-                  onClearVideo={() => {
-                    clearVideo();
-                    setShowInlineRecording(false);
-                  }}
-                  onTranscribeVideo={async (): Promise<void> => {
-                    if (videoBlob) {
-                      await handleVideoContentUpdate(videoBlob);
-                    }
-                  }}
-                />
-              </div>
-            )}
+            {/* Show the video content component */}
+            <VideoContent
+              videoUrl={videoUrl}
+              isRecording={isRecording}
+              isInitializing={isInitializing}
+              hasPermission={hasPermission}
+              previewStream={previewStream}
+              onStartRecording={startRecording}
+              onStopRecording={stopRecording}
+              onClearVideo={() => {
+                clearVideo();
+                setShowInlineRecording(false);
+              }}
+              onTranscribeVideo={async (): Promise<void> => {
+                if (videoBlob) {
+                  await handleVideoContentUpdate(videoBlob);
+                }
+              }}
+            />
           </div>
         )}
       </div>
@@ -146,6 +124,9 @@ export function MessageDetails({ message }: MessageDetailsProps) {
         videoUrl={videoUrl}
         videoBlob={videoBlob}
         isRecording={isRecording}
+        isInitializing={isInitializing}
+        hasPermission={hasPermission}
+        previewStream={previewStream}
         startRecording={startRecording}
         stopRecording={stopRecording}
         clearVideo={clearVideo}
