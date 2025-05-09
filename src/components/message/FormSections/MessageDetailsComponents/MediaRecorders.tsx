@@ -37,7 +37,7 @@ export function MediaRecorders({
   
   // Log state changes for debugging
   useEffect(() => {
-    console.log("MediaRecorders: showVideoRecorder state changed:", showVideoRecorder);
+    console.log("MediaRecorders: Dialog open state =", showVideoRecorder);
   }, [showVideoRecorder]);
   
   return (

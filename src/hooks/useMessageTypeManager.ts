@@ -11,6 +11,7 @@ export function useMessageTypeManager() {
   } = useMessageTypeHandler();
   
   const {
+    isRecording,
     videoBlob, 
     videoUrl,
     showVideoRecorder,
@@ -44,6 +45,7 @@ export function useMessageTypeManager() {
     messageType,
     onTextTypeClick,
     onVideoTypeClick,
+    isRecording,
     videoBlob,
     videoUrl,
     showVideoRecorder,

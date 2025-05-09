@@ -37,10 +37,16 @@ export function VideoContent({
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [permissionError, setPermissionError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [showVideoPreview, setShowVideoPreview] = useState(false);
   
   // Log for debugging
   useEffect(() => {
     console.log("VideoContent: inDialog =", inDialog, "videoUrl =", videoUrl ? "present" : "null");
+    
+    // If we have a video URL, we should show the video preview
+    if (videoUrl) {
+      setShowVideoPreview(true);
+    }
   }, [inDialog, videoUrl]);
   
   // Toggle video playback
@@ -80,7 +86,7 @@ export function VideoContent({
   const handleStartRecording = async () => {
     setPermissionError(null);
     try {
-      console.log("Requesting camera and microphone permissions...");
+      console.log("Starting recording...");
       await onStartRecording();
       console.log("Recording started successfully");
     } catch (error: any) {
@@ -99,7 +105,7 @@ export function VideoContent({
       {!inDialog && <Label htmlFor="videoContent">Video Message</Label>}
       
       {/* Show video preview if available */}
-      {videoUrl && (
+      {videoUrl && showVideoPreview && (
         <div className="relative rounded-md overflow-hidden bg-black">
           <video 
             ref={videoRef}
@@ -114,7 +120,7 @@ export function VideoContent({
               size="sm"
               variant="ghost"
               onClick={togglePlayback}
-              className="text-white"
+              className="text-white hover:bg-white/20 transition-colors"
             >
               {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
               {isPlaying ? "Pause" : "Play"}
@@ -127,7 +133,7 @@ export function VideoContent({
                 variant="outline"
                 onClick={handleTranscribe}
                 disabled={isTranscribing}
-                className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
+                className="hover:bg-primary/90 transition-colors"
               >
                 <Captions className="w-4 h-4 mr-1" />
                 {isTranscribing ? "Transcribing..." : "Transcribe"}
@@ -138,7 +144,7 @@ export function VideoContent({
                 size="sm" 
                 variant="destructive"
                 onClick={onClearVideo}
-                className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.destructive}`}
+                className="hover:bg-destructive/90 transition-colors"
               >
                 <Trash2 className="w-4 h-4 mr-1" />
                 Delete
@@ -148,8 +154,8 @@ export function VideoContent({
         </div>
       )}
       
-      {/* Show recording controls if no video is available */}
-      {!videoUrl && (
+      {/* Show recording controls if no video is available or we're recording */}
+      {(!videoUrl || isRecording) && (
         <div className={`flex flex-col items-center ${!inDialog ? "border-2 border-dashed border-muted-foreground/30" : ""} rounded-md p-6 space-y-4`}>
           <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
             <Video className="h-8 w-8 text-primary" />
@@ -166,11 +172,18 @@ export function VideoContent({
             </div>
           )}
           
+          {isRecording && (
+            <div className="flex items-center justify-center gap-2 text-destructive">
+              <span className="animate-pulse h-3 w-3 rounded-full bg-destructive"></span>
+              <span className="text-sm font-medium">Recording in progress...</span>
+            </div>
+          )}
+          
           <Button
             type="button"
             onClick={isRecording ? onStopRecording : handleStartRecording}
             variant={isRecording ? "destructive" : "default"}
-            className={`${HOVER_TRANSITION} ${isRecording ? BUTTON_HOVER_EFFECTS.destructive : BUTTON_HOVER_EFFECTS.default}`}
+            className="hover:opacity-90 transition-all"
           >
             {isRecording ? (
               <>
