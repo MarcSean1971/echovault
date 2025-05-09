@@ -32,7 +32,7 @@ export function VideoContent({
       <div className="space-y-3">
         <VideoPlayer src={videoUrl} className="w-full aspect-video" />
         
-        {videoTranscription && (
+        {videoTranscription && !isTranscribingVideo && (
           <div className="mt-4 p-3 border rounded-lg bg-muted/30">
             <h4 className="font-medium mb-1">Transcription:</h4>
             <p className="text-sm italic">"{videoTranscription}"</p>

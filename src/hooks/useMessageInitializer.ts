@@ -25,6 +25,7 @@ export function useMessageInitializer(message?: Message) {
   // Set initial message type based on the message being edited
   useEffect(() => {
     if (message?.message_type) {
+      console.log("Initializing message type:", message.message_type);
       setContextMessageType(message.message_type);
     }
   }, [message, setContextMessageType]);
@@ -33,17 +34,24 @@ export function useMessageInitializer(message?: Message) {
   useEffect(() => {
     if (!message?.content) return;
     
+    console.log("Initializing message content:", message.content);
+    
     if (message.message_type === 'audio' || message.message_type === 'video') {
       try {
         const contentObj = JSON.parse(message.content);
+        console.log("Parsed content object:", contentObj);
         
         // Initialize audio content
         if (message.message_type === 'audio' && contentObj.audioData) {
+          console.log("Found audio data, initializing audio content");
           const audioBlob = base64ToBlob(contentObj.audioData, 'audio/webm');
           const url = URL.createObjectURL(audioBlob);
           setAudioUrl(url);
           setAudioBase64(contentObj.audioData);
-          setAudioTranscription(contentObj.transcription || null);
+          if (contentObj.transcription) {
+            console.log("Found audio transcription:", contentObj.transcription);
+            setAudioTranscription(contentObj.transcription);
+          }
           setAudioBlob(audioBlob); // Also set the audio blob for use in the recorder
           
           // Important: Set the form content to match the audio data
@@ -52,18 +60,22 @@ export function useMessageInitializer(message?: Message) {
         
         // Initialize video content
         if (message.message_type === 'video' && contentObj.videoData) {
+          console.log("Found video data, initializing video content");
           const videoBlob = base64ToBlob(contentObj.videoData, 'video/webm');
           const url = URL.createObjectURL(videoBlob);
           setVideoUrl(url);
           setVideoBase64(contentObj.videoData);
-          setVideoTranscription(contentObj.transcription || null);
+          if (contentObj.transcription) {
+            console.log("Found video transcription:", contentObj.transcription);
+            setVideoTranscription(contentObj.transcription);
+          }
           setVideoBlob(videoBlob); // Also set the video blob for use in the recorder
           
           // Important: Set the form content to match the video data
           setContent(message.content);
         }
       } catch (e) {
-        console.log("Error parsing message content:", e);
+        console.error("Error parsing message content:", e);
       }
     } else if (message.message_type === 'text' && message.content) {
       // For text messages, just set the content directly
