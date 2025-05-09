@@ -59,11 +59,10 @@ export function MessageDetails({ message }: MessageDetailsProps) {
             onStartRecording={startRecording}
             onStopRecording={stopRecording}
             onClearVideo={clearVideo}
-            onTranscribeVideo={async () => {
+            onTranscribeVideo={async (): Promise<void> => {
               if (videoBlob) {
-                return handleVideoContentUpdate(videoBlob);
+                await handleVideoContentUpdate(videoBlob);
               }
-              return Promise.resolve({});
             }}
           />
         )}
