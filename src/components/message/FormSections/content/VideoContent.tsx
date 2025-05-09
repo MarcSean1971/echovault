@@ -11,7 +11,7 @@ interface VideoContentProps {
   isTranscribingVideo: boolean;
   onRecordClick: () => void;
   onClearVideo: () => void;
-  setShowVideoRecorder?: (show: boolean) => void;
+  setShowVideoRecorder: (show: boolean) => void;
 }
 
 export function VideoContent({ 
@@ -22,16 +22,9 @@ export function VideoContent({
   onClearVideo,
   setShowVideoRecorder
 }: VideoContentProps) {
-  // Create a direct handler function that ensures the recorder opens
   const handleOpenRecorder = () => {
     console.log("Opening video recorder from VideoContent");
-    // Directly set the recorder to visible if the prop is available
-    if (setShowVideoRecorder) {
-      setShowVideoRecorder(true);
-    } else {
-      // Fallback to the original method
-      onRecordClick();
-    }
+    setShowVideoRecorder(true);
   };
   
   if (videoUrl) {

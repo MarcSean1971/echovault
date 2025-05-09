@@ -1,26 +1,32 @@
 
 import { AudioRecorderDialog } from "@/components/media/AudioRecorderDialog";
 import { VideoRecorderDialog } from "@/components/media/VideoRecorderDialog";
-import { useAudioRecordingHandler } from "@/hooks/useAudioRecordingHandler";
-import { useVideoRecordingHandler } from "@/hooks/useVideoRecordingHandler";
-import { useMessageForm } from "../../MessageFormContext";
 
 interface MediaRecordersProps {
+  showAudioRecorder: boolean;
+  setShowAudioRecorder: (show: boolean) => void;
+  showVideoRecorder: boolean;
+  setShowVideoRecorder: (show: boolean) => void;
   onAudioContentUpdate: (audioBlob: Blob, audioBase64: string) => Promise<void>;
   onVideoContentUpdate: (videoBlob: Blob, videoBase64: string) => Promise<void>;
+  audioUrl: string | null;
+  audioBlob: Blob | null;
+  videoUrl: string | null;
+  videoBlob: Blob | null;
 }
 
-export function MediaRecorders({ onAudioContentUpdate, onVideoContentUpdate }: MediaRecordersProps) {
-  const {
-    showAudioRecorder, setShowAudioRecorder,
-    audioBlob, audioUrl
-  } = useAudioRecordingHandler();
-  
-  const {
-    showVideoRecorder, setShowVideoRecorder,
-    videoBlob, videoUrl
-  } = useVideoRecordingHandler();
-
+export function MediaRecorders({ 
+  showAudioRecorder, 
+  setShowAudioRecorder,
+  showVideoRecorder, 
+  setShowVideoRecorder,
+  onAudioContentUpdate, 
+  onVideoContentUpdate,
+  audioUrl,
+  audioBlob,
+  videoUrl,
+  videoBlob
+}: MediaRecordersProps) {
   return (
     <>
       {/* Audio Recorder Dialog */}

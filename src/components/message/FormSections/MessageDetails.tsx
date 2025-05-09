@@ -29,12 +29,12 @@ export function MessageDetails({ message }: MessageDetailsProps) {
   // Use our custom hooks
   const {
     audioUrl, audioTranscription, isTranscribingAudio,
-    showAudioRecorder, setShowAudioRecorder
+    showAudioRecorder, setShowAudioRecorder, audioBlob
   } = useAudioRecordingHandler();
   
   const {
     videoUrl, videoTranscription, isTranscribingVideo,
-    showVideoRecorder, setShowVideoRecorder
+    showVideoRecorder, setShowVideoRecorder, videoBlob
   } = useVideoRecordingHandler();
   
   const {
@@ -104,8 +104,16 @@ export function MessageDetails({ message }: MessageDetailsProps) {
 
       {/* Media recorder dialogs */}
       <MediaRecorders 
+        showAudioRecorder={showAudioRecorder}
+        setShowAudioRecorder={setShowAudioRecorder}
+        showVideoRecorder={showVideoRecorder}
+        setShowVideoRecorder={setShowVideoRecorder}
         onAudioContentUpdate={handleAudioContentUpdate}
         onVideoContentUpdate={handleVideoContentUpdate}
+        audioUrl={audioUrl}
+        audioBlob={audioBlob}
+        videoUrl={videoUrl}
+        videoBlob={videoBlob}
       />
     </div>
   );
