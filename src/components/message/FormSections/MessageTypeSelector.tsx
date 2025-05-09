@@ -9,7 +9,7 @@ interface MessageTypeSelectorProps {
   onVideoTypeClick: () => void;
 }
 
-export function MessageTypeSelector({ onTextTypeClick, onVideoTypeClick }: MessageTypeSelectorProps) {
+export function MessageTypeSelector({ onTextTypeClick }: MessageTypeSelectorProps) {
   const { messageType } = useMessageForm();
   
   return (
@@ -23,14 +23,6 @@ export function MessageTypeSelector({ onTextTypeClick, onVideoTypeClick }: Messa
           className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
         >
           Text
-        </Button>
-        <Button
-          type="button"
-          variant={messageType === "video" ? "default" : "outline"}
-          onClick={onVideoTypeClick}
-          className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
-        >
-          Video
         </Button>
       </div>
     </div>

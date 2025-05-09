@@ -1,6 +1,4 @@
 
-import { VideoRecorderDialog } from "@/components/media/VideoRecorderDialog";
-
 interface MediaRecordersProps {
   showVideoRecorder: boolean;
   setShowVideoRecorder: (show: boolean) => void;
@@ -16,15 +14,6 @@ export function MediaRecorders({
   videoUrl,
   videoBlob
 }: MediaRecordersProps) {
-  return (
-    <>
-      <VideoRecorderDialog 
-        open={showVideoRecorder} 
-        onOpenChange={setShowVideoRecorder}
-        existingVideoUrl={videoUrl}
-        existingVideoBlob={videoBlob} 
-        onVideoReady={onVideoContentUpdate}
-      />
-    </>
-  );
+  // Video functionality removed
+  return null;
 }

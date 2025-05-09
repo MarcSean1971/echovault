@@ -2,7 +2,6 @@
 import React, { useEffect } from "react";
 import { Message } from "@/types/message";
 import { TextMessageContent } from "./content/TextMessageContent";
-import { VideoMessageContent } from "./content/VideoMessageContent";
 import { UnknownMessageContent } from "./content/UnknownMessageContent";
 import { WhatsAppIntegration } from "./content/WhatsAppIntegration";
 import { Separator } from "@/components/ui/separator";
@@ -35,9 +34,6 @@ export function MessageContent({
     switch (message.message_type) {
       case "text":
         return <TextMessageContent message={message} content={message.content} />;
-      case "video":
-        console.log("MessageContent: Rendering video message with transcription:", transcription);
-        return <VideoMessageContent message={message} transcription={transcription} />;
       default:
         return <UnknownMessageContent message={message} />;
     }
