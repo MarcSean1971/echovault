@@ -19,9 +19,26 @@ export function useVideoStorage() {
   // Function to restore video from blob and url
   const restoreVideo = (blob: Blob, url: string, setVideoBlob: (blob: Blob) => void, setVideoUrl: (url: string) => void) => {
     console.log("Restoring video from blob:", blob.size, "bytes");
+    
+    // Create a fresh URL to avoid stale references
+    const freshUrl = URL.createObjectURL(blob);
+    
+    // Set the blob first, then the URL
     setVideoBlob(blob);
-    setVideoUrl(url);
-    console.log("Video restored successfully");
+    
+    // If the passed URL is different from the fresh one, revoke the old one
+    if (url !== freshUrl && url) {
+      try {
+        URL.revokeObjectURL(url);
+        console.log("Revoked old URL during restoration");
+      } catch (e) {
+        console.warn("Could not revoke old URL:", e);
+      }
+    }
+    
+    // Set the fresh URL
+    setVideoUrl(freshUrl);
+    console.log("Video restored successfully with fresh URL:", freshUrl);
   };
   
   return {

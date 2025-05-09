@@ -1,3 +1,4 @@
+
 import { Label } from "@/components/ui/label";
 import { useMessageForm } from "../MessageFormContext";
 import { FileUploader } from "@/components/FileUploader";
@@ -29,7 +30,8 @@ export function MessageDetails({ message }: MessageDetailsProps) {
     onTextTypeClick, onVideoTypeClick,
     videoBlob, videoUrl, showVideoRecorder, setShowVideoRecorder,
     isRecording, isInitializing, hasPermission, previewStream,
-    initializeStream, startRecording, stopRecording, clearVideo 
+    initializeStream, startRecording, stopRecording, clearVideo,
+    forceInitializeCamera
   } = useMessageTypeManager();
   
   const { handleVideoContentUpdate, isTranscribingVideo } = useContentUpdater();
@@ -39,6 +41,8 @@ export function MessageDetails({ message }: MessageDetailsProps) {
 
   // Initialize the camera when switching to video mode
   useEffect(() => {
+    console.log("MessageDetails: messageType changed to", messageType);
+    
     if (messageType === "video" && !videoUrl && !previewStream && !showInlineRecording) {
       console.log("Video mode detected. Setting showInlineRecording to true");
       setShowInlineRecording(true);
@@ -47,13 +51,16 @@ export function MessageDetails({ message }: MessageDetailsProps) {
 
   // Initialize camera preview when showing inline recording UI
   useEffect(() => {
+    console.log("MessageDetails: showInlineRecording:", showInlineRecording, "messageType:", messageType);
+    
     if (showInlineRecording && messageType === "video" && !videoUrl && !previewStream) {
       console.log("Initializing camera preview for inline recording");
-      initializeStream().catch(error => {
+      // Use forceInitializeCamera to ensure we get a fresh stream
+      forceInitializeCamera().catch(error => {
         console.error("Failed to initialize camera stream:", error);
       });
     }
-  }, [showInlineRecording, messageType, videoUrl, previewStream, initializeStream]);
+  }, [showInlineRecording, messageType, videoUrl, previewStream, forceInitializeCamera]);
 
   // Handle tab change
   const handleTabChange = (value: string) => {
@@ -63,6 +70,11 @@ export function MessageDetails({ message }: MessageDetailsProps) {
     } else if (value === "video") {
       onVideoTypeClick();
     }
+  };
+
+  // Generate a key for the VideoContent to force remount when needed
+  const getVideoContentKey = () => {
+    return `video-content-${messageType === 'video' ? 'active' : 'inactive'}-${videoUrl ? 'has-video' : 'no-video'}-${Date.now()}`;
   };
 
   return (
@@ -115,6 +127,7 @@ export function MessageDetails({ message }: MessageDetailsProps) {
           {/* Video content tab */}
           <TabsContent value="video" className="mt-0">
             <VideoContent
+              key={getVideoContentKey()}
               videoUrl={videoUrl}
               isRecording={isRecording}
               isInitializing={isInitializing}

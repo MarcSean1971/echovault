@@ -9,10 +9,7 @@ import { parseMessageTranscription } from "@/services/messages/mediaService";
 
 export function useMessageTypeManager() {
   const { messageType, setMessageType: setContextMessageType, content } = useMessageForm();
-  const {
-    handleTextTypeClick, handleMediaTypeClick
-  } = useMessageTypeHandler();
-
+  const { handleTextTypeClick, handleMediaTypeClick } = useMessageTypeHandler();
   const { handleMessageTypeChange } = useMessageTypeState();
   const { cachedVideoBlob, cachedVideoUrl, cachedTranscription, cacheVideo, clearCache, hasCachedVideo } = useVideoCache();
   
@@ -26,14 +23,19 @@ export function useMessageTypeManager() {
     setShowVideoRecorder,
     previewStream,
     initializeStream,
+    forceInitializeCamera,
     startRecording,
     stopRecording,
     clearVideo,
-    restoreVideo
+    restoreVideo,
+    stopMediaStream,
+    isStreamActive
   } = useVideoRecordingHandler();
 
-  // Tracking the previous message type for debugging
+  // Tracking the previous message type for state transitions
   const [prevMessageType, setPrevMessageType] = useState<string | null>(null);
+  // Flag to track if we need to force refresh camera on next tab switch
+  const [needsCameraRefresh, setNeedsCameraRefresh] = useState(false);
   
   // Log state changes for debugging
   useEffect(() => {
@@ -42,33 +44,24 @@ export function useMessageTypeManager() {
       console.log("useMessageTypeManager: Current video state:", {
         videoUrl: videoUrl ? "present" : "none",
         cachedVideoUrl: cachedVideoUrl ? "present" : "none",
+        previewStreamActive: previewStream ? (isStreamActive() ? "active" : "inactive") : "none",
         hasCachedVideo: hasCachedVideo()
       });
       setPrevMessageType(messageType);
     }
-  }, [messageType, videoUrl, cachedVideoUrl, hasCachedVideo, prevMessageType]);
+  }, [messageType, videoUrl, cachedVideoUrl, hasCachedVideo, previewStream, prevMessageType, isStreamActive]);
 
   // Extract transcription from the current content
   const getCurrentTranscription = () => {
     if (!content) return null;
     return parseMessageTranscription(content);
   };
-
-  // Helper function to stop the media stream without clearing the video
-  const stopMediaStream = () => {
-    if (previewStream) {
-      previewStream.getTracks().forEach(track => {
-        console.log("Stopping track:", track.kind);
-        track.stop();
-      });
-    }
-  };
   
   // Wrapper functions for message type handling
   const onTextTypeClick = () => {
+    console.log("Switching to text mode");
     // Save the current video state and transcription before switching to text
     const currentTranscription = getCurrentTranscription();
-    console.log("Switching to text mode. Current transcription:", currentTranscription);
     
     if (videoBlob && videoUrl) {
       console.log("Caching video before switching to text mode");
@@ -79,14 +72,18 @@ export function useMessageTypeManager() {
     handleMessageTypeChange("text");
     setContextMessageType("text");
     
-    // If we were in video mode, clean up the camera stream but don't clear the video
+    // If we were in video mode, clean up the camera stream
     if (previewStream) {
+      console.log("Stopping media stream when switching to text");
       stopMediaStream();
     }
+    
+    // Set flag to refresh camera next time we switch to video
+    setNeedsCameraRefresh(true);
   };
   
   // When switching to video type, initialize the camera stream or restore video
-  const onVideoTypeClick = () => {
+  const onVideoTypeClick = async () => {
     console.log("Switching to video mode");
     handleMediaTypeClick();
     handleMessageTypeChange("video");
@@ -94,20 +91,24 @@ export function useMessageTypeManager() {
     
     // If we have cached video, restore it first
     if (cachedVideoBlob && cachedVideoUrl) {
-      console.log("Restoring cached video after switching back to video mode");
+      console.log("Restoring cached video after switching to video mode");
       console.log("Cached transcription:", cachedTranscription);
-      restoreVideo(cachedVideoBlob, cachedVideoUrl, cachedTranscription);
+      await restoreVideo(cachedVideoBlob, cachedVideoUrl, cachedTranscription);
       return;
     }
     
-    // Don't show the dialog, instead initialize the preview stream directly
-    if (!videoUrl && !previewStream) {
-      console.log("Video mode selected, initializing camera preview");
-      initializeStream().catch(err => {
-        console.error("Failed to initialize camera preview:", err);
+    // Check if we need to force-refresh the camera
+    if (needsCameraRefresh || !previewStream || !isStreamActive()) {
+      console.log("Video tab needs camera refresh, initializing...");
+      // Try to initialize the camera with force=true to ensure fresh stream
+      forceInitializeCamera().then(() => {
+        setNeedsCameraRefresh(false);
+        console.log("Camera successfully refreshed");
+      }).catch(err => {
+        console.error("Failed to refresh camera:", err);
       });
     } else {
-      console.log("Video mode: No need to initialize camera - videoUrl or previewStream exists");
+      console.log("Video mode: Camera already active, no need to reinitialize");
     }
   };
 
@@ -116,6 +117,7 @@ export function useMessageTypeManager() {
     return () => {
       if (previewStream) {
         clearVideo();
+        stopMediaStream();
       }
       
       clearCache();
@@ -137,6 +139,7 @@ export function useMessageTypeManager() {
     initializeStream,
     startRecording,
     stopRecording,
-    clearVideo
+    clearVideo,
+    forceInitializeCamera
   };
 }

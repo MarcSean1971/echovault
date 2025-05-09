@@ -16,10 +16,24 @@ export function useVideoCache() {
     });
     
     if (blob && url) {
+      // Create a fresh URL for the cached blob to avoid stale references
+      const freshUrl = URL.createObjectURL(blob);
+      
+      // If previous cached URL exists, revoke it
+      if (cachedVideoUrl) {
+        try {
+          URL.revokeObjectURL(cachedVideoUrl);
+          console.log("Revoked previous cached URL");
+        } catch (e) {
+          console.warn("Could not revoke previous cached URL:", e);
+        }
+      }
+      
+      // Set cached values
       setCachedVideoBlob(blob);
-      setCachedVideoUrl(url);
+      setCachedVideoUrl(freshUrl);
       setCachedTranscription(transcription);
-      console.log("Video successfully cached");
+      console.log("Video successfully cached with fresh URL:", freshUrl);
       return true;
     }
     console.log("Failed to cache video - missing blob or URL");

@@ -11,23 +11,45 @@ export function useMediaStream() {
   // Function to stop media stream
   const stopMediaStream = () => {
     if (streamRef.current) {
+      console.log("Stopping media stream tracks...");
       streamRef.current.getTracks().forEach(track => {
-        console.log("Stopping track:", track.kind);
+        console.log("Stopping track:", track.kind, track.readyState);
         track.stop();
       });
+      
+      // Important: Clear both the ref and the state
       streamRef.current = null;
       setPreviewStream(null);
-      console.log("Media stream stopped");
+      console.log("Media stream stopped and state cleared");
+    } else {
+      console.log("No media stream to stop");
     }
   };
 
+  // Check if the stream is actually active (not stopped)
+  const isStreamActive = () => {
+    if (!streamRef.current) return false;
+    
+    // Check if all tracks are active
+    const allTracks = streamRef.current.getTracks();
+    const activeTracks = allTracks.filter(track => track.readyState === "live");
+    
+    return activeTracks.length > 0 && activeTracks.length === allTracks.length;
+  };
+
   // Initialize the media stream for preview before recording
-  const initializeStream = async () => {
+  const initializeStream = async (forceNew = false) => {
     try {
+      // If we already have an active stream and don't need to force new, return it
+      if (!forceNew && streamRef.current && isStreamActive()) {
+        console.log("Reusing existing active stream");
+        return streamRef.current;
+      }
+      
       setIsInitializing(true);
       console.log("Initializing camera for preview...");
       
-      // Stop any existing stream first
+      // Always stop any existing stream first
       stopMediaStream();
       
       const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -82,6 +104,7 @@ export function useMediaStream() {
     hasPermission,
     streamRef,
     initializeStream,
-    stopMediaStream
+    stopMediaStream,
+    isStreamActive
   };
 }

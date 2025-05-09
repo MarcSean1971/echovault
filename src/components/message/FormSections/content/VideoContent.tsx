@@ -40,19 +40,26 @@ export function VideoContent({
   const [showVideoPreview, setShowVideoPreview] = useState(!!videoUrl);
   const [transcription, setTranscription] = useState<string | null>(null);
   
-  // Reset showVideoPreview state whenever videoUrl changes or tab changes
+  // Reset showVideoPreview state whenever videoUrl changes or messageType changes
   useEffect(() => {
-    console.log("VideoContent: videoUrl or messageType changed:", { 
+    console.log("VideoContent: videoUrl changed:", { 
       videoUrl: videoUrl ? "present" : "null", 
-      messageType 
+      messageType,
+      previewStream: previewStream ? "active" : "null"
     });
     
     // If we have a video URL, we should always show the video preview
     if (videoUrl) {
       console.log("VideoContent: Setting showVideoPreview to true because videoUrl exists");
       setShowVideoPreview(true);
+    } else {
+      // When videoUrl becomes null, reset showVideoPreview for rendering empty state
+      console.log("VideoContent: No videoUrl, checking if previewStream exists");
+      if (!previewStream) {
+        setShowVideoPreview(false);
+      }
     }
-  }, [videoUrl, messageType]);
+  }, [videoUrl, messageType, previewStream]);
   
   // Extract transcription from content
   useEffect(() => {
@@ -72,9 +79,10 @@ export function VideoContent({
       previewStream: previewStream ? "active" : "null",
       isRecording,
       transcription: transcription ? "present" : "null",
-      showVideoPreview
+      showVideoPreview,
+      messageType
     });
-  }, [inDialog, videoUrl, previewStream, isRecording, transcription, showVideoPreview]);
+  }, [inDialog, videoUrl, previewStream, isRecording, transcription, showVideoPreview, messageType]);
   
   // Handle transcription
   const handleTranscribe = async () => {
@@ -106,12 +114,10 @@ export function VideoContent({
     }
   };
   
-  return (
-    <div className="space-y-4">
-      {!inDialog && <Label htmlFor="videoContent">Video Message</Label>}
-      
-      {/* Show video player if we have a video URL */}
-      {videoUrl && showVideoPreview && (
+  // Determine what to render based on current state
+  const renderVideoContent = () => {
+    if (videoUrl && showVideoPreview) {
+      return (
         <VideoPlayer
           videoUrl={videoUrl}
           transcription={transcription}
@@ -119,10 +125,11 @@ export function VideoContent({
           isTranscribing={isTranscribingVideo}
           onClearVideo={onClearVideo}
         />
-      )}
-      
-      {/* Show camera preview when we have an active stream */}
-      {!videoUrl && previewStream && (
+      );
+    }
+    
+    if (!videoUrl && previewStream) {
+      return (
         <CameraPreview
           previewStream={previewStream}
           isRecording={isRecording}
@@ -130,18 +137,25 @@ export function VideoContent({
           onStartRecording={handleStartRecording}
           onStopRecording={onStopRecording}
         />
-      )}
-      
-      {/* Show empty state when there's no video and no preview */}
-      {!videoUrl && !previewStream && !isRecording && (
-        <EmptyVideoState
-          handleStartRecording={handleStartRecording}
-          isInitializing={isInitializing || false}
-          permissionError={permissionError}
-          hasPermission={hasPermission}
-          inDialog={inDialog}
-        />
-      )}
+      );
+    }
+    
+    // Default to empty state
+    return (
+      <EmptyVideoState
+        handleStartRecording={handleStartRecording}
+        isInitializing={isInitializing || false}
+        permissionError={permissionError}
+        hasPermission={hasPermission}
+        inDialog={inDialog}
+      />
+    );
+  };
+  
+  return (
+    <div className="space-y-4">
+      {!inDialog && <Label htmlFor="videoContent">Video Message</Label>}
+      {renderVideoContent()}
     </div>
   );
 }

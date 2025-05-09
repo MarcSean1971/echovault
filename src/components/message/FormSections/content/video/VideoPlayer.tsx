@@ -30,6 +30,19 @@ export function VideoPlayer({
     });
   }, [videoUrl, transcription, isTranscribing]);
   
+  // Reset video when URL changes
+  useEffect(() => {
+    console.log("VideoPlayer: videoUrl changed:", videoUrl ? videoUrl.substring(0, 30) + "..." : "none");
+    
+    // When video URL changes, reset playback state
+    setIsPlaying(false);
+    
+    // Ensure video element loads the new URL correctly
+    if (videoRef.current) {
+      videoRef.current.load();
+    }
+  }, [videoUrl]);
+  
   const togglePlayback = () => {
     if (!videoRef.current) return;
     
@@ -64,6 +77,7 @@ export function VideoPlayer({
           src={videoUrl}
           className="w-full h-full max-h-[300px]"
           onEnded={() => setIsPlaying(false)}
+          key={videoUrl} // Key helps React recognize when to remount the video element
         />
         
         <VideoPlayerControls

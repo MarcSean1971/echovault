@@ -15,7 +15,8 @@ export function useVideoRecordingHandler() {
     hasPermission,
     streamRef,
     initializeStream,
-    stopMediaStream
+    stopMediaStream,
+    isStreamActive
   } = useMediaStream();
   
   const {
@@ -64,6 +65,19 @@ export function useVideoRecordingHandler() {
     }
   };
   
+  // Force initialize camera - used when switching tabs or when camera needs refresh
+  const forceInitializeCamera = async () => {
+    try {
+      console.log("Forcing camera initialization...");
+      await initializeStream(true);
+      console.log("Force camera initialization successful");
+      return true;
+    } catch (error) {
+      console.error("Force camera initialization failed:", error);
+      return false;
+    }
+  };
+  
   return {
     isRecording,
     isInitializing,
@@ -74,9 +88,12 @@ export function useVideoRecordingHandler() {
     setShowVideoRecorder,
     previewStream,
     initializeStream,
+    forceInitializeCamera,
     startRecording,
     stopRecording,
     clearVideo,
-    restoreVideo
+    restoreVideo,
+    stopMediaStream,
+    isStreamActive
   };
 }
