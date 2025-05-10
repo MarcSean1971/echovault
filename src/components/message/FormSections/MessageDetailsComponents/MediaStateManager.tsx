@@ -125,8 +125,8 @@ export function MediaStateManager({
         
         try {
           // Use forceInitializeCamera to ensure we get a fresh stream
-          await forceInitializeCamera();
-          console.log("Camera initialization successful");
+          const success = await forceInitializeCamera();
+          console.log("Camera initialization " + (success ? "successful" : "failed"));
         } catch (error) {
           console.error("Failed to initialize camera stream:", error);
           // Important: Reset state even on error
@@ -165,8 +165,8 @@ export function MediaStateManager({
         
         try {
           // Use forceInitializeMicrophone to ensure we get a fresh stream
-          await forceInitializeMicrophone();
-          console.log("Microphone initialization successful");
+          const success = await forceInitializeMicrophone();
+          console.log("Microphone initialization " + (success ? "successful" : "failed"));
         } catch (error) {
           console.error("Failed to initialize microphone stream:", error);
           // Important: Reset state even on error
