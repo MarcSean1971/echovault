@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from "react";
 import { Label } from "@/components/ui/label";
 import { useMessageForm } from "../MessageFormContext";
@@ -66,10 +65,12 @@ export function MessageDetails({ message }: MessageDetailsProps) {
   
   // Create a wrapper function for forceInitializeCamera that returns void
   const handleStartRecordingWrapper = async (): Promise<void> => {
-    // Call the original function but ignore its boolean result
-    await forceInitializeCamera();
-    // Explicitly return to ensure void return type
-    return;
+    // Call the original function but completely ignore its boolean result
+    // Using void operator to explicitly ensure void return type
+    void await forceInitializeCamera();
+    
+    // Explicitly return undefined to satisfy Promise<void>
+    return undefined;
   };
 
   // Generate stable content keys to avoid unnecessary remounts
@@ -77,11 +78,6 @@ export function MessageDetails({ message }: MessageDetailsProps) {
     const hasContent = Boolean(videoUrl || videoBlob);
     return `video-content-${hasContent ? 'has-video' : 'no-video'}`;
   }, [videoUrl, videoBlob]);
-  
-  const audioContentKey = useMemo(() => {
-    const hasContent = Boolean(audioUrl || audioBlob);
-    return `audio-content-${hasContent ? 'has-audio' : 'no-audio'}`;
-  }, [audioUrl, audioBlob]);
   
   // Handle audio transcription
   const handleTranscribeAudio = async () => {
