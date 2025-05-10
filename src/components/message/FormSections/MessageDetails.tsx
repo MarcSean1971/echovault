@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from "react";
 import { Label } from "@/components/ui/label";
 import { useMessageForm } from "../MessageFormContext";
@@ -12,6 +13,7 @@ import { MediaStateManager } from "./MessageDetailsComponents/MediaStateManager"
 
 // Import custom hooks
 import { useMessageVideoHandler } from "@/hooks/useMessageVideoHandler";
+import { useContentUpdater } from "@/hooks/useContentUpdater";
 
 // Import Button from UI components for Record Video button
 import { Button } from "@/components/ui/button";
@@ -26,6 +28,9 @@ export function MessageDetails({ message }: MessageDetailsProps) {
   const [showInlineRecording, setShowInlineRecording] = useState(false);
   const [audioTranscription, setAudioTranscription] = useState<string | null>(null);
   
+  // Get audio content updater from the hook
+  const { handleAudioContentUpdate, handleVideoContentUpdate } = useContentUpdater();
+  
   // Use our custom hook for handling media
   const {
     // Text handling
@@ -37,7 +42,6 @@ export function MessageDetails({ message }: MessageDetailsProps) {
     videoUrl, videoBlob, showVideoRecorder, setShowVideoRecorder,
     isVideoRecording, isVideoInitializing, hasVideoPermission, videoPreviewStream,
     startVideoRecording, stopVideoRecording, clearVideo, forceInitializeCamera, 
-    handleVideoContentUpdate,
     
     // Audio handling
     onAudioTypeClick,
@@ -62,7 +66,7 @@ export function MessageDetails({ message }: MessageDetailsProps) {
     }
   };
   
-  // Fixed: Create a proper wrapper function that explicitly returns Promise<void> with proper void handling
+  // Create a proper wrapper function that explicitly returns Promise<void> with proper void handling
   const handleStartRecordingWrapper = async (): Promise<void> => {
     try {
       // Call the function but explicitly ignore its return value
@@ -74,7 +78,7 @@ export function MessageDetails({ message }: MessageDetailsProps) {
     }
   };
   
-  // Fixed: Create a wrapper for startVideoRecording that explicitly returns Promise<void>
+  // Create a wrapper for startVideoRecording that explicitly returns Promise<void>
   const startVideoRecordingWrapper = async (): Promise<void> => {
     try {
       // Call the function but explicitly ignore its return value
