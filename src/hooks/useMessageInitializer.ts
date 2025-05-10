@@ -79,7 +79,7 @@ export function useMessageInitializer(message?: Message) {
       try {
         const contentObj = JSON.parse(message.content);
         if (contentObj.audioData) {
-          console.log("Message contains audio content");
+          console.log("Message contains audio content - setting audioContent state");
           hasAudio = true;
           setAudioContent(message.content);
           

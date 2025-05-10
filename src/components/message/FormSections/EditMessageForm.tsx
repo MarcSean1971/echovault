@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { useMessageForm } from "../MessageFormContext";
@@ -40,6 +41,7 @@ function MessageEditForm({ message, onCancel }: EditMessageFormComponentProps) {
     setMessageType,
     textContent,
     videoContent,
+    audioContent,
     showUploadDialog, 
     setShowUploadDialog, 
     uploadProgress,
@@ -222,6 +224,11 @@ function MessageEditForm({ message, onCancel }: EditMessageFormComponentProps) {
         throw new Error("Video message type requires recorded video content. Please record a video before saving.");
       }
       
+      // Validate audio content for audio message type
+      if (messageType === "audio" && (!audioContent || audioContent.trim() === "")) {
+        throw new Error("Audio message type requires recorded audio content. Please record audio before saving.");
+      }
+      
       // Upload any new files that haven't been uploaded
       const newFiles = files.filter(f => f.file && !f.isUploaded);
       let attachmentsToSave = [...(message.attachments || [])].filter(
@@ -270,7 +277,41 @@ function MessageEditForm({ message, onCancel }: EditMessageFormComponentProps) {
           console.error("Invalid video content detected on save:", error);
           throw new Error("The video content is invalid or corrupted. Please try re-recording your video.");
         }
-      } else if (messageType === "text") {
+      } 
+      // Handle audio message type specifically
+      else if (messageType === "audio") {
+        if (!audioContent || audioContent.trim() === "") {
+          throw new Error("Audio message requires audio content. Please record audio before saving.");
+        }
+        
+        contentToSave = audioContent;
+        
+        // If we also have text content, add it to the audio content
+        if (textContent && textContent.trim() !== '') {
+          try {
+            // Parse the audio content to add text content to it
+            const audioContentObj = JSON.parse(audioContent);
+            audioContentObj.additionalText = textContent;
+            contentToSave = JSON.stringify(audioContentObj);
+          } catch (error) {
+            console.error("Error combining text and audio content:", error);
+            throw new Error("Error preparing audio content. Please try re-recording your audio.");
+          }
+        }
+        
+        // Validate that the content actually contains audio data
+        try {
+          const audioContentObj = JSON.parse(contentToSave);
+          if (!audioContentObj.audioData) {
+            console.error("Invalid audio content detected on save: missing audioData");
+            throw new Error("The audio content is invalid or corrupted. Please try re-recording your audio.");
+          }
+        } catch (error) {
+          console.error("Error validating audio content:", error);
+          throw new Error("Invalid audio content format. Please try re-recording your audio.");
+        }
+      } 
+      else if (messageType === "text") {
         contentToSave = textContent;
       }
 
@@ -355,7 +396,9 @@ function MessageEditForm({ message, onCancel }: EditMessageFormComponentProps) {
       // Set content validation error if it's related to content
       if (error.message && (
         error.message.includes("video content") || 
-        error.message.includes("Video message")
+        error.message.includes("Video message") ||
+        error.message.includes("audio content") ||
+        error.message.includes("Audio message")
       )) {
         setContentValidationError(error.message);
       }
@@ -444,3 +487,4 @@ export function EditMessageForm({ message, onCancel }: EditMessageFormComponentP
 
 // Import MessageFormProvider here so it's available for the exported component
 import { MessageFormProvider } from "../MessageFormContext";
+
