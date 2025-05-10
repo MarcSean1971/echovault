@@ -1,10 +1,10 @@
 
 import { Label } from "@/components/ui/label";
-import { FileUploader } from "@/components/FileUploader";
+import { FileUploader, FileAttachment } from "@/components/FileUploader";
 
 interface FileAttachmentsSectionProps {
-  files: File[];
-  setFiles: (files: File[]) => void;
+  files: FileAttachment[];
+  setFiles: (files: FileAttachment[]) => void;
 }
 
 export function FileAttachmentsSection({ files, setFiles }: FileAttachmentsSectionProps) {

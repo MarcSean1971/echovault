@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { useMessageForm } from "../MessageFormContext";
-import { FileUploader } from "@/components/FileUploader";
+import { FileUploader, FileAttachment } from "@/components/FileUploader";
 
 // Import our components
 import { TitleInput } from "./TitleInput";
@@ -9,8 +9,6 @@ import { LocationSection } from "./LocationSection";
 import { MediaStateManager } from "./MessageDetailsComponents/MediaStateManager";
 import { MessageTypeTabSelector } from "./MessageTypeTabSelector";
 import { MediaRecordersDialog } from "./MessageDetailsComponents/MediaRecordersDialog";
-import { VideoSection } from "./MessageDetailsComponents/VideoSection";
-import { useContentKeys } from "./MessageDetailsComponents/ContentKeyManager";
 import { FileAttachmentsSection } from "./MessageDetailsComponents/FileAttachmentsSection";
 
 // Import custom hooks
@@ -20,8 +18,9 @@ import { useAudioTranscription } from "@/hooks/message/useAudioTranscription";
 import { useMediaHandlers } from "@/hooks/message/useMediaHandlers";
 import { useRecordingWrappers } from "@/hooks/message/useRecordingWrappers";
 
-// Make sure we still import AudioSection so its import doesn't get cleaned up
-// We need this for type checking and it's used in MessageTypeTabSelector
+// Make sure we still import Video and AudioSection component types so their imports don't get cleaned up
+// We need these for type checking
+import { VideoSection } from "./MessageDetailsComponents/VideoSection";
 import { AudioSection } from "./MessageDetailsComponents/AudioSection";
 
 interface MessageDetailsProps {
@@ -147,28 +146,6 @@ export function MessageDetails({ message }: MessageDetailsProps) {
           getAudioContentKey={() => audioContentKey}
         />
       </div>
-
-      {/* Video Section (conditionally rendered) */}
-      <VideoSection 
-        messageType={messageType}
-        videoUrl={videoUrl}
-        videoBlob={videoBlob}
-        isVideoRecording={isVideoRecording}
-        isVideoInitializing={isVideoInitializing}
-        hasVideoPermission={hasVideoPermission}
-        videoPreviewStream={videoPreviewStream}
-        startVideoRecording={startVideoRecording}
-        stopVideoRecording={stopVideoRecording}
-        clearVideo={clearVideo}
-        handleVideoContentUpdate={handleVideoContentUpdate}
-        showVideoRecorder={showVideoRecorder}
-        setShowVideoRecorder={setShowVideoRecorder}
-        handleClearVideoAndRecord={handleClearVideoAndRecord}
-      />
-
-      {/* REMOVED: AudioSection - now only showing in the TabSelector */}
-      {/* The audio section is already rendered in the MessageTypeTabSelector */}
-      {/* We don't need to render it twice */}
 
       {/* Location section */}
       <LocationSection />
