@@ -8,7 +8,7 @@ import { useMessageForm } from "@/components/message/MessageFormContext";
 import { useFormValidation } from "@/hooks/useFormValidation";
 import { simulateUploadProgress } from "@/utils/uploadProgress";
 import { fetchRecipients } from "@/services/messages/recipientService";
-import { TriggerType } from "@/types/message";
+import { TriggerType, FileAttachment } from "@/types/message";
 
 export function useFormActions() {
   const navigate = useNavigate();
@@ -82,13 +82,16 @@ export function useFormActions() {
       // For text message type, use the textContent
       const messageContent = textContent;
       
+      // Extract only File objects from FileAttachment objects
+      const fileObjects: File[] = files.map(attachment => attachment.file);
+      
       // Create the basic message with location data if enabled
       const message = await createMessage(
         userId, 
         title, 
         messageContent, 
         messageType, 
-        files,
+        fileObjects,
         // Location data
         shareLocation ? {
           latitude: locationLatitude,

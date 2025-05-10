@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Clock, AlertCircle } from "lucide-react";
 import { SecurityOptions } from "./DeadManSwitchComponents/SecurityOptions";
 import { Separator } from "@/components/ui/separator";
-import { TriggerType, DeliveryOption } from "@/types/message";
+import { TriggerType, DeliveryOption, RecurringPattern } from "@/types/message";
 
 export function DeadManSwitch() {
   const { 

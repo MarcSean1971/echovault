@@ -1,6 +1,6 @@
 
 import { createContext, useContext, useState } from "react";
-import { TriggerType, DeliveryOption } from "@/types/message";
+import { TriggerType, DeliveryOption, RecurringPattern, FileAttachment } from "@/types/message";
 
 type MessageType = "text";
 
@@ -18,8 +18,8 @@ interface MessageFormContextType {
   setTitle: (title: string) => void;
   
   // File handling
-  files: File[];
-  setFiles: (files: File[]) => void;
+  files: FileAttachment[];
+  setFiles: (files: FileAttachment[]) => void;
   
   // UI state
   isLoading: boolean;
@@ -42,8 +42,8 @@ interface MessageFormContextType {
   setMinutesThreshold: (minutes: number) => void;
   triggerDate: Date | null;
   setTriggerDate: (date: Date | null) => void;
-  recurringPattern: string | null;
-  setRecurringPattern: (pattern: string | null) => void;
+  recurringPattern: RecurringPattern;
+  setRecurringPattern: (pattern: RecurringPattern) => void;
   panicTriggerConfig: any | null;
   setPanicTriggerConfig: (config: any | null) => void;
   pinCode: string;
@@ -80,7 +80,7 @@ export const MessageFormProvider = ({ children }: { children: React.ReactNode })
   const [title, setTitle] = useState("");
   
   // File handling
-  const [files, setFiles] = useState<File[]>([]);
+  const [files, setFiles] = useState<FileAttachment[]>([]);
   
   // UI state
   const [isLoading, setIsLoading] = useState(false);
@@ -95,7 +95,7 @@ export const MessageFormProvider = ({ children }: { children: React.ReactNode })
   const [hoursThreshold, setHoursThreshold] = useState(24);
   const [minutesThreshold, setMinutesThreshold] = useState(0);
   const [triggerDate, setTriggerDate] = useState<Date | null>(null);
-  const [recurringPattern, setRecurringPattern] = useState<string | null>(null);
+  const [recurringPattern, setRecurringPattern] = useState<RecurringPattern>(null);
   const [panicTriggerConfig, setPanicTriggerConfig] = useState<any | null>(null);
   const [pinCode, setPinCode] = useState("");
   const [unlockDelay, setUnlockDelay] = useState(0);

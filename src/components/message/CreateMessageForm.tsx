@@ -9,6 +9,7 @@ import { DeadManSwitch } from "./FormSections/DeadManSwitch";
 import { Separator } from "@/components/ui/separator";
 import { FileText, Users } from "lucide-react";
 import { RecipientSelector } from "./FormSections/RecipientSelector";
+import { FileAttachment } from "@/types/message";
 
 interface CreateMessageFormProps {
   onCancel: () => void;

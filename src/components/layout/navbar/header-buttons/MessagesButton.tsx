@@ -2,7 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { MessageSquare } from "lucide-react";
 import { Link } from "react-router-dom";
-import { BUTTON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface MessagesButtonProps {
   buttonPaddingClass: string;
@@ -19,7 +19,7 @@ export function MessagesButton({
 }: MessagesButtonProps) {
   return (
     <Button 
-      className={`bg-green-600 text-white ${buttonPaddingClass} ${buttonSizeClass} ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
+      className={`bg-green-600 text-white ${buttonPaddingClass} ${buttonSizeClass} ${HOVER_TRANSITION}`}
       size={isMobile ? "sm" : "lg"}
       asChild
       style={{ backgroundColor: "#16a34a" }} // Keep green color on hover
