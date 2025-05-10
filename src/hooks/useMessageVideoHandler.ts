@@ -1,5 +1,4 @@
 
-import { useEffect } from "react";
 import { useMessageForm } from "@/components/message/MessageFormContext";
 import { useVideoRecordingHandler } from "./useVideoRecordingHandler";
 import { useAudioRecordingHandler } from "./useAudioRecordingHandler";
@@ -7,9 +6,11 @@ import { useContentUpdater } from "./useContentUpdater";
 import { useMessageInitializer } from "./useMessageInitializer";
 import { Message } from "@/types/message";
 import { useMessageTypeManager } from "./useMessageTypeManager";
+import { useAdditionalTextHandler } from "./message/useAdditionalTextHandler";
+import { useMediaInitializer } from "./message/useMediaInitializer";
 
 export function useMessageVideoHandler(message?: Message) {
-  const { messageType, setContent, setTextContent, setVideoContent, setAudioContent } = useMessageForm();
+  const { messageType } = useMessageForm();
   
   // Use our custom hooks
   const { 
@@ -47,38 +48,23 @@ export function useMessageVideoHandler(message?: Message) {
     hasInitialized,
     additionalText 
   } = useMessageInitializer(message);
-
-  // Connect initialized video data to our message type manager
-  useEffect(() => {
-    if (hasInitialized && initialVideoBlob && initialVideoUrl && !initializedFromMessage) {
-      console.log("MessageVideoHandler: Connecting initialized video to message type manager");
-      console.log("Initial video blob size:", initialVideoBlob.size);
-      
-      // Set the flag first to prevent double initialization
-      setInitializedFromMessage(true);
-      handleInitializedVideo(initialVideoBlob, initialVideoUrl);
-    }
-  }, [hasInitialized, initialVideoBlob, initialVideoUrl, handleInitializedVideo, initializedFromMessage, setInitializedFromMessage]);
-
-  // Connect initialized audio data to our message type manager
-  useEffect(() => {
-    if (hasInitialized && initialAudioBlob && initialAudioUrl && !initializedFromMessage) {
-      console.log("MessageVideoHandler: Connecting initialized audio to message type manager");
-      console.log("Initial audio blob size:", initialAudioBlob.size);
-      
-      // Set the flag first to prevent double initialization
-      setInitializedFromMessage(true);
-      handleInitializedAudio(initialAudioBlob, initialAudioUrl);
-    }
-  }, [hasInitialized, initialAudioBlob, initialAudioUrl, handleInitializedAudio, initializedFromMessage, setInitializedFromMessage]);
-
+  
   // Handle additional text from message initialization
-  useEffect(() => {
-    if (additionalText && hasInitialized) {
-      console.log("MessageVideoHandler: Setting additional text from message:", additionalText.substring(0, 50));
-      setTextContent(additionalText);
-    }
-  }, [additionalText, setTextContent, hasInitialized]);
+  useAdditionalTextHandler(additionalText, hasInitialized);
+  
+  // Connect initialized media to our message type manager
+  useMediaInitializer(
+    message,
+    initialVideoBlob,
+    initialVideoUrl,
+    initialAudioBlob,
+    initialAudioUrl,
+    hasInitialized,
+    initializedFromMessage,
+    setInitializedFromMessage,
+    handleInitializedVideo,
+    handleInitializedAudio
+  );
 
   return {
     videoBlob,
