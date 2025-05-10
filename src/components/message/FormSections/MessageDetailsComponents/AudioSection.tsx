@@ -31,7 +31,18 @@ export function AudioSection({
   clearAudio,
   onTranscribeAudio
 }: AudioSectionProps) {
-  // Use the original function directly - AudioSection handles the Promise<boolean> return type
+  // Create a wrapper function that explicitly returns Promise<void>
+  const handleStartRecordingWrapper = async (): Promise<void> => {
+    try {
+      // Use void operator to explicitly discard the boolean return value
+      void await startAudioRecording();
+      // No return statement ensures Promise<void>
+    } catch (error) {
+      console.error("Error in handleStartRecordingWrapper:", error);
+      // No re-throw to maintain Promise<void>
+    }
+  };
+
   if (messageType !== "audio") return null;
 
   return (
@@ -42,7 +53,7 @@ export function AudioSection({
       isInitializing={isAudioInitializing}
       hasPermission={hasAudioPermission}
       transcription={audioTranscription}
-      onStartRecording={startAudioRecording}  // Pass the original Promise<boolean> function
+      onStartRecording={handleStartRecordingWrapper}
       onStopRecording={stopAudioRecording}
       onClearAudio={clearAudio}
       onTranscribeAudio={onTranscribeAudio}
