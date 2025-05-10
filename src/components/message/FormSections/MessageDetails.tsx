@@ -87,6 +87,18 @@ export function MessageDetails({ message }: MessageDetailsProps) {
     }
   };
 
+  // Wrapper for forceInitializeCamera that returns void
+  const handleInitializeCamera = async (): Promise<void> => {
+    await forceInitializeCamera();
+    // We ignore the boolean result to match the expected void return type
+  };
+  
+  // Wrapper for forceInitializeMicrophone that returns void
+  const handleInitializeMicrophone = async (): Promise<void> => {
+    await forceInitializeMicrophone();
+    // We ignore the boolean result to match the expected void return type
+  };
+
   return (
     <div className="space-y-6">
       {/* Media state manager - handles initialization of camera/microphone */}
@@ -171,7 +183,7 @@ export function MessageDetails({ message }: MessageDetailsProps) {
         isInitializing={isVideoInitializing}
         hasPermission={hasVideoPermission}
         previewStream={videoPreviewStream}
-        startRecording={startVideoRecording}
+        startRecording={handleInitializeCamera}
         stopRecording={stopVideoRecording}
         clearVideo={clearVideo}
       />
