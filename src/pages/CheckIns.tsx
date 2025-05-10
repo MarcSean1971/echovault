@@ -1,140 +1,109 @@
-
-import React, { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { performCheckIn } from "@/services/messages/conditions/checkInService";
+import { Plus, Clock } from "lucide-react";
+import { format } from "date-fns";
 import { useAuth } from "@/contexts/AuthContext";
+import { performCheckIn } from "@/services/messages/conditions/checkInService";
 import { toast } from "@/components/ui/use-toast";
-import { Spinner } from "@/components/ui/spinner";
 import { CheckIn } from "@/types/message";
 
+// Update the mockCheckIns data to include created_at
+const mockCheckIns: CheckIn[] = [
+  {
+    id: "1",
+    user_id: "user123",
+    created_at: new Date().toISOString(), // Add required property
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(), // 2 days ago
+    method: "app"
+  },
+  {
+    id: "2",
+    user_id: "user123",
+    created_at: new Date().toISOString(), // Add required property
+    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1 day ago
+    method: "app"
+  },
+  {
+    id: "3",
+    user_id: "user123",
+    created_at: new Date().toISOString(), // Add required property
+    timestamp: new Date().toISOString(),
+    method: "app",
+    device_info: "Web browser" 
+  }
+];
+
 export default function CheckIns() {
+  const [checkIns, setCheckIns] = useState<CheckIn[]>(mockCheckIns);
   const { userId } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
-  const [recentCheckIns, setRecentCheckIns] = useState<CheckIn[]>([]);
-  
-  // Mock data for recent check-ins
+
   useEffect(() => {
-    // This would be replaced by a real API call in production
-    const mockCheckIns: CheckIn[] = [
-      {
-        id: "1",
-        user_id: userId || "",
-        created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-        timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-        method: "app"
-      },
-      {
-        id: "2",
-        user_id: userId || "",
-        created_at: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
-        timestamp: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
-        method: "sms"
-      },
-      {
-        id: "3",
-        user_id: userId || "",
-        created_at: new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString(),
-        timestamp: new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString(),
-        method: "app",
-        device_info: "iPhone"
-      }
-    ];
-    
-    setRecentCheckIns(mockCheckIns);
-  }, [userId]);
-  
+    // Simulate fetching check-in data from a database
+    // In a real application, you would fetch this data from your database
+    // using an API call
+    // For now, we'll just use the mock data
+    setCheckIns(mockCheckIns);
+  }, []);
+
   const handleCheckIn = async () => {
     if (!userId) {
       toast({
-        title: "Error",
-        description: "You must be logged in to check in",
-        variant: "destructive"
+        title: "You must be logged in to check in.",
+        variant: "destructive",
       });
       return;
     }
-    
-    setIsLoading(true);
-    
+
     try {
       const result = await performCheckIn(userId, "app");
-      
-      if (result.success) {
-        // Add this check-in to our list
-        const newCheckIn: CheckIn = {
-          id: Math.random().toString(36).substring(7),
-          user_id: userId,
-          created_at: result.timestamp,
-          timestamp: result.timestamp,
-          method: result.method
-        };
-        
-        setRecentCheckIns([newCheckIn, ...recentCheckIns]);
-        
-        toast({
-          title: "Check-in Successful",
-          description: `Updated ${result.conditions_updated} active conditions`,
-          variant: "default"
-        });
-      }
-    } catch (error: any) {
-      console.error("Check-in error:", error);
       toast({
-        title: "Check-in Failed",
-        description: error.message || "Failed to perform check-in",
-        variant: "destructive"
+        title: "Check-in successful!",
+        description: `Checked in via ${result.method} at ${format(
+          new Date(result.timestamp),
+          "Pp"
+        )}`,
       });
-    } finally {
-      setIsLoading(false);
+    } catch (error: any) {
+      toast({
+        title: "Something went wrong.",
+        description: error.message,
+        variant: "destructive",
+      });
     }
   };
-  
+
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-6">Check-In System</h1>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardContent className="pt-6">
-            <h2 className="text-xl font-medium mb-4">Manual Check-In</h2>
-            <p className="text-muted-foreground mb-6">
-              Click the button below to check-in and reset your deadman's switch timers.
-            </p>
-            <Button 
-              onClick={handleCheckIn} 
-              disabled={isLoading}
-              className="w-full"
-            >
-              {isLoading ? (
-                <>
-                  <Spinner size="sm" className="mr-2" />
-                  Checking In...
-                </>
-              ) : "Check In Now"}
-            </Button>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="pt-6">
-            <h2 className="text-xl font-medium mb-4">Recent Check-Ins</h2>
-            {recentCheckIns.length > 0 ? (
-              <div className="space-y-3">
-                {recentCheckIns.map((checkIn) => (
-                  <div key={checkIn.id} className="flex justify-between items-center p-3 bg-muted/50 rounded-md">
-                    <div>
-                      <p className="font-medium">{new Date(checkIn.created_at).toLocaleString()}</p>
-                      <p className="text-sm text-muted-foreground">Method: {checkIn.method}</p>
-                    </div>
-                  </div>
-                ))}
+    <div className="container mx-auto py-10">
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-2xl font-bold">Recent Check-Ins</CardTitle>
+          <Button onClick={handleCheckIn}>
+            <Plus className="mr-2 h-4 w-4" />
+            Check In Now
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4">
+            {checkIns.map((checkIn) => (
+              <div
+                key={checkIn.id}
+                className="flex items-center space-x-4 rounded-md border p-4"
+              >
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <div className="space-y-1">
+                  <p className="text-sm font-medium leading-none">
+                    Checked in via {checkIn.method}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {format(new Date(checkIn.timestamp || checkIn.created_at), "Pp")}
+                  </p>
+                </div>
               </div>
-            ) : (
-              <p className="text-muted-foreground">No recent check-ins found.</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

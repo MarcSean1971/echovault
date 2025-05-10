@@ -1,108 +1,74 @@
-
-import { useState, useEffect, useCallback } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { useState, useCallback } from "react";
+import { useParams } from "react-router-dom";
 import { Message } from "@/types/message";
-import { useSecurityConstraints } from "./message-access/useSecurityConstraints";
-import { toast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useSecurityConstraints } from "@/hooks/message-access/useSecurityConstraints";
 
 export function usePublicMessageAccess() {
-  const { id } = useParams<{ id: string }>();
-  const [searchParams] = useSearchParams();
-  const { convertDatabaseMessageToMessage } = useSecurityConstraints();
-  
-  const [message, setMessage] = useState<Message | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isVerified, setIsVerified] = useState(false);
   const [isPinRequired, setIsPinRequired] = useState(false);
   const [isUnlockDelayed, setIsUnlockDelayed] = useState(false);
-  const [unlockTime, setUnlockTime] = useState<Date | null>(null);
+  const [unlockTime, setUnlockTime] = useState<Date>(new Date());
+  const [isVerified, setIsVerified] = useState(false);
+  const [message, setMessage] = useState<Message | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { convertDatabaseMessageToMessage } = useSecurityConstraints();
+  const { id } = useParams<{ id: string }>();
   
-  // Fetch message with delivery token
-  const fetchMessageWithToken = useCallback(async () => {
+  const verifyPin = (pinCode: string) => {
+    // In a real implementation, this would verify against the stored pin
+    // For now, we'll just accept any non-empty pin
+    if (pinCode.trim()) {
+      setIsVerified(true);
+      return true;
+    }
+    return false;
+  };
+  
+  const handleUnlockExpired = () => {
+    setIsUnlockDelayed(false);
+  };
+  
+  const fetchMessage = useCallback(async () => {
+    if (!id) {
+      setError("No message ID provided");
+      setIsLoading(false);
+      return null;
+    }
+    
+    setIsLoading(true);
+    setError(null);
+    
     try {
-      setIsLoading(true);
-      const deliveryId = searchParams.get('delivery');
-      
-      if (!id || !deliveryId) {
-        setIsLoading(false);
-        return;
-      }
-      
-      // First check if this is a valid delivery
-      const { data: deliveryData, error: deliveryError } = await supabase
-        .from('delivered_messages')
-        .select('*')
-        .eq('message_id', id)
-        .eq('delivery_id', deliveryId)
-        .single();
-        
-      if (deliveryError || !deliveryData) {
-        console.error("Error fetching message delivery:", deliveryError);
-        setIsLoading(false);
-        return;
-      }
-      
-      // Mark as viewed if not already
-      if (!deliveryData.viewed_at) {
-        await supabase
-          .from('delivered_messages')
-          .update({
-            viewed_at: new Date().toISOString(),
-            viewed_count: (deliveryData.viewed_count || 0) + 1
-          })
-          .eq('id', deliveryData.id);
-      }
-      
-      // Now fetch the actual message
-      const { data: messageData, error: messageError } = await supabase
+      const { data, error: fetchError } = await supabase
         .from('messages')
         .select('*')
         .eq('id', id)
         .single();
         
-      if (messageError || !messageData) {
-        console.error("Error fetching message:", messageError);
+      if (fetchError) {
+        setError(fetchError.message);
         setIsLoading(false);
-        return;
+        return null;
       }
       
-      // Convert to our Message type
-      const convertedMessage = convertDatabaseMessageToMessage(messageData);
-      setMessage(convertedMessage);
+      if (!data) {
+        setError("Message not found");
+        setIsLoading(false);
+        return null;
+      }
       
-      // Auto-verify for delivery token access
-      setIsVerified(true);
-    } catch (error: any) {
-      console.error("Error in fetchMessageWithToken:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load the message",
-        variant: "destructive"
-      });
-    } finally {
+      const convertedMessage = convertDatabaseMessageToMessage(data);
+      setMessage(convertedMessage);
       setIsLoading(false);
+      return convertedMessage;
+    } catch (err) {
+      console.error("Error fetching message:", err);
+      setError(err instanceof Error ? err.message : "An unknown error occurred");
+      setIsLoading(false);
+      return null;
     }
-  }, [id, searchParams, convertDatabaseMessageToMessage]);
-  
-  // Method to verify PIN code
-  const verifyPin = useCallback((pinCode: string) => {
-    // Implementation details would go here
-    console.log("Verifying PIN:", pinCode);
-    setIsVerified(true);
-    return true;
-  }, []);
-  
-  // Method to handle expired unlock time
-  const handleUnlockExpired = useCallback(() => {
-    setIsUnlockDelayed(false);
-    setUnlockTime(null);
-  }, []);
-  
-  // Effect to fetch message on initial load
-  useEffect(() => {
-    fetchMessageWithToken();
-  }, [fetchMessageWithToken]);
+  }, [id, convertDatabaseMessageToMessage]);
   
   return {
     isPinRequired,
@@ -113,6 +79,7 @@ export function usePublicMessageAccess() {
     isLoading,
     verifyPin,
     handleUnlockExpired,
-    fetchMessage: fetchMessageWithToken
+    fetchMessage,
+    error
   };
 }

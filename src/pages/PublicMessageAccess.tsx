@@ -1,4 +1,3 @@
-
 import { useParams, useSearchParams } from 'react-router-dom';
 import { usePublicMessageAccess } from '@/hooks/usePublicMessageAccess';
 import { LoadingState } from '@/components/message/public-access/LoadingState';
@@ -37,15 +36,16 @@ export default function PublicMessageAccess() {
   
   // Request access to the message
   const { 
-    message,
+    isPinRequired, 
+    isUnlockDelayed, 
+    unlockTime, 
+    isVerified, 
+    message, 
     isLoading,
-    error,
-    isPinRequired,
-    isUnlockDelayed,
-    unlockTime,
-    isVerified,
     verifyPin,
-    handleUnlockExpired
+    handleUnlockExpired,
+    fetchMessage,
+    error
   } = usePublicMessageAccess({ 
     messageId, 
     deliveryId: decodedDeliveryId, 

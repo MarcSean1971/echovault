@@ -1,8 +1,8 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { Recipient } from "@/types/message";
 import { sendTestWhatsAppMessage } from "./whatsApp";
+import { Json } from "@/types/supabase";
 
 /**
  * Manually trigger message notifications for a specific message
@@ -63,7 +63,9 @@ export async function sendTestNotification(messageId: string) {
       return;
     }
     
-    const recipients = condition.recipients as Recipient[];
+    const recipientsArray = Array.isArray(condition.recipients) 
+      ? (condition.recipients as Json[]).map(jsonToRecipient)
+      : [];
     
     // Get the message details
     const { data: message, error: messageError } = await supabase
@@ -77,8 +79,8 @@ export async function sendTestNotification(messageId: string) {
     // Send test email to each recipient
     const { error } = await supabase.functions.invoke("send-test-email", {
       body: {
-        recipientName: recipients[0].name,
-        recipientEmail: recipients[0].email,
+        recipientName: recipientsArray[0].name,
+        recipientEmail: recipientsArray[0].email,
         senderName: "You",
         messageTitle: message?.title || "Your message",
         appName: "EchoVault"
@@ -89,7 +91,7 @@ export async function sendTestNotification(messageId: string) {
     
     toast({
       title: "Test notification sent",
-      description: `Sent to ${recipients[0].email}`,
+      description: `Sent to ${recipientsArray[0].email}`,
     });
     
   } catch (error: any) {
@@ -136,4 +138,26 @@ export async function testWhatsAppTemplate(
     });
     throw error;
   }
+}
+
+// Add Json to Recipient conversion in the notification service
+function jsonToRecipient(json: Json): Recipient {
+  if (typeof json !== 'object' || json === null) {
+    return {
+      id: '',
+      name: '',
+      email: '',
+    };
+  }
+  
+  const obj = json as Record<string, any>;
+  return {
+    id: obj.id || '',
+    name: obj.name || '',
+    email: obj.email || '',
+    phone: obj.phone,
+    relationship: obj.relationship,
+    notes: obj.notes,
+    deliveryId: obj.deliveryId
+  };
 }

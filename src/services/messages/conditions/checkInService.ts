@@ -1,8 +1,8 @@
-
 import { getAuthClient } from "@/lib/supabaseClient";
 import { CheckInResult, CheckInDeadlineResult } from "./types";
 import { updateConditionsLastChecked } from "./dbOperations";
 import { MessageCondition, Recipient, TriggerType } from "@/types/message";
+import { Json } from "@/types/supabase";
 
 export async function performCheckIn(userId: string, method: string): Promise<CheckInResult> {
   const client = await getAuthClient();
@@ -38,6 +38,28 @@ export async function performCheckIn(userId: string, method: string): Promise<Ch
     console.error("Error performing check-in:", error);
     throw new Error(error.message || "Failed to perform check-in");
   }
+}
+
+// Helper function to safely convert Json to Recipient
+function jsonToRecipient(json: Json): Recipient {
+  if (typeof json !== 'object' || json === null) {
+    return {
+      id: '',
+      name: '',
+      email: '',
+    };
+  }
+  
+  const obj = json as Record<string, any>;
+  return {
+    id: obj.id || '',
+    name: obj.name || '',
+    email: obj.email || '',
+    phone: obj.phone,
+    relationship: obj.relationship,
+    notes: obj.notes,
+    deliveryId: obj.deliveryId
+  };
 }
 
 export async function getNextCheckInDeadline(userId: string): Promise<CheckInDeadlineResult> {
@@ -86,34 +108,19 @@ export async function getNextCheckInDeadline(userId: string): Promise<CheckInDea
     const conditions: MessageCondition[] = data ? data.map(item => {
       // Ensure recipients is properly cast to Recipient[]
       let recipientsArray: Recipient[] = [];
+      
       if (Array.isArray(item.recipients)) {
-        // Cast any[] to Recipient[] with proper handling
-        recipientsArray = (item.recipients as any[]).map(recipient => ({
-          id: recipient.id || '',
-          name: recipient.name || '',
-          email: recipient.email || '',
-          phone: recipient.phone,
-          relationship: recipient.relationship,
-          notes: recipient.notes,
-          deliveryId: recipient.deliveryId
-        }));
+        // Cast Json[] to Recipient[] with proper handling
+        recipientsArray = (item.recipients as Json[]).map(jsonToRecipient);
       } else if (item.recipients && typeof item.recipients === 'object') {
-        const recipient = item.recipients as any;
-        recipientsArray = [{
-          id: recipient.id || '',
-          name: recipient.name || '',
-          email: recipient.email || '',
-          phone: recipient.phone,
-          relationship: recipient.relationship,
-          notes: recipient.notes,
-          deliveryId: recipient.deliveryId
-        }];
+        // Single recipient as object
+        recipientsArray = [jsonToRecipient(item.recipients)];
       }
       
       return {
         id: item.id,
         message_id: item.message_id,
-        trigger_type: item.condition_type as TriggerType,
+        trigger_type: (item.trigger_type || item.condition_type) as TriggerType,
         condition_type: item.condition_type,
         hours_threshold: item.hours_threshold,
         created_at: item.created_at,

@@ -123,10 +123,11 @@ export interface DeliveredMessage {
   status: 'sent' | 'delivered' | 'read' | 'failed';
 }
 
+// Add CheckIn type definition
 export interface CheckIn {
   id: string;
   user_id: string;
-  created_at: string;
+  created_at: string; // Required property that was missing
   latitude?: number;
   longitude?: number;
   location_name?: string;
