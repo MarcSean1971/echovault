@@ -15,14 +15,16 @@ export function useVideoRecorder(previewStream: MediaStream | null, streamRef: R
       console.log("Starting recording...");
       videoChunksRef.current = [];
       
-      let stream = previewStream;
+      // Use the streamRef first (more reliable), fall back to previewStream
+      let stream = streamRef.current || previewStream;
       
-      // If we don't have a preview stream, we can't record
+      // Clear error check: If we don't have a stream, we can't record
       if (!stream) {
         console.error("No camera stream available");
-        throw new Error("No camera stream available. Please try enabling the camera first.");
+        throw new Error("Camera not available. Please enable your camera and try again.");
       }
       
+      // Make sure we have video tracks
       if (stream.getVideoTracks().length === 0) {
         console.error("No video tracks found in stream");
         throw new Error("Camera not properly initialized. Please refresh and try again.");

@@ -41,7 +41,6 @@ export function CameraPreview({
     
     return () => {
       if (previewRef.current) {
-        console.log("Cleaning up video preview element");
         previewRef.current.srcObject = null;
       }
     };

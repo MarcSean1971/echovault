@@ -15,165 +15,116 @@ export function useMediaStream() {
   const isUnmountedRef = useRef(false);
   const initTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Set up unmount detection
   useEffect(() => {
+    isUnmountedRef.current = false;
     return () => {
-      // Mark component as unmounted to prevent state updates
       isUnmountedRef.current = true;
+      stopMediaStream();
       
-      // Clear any pending initialization timeouts
       if (initTimeoutRef.current) {
         clearTimeout(initTimeoutRef.current);
-        initTimeoutRef.current = null;
       }
-      
-      // Ensure we stop all tracks
-      stopMediaStream();
     };
   }, []);
 
-  // Function to stop media stream with enhanced logging and error handling
+  // Function to stop media stream
   const stopMediaStream = () => {
     if (streamRef.current) {
       console.log("Stopping media stream tracks...");
       try {
         const tracks = streamRef.current.getTracks();
-        console.log(`Stopping ${tracks.length} track(s)...`);
-        
         tracks.forEach(track => {
-          try {
-            console.log(`Stopping ${track.kind} track (${track.readyState})...`);
-            track.stop();
-            console.log(`${track.kind} track stopped successfully`);
-          } catch (e) {
-            console.warn(`Error stopping ${track.kind} track:`, e);
-          }
+          track.stop();
         });
         
-        // Important: Clear both the ref and the state
+        // Clear the ref and state but only if component is mounted
         streamRef.current = null;
-        
-        // Only update state if component is still mounted
         if (!isUnmountedRef.current) {
           setPreviewStream(null);
-          console.log("Media stream state cleared");
         }
       } catch (e) {
         console.error("Error stopping media stream:", e);
       }
-    } else {
-      console.log("No media stream to stop");
     }
   };
 
-  // Check if the stream is actually active (not stopped)
+  // Check if the stream is active
   const isStreamActive = () => {
     if (!streamRef.current) return false;
     
     try {
-      // Check if all tracks are active
-      const allTracks = streamRef.current.getTracks();
-      if (allTracks.length === 0) return false;
-      
-      const activeTracks = allTracks.filter(track => track.readyState === "live");
-      return activeTracks.length > 0;
+      const tracks = streamRef.current.getTracks();
+      return tracks.length > 0 && tracks.some(track => track.readyState === "live");
     } catch (e) {
-      console.error("Error checking stream active state:", e);
       return false;
     }
   };
 
-  // Check for browser compatibility
-  const checkBrowserCompatibility = () => {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      console.error("getUserMedia not supported in this browser");
-      return false;
-    }
-    return true;
-  };
-
-  // Initialize the media stream for preview before recording
+  // Initialize the media stream
   const initializeStream = async (forceNew = false, options: MediaOptions = { video: true, audio: true }) => {
+    if (isInitializing) {
+      console.log("Already initializing stream, waiting...");
+      return streamRef.current;
+    }
+    
     try {
-      // Always ensure the initializing state starts as true
-      if (!isUnmountedRef.current) {
-        setIsInitializing(true);
+      // Set initializing state
+      setIsInitializing(true);
+      
+      // Set up a timeout to reset state if initialization takes too long
+      if (initTimeoutRef.current) {
+        clearTimeout(initTimeoutRef.current);
       }
       
-      // Set up a timeout to reset initialization state if it takes too long
-      const timeout = setTimeout(() => {
+      initTimeoutRef.current = setTimeout(() => {
         if (!isUnmountedRef.current) {
-          console.warn("Media initialization timeout reached, resetting state");
           setIsInitializing(false);
         }
       }, 10000); // 10 second timeout
       
-      // Store timeout ref for cleanup
-      initTimeoutRef.current = timeout;
-      
-      // Check browser compatibility first
-      if (!checkBrowserCompatibility()) {
-        throw new Error("Your browser doesn't support media recording. Please try a modern browser like Chrome, Firefox, or Edge.");
+      // Check for browser compatibility
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error("Your browser doesn't support media recording");
       }
       
       // If we already have an active stream and don't need to force new, return it
       if (!forceNew && streamRef.current && isStreamActive()) {
         console.log("Reusing existing active stream");
-        clearTimeout(timeout);
-        initTimeoutRef.current = null;
-        
-        if (!isUnmountedRef.current) {
-          setIsInitializing(false);
-        }
-        
+        setIsInitializing(false);
+        clearTimeout(initTimeoutRef.current);
         return streamRef.current;
       }
-      
-      console.log(`Initializing ${options.video ? 'camera' : 'microphone'} for preview...`);
-      console.log("Stream options:", options);
       
       // Always stop any existing stream first
       stopMediaStream();
       
-      // Try to get user media with specified options
+      console.log("Requesting camera access with options:", options);
       const stream = await navigator.mediaDevices.getUserMedia(options);
-      
-      // Log the tracks we got
-      const tracks = stream.getTracks();
-      console.log("Obtained media tracks:", tracks.map(t => `${t.kind} (${t.readyState})`));
-      
-      if (options.audio && stream.getAudioTracks().length === 0) {
-        console.warn("No audio tracks found in the stream despite requesting audio");
-      }
-      
-      if (options.video && stream.getVideoTracks().length === 0) {
-        console.warn("No video tracks found in the stream despite requesting video");
-      }
-      
-      console.log(`${options.video ? 'Camera' : 'Microphone'} preview initialized successfully`);
+      console.log("Camera access granted successfully");
       
       // Only update state if component is still mounted
       if (!isUnmountedRef.current) {
         streamRef.current = stream;
         setPreviewStream(stream);
         setHasPermission(true);
-        setIsInitializing(false); // Important: Reset initializing state on success
-        
-        // Clear the timeout since initialization succeeded
-        clearTimeout(timeout);
-        initTimeoutRef.current = null;
+        setIsInitializing(false);
       } else {
-        // If component unmounted while we were initializing, clean up the stream
-        console.log("Component unmounted during stream initialization. Cleaning up stream...");
+        // Clean up stream if component unmounted during initialization
         stream.getTracks().forEach(track => track.stop());
-        clearTimeout(timeout);
+      }
+      
+      // Clear the timeout since initialization succeeded
+      if (initTimeoutRef.current) {
+        clearTimeout(initTimeoutRef.current);
         initTimeoutRef.current = null;
       }
       
       return stream;
     } catch (error: any) {
-      console.error(`Error initializing ${options.video ? 'camera' : 'microphone'}:`, error);
+      console.error("Error initializing media stream:", error);
       
-      // IMPORTANT: Always reset initializing state on error
+      // Only update state if component is still mounted
       if (!isUnmountedRef.current) {
         setIsInitializing(false);
         setHasPermission(false);
@@ -185,28 +136,21 @@ export function useMediaStream() {
         initTimeoutRef.current = null;
       }
       
-      // More specific error messages based on common issues
-      let errorMessage = `Error accessing ${options.video ? 'camera' : 'microphone'}`;
-      
-      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-        errorMessage = `${options.video ? 'Camera' : 'Microphone'} access was denied. Please check your browser permissions.`;
+      // Simplified error messages
+      let errorMessage = "Camera access error";
+      if (error.name === 'NotAllowedError') {
+        errorMessage = "Camera access denied. Please check your browser permissions.";
       } else if (error.name === 'NotFoundError') {
-        errorMessage = `${options.video ? 'Camera' : 'Microphone'} not found. Please check your device.`;
-      } else if (error.name === 'NotReadableError' || error.name === 'AbortError') {
-        errorMessage = `Could not access your ${options.video ? 'camera' : 'microphone'}. It might be in use by another application.`;
-      } else if (error.name === 'SecurityError') {
-        errorMessage = "Media access is not allowed in this context. Please check your settings.";
-      } else if (error.name === 'TypeError') {
-        errorMessage = "Incorrect media constraints specified.";
+        errorMessage = "Camera not found. Please check your device.";
+      } else if (error.name === 'NotReadableError') {
+        errorMessage = "Could not access your camera. It might be in use by another application.";
       } else if (error.message) {
-        // Include the actual error message for better debugging
-        errorMessage = `${errorMessage}: ${error.message}`;
+        errorMessage = error.message;
       }
       
-      // Only show toast if component is still mounted
       if (!isUnmountedRef.current) {
         toast({
-          title: "Permission Error",
+          title: "Camera Error",
           description: errorMessage,
           variant: "destructive"
         });
