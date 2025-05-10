@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from "react";
 import { Label } from "@/components/ui/label";
 import { useMessageForm } from "../MessageFormContext";
@@ -205,7 +206,7 @@ export function MessageDetails({ message }: MessageDetailsProps) {
         isInitializing={isVideoInitializing}
         hasPermission={hasVideoPermission}
         previewStream={videoPreviewStream}
-        startRecording={handleStartRecordingWrapper} // Using wrapper function with Promise<void>
+        startRecording={handleStartRecordingWrapper} // Fix: Using Promise<void> wrapper function
         stopRecording={stopVideoRecording}
         clearVideo={clearVideo}
       />
