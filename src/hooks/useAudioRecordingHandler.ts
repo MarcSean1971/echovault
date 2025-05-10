@@ -59,8 +59,10 @@ export function useAudioRecordingHandler() {
   // Start recording wrapper
   const startRecording = useCallback(async () => {
     try {
-      // Use a callback to update duration instead of using setAudioDuration directly
-      await startRecordingInner(duration => setAudioDuration(duration));
+      // Pass a callback to update duration
+      await startRecordingInner((duration) => {
+        setAudioDuration(duration);
+      });
       return true;
     } catch (error) {
       console.error("Error in startRecording wrapper:", error);
@@ -106,7 +108,7 @@ export function useAudioRecordingHandler() {
     
     try {
       console.log("Transcribing audio...");
-      // Fix: Use transcribeAudioInner from useAudioProcessor with the correct argument
+      // Use transcribeAudioInner with the correct argument
       const transcription = await transcribeAudioInner(audioBlob);
       console.log("Audio transcription complete:", transcription);
       return transcription;

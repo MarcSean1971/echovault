@@ -67,12 +67,21 @@ export function MessageDetails({ message }: MessageDetailsProps) {
   // Create a proper wrapper function that explicitly returns Promise<void>
   const handleStartRecordingWrapper = async (): Promise<void> => {
     try {
-      // Call the original function but discard its return value
       await forceInitializeCamera();
-      // No return statement needed - will implicitly return undefined, which is void
+      // We're explicitly not returning anything, which results in Promise<void>
     } catch (error) {
       console.error("Error in handleStartRecordingWrapper:", error);
       // No re-throw to maintain Promise<void>
+    }
+  };
+  
+  // Create a wrapper for startVideoRecording that returns Promise<void>
+  const startVideoRecordingWrapper = async (): Promise<void> => {
+    try {
+      await startVideoRecording();
+      // We're explicitly not returning anything, which results in Promise<void>
+    } catch (error) {
+      console.error("Error in startVideoRecordingWrapper:", error);
     }
   };
 
@@ -137,7 +146,7 @@ export function MessageDetails({ message }: MessageDetailsProps) {
           isVideoInitializing={isVideoInitializing}
           hasVideoPermission={hasVideoPermission}
           videoPreviewStream={videoPreviewStream}
-          onStartVideoRecording={startVideoRecording}
+          onStartVideoRecording={startVideoRecordingWrapper} // Use the wrapper here
           onStopVideoRecording={stopVideoRecording}
           onClearVideo={() => {
             clearVideo();
@@ -189,7 +198,7 @@ export function MessageDetails({ message }: MessageDetailsProps) {
         isInitializing={isVideoInitializing}
         hasPermission={hasVideoPermission}
         previewStream={videoPreviewStream}
-        startRecording={handleStartRecordingWrapper} 
+        startRecording={handleStartRecordingWrapper} // Use the wrapper here
         stopRecording={stopVideoRecording}
         clearVideo={clearVideo}
       />
