@@ -19,7 +19,13 @@ export function useVideoRecorder(previewStream: MediaStream | null, streamRef: R
       
       // If we don't have a preview stream, we can't record
       if (!stream) {
-        throw new Error("No camera stream available");
+        console.error("No camera stream available");
+        throw new Error("No camera stream available. Please try enabling the camera first.");
+      }
+      
+      if (stream.getVideoTracks().length === 0) {
+        console.error("No video tracks found in stream");
+        throw new Error("Camera not properly initialized. Please refresh and try again.");
       }
       
       // Create and configure the media recorder
@@ -35,6 +41,16 @@ export function useVideoRecorder(previewStream: MediaStream | null, streamRef: R
       
       mediaRecorder.onstop = () => {
         console.log("Media recorder stopped, processing video...");
+        if (videoChunksRef.current.length === 0) {
+          console.error("No video chunks recorded");
+          toast({
+            title: "Recording Error",
+            description: "No video data was captured. Please try again.",
+            variant: "destructive"
+          });
+          return;
+        }
+        
         const videoBlob = new Blob(videoChunksRef.current, { type: 'video/webm' });
         console.log("Created video blob:", videoBlob.size, "bytes");
         setVideoBlob(videoBlob);
@@ -58,13 +74,16 @@ export function useVideoRecorder(previewStream: MediaStream | null, streamRef: R
     } catch (error: any) {
       console.error("Error starting video recording:", error);
       
-      let errorMessage = "Error starting recording";
+      let errorMessage = error.message || "Error starting recording";
       
       toast({
         title: "Recording Error",
         description: errorMessage,
         variant: "destructive"
       });
+      
+      // Make sure to rethrow so the UI can reset appropriately
+      throw error;
     }
   };
   

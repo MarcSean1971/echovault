@@ -94,9 +94,14 @@ export function useMediaStream() {
   // Initialize the media stream for preview before recording
   const initializeStream = async (forceNew = false, options: MediaOptions = { video: true, audio: true }) => {
     try {
+      // Always ensure the initializing state starts as true
+      if (!isUnmountedRef.current) {
+        setIsInitializing(true);
+      }
+      
       // Set up a timeout to reset initialization state if it takes too long
       const timeout = setTimeout(() => {
-        if (isInitializing && !isUnmountedRef.current) {
+        if (!isUnmountedRef.current) {
           console.warn("Media initialization timeout reached, resetting state");
           setIsInitializing(false);
         }
@@ -115,10 +120,14 @@ export function useMediaStream() {
         console.log("Reusing existing active stream");
         clearTimeout(timeout);
         initTimeoutRef.current = null;
+        
+        if (!isUnmountedRef.current) {
+          setIsInitializing(false);
+        }
+        
         return streamRef.current;
       }
       
-      setIsInitializing(true);
       console.log(`Initializing ${options.video ? 'camera' : 'microphone'} for preview...`);
       console.log("Stream options:", options);
       
@@ -147,6 +156,7 @@ export function useMediaStream() {
         streamRef.current = stream;
         setPreviewStream(stream);
         setHasPermission(true);
+        setIsInitializing(false); // Important: Reset initializing state on success
         
         // Clear the timeout since initialization succeeded
         clearTimeout(timeout);

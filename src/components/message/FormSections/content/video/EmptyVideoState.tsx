@@ -108,7 +108,7 @@ export function EmptyVideoState({
         onClick={onEnableCamera}
         variant="default"
         disabled={localInitializing || isAttemptingToEnable}
-        className="hover:opacity-90 transition-all duration-200"
+        className="hover:opacity-90 transition-opacity duration-200"
       >
         {(localInitializing || isAttemptingToEnable) ? (
           <>
