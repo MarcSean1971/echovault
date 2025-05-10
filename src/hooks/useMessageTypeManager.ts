@@ -76,16 +76,47 @@ export function useMessageTypeManager() {
     handleInitializedAudio: handleInitializedAudioBase
   } = useInitializedMediaHandler();
   
-  // Wrapper for initialized video handler
+  // Wrapper for initialized video handler with improved error handling
   const handleInitializedVideo = (blob: Blob, url: string) => {
-    console.log("useMessageTypeManager: Initializing video with blob size:", blob.size);
-    handleInitializedVideoBase(blob, url, setInitializedFromMessage, restoreVideo);
+    console.log("useMessageTypeManager: Initializing video with blob size:", blob.size, 
+                "URL:", url.substring(0, 30) + "...");
+    
+    if (!blob || blob.size === 0) {
+      console.error("Invalid blob in handleInitializedVideo");
+      return;
+    }
+    
+    try {
+      // Pass initialization to our handler
+      handleInitializedVideoBase(blob, url, setInitializedFromMessage, restoreVideo);
+      
+      // Log success
+      console.log("Video initialization processed successfully in useMessageTypeManager");
+      
+      // Double-check if video was restored by logging current videoUrl
+      console.log("Current video URL after initialization:", 
+                 videoUrl ? videoUrl.substring(0, 30) + "..." : "null");
+    } catch (error) {
+      console.error("Error in handleInitializedVideo:", error);
+    }
   };
   
-  // Wrapper for initialized audio handler
+  // Wrapper for initialized audio handler with improved error handling
   const handleInitializedAudio = (blob: Blob, url: string) => {
-    console.log("useMessageTypeManager: Initializing audio with blob size:", blob.size);
-    handleInitializedAudioBase(blob, url, setInitializedFromMessage, restoreAudio);
+    console.log("useMessageTypeManager: Initializing audio with blob size:", blob.size,
+                "URL:", url.substring(0, 30) + "...");
+    
+    if (!blob || blob.size === 0) {
+      console.error("Invalid blob in handleInitializedAudio");
+      return;
+    }
+    
+    try {
+      handleInitializedAudioBase(blob, url, setInitializedFromMessage, restoreAudio);
+      console.log("Audio initialization processed successfully in useMessageTypeManager");
+    } catch (error) {
+      console.error("Error in handleInitializedAudio:", error);
+    }
   };
 
   return {

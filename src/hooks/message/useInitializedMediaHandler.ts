@@ -5,7 +5,7 @@ import { Message } from "@/types/message";
  * Hook to handle initialized media from existing messages
  */
 export function useInitializedMediaHandler() {
-  // Handle initialized video from existing message with improved reliability
+  // Handle initialized video from existing message with enhanced reliability
   const handleInitializedVideo = (
     blob: Blob, 
     url: string, 
@@ -24,11 +24,13 @@ export function useInitializedMediaHandler() {
     try {
       // First restore the video to ensure it's displayed
       restoreVideo(blob, url);
-      console.log("Video restored first, now setting initialization flag");
+      console.log("Video restored successfully in handleInitializedVideo");
       
-      // Set the initialization flag after restoring the video
-      // This ensures the video is displayed before any other logic runs
-      setInitializedFromMessage(true);
+      // Force a small delay before setting the flag to ensure the UI has updated
+      setTimeout(() => {
+        setInitializedFromMessage(true);
+        console.log("Video initialization flag set to true after forced delay");
+      }, 50);
     } catch (error) {
       console.error("Error in handleInitializedVideo:", error);
     }
@@ -53,10 +55,13 @@ export function useInitializedMediaHandler() {
     try {
       // First restore the audio to ensure it's displayed
       restoreAudio(blob, url);
-      console.log("Audio restored first, now setting initialization flag");
+      console.log("Audio restored successfully in handleInitializedAudio");
       
-      // Set the initialization flag after restoring the audio
-      setInitializedFromMessage(true);
+      // Force a small delay before setting the flag to ensure the UI has updated
+      setTimeout(() => {
+        setInitializedFromMessage(true);
+        console.log("Audio initialization flag set to true after forced delay");
+      }, 50);
     } catch (error) {
       console.error("Error in handleInitializedAudio:", error);
     }

@@ -36,39 +36,30 @@ export function useMediaInitializer(
       messageType: message?.message_type
     });
     
-    // Skip if we've already initialized the content
-    if (initializedFromMessage) {
-      console.log("MediaInitializer: Already initialized from message, skipping");
-      return;
-    }
-    
-    // Handle video initialization with priority since we're seeing issues here
+    // Handle video initialization with priority
     if (initialVideoBlob && initialVideoUrl) {
       console.log("MediaInitializer: Initializing video with blob size:", initialVideoBlob.size);
       
-      // Force a small delay to ensure state updates have propagated
-      setTimeout(() => {
-        try {
-          handleInitializedVideo(initialVideoBlob, initialVideoUrl);
-          console.log("MediaInitializer: Video initialization triggered");
-        } catch (err) {
-          console.error("MediaInitializer: Error initializing video:", err);
-        }
-      }, 100);
+      // Process immediately without delay or initialization checks
+      try {
+        handleInitializedVideo(initialVideoBlob, initialVideoUrl);
+        console.log("MediaInitializer: Video initialization processed immediately");
+        setInitializedFromMessage(true);
+      } catch (err) {
+        console.error("MediaInitializer: Error initializing video:", err);
+      }
     }
     // Handle audio initialization
     else if (initialAudioBlob && initialAudioUrl) {
       console.log("MediaInitializer: Initializing audio with blob size:", initialAudioBlob.size);
       
-      // Force a small delay to ensure state updates have propagated
-      setTimeout(() => {
-        try {
-          handleInitializedAudio(initialAudioBlob, initialAudioUrl);
-          console.log("MediaInitializer: Audio initialization triggered");
-        } catch (err) {
-          console.error("MediaInitializer: Error initializing audio:", err);
-        }
-      }, 100);
+      try {
+        handleInitializedAudio(initialAudioBlob, initialAudioUrl);
+        console.log("MediaInitializer: Audio initialization processed immediately");
+        setInitializedFromMessage(true);
+      } catch (err) {
+        console.error("MediaInitializer: Error initializing audio:", err);
+      }
     }
     else {
       console.log("MediaInitializer: No media to initialize");

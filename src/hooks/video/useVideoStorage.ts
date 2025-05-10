@@ -20,7 +20,7 @@ export function useVideoStorage() {
     console.log("Video cleared successfully");
   }, []);
   
-  // Function to restore video from blob and url with improved error handling and debugging
+  // Function to restore video from blob and url with improved error handling
   const restoreVideo = useCallback((blob: Blob, url: string, setVideoBlob: (blob: Blob) => void, setVideoUrl: (url: string) => void) => {
     if (!blob || blob.size === 0) {
       console.error("Cannot restore video: Invalid blob", blob);
@@ -34,9 +34,15 @@ export function useVideoStorage() {
       // First set the blob so we have the data
       setVideoBlob(blob);
       
-      // Create a fresh URL to avoid stale references
-      const freshUrl = URL.createObjectURL(blob);
-      console.log("Created fresh URL:", freshUrl.substring(0, 30) + "...");
+      // Always create a fresh URL to avoid stale references
+      let freshUrl: string;
+      try {
+        freshUrl = URL.createObjectURL(blob);
+        console.log("Created fresh URL:", freshUrl.substring(0, 30) + "...");
+      } catch (e) {
+        console.error("Failed to create fresh URL, will use original:", e);
+        freshUrl = url; // Fallback to original URL
+      }
       
       // If the passed URL is different from the fresh one, revoke the old one
       if (url !== freshUrl && url) {
@@ -48,17 +54,23 @@ export function useVideoStorage() {
         }
       }
       
-      // Set the fresh URL
+      // First, log what we're about to do
+      console.log(`About to set video URL to: ${freshUrl.substring(0, 30)}...`);
+      
+      // Set the URL and immediately verify it was set correctly
       setVideoUrl(freshUrl);
-      console.log("Video restored successfully with fresh URL");
+      
+      // Force call an immediate setTimeout to verify the URL was set
+      setTimeout(() => {
+        console.log("Verification check: Video URL should now be set to:", freshUrl.substring(0, 30) + "...");
+      }, 0);
     } catch (error) {
       console.error("Error in restoreVideo:", error);
       
-      // Try one more time with a fallback approach if there was an error
+      // Try one more time with a fallback approach
       try {
-        // Fallback to just using the original URL
+        console.log("Attempting fallback video restoration with original URL");
         setVideoUrl(url);
-        console.log("Video restoration fell back to original URL");
       } catch (e) {
         console.error("Video restoration failed completely:", e);
       }

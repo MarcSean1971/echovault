@@ -13,6 +13,7 @@ export function VideoPlayer({ videoUrl, onClearVideo, inDialog = false }: VideoP
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isControlsVisible, setIsControlsVisible] = useState(false);
   const [videoError, setVideoError] = useState<string | null>(null);
+  const [videoLoaded, setVideoLoaded] = useState(false);
   
   // Handle play/pause toggle
   const togglePlayback = () => {
@@ -51,40 +52,85 @@ export function VideoPlayer({ videoUrl, onClearVideo, inDialog = false }: VideoP
       setVideoError("Error playing video. Please try reloading the page.");
       setIsPlaying(false);
     };
+    const handleLoadedData = () => {
+      console.log("Video loaded data successfully");
+      setVideoLoaded(true);
+    };
     
     videoElement.addEventListener('play', handlePlay);
     videoElement.addEventListener('pause', handlePause);
     videoElement.addEventListener('ended', handleEnded);
     videoElement.addEventListener('error', handleError);
+    videoElement.addEventListener('loadeddata', handleLoadedData);
     
     return () => {
       videoElement.removeEventListener('play', handlePlay);
       videoElement.removeEventListener('pause', handlePause);
       videoElement.removeEventListener('ended', handleEnded);
       videoElement.removeEventListener('error', handleError);
+      videoElement.removeEventListener('loadeddata', handleLoadedData);
     };
   }, []);
   
-  // Effect to handle videoUrl changes
+  // Log when videoUrl changes to help debug
   useEffect(() => {
     console.log("VideoPlayer: videoUrl changed:", 
                 videoUrl ? videoUrl.substring(0, 30) + "..." : "null");
     
     // Reset video error when URL changes
     setVideoError(null);
+    setVideoLoaded(false);
     
     // Reset playing state when URL changes
     setIsPlaying(false);
     
-    // If we have a video element and a URL, load it
+    // If we have a video element and a URL, manually trigger a load
     if (videoRef.current && videoUrl) {
-      videoRef.current.load();
+      try {
+        // Force a reload
+        videoRef.current.load();
+        console.log("Forced video element to reload with new URL");
+      } catch (err) {
+        console.error("Error loading video:", err);
+      }
     }
   }, [videoUrl]);
   
   // Show controls on hover with improved transition
   const showControls = () => setIsControlsVisible(true);
   const hideControls = () => setIsControlsVisible(false);
+  
+  // Verify we actually have a video URL to show
+  useEffect(() => {
+    if (!videoUrl) {
+      console.warn("VideoPlayer rendered without a videoUrl");
+    } else {
+      console.log("VideoPlayer has URL:", videoUrl.substring(0, 30) + "...");
+    }
+  }, [videoUrl]);
+  
+  // Attempt recovery if video fails to load in normal way
+  useEffect(() => {
+    if (!videoLoaded && videoUrl && videoRef.current) {
+      // Start a recovery timer
+      const timer = setTimeout(() => {
+        if (!videoLoaded && videoRef.current) {
+          console.log("Attempting video recovery after load timeout");
+          try {
+            // Try setting the src attribute directly
+            videoRef.current.src = videoUrl;
+            
+            // Force a reload
+            videoRef.current.load();
+          } catch (err) {
+            console.error("Video recovery attempt failed:", err);
+          }
+        }
+      }, 1000); // Wait 1 second for normal loading before attempting recovery
+      
+      return () => clearTimeout(timer);
+    }
+  }, [videoLoaded, videoUrl]);
   
   // If there's no videoUrl, show a message
   if (!videoUrl) {
@@ -116,11 +162,19 @@ export function VideoPlayer({ videoUrl, onClearVideo, inDialog = false }: VideoP
         </div>
       ) : null}
       
+      {!videoLoaded && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white">
+          <div className="animate-spin w-8 h-8 border-t-2 border-blue-500 rounded-full"></div>
+          <span className="ml-2">Loading video...</span>
+        </div>
+      )}
+      
       <video 
         ref={videoRef}
         src={videoUrl}
         className="w-full h-full object-contain bg-black"
         playsInline
+        preload="auto"
         onError={(e) => {
           console.error("Video error:", e);
           setVideoError("Error loading video. Please try reloading the page.");

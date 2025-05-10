@@ -33,6 +33,7 @@ export function VideoContent({
   const [permissionError, setPermissionError] = useState<string | null>(null);
   const [showVideoPreview, setShowVideoPreview] = useState(false);
   const mountedRef = useRef(true);
+  const lastVideoUrlRef = useRef<string | null>(null);
   
   // Set up mounted ref for cleanup
   useEffect(() => {
@@ -44,7 +45,7 @@ export function VideoContent({
   
   // Log initial props for debugging
   useEffect(() => {
-    console.log("VideoContent: Initial props:", { 
+    console.log("VideoContent: Initial render with props:", { 
       hasVideoUrl: !!videoUrl, 
       videoUrl: videoUrl ? videoUrl.substring(0, 30) + "..." : null,
       messageType,
@@ -53,21 +54,19 @@ export function VideoContent({
       hasPermission: hasPermission === null ? "unknown" : hasPermission ? "yes" : "no",
       hasPreviewStream: !!previewStream
     });
-  }, []);
-  
-  // Reset showVideoPreview state whenever videoUrl changes or messageType changes
-  useEffect(() => {
-    console.log("VideoContent: States updated:", { 
-      hasVideoUrl: !!videoUrl, 
-      videoUrl: videoUrl ? videoUrl.substring(0, 30) + "..." : null,
-      messageType,
-      previewStream: previewStream ? "active" : "null",
-      isInitializing: isInitializing ? "yes" : "no"
-    });
     
+    // Track the latest videoUrl reference
+    if (videoUrl !== lastVideoUrlRef.current) {
+      console.log(`VideoContent: videoUrl changed from ${lastVideoUrlRef.current?.substring(0, 30)}... to ${videoUrl?.substring(0, 30)}...`);
+      lastVideoUrlRef.current = videoUrl;
+    }
+  }, [videoUrl, messageType, isRecording, isInitializing, hasPermission, previewStream]);
+  
+  // CRITICAL: Always prioritize showing existing video content
+  useEffect(() => {
     // CRITICAL: Always prioritize showing existing video content
     if (videoUrl) {
-      console.log("VideoContent: Setting showVideoPreview to true because videoUrl exists");
+      console.log("VideoContent: Setting showVideoPreview to true because videoUrl exists:", videoUrl.substring(0, 30) + "...");
       setShowVideoPreview(true);
     } else if (previewStream) {
       // Show camera preview if we have a stream but no recorded video
@@ -78,7 +77,7 @@ export function VideoContent({
       console.log("VideoContent: No videoUrl or previewStream, showing empty state");
       setShowVideoPreview(false);
     }
-  }, [videoUrl, messageType, previewStream, isInitializing]);
+  }, [videoUrl, previewStream]);
   
   // Handle recording with better error handling
   const handleStartRecording = async (): Promise<void> => {
@@ -99,6 +98,7 @@ export function VideoContent({
   const renderVideoContent = () => {
     console.log("VideoContent: Rendering with state:", {
       hasVideoUrl: !!videoUrl,
+      videoUrl: videoUrl ? videoUrl.substring(0, 30) + "..." : "null",
       hasPreviewStream: !!previewStream,
       isRecording,
       showVideoPreview
