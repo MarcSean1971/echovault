@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from "react";
 import { Label } from "@/components/ui/label";
 import { useMessageForm } from "../MessageFormContext";
@@ -46,7 +45,6 @@ export function MessageDetails({ message }: MessageDetailsProps) {
     isAudioRecording, isAudioInitializing, hasAudioPermission,
     startAudioRecording, stopAudioRecording, clearAudio, forceInitializeMicrophone,
     transcribeAudio, isAudioInitializationAttempted,
-    handleAudioContentUpdate,
     
     // Initialization state
     initializedFromMessage
@@ -64,22 +62,24 @@ export function MessageDetails({ message }: MessageDetailsProps) {
     }
   };
   
-  // Create a proper wrapper function that explicitly returns Promise<void>
+  // Fixed: Create a proper wrapper function that explicitly returns Promise<void> with proper void handling
   const handleStartRecordingWrapper = async (): Promise<void> => {
     try {
+      // Call the function but explicitly ignore its return value
       await forceInitializeCamera();
-      // Not returning anything explicitly ensures Promise<void>
+      // No return statement to ensure void return type
     } catch (error) {
       console.error("Error in handleStartRecordingWrapper:", error);
       // No re-throw to maintain Promise<void>
     }
   };
   
-  // Create a wrapper for startVideoRecording that explicitly returns Promise<void>
+  // Fixed: Create a wrapper for startVideoRecording that explicitly returns Promise<void>
   const startVideoRecordingWrapper = async (): Promise<void> => {
     try {
+      // Call the function but explicitly ignore its return value
       await startVideoRecording();
-      // Not returning anything explicitly ensures Promise<void>
+      // No return statement to ensure void return type
     } catch (error) {
       console.error("Error in startVideoRecordingWrapper:", error);
       // No re-throw to maintain Promise<void>
@@ -157,7 +157,7 @@ export function MessageDetails({ message }: MessageDetailsProps) {
           isVideoInitializing={isVideoInitializing}
           hasVideoPermission={hasVideoPermission}
           videoPreviewStream={videoPreviewStream}
-          onStartVideoRecording={startVideoRecordingWrapper} // Using wrapper function with Promise<void>
+          onStartVideoRecording={startVideoRecordingWrapper} // Fixed: Using correct Promise<void> wrapper
           onStopVideoRecording={stopVideoRecording}
           onClearVideo={handleClearVideoAndRecord} // Use new handler to clear and show record dialog
           
@@ -206,7 +206,7 @@ export function MessageDetails({ message }: MessageDetailsProps) {
         isInitializing={isVideoInitializing}
         hasPermission={hasVideoPermission}
         previewStream={videoPreviewStream}
-        startRecording={handleStartRecordingWrapper} // Fix: Using Promise<void> wrapper function
+        startRecording={handleStartRecordingWrapper} // Fixed: Using Promise<void> wrapper function
         stopRecording={stopVideoRecording}
         clearVideo={clearVideo}
       />
