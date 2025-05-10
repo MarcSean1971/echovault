@@ -3,7 +3,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useMessageForm } from "@/components/message/MessageFormContext";
 import { safeCreateObjectURL, safeRevokeObjectURL } from "@/utils/mediaUtils";
 import { useMediaStream } from "./video/useMediaStream"; // Fixed import path
-import { useAudioRecorder } from "./audio/useAudioRecorder";
+import { useAudioRecorder } from "./hooks/audio/useAudioRecorder";
 import { useAudioProcessor } from "./audio/useAudioProcessor";
 
 /**
@@ -41,7 +41,7 @@ export function useAudioRecordingHandler() {
     stopRecording,
     audioBlob: recorderAudioBlob, // Store the blob from recorder
     audioDuration: recorderAudioDuration // Store the duration from recorder
-  } = useAudioRecorder(previewStream, streamRef, setAudioBlob, setAudioUrl);
+  } = useAudioRecorder(previewStream, streamRef);
   
   // Update duration from the recorder
   useEffect(() => {

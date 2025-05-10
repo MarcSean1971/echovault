@@ -20,9 +20,26 @@ export function TextContent() {
     setTextContent(newContent);
     setDisplayContent(newContent);
     
-    // Also update the main content field for compatibility with other components
-    setContent(newContent);
+    // Only update the main content if we're in text mode
+    if (messageType === 'text') {
+      setContent(newContent);
+    }
   };
+
+  // Safety check to prevent showing JSON data in text field
+  useEffect(() => {
+    if (textContent && textContent.trim().startsWith('{') && textContent.includes('"audioData"')) {
+      console.warn("Detected audio JSON data in text field - clearing to prevent data leak");
+      setTextContent('');
+      setDisplayContent('');
+    }
+    
+    if (textContent && textContent.trim().startsWith('{') && textContent.includes('"videoData"')) {
+      console.warn("Detected video JSON data in text field - clearing to prevent data leak");
+      setTextContent('');
+      setDisplayContent('');
+    }
+  }, [textContent, setTextContent]);
 
   return (
     <>
@@ -37,7 +54,9 @@ export function TextContent() {
       <div className="flex justify-end mt-2">
         <AIEnhancer content={displayContent} onChange={(enhancedContent) => {
           setTextContent(enhancedContent);
-          setContent(enhancedContent);
+          if (messageType === 'text') {
+            setContent(enhancedContent);
+          }
           setDisplayContent(enhancedContent);
         }} />
       </div>

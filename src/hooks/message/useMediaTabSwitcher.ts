@@ -14,7 +14,7 @@ export function useMediaTabSwitcher(
   stopAudioStream: () => void,
   isAudioStreamActive: () => boolean
 ) {
-  const { setMessageType } = useMessageForm();
+  const { setMessageType, setTextContent, setVideoContent, setAudioContent } = useMessageForm();
   
   // Handle clicking on text tab
   const onTextTypeClick = () => {
@@ -32,7 +32,6 @@ export function useMediaTabSwitcher(
     }
     
     // Stop any active media streams when switching to text mode
-    // but don't clear the content - this is the critical fix
     if (isVideoStreamActive()) {
       console.log("Stopping active video stream when switching to text mode");
       stopVideoStream();
@@ -42,6 +41,11 @@ export function useMediaTabSwitcher(
       console.log("Stopping active audio stream when switching to text mode");
       stopAudioStream();
     }
+    
+    // IMPORTANT: Clear other content types when switching to text mode
+    // but preserve text content
+    setVideoContent('');
+    setAudioContent('');
   };
   
   // Handle clicking on video tab
@@ -59,6 +63,10 @@ export function useMediaTabSwitcher(
       console.log("Stopping active audio stream when switching to video mode");
       stopAudioStream();
     }
+    
+    // IMPORTANT: Clear other content types when switching to video mode
+    // Text can coexist with video as additionalText, so we don't clear it
+    setAudioContent('');
   };
   
   // Handle clicking on audio tab
@@ -76,6 +84,10 @@ export function useMediaTabSwitcher(
       console.log("Stopping active video stream when switching to audio mode");
       stopVideoStream();
     }
+    
+    // IMPORTANT: Clear other content types when switching to audio mode
+    // Text can coexist with audio as additionalText, so we don't clear it
+    setVideoContent('');
   };
   
   return {

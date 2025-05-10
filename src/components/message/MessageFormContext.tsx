@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useState, useCallback } from "react";
 import { FileAttachment } from "../FileUploader";
 import { Recipient, TriggerType, DeliveryOption, RecurringPattern, PanicTriggerConfig } from "@/types/message";
 
@@ -14,6 +14,7 @@ interface MessageFormContextType {
   setVideoContent: (content: string) => void;
   audioContent: string;
   setAudioContent: (content: string) => void;
+  clearAllContent: () => void;
   messageType: string;
   setMessageType: (type: string) => void;
   files: FileAttachment[];
@@ -103,6 +104,14 @@ export const MessageFormProvider = ({ children }: { children: React.ReactNode })
   const [locationName, setLocationName] = useState<string | null>(null);
   const [locationLatitude, setLocationLatitude] = useState<number | null>(null);
   const [locationLongitude, setLocationLongitude] = useState<number | null>(null);
+  
+  // Helper function to clear all content states
+  const clearAllContent = useCallback(() => {
+    setContent("");
+    setTextContent("");
+    setVideoContent("");
+    setAudioContent("");
+  }, []);
 
   const value = {
     title,
@@ -115,6 +124,7 @@ export const MessageFormProvider = ({ children }: { children: React.ReactNode })
     setVideoContent,
     audioContent,
     setAudioContent,
+    clearAllContent,
     messageType,
     setMessageType,
     files,
@@ -151,7 +161,7 @@ export const MessageFormProvider = ({ children }: { children: React.ReactNode })
     setReminderHours,
     checkInCode,
     setCheckInCode,
-    // Add location-related values to the context
+    // Location-related values
     shareLocation,
     setShareLocation,
     locationName,

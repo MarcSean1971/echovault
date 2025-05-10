@@ -1,207 +1,176 @@
 
-import React, { useState, useRef, useEffect } from "react";
-import { Card } from "@/components/ui/card";
+import React, { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
-import { Play, Pause, Trash2 } from "lucide-react";
-import { formatTime } from "@/utils/mediaUtils";
-import { Spinner } from "@/components/ui/spinner";
-import { toast } from "@/components/ui/use-toast";
+import { Play, Pause, X, Trash2, Clock, Volume2 } from "lucide-react";
+import { formatDuration } from '@/utils/timeUtils';
+import { cn } from "@/lib/utils";
+import { toast } from '@/components/ui/use-toast';
 
-interface AudioPlayerStateProps {
-  audioUrl: string | null;
-  audioDuration?: number;
+export interface AudioPlayerStateProps {
+  audioUrl: string;
+  audioDuration: number;
   onClearAudio: () => void;
   inDialog?: boolean;
 }
 
 export function AudioPlayerState({
   audioUrl,
-  audioDuration = 0,
+  audioDuration,
   onClearAudio,
   inDialog = false
 }: AudioPlayerStateProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [audioError, setAudioError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const animationRef = useRef<number>();
-
-  // Reset state when audio changes
+  const progressRef = useRef<HTMLDivElement>(null);
+  
+  // Initialize audio element
   useEffect(() => {
+    if (!audioUrl) return;
+    
+    const audio = new Audio(audioUrl);
+    audioRef.current = audio;
+    
+    // Add event listeners
+    audio.addEventListener('timeupdate', updateProgress);
+    audio.addEventListener('ended', handleAudioEnd);
+    
+    // Clean up
+    return () => {
+      audio.pause();
+      audio.removeEventListener('timeupdate', updateProgress);
+      audio.removeEventListener('ended', handleAudioEnd);
+    };
+  }, [audioUrl]);
+
+  // Update progress bar as audio plays
+  const updateProgress = () => {
+    const audio = audioRef.current;
+    if (audio) {
+      setCurrentTime(audio.currentTime);
+      
+      // Update progress bar width
+      if (progressRef.current) {
+        const width = (audio.currentTime / audio.duration) * 100;
+        progressRef.current.style.width = `${width}%`;
+      }
+    }
+  };
+  
+  // Handle audio ending
+  const handleAudioEnd = () => {
     setIsPlaying(false);
     setCurrentTime(0);
-    setAudioError(null);
-    
-    if (audioRef.current) {
-      audioRef.current.currentTime = 0;
+    if (progressRef.current) {
+      progressRef.current.style.width = '0%';
     }
-  }, [audioUrl]);
+  };
   
-  // Clean up on unmount
-  useEffect(() => {
-    return () => {
-      // Cancel any animations
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
+  // Toggle play/pause
+  const togglePlayPause = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    
+    if (isPlaying) {
+      audio.pause();
+    } else {
+      const playPromise = audio.play();
       
-      // Stop audio playback if playing
-      if (audioRef.current && !audioRef.current.paused) {
-        audioRef.current.pause();
-      }
-    };
-  }, []);
-
-  // Update audio duration when it's loaded
-  const handleLoadedMetadata = () => {
-    if (audioRef.current) {
-      setDuration(audioRef.current.duration);
-    }
-  };
-  
-  // Handle audio loading errors
-  const handleAudioError = (e: React.SyntheticEvent<HTMLAudioElement>) => {
-    console.error("Audio element error:", e);
-    setAudioError("Could not load audio. The file may be corrupted or inaccessible.");
-    setIsPlaying(false);
-    
-    toast({
-      title: "Audio Playback Error",
-      description: "Failed to play audio. Please try again.",
-      variant: "destructive"
-    });
-  };
-  
-  // Function to handle the animation of the progress
-  const updateProgress = () => {
-    if (audioRef.current) {
-      setCurrentTime(audioRef.current.currentTime);
-      animationRef.current = requestAnimationFrame(updateProgress);
-    }
-  };
-  
-  // Play/pause the audio
-  const togglePlayback = () => {
-    if (!audioRef.current) return;
-    
-    try {
-      if (isPlaying) {
-        audioRef.current.pause();
-        cancelAnimationFrame(animationRef.current!);
-      } else {
-        const playPromise = audioRef.current.play();
-        if (playPromise !== undefined) {
-          playPromise.then(() => {
-            // Playback started successfully
-            animationRef.current = requestAnimationFrame(updateProgress);
-          }).catch(error => {
-            // Auto-play was prevented or other error
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            // Audio started playing
+          })
+          .catch(error => {
             console.error("Error playing audio:", error);
-            setIsPlaying(false);
             toast({
               title: "Playback Error",
-              description: "Could not play audio. Browser may be blocking autoplay.",
+              description: "There was a problem playing the audio. Please try again.",
               variant: "destructive"
             });
           });
-        }
       }
+    }
+    
+    setIsPlaying(!isPlaying);
+  };
+  
+  // Handle click on progress bar to seek
+  const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const audio = audioRef.current;
+    const progressBar = e.currentTarget;
+    
+    if (audio && progressBar) {
+      const rect = progressBar.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const percentClicked = clickX / rect.width;
       
-      setIsPlaying(!isPlaying);
-    } catch (error) {
-      console.error("Toggle playback error:", error);
-      setIsPlaying(false);
-      toast({
-        title: "Playback Error",
-        description: "An error occurred while controlling audio playback.",
-        variant: "destructive"
-      });
+      audio.currentTime = percentClicked * audio.duration;
+      updateProgress();
     }
   };
   
-  // Handle the end of audio playback
-  const handleEnded = () => {
-    setIsPlaying(false);
-    setCurrentTime(0);
+  // Handle clearing the audio
+  const handleClearAudio = () => {
     if (audioRef.current) {
-      audioRef.current.currentTime = 0;
+      audioRef.current.pause();
+      setIsPlaying(false);
     }
-    cancelAnimationFrame(animationRef.current!);
+    onClearAudio();
   };
-
+  
   return (
-    <div className="space-y-4">
-      {/* Audio element (hidden) */}
-      <audio 
-        ref={audioRef} 
-        src={audioUrl || undefined} 
-        onLoadedMetadata={handleLoadedMetadata}
-        onEnded={handleEnded}
-        onError={handleAudioError}
-      />
+    <div className={cn(
+      "p-4 bg-muted/30 rounded-md border",
+      inDialog ? "max-w-md mx-auto" : "w-full"
+    )}>
+      <div className="flex items-center mb-2">
+        <Volume2 className="h-5 w-5 text-primary mr-2" />
+        <span className="font-medium">Audio Recording</span>
+      </div>
       
-      <Card className="p-6">
-        <div className="flex flex-col space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-medium">Audio Message</h3>
-            <Button 
-              variant="destructive" 
-              size="sm" 
-              onClick={onClearAudio}
-              type="button"
-              className="hover:bg-destructive/90 hover:scale-105 transition-all"
-            >
-              <Trash2 className="h-4 w-4" />
-              <span className="sr-only">Delete Audio</span>
-            </Button>
+      <div className="mt-2">
+        <div className="flex items-center space-x-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={togglePlayPause}
+            className="h-8 w-8 p-0 flex items-center justify-center hover:bg-primary/10 transition-colors"
+          >
+            {isPlaying ? (
+              <Pause className="h-4 w-4" />
+            ) : (
+              <Play className="h-4 w-4" />
+            )}
+          </Button>
+          
+          <div 
+            className="relative h-2 bg-muted-foreground/20 rounded-full flex-grow cursor-pointer"
+            onClick={handleProgressClick}
+          >
+            <div 
+              ref={progressRef}
+              className="absolute left-0 top-0 h-full bg-primary rounded-full"
+              style={{ width: '0%' }}
+            />
           </div>
           
-          {audioError ? (
-            <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 rounded-md">
-              <p>{audioError}</p>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="mt-2"
-                type="button"
-                onClick={onClearAudio}
-              >
-                Clear and try again
-              </Button>
-            </div>
-          ) : (
-            <>
-              {/* Audio player controls */}
-              <div className="flex items-center space-x-3">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  type="button"
-                  className="h-10 w-10 rounded-full hover:bg-primary/10 hover:scale-105 transition-all"
-                  onClick={togglePlayback}
-                  disabled={!audioUrl}
-                >
-                  {isPlaying ? <Pause className="h-6 w-6" /> : <Play className="h-6 w-6" />}
-                </Button>
-                
-                <div className="w-full space-y-1">
-                  <div className="relative w-full h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
-                    <div 
-                      className="absolute top-0 left-0 h-full bg-primary rounded-full transition-all"
-                      style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
-                    />
-                  </div>
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>{formatTime(currentTime)}</span>
-                    <span>{formatTime(duration || audioDuration || 0)}</span>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
+          <span className="text-sm text-muted-foreground min-w-[60px] text-right">
+            {formatDuration(currentTime)} / {formatDuration(audioDuration)}
+          </span>
+          
+          <Button
+            type="button"
+            size="sm"
+            variant="destructive"
+            onClick={handleClearAudio}
+            className="h-8 w-8 p-0"
+          >
+            {inDialog ? <X className="h-4 w-4" /> : <Trash2 className="h-4 w-4" />}
+          </Button>
         </div>
-      </Card>
+      </div>
     </div>
   );
 }

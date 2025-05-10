@@ -49,6 +49,11 @@ export function useMessageInitializer(message?: Message) {
     // Set form content regardless of message type
     setContent(message.content);
     
+    // Reset all content types first to avoid overlap
+    setTextContent('');
+    setVideoContent('');
+    setAudioContent('');
+    
     // Check if the content has video or audio data
     let hasVideo = false;
     let hasAudio = false;
@@ -59,7 +64,7 @@ export function useMessageInitializer(message?: Message) {
       hasVideo = !!videoData;
       
       // If we have video content, store it
-      if (hasVideo) {
+      if (hasVideo || message.message_type === "video") {
         console.log("Message contains video content - setting videoContent state");
         setVideoContent(message.content);
         
@@ -68,7 +73,10 @@ export function useMessageInitializer(message?: Message) {
           const contentObj = JSON.parse(message.content);
           if (contentObj.additionalText) {
             console.log("Message contains additional text with video:", contentObj.additionalText);
-            setTextContent(contentObj.additionalText);
+            // Only set text content if we're in video mode - this is crucial!
+            if (message.message_type === "video") {
+              setTextContent(contentObj.additionalText);
+            }
           }
         } catch (e) {
           console.error("Error parsing additional text from video content:", e);
@@ -78,7 +86,7 @@ export function useMessageInitializer(message?: Message) {
       // Check for audio content
       try {
         const contentObj = JSON.parse(message.content);
-        if (contentObj.audioData) {
+        if (contentObj.audioData || message.message_type === "audio") {
           console.log("Message contains audio content - setting audioContent state");
           hasAudio = true;
           setAudioContent(message.content);
@@ -86,7 +94,10 @@ export function useMessageInitializer(message?: Message) {
           // Check for additional text in the audio content
           if (contentObj.additionalText) {
             console.log("Message contains additional text with audio:", contentObj.additionalText);
-            setTextContent(contentObj.additionalText);
+            // Only set text content if we're in audio mode - this is crucial!
+            if (message.message_type === "audio") {
+              setTextContent(contentObj.additionalText);
+            }
           }
         }
       } catch (e) {
@@ -97,7 +108,8 @@ export function useMessageInitializer(message?: Message) {
     }
     
     // For text content, we consider any non-JSON content or message type="text" as text
-    if ((!hasVideo && !hasAudio) || message.message_type === "text") {
+    if (message.message_type === "text") {
+      // If this is a true text message, just set the text content directly
       setTextContent(message.content);
     }
     
