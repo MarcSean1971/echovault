@@ -12,7 +12,7 @@ interface UseMediaStreamInitializationProps {
   isAudioInitializationAttempted: boolean;
   initializedFromMessage: boolean;
   mountedRef: React.RefObject<boolean>;
-  initTimeoutRef: React.RefObject<NodeJS.Timeout | null>;
+  initTimeoutRef: React.MutableRefObject<NodeJS.Timeout | null>; // Changed from RefObject to MutableRefObject
   setIsInitializing: (value: boolean) => void;
   setHasAttemptedVideoInit: (value: boolean) => void;
   forceInitializeCamera: () => Promise<boolean>;
@@ -64,7 +64,7 @@ export function useMediaStreamInitialization({
           }
         }, 15000); // 15 seconds timeout
         
-        initTimeoutRef.current = timeout;
+        initTimeoutRef.current = timeout; // Now this is allowed with MutableRefObject
         
         try {
           // Use forceInitializeCamera to ensure we get a fresh stream
@@ -104,7 +104,7 @@ export function useMediaStreamInitialization({
           }
         }, 15000); // 15 seconds timeout
         
-        initTimeoutRef.current = timeout;
+        initTimeoutRef.current = timeout; // Now this is allowed with MutableRefObject
         
         try {
           // Use forceInitializeMicrophone to ensure we get a fresh stream
