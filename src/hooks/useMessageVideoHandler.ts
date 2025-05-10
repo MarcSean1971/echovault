@@ -101,6 +101,9 @@ export function useMessageVideoHandler(message?: Message) {
     onTextTypeClick,
     onVideoTypeClick,
     onAudioTypeClick,
-    messageType
+    messageType,
+    
+    // Include initializedFromMessage in the return object
+    initializedFromMessage
   };
 }

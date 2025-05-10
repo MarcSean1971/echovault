@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from "react";
 import { Label } from "@/components/ui/label";
 import { useMessageForm } from "../MessageFormContext";
@@ -41,7 +42,10 @@ export function MessageDetails({ message }: MessageDetailsProps) {
     isAudioRecording, isAudioInitializing, hasAudioPermission,
     startAudioRecording, stopAudioRecording, clearAudio, forceInitializeMicrophone,
     transcribeAudio, isAudioInitializationAttempted,
-    handleAudioContentUpdate
+    handleAudioContentUpdate,
+    
+    // Initialization state
+    initializedFromMessage
   } = useMessageVideoHandler(message);
 
   // Handle tab change
@@ -97,6 +101,7 @@ export function MessageDetails({ message }: MessageDetailsProps) {
         forceInitializeCamera={forceInitializeCamera}
         forceInitializeMicrophone={forceInitializeMicrophone}
         isAudioInitializationAttempted={isAudioInitializationAttempted}
+        initializedFromMessage={initializedFromMessage}
       />
 
       {/* Title field */}
