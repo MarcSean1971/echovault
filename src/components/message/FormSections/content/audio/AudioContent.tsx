@@ -1,8 +1,8 @@
 
 import React, { useEffect } from "react";
-import { AudioEmptyState } from "./audio/AudioEmptyState";
-import { AudioRecordingState } from "./audio/AudioRecordingState";
-import { AudioPlayerState } from "./audio/AudioPlayerState";
+import { AudioEmptyState } from "./AudioEmptyState";
+import { AudioRecordingState } from "./AudioRecordingState";
+import { AudioPlayerState } from "./AudioPlayerState";
 
 interface AudioContentProps {
   audioUrl: string | null;
