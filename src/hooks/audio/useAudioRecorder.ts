@@ -12,6 +12,7 @@ export function useAudioRecorder(audioStream: MediaStream | null, streamRef: Rea
   const startTimeRef = useRef<number | null>(null);
   const durationTimerRef = useRef<number | null>(null);
   const durationCallbackRef = useRef<((duration: number) => void) | null>(null);
+  const onStopCallbackRef = useRef<((blob: Blob, url: string, duration: number) => void) | null>(null);
   
   // Cleanup function to reset resources
   const cleanupResources = () => {
@@ -144,6 +145,12 @@ export function useAudioRecorder(audioStream: MediaStream | null, streamRef: Rea
               window.clearInterval(durationTimerRef.current);
               durationTimerRef.current = null;
             }
+            
+            // Call onStop callback if provided with the final blob, url and duration
+            if (onStopCallbackRef.current) {
+              console.log("Calling onStop callback with blob, url, and duration");
+              onStopCallbackRef.current(audioBlob, audioUrl, audioDuration);
+            }
           } catch (error) {
             console.error("Error processing audio after recording:", error);
             cleanupResources();
@@ -191,9 +198,15 @@ export function useAudioRecorder(audioStream: MediaStream | null, streamRef: Rea
     }
   };
   
-  // Function to stop recording
-  const stopRecording = () => {
+  // Function to stop recording with optional callback
+  const stopRecording = (onStopCallback?: (blob: Blob, url: string, duration: number) => void) => {
     console.log("Stopping audio recording...");
+    
+    // Store callback if provided
+    if (onStopCallback) {
+      onStopCallbackRef.current = onStopCallback;
+    }
+    
     if (mediaRecorderRef.current && isRecording) {
       try {
         mediaRecorderRef.current.stop();

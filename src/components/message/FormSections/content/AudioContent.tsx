@@ -33,7 +33,7 @@ export function AudioContent({
   inDialog = false,
   initAttempted = false
 }: AudioContentProps) {
-  // Log state changes to help with debugging
+  // Debug component state - CRITICAL for identifying state issues
   useEffect(() => {
     console.log("AudioContent: Rendering with state", { 
       audioUrl: audioUrl ? "present" : "null",
@@ -41,12 +41,15 @@ export function AudioContent({
       isInitializing,
       hasPermission,
       hasTranscription: !!transcription,
-      initAttempted
+      initAttempted,
+      audioDuration
     });
-  }, [audioUrl, isRecording, isInitializing, transcription, hasPermission, initAttempted]);
+  }, [audioUrl, isRecording, isInitializing, transcription, hasPermission, initAttempted, audioDuration]);
 
   // CRITICAL: Always prioritize showing existing audio if available
-  if (audioUrl) {
+  // Explicitly check if audioUrl exists rather than relying on type coercion
+  if (audioUrl !== null && audioUrl !== undefined) {
+    console.log("AudioContent: Showing AudioPlayerState with URL", audioUrl.substring(0, 30) + "...");
     return (
       <AudioPlayerState
         audioUrl={audioUrl}
@@ -61,6 +64,7 @@ export function AudioContent({
   
   // Next priority: Show recording state if actively recording
   if (isRecording) {
+    console.log("AudioContent: Showing AudioRecordingState");
     return (
       <AudioRecordingState 
         audioDuration={audioDuration}
@@ -70,6 +74,7 @@ export function AudioContent({
   }
   
   // Default: Show empty state when no audio and not recording
+  console.log("AudioContent: Showing AudioEmptyState");
   return (
     <AudioEmptyState 
       isInitializing={isInitializing}

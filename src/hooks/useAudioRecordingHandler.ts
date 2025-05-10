@@ -6,6 +6,7 @@ import { useAudioProcessor } from "./audio/useAudioProcessor";
 import { useAudioRecorder } from "./audio/useAudioRecorder";
 import { useAudioStorage } from "./audio/useAudioStorage";
 import { toast } from "@/components/ui/use-toast";
+import { blobToBase64 } from "@/utils/mediaUtils";
 
 export function useAudioRecordingHandler() {
   const { setAudioContent } = useMessageForm();
@@ -33,7 +34,7 @@ export function useAudioRecordingHandler() {
   const {
     isRecording,
     startRecording: startRecordingInner,
-    stopRecording,
+    stopRecording: stopRecordingInner,
     setAudioBlob: setAudioBlobInner,
     setAudioUrl: setAudioUrlInner,
     cleanupResources
@@ -50,6 +51,29 @@ export function useAudioRecordingHandler() {
     transcribeAudio: transcribeAudioInner,
     formatAudioContent
   } = useAudioProcessor();
+  
+  // Function to update audio content in the form
+  const updateAudioContent = useCallback((blob: Blob, duration: number) => {
+    console.log("Updating audio content in form with blob size:", blob.size, "and duration:", duration);
+    
+    // Update local state
+    setAudioBlob(blob);
+    setAudioDuration(duration);
+    
+    // Convert blob to base64 and update form state
+    blobToBase64(blob).then(base64data => {
+      const formattedContent = JSON.stringify({
+        audioData: base64data,
+        timestamp: new Date().toISOString(),
+        duration: duration || 0
+      });
+      
+      console.log("Setting audio content in form state with data length:", base64data.length);
+      setAudioContent(formattedContent);
+    }).catch(err => {
+      console.error("Error converting blob to base64:", err);
+    });
+  }, [setAudioContent]);
   
   // Initialize stream with better error handling
   const initializeStreamWithSetup = useCallback(async () => {
@@ -122,6 +146,25 @@ export function useAudioRecordingHandler() {
     MAX_RETRIES
   ]);
   
+  // Handle recording completed
+  const handleRecordingCompleted = useCallback((blob: Blob, url: string, duration: number) => {
+    console.log("Audio recording completed. Blob size:", blob.size, "URL:", url.substring(0, 30) + "...", "Duration:", duration);
+    
+    // Update local state first
+    setAudioBlob(blob);
+    setAudioUrl(url);
+    setAudioDuration(duration);
+    
+    // Update form content immediately
+    updateAudioContent(blob, duration);
+    
+    // Show confirmation
+    toast({
+      title: "Audio Recorded",
+      description: "Your audio has been recorded successfully."
+    });
+  }, [updateAudioContent]);
+  
   // Start recording wrapper with enhanced initialization
   const startRecording = useCallback(async () => {
     try {
@@ -158,6 +201,14 @@ export function useAudioRecordingHandler() {
     }
   }, [ensureAudioStreamInitialized, startRecordingInner]);
   
+  // Enhanced stop recording with content update
+  const stopRecording = useCallback(() => {
+    console.log("Stopping audio recording with content update");
+    
+    // Use the enhanced stopRecording with callback
+    stopRecordingInner(handleRecordingCompleted);
+  }, [stopRecordingInner, handleRecordingCompleted]);
+  
   // Clear audio
   const clearAudio = useCallback(() => {
     clearAudioInner(audioUrl, setAudioBlob, setAudioUrl);
@@ -174,10 +225,7 @@ export function useAudioRecordingHandler() {
     }
     
     // Convert blob back to base64 and update audio content
-    const reader = new FileReader();
-    reader.readAsDataURL(blob);
-    reader.onloadend = () => {
-      const base64data = reader.result?.toString().split(',')[1] || '';
+    blobToBase64(blob).then(base64data => {
       const formattedContent = JSON.stringify({
         audioData: base64data,
         timestamp: new Date().toISOString(),
@@ -185,7 +233,9 @@ export function useAudioRecordingHandler() {
       });
       console.log("Restoring audio content in form state");
       setAudioContent(formattedContent);
-    };
+    }).catch(err => {
+      console.error("Error converting blob to base64:", err);
+    });
   }, [restoreAudioInner, setAudioContent]);
   
   // Transcribe audio

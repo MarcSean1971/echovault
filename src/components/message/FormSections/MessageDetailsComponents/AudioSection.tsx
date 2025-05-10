@@ -40,6 +40,17 @@ export function AudioSection({
     }
   }, [isAudioInitializing, initAttempted]);
   
+  // For debugging - log props when they change
+  useEffect(() => {
+    console.log("AudioSection props updated:", { 
+      messageType, 
+      hasAudioUrl: !!audioUrl,
+      hasAudioBlob: !!audioBlob,
+      audioDuration,
+      isRecording: isAudioRecording
+    });
+  }, [messageType, audioUrl, audioBlob, audioDuration, isAudioRecording]);
+  
   // Create a wrapper function that explicitly returns Promise<void>
   const handleStartRecordingWrapper = async (): Promise<void> => {
     try {
