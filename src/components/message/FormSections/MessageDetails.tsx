@@ -1,5 +1,4 @@
-
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { useMessageForm } from "../MessageFormContext";
 import { FileUploader } from "@/components/FileUploader";
@@ -10,14 +9,13 @@ import { LocationSection } from "./LocationSection";
 import { MediaRecorders } from "./MessageDetailsComponents/MediaRecorders";
 import { MessageTypeTabSelector } from "./MessageTypeTabSelector";
 import { MediaStateManager } from "./MessageDetailsComponents/MediaStateManager";
+import { VideoSection } from "./MessageDetailsComponents/VideoSection";
+import { AudioSection } from "./MessageDetailsComponents/AudioSection";
+import { useContentKeys } from "./MessageDetailsComponents/ContentKeyManager";
 
 // Import custom hooks
 import { useMessageVideoHandler } from "@/hooks/useMessageVideoHandler";
 import { useContentUpdater } from "@/hooks/useContentUpdater";
-
-// Import Button from UI components for Record Video button
-import { Button } from "@/components/ui/button";
-import { Video } from "lucide-react";
 
 interface MessageDetailsProps {
   message?: any;  // Optional message prop for editing
@@ -66,41 +64,13 @@ export function MessageDetails({ message }: MessageDetailsProps) {
     }
   };
   
-  // Create a proper wrapper function that explicitly returns Promise<void> with proper void handling
-  const handleStartRecordingWrapper = async (): Promise<void> => {
-    try {
-      // Call the function but explicitly ignore its return value
-      await forceInitializeCamera();
-      // No return statement to ensure void return type
-    } catch (error) {
-      console.error("Error in handleStartRecordingWrapper:", error);
-      // No re-throw to maintain Promise<void>
-    }
-  };
-  
-  // Create a wrapper for startVideoRecording that explicitly returns Promise<void>
-  const startVideoRecordingWrapper = async (): Promise<void> => {
-    try {
-      // Call the function but explicitly ignore its return value
-      await startVideoRecording();
-      // No return statement to ensure void return type
-    } catch (error) {
-      console.error("Error in startVideoRecordingWrapper:", error);
-      // No re-throw to maintain Promise<void>
-    }
-  };
-
-  // Generate stable content keys to avoid unnecessary remounts
-  const videoContentKey = useMemo(() => {
-    const hasContent = Boolean(videoUrl || videoBlob);
-    return `video-content-${hasContent ? 'has-video' : 'no-video'}`;
-  }, [videoUrl, videoBlob]);
-  
-  // Add back the audioContentKey that was missing
-  const audioContentKey = useMemo(() => {
-    const hasContent = Boolean(audioUrl || audioBlob);
-    return `audio-content-${hasContent ? 'has-audio' : 'no-audio'}`;
-  }, [audioUrl, audioBlob]);
+  // Content key generation using our extracted hook
+  const { videoContentKey, audioContentKey } = useContentKeys({
+    videoUrl,
+    videoBlob, 
+    audioUrl,
+    audioBlob
+  });
   
   // Handle audio transcription
   const handleTranscribeAudio = async () => {
@@ -127,6 +97,18 @@ export function MessageDetails({ message }: MessageDetailsProps) {
     setTimeout(() => {
       setShowVideoRecorder(true);
     }, 50);
+  };
+
+  // Create a wrapper function that explicitly returns Promise<void>
+  const handleStartRecordingWrapper = async (): Promise<void> => {
+    try {
+      // Call the function but explicitly ignore its return value
+      await forceInitializeCamera();
+      // No return statement to ensure void return type
+    } catch (error) {
+      console.error("Error in handleStartRecordingWrapper:", error);
+      // No re-throw to maintain Promise<void>
+    }
   };
 
   return (
@@ -161,9 +143,9 @@ export function MessageDetails({ message }: MessageDetailsProps) {
           isVideoInitializing={isVideoInitializing}
           hasVideoPermission={hasVideoPermission}
           videoPreviewStream={videoPreviewStream}
-          onStartVideoRecording={startVideoRecordingWrapper} // Fixed: Using correct Promise<void> wrapper
+          onStartVideoRecording={handleStartRecordingWrapper} 
           onStopVideoRecording={stopVideoRecording}
-          onClearVideo={handleClearVideoAndRecord} // Use new handler to clear and show record dialog
+          onClearVideo={handleClearVideoAndRecord}
           
           // Audio props
           audioUrl={audioUrl}
@@ -186,6 +168,43 @@ export function MessageDetails({ message }: MessageDetailsProps) {
           getAudioContentKey={() => audioContentKey}
         />
       </div>
+
+      {/* Video Section (conditionally rendered) */}
+      <VideoSection 
+        messageType={messageType}
+        videoUrl={videoUrl}
+        videoBlob={videoBlob}
+        isVideoRecording={isVideoRecording}
+        isVideoInitializing={isVideoInitializing}
+        hasVideoPermission={hasVideoPermission}
+        videoPreviewStream={videoPreviewStream}
+        startVideoRecording={startVideoRecording}
+        stopVideoRecording={stopVideoRecording}
+        clearVideo={clearVideo}
+        handleVideoContentUpdate={handleVideoContentUpdate}
+        showVideoRecorder={showVideoRecorder}
+        setShowVideoRecorder={setShowVideoRecorder}
+        handleClearVideoAndRecord={handleClearVideoAndRecord}
+      />
+
+      {/* Audio Section (conditionally rendered) */}
+      <AudioSection 
+        messageType={messageType}
+        audioUrl={audioUrl}
+        audioBlob={audioBlob}
+        audioDuration={audioDuration}
+        isAudioRecording={isAudioRecording}
+        isAudioInitializing={isAudioInitializing}
+        hasAudioPermission={hasAudioPermission}
+        audioTranscription={audioTranscription}
+        startAudioRecording={startAudioRecording}
+        stopAudioRecording={stopAudioRecording}
+        clearAudio={() => {
+          clearAudio();
+          setAudioTranscription(null);
+        }}
+        onTranscribeAudio={handleTranscribeAudio}
+      />
 
       {/* Location section */}
       <LocationSection />
@@ -210,7 +229,7 @@ export function MessageDetails({ message }: MessageDetailsProps) {
         isInitializing={isVideoInitializing}
         hasPermission={hasVideoPermission}
         previewStream={videoPreviewStream}
-        startRecording={handleStartRecordingWrapper} // Fixed: Using Promise<void> wrapper function
+        startRecording={handleStartRecordingWrapper}
         stopRecording={stopVideoRecording}
         clearVideo={clearVideo}
       />
