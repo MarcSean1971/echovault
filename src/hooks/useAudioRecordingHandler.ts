@@ -2,8 +2,8 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useMessageForm } from "@/components/message/MessageFormContext";
 import { safeCreateObjectURL, safeRevokeObjectURL } from "@/utils/mediaUtils";
-import { useMediaStream } from "./video/useMediaStream"; // Fixed import path
-import { useAudioRecorder } from "./hooks/audio/useAudioRecorder";
+import { useMediaStream } from "./video/useMediaStream"; // Keep correct import path
+import { useAudioRecorder } from "./audio/useAudioRecorder"; // Fix import path
 import { useAudioProcessor } from "./audio/useAudioProcessor";
 
 /**
@@ -71,7 +71,7 @@ export function useAudioRecordingHandler() {
       // Track that we attempted initialization
       setIsInitializationAttempted(true);
       
-      // Start the actual recording
+      // Start the actual recording - don't pass any arguments here
       await startAudioRecordingInternal();
       return true;
     } catch (error) {
@@ -92,7 +92,7 @@ export function useAudioRecordingHandler() {
       
       // Request a new audio-only stream
       const stream = await initializeStream();
-      return stream !== null; // Fix void conditional check
+      return stream !== null;
     } catch (error) {
       console.error("Force initialize microphone failed:", error);
       return false;
