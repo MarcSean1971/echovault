@@ -7,18 +7,20 @@ interface VideoPlayerControlsProps {
   togglePlayback: () => void;
   onClearVideo: () => void;
   inDialog?: boolean;
+  isVisible?: boolean;
 }
 
 export function VideoPlayerControls({
   isPlaying,
   togglePlayback,
   onClearVideo,
-  inDialog = false
+  inDialog = false,
+  isVisible = true
 }: VideoPlayerControlsProps) {
   return (
     <div 
       className={`absolute bottom-0 left-0 right-0 p-3 flex justify-between items-center bg-gradient-to-t from-black/70 to-transparent 
-        opacity-0 group-hover:opacity-100 transition-opacity duration-300`}
+        opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
       onClick={(e) => e.stopPropagation()}
     >
       <Button 
