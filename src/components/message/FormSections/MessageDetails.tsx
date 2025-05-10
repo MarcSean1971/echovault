@@ -1,5 +1,4 @@
-
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Label } from "@/components/ui/label";
 import { useMessageForm } from "../MessageFormContext";
 import { FileUploader } from "@/components/FileUploader";
@@ -9,10 +8,9 @@ import { TitleInput } from "./TitleInput";
 import { LocationSection } from "./LocationSection";
 import { MediaRecorders } from "./MessageDetailsComponents/MediaRecorders";
 import { MessageTypeTabSelector } from "./MessageTypeTabSelector";
+import { MediaStateManager } from "./MessageDetailsComponents/MediaStateManager";
 
 // Import custom hooks
-import { useMessageInitializer } from "@/hooks/useMessageInitializer";
-import { useContentUpdater } from "@/hooks/useContentUpdater";
 import { useMessageVideoHandler } from "@/hooks/useMessageVideoHandler";
 
 interface MessageDetailsProps {
@@ -20,7 +18,7 @@ interface MessageDetailsProps {
 }
 
 export function MessageDetails({ message }: MessageDetailsProps) {
-  const { files, setFiles, content, messageType, textContent, videoContent, audioContent } = useMessageForm();
+  const { files, setFiles } = useMessageForm();
   const [showInlineRecording, setShowInlineRecording] = useState(false);
   const [audioTranscription, setAudioTranscription] = useState<string | null>(null);
   
@@ -28,12 +26,14 @@ export function MessageDetails({ message }: MessageDetailsProps) {
   const {
     // Text handling
     onTextTypeClick,
+    messageType,
     
     // Video handling
     onVideoTypeClick,
     videoUrl, videoBlob, showVideoRecorder, setShowVideoRecorder,
     isVideoRecording, isVideoInitializing, hasVideoPermission, videoPreviewStream,
     startVideoRecording, stopVideoRecording, clearVideo, forceInitializeCamera, 
+    handleVideoContentUpdate,
     
     // Audio handling
     onAudioTypeClick,
@@ -41,55 +41,8 @@ export function MessageDetails({ message }: MessageDetailsProps) {
     isAudioRecording, isAudioInitializing, hasAudioPermission,
     startAudioRecording, stopAudioRecording, clearAudio, forceInitializeMicrophone,
     transcribeAudio, isAudioInitializationAttempted,
-    
-    handleVideoContentUpdate,
     handleAudioContentUpdate
   } = useMessageVideoHandler(message);
-
-  // Initialize the camera or microphone when switching to media mode
-  useEffect(() => {
-    console.log("MessageDetails: messageType changed to", messageType);
-    
-    if (messageType === "video" && !videoUrl && !videoPreviewStream && !showInlineRecording) {
-      console.log("Video mode detected. Setting showInlineRecording to true");
-      setShowInlineRecording(true);
-    }
-    
-    if (messageType === "audio" && !audioUrl && !showInlineRecording) {
-      console.log("Audio mode detected. Setting showInlineRecording to true");
-      setShowInlineRecording(true);
-    }
-  }, [messageType, videoUrl, videoPreviewStream, audioUrl, showInlineRecording]);
-
-  // Initialize camera preview when showing inline recording UI
-  useEffect(() => {
-    // For video mode
-    if (showInlineRecording && messageType === "video" && !videoUrl && !videoPreviewStream) {
-      console.log("Initializing camera preview for inline recording");
-      // Use forceInitializeCamera to ensure we get a fresh stream
-      forceInitializeCamera().catch(error => {
-        console.error("Failed to initialize camera stream:", error);
-      });
-    }
-    
-    // For audio mode - only initialize if not already attempted
-    if (showInlineRecording && messageType === "audio" && !audioUrl && !isAudioInitializationAttempted) {
-      console.log("Initializing microphone for inline recording");
-      // Use forceInitializeMicrophone to ensure we get a fresh stream
-      forceInitializeMicrophone().catch(error => {
-        console.error("Failed to initialize microphone stream:", error);
-      });
-    }
-  }, [
-    showInlineRecording, 
-    messageType, 
-    videoUrl, 
-    videoPreviewStream, 
-    audioUrl, 
-    forceInitializeCamera, 
-    forceInitializeMicrophone,
-    isAudioInitializationAttempted
-  ]);
 
   // Handle tab change
   const handleTabChange = (value: string) => {
@@ -104,7 +57,6 @@ export function MessageDetails({ message }: MessageDetailsProps) {
   };
 
   // Generate stable content keys to avoid unnecessary remounts
-  // Generate keys for content components based on content not just type
   const videoContentKey = useMemo(() => {
     const hasContent = Boolean(videoUrl || videoBlob);
     return `video-content-${hasContent ? 'has-video' : 'no-video'}`;
@@ -134,6 +86,19 @@ export function MessageDetails({ message }: MessageDetailsProps) {
 
   return (
     <div className="space-y-6">
+      {/* Media state manager - handles initialization of camera/microphone */}
+      <MediaStateManager 
+        messageType={messageType}
+        videoUrl={videoUrl}
+        videoPreviewStream={videoPreviewStream}
+        audioUrl={audioUrl}
+        showInlineRecording={showInlineRecording}
+        setShowInlineRecording={setShowInlineRecording}
+        forceInitializeCamera={forceInitializeCamera}
+        forceInitializeMicrophone={forceInitializeMicrophone}
+        isAudioInitializationAttempted={isAudioInitializationAttempted}
+      />
+
       {/* Title field */}
       <TitleInput />
 
