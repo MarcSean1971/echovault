@@ -1,4 +1,3 @@
-
 export type MessageType = "text" | "audio" | "video";
 
 export type TriggerType = "no_check_in" | "panic_button" | "manual_trigger" | "scheduled" | "panic_trigger";
@@ -132,4 +131,6 @@ export interface CheckIn {
   longitude?: number;
   location_name?: string;
   device_info?: string;
+  timestamp?: string; // Adding this property to fix the error
+  method?: string;    // Adding this property to fix the error
 }

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -6,30 +5,15 @@ import { toast } from "@/components/ui/use-toast";
 import { getConditionByMessageId, getMessageDeadline } from "@/services/messages/conditionService";
 import { Message, MessageAttachment } from "@/types/message";
 
-type DatabaseMessage = {
-  id: string;
-  title: string;
-  content: string;
-  message_type: string;
-  user_id: string;
-  created_at: string;
-  updated_at: string;
-  share_location?: boolean;
-  location_name?: string;
-  location_latitude?: number;
-  location_longitude?: number;
-  attachments?: any;
-};
-
 /**
  * Convert database message to our app Message type
  */
-function convertDatabaseMessageToMessage(dbMessage: DatabaseMessage): Message {
+function convertDatabaseMessageToMessage(dbMessage: any): Message {
   // Process attachments to ensure they match MessageAttachment type
   let processedAttachments: MessageAttachment[] = [];
   
   if (dbMessage.attachments && Array.isArray(dbMessage.attachments)) {
-    processedAttachments = dbMessage.attachments.map(attachment => ({
+    processedAttachments = dbMessage.attachments.map((attachment: any) => ({
       id: attachment.id || "",
       message_id: attachment.message_id || dbMessage.id,
       file_name: attachment.file_name || attachment.name || "",
@@ -45,8 +29,8 @@ function convertDatabaseMessageToMessage(dbMessage: DatabaseMessage): Message {
     }));
   }
   
-  // Convert to Message type
-  const message: Message = {
+  // Convert to Message type with explicit type assertion
+  const message = {
     id: dbMessage.id,
     title: dbMessage.title,
     content: dbMessage.content || "",
@@ -59,7 +43,7 @@ function convertDatabaseMessageToMessage(dbMessage: DatabaseMessage): Message {
     location_latitude: dbMessage.location_latitude,
     location_longitude: dbMessage.location_longitude,
     attachments: processedAttachments
-  };
+  } as Message;
   
   return message;
 }
@@ -95,7 +79,7 @@ export function useMessageDetail(messageId: string | undefined, onError: () => v
       if (error) throw error;
       
       // Convert database result to our Message type
-      const convertedMessage = convertDatabaseMessageToMessage(data as DatabaseMessage);
+      const convertedMessage = convertDatabaseMessageToMessage(data);
       setMessage(convertedMessage);
       
       // Check if message has a condition and if it's armed

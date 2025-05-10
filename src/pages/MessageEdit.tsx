@@ -50,7 +50,7 @@ function convertDatabaseMessageToMessage(dbMessage: DatabaseMessage): Message {
     }));
   }
   
-  // Convert to Message type
+  // Convert to Message type using a fresh object with explicit typing
   const message: Message = {
     id: dbMessage.id,
     title: dbMessage.title,
