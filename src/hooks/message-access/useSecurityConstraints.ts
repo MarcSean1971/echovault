@@ -26,12 +26,27 @@ export function useSecurityConstraints() {
       }));
     }
     
-    // Convert to Message type with type assertion
-    const convertedMessage = {
-      ...data,
-      attachments: processedAttachments,
-      message_type: data.message_type as "text" | "audio" | "video"
-    } as Message;
+    // Convert to Message type with explicit type casting
+    const convertedMessage: Message = {
+      id: data.id,
+      title: data.title,
+      content: data.content || "",
+      message_type: data.message_type as "text" | "audio" | "video",
+      user_id: data.user_id,
+      created_at: data.created_at,
+      updated_at: data.updated_at,
+      expires_at: data.expires_at,
+      expires_in_hours: data.expires_in_hours,
+      is_armed: data.is_armed,
+      sender_name: data.sender_name,
+      share_location: data.share_location,
+      location_name: data.location_name,
+      latitude: data.latitude,
+      longitude: data.longitude,
+      location_latitude: data.location_latitude,
+      location_longitude: data.location_longitude,
+      attachments: processedAttachments
+    };
     
     return convertedMessage;
   }, []);

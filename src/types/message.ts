@@ -131,6 +131,6 @@ export interface CheckIn {
   longitude?: number;
   location_name?: string;
   device_info?: string;
-  timestamp?: string; // Adding this property to fix the error
-  method?: string;    // Adding this property to fix the error
+  timestamp?: string;
+  method?: string;
 }

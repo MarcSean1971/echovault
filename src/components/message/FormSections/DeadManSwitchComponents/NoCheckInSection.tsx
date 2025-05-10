@@ -50,10 +50,10 @@ export function NoCheckInSection({
       
       <NoCheckInDeliveryOptions
         deliveryOption={deliveryOption}
-        setDeliveryOption={(option) => setDeliveryOption(option as DeliveryOption)}
+        setDeliveryOption={setDeliveryOption}
         recurringPattern={recurringPattern}
         setRecurringPattern={setRecurringPattern}
-        triggerDate={triggerDate || null}
+        triggerDate={triggerDate ? triggerDate : null}
         setTriggerDate={(date) => setTriggerDate(date || undefined)}
       />
     </div>

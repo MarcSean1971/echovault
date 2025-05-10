@@ -3,20 +3,27 @@ import React from "react";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useMessageForm } from "@/components/message/MessageFormContext";
-import { DeliveryOption } from "@/types/message";
+import { DeliveryOption, RecurringPattern } from "@/types/message";
 import { DateTimePicker } from "@/components/ui/date-time-picker";
 import { RecurringPatternSelector } from "./RecurringPatternSelector";
 
-export function NoCheckInDeliveryOptions() {
-  const { 
-    deliveryOption, 
-    setDeliveryOption, 
-    triggerDate, 
-    setTriggerDate,
-    recurringPattern,
-    setRecurringPattern
-  } = useMessageForm();
+interface NoCheckInDeliveryOptionsProps {
+  deliveryOption: DeliveryOption;
+  setDeliveryOption: (option: DeliveryOption) => void;
+  recurringPattern: RecurringPattern | null;
+  setRecurringPattern: (pattern: RecurringPattern | null) => void;
+  triggerDate: Date | null;
+  setTriggerDate: (date: Date | null) => void;
+}
 
+export function NoCheckInDeliveryOptions({
+  deliveryOption,
+  setDeliveryOption,
+  recurringPattern,
+  setRecurringPattern,
+  triggerDate,
+  setTriggerDate
+}: NoCheckInDeliveryOptionsProps) {
   const handleDeliveryOptionChange = (value: string) => {
     setDeliveryOption(value as DeliveryOption);
   };
@@ -58,8 +65,8 @@ export function NoCheckInDeliveryOptions() {
       {deliveryOption === "recurring" && (
         <div className="space-y-2 pl-6 mt-4">
           <RecurringPatternSelector 
-            pattern={recurringPattern} 
-            setPattern={setRecurringPattern}
+            recurringPattern={recurringPattern} 
+            setRecurringPattern={setRecurringPattern}
           />
         </div>
       )}

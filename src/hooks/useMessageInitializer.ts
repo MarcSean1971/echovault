@@ -7,6 +7,11 @@ import { base64ToBlob } from "@/utils/mediaUtils";
 export function useMessageInitializer(message?: Message) {
   const { setContent, setTitle, setMessageType } = useMessageForm();
   const [hasInitialized, setHasInitialized] = useState(false);
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [additionalText, setAdditionalText] = useState<string | null>(null);
 
   // Initialize form fields from the message
   useEffect(() => {
@@ -20,11 +25,18 @@ export function useMessageInitializer(message?: Message) {
     setContent(message.content || "");
     
     // Set message type
-    setMessageType(message.message_type as "text" | "audio" | "video");
+    setMessageType(message.message_type);
     
     // Mark as initialized
     setHasInitialized(true);
   }, [message, setContent, setTitle, setMessageType]);
 
-  return { hasInitialized };
+  return { 
+    hasInitialized,
+    videoUrl,
+    videoBlob,
+    audioUrl,
+    audioBlob,
+    additionalText
+  };
 }

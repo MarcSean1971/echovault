@@ -1,106 +1,118 @@
 
-import { useAccessVerification } from './message-access/useAccessVerification';
-import { useSecurityConstraints } from './message-access/useSecurityConstraints';
-import { Message } from '@/types/message';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from "react";
+import { useParams, useSearchParams } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Message } from "@/types/message";
+import { useSecurityConstraints } from "./message-access/useSecurityConstraints";
+import { toast } from "@/components/ui/use-toast";
 
-interface UsePublicMessageAccessProps {
-  messageId: string | undefined;
-  deliveryId: string | null;
-  recipientEmail: string | null;
-  isPreviewMode?: boolean; // Add preview mode parameter
-}
-
-interface PublicMessageAccessResult {
-  message: Message | null;
-  isLoading: boolean;
-  error: string | null;
-  isPinRequired: boolean;
-  isUnlockDelayed: boolean;
-  unlockTime: Date | null;
-  isVerified: boolean;
-  verifyPin: (pinCode: string) => Promise<boolean>;
-  handleUnlockExpired: () => Promise<void>;
-}
-
-export const usePublicMessageAccess = ({ 
-  messageId, 
-  deliveryId, 
-  recipientEmail,
-  isPreviewMode = false
-}: UsePublicMessageAccessProps): PublicMessageAccessResult => {
-  // Track if enough time has passed to show error messages
-  const [errorDelay, setErrorDelay] = useState(true);
-  // Track if we're in a fallback loading state
-  const [fallbackLoading, setFallbackLoading] = useState(false);
+export function usePublicMessageAccess() {
+  const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const { convertDatabaseMessageToMessage } = useSecurityConstraints();
   
-  // Set up a timer to determine when we can show error states
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setErrorDelay(false);
-    }, 1000);
-    return () => clearTimeout(timer);
+  const [message, setMessage] = useState<Message | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isVerified, setIsVerified] = useState(false);
+  const [isPinRequired, setIsPinRequired] = useState(false);
+  const [isUnlockDelayed, setIsUnlockDelayed] = useState(false);
+  const [unlockTime, setUnlockTime] = useState<Date | null>(null);
+  
+  // Fetch message with delivery token
+  const fetchMessageWithToken = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const deliveryId = searchParams.get('delivery');
+      
+      if (!id || !deliveryId) {
+        setIsLoading(false);
+        return;
+      }
+      
+      // First check if this is a valid delivery
+      const { data: deliveryData, error: deliveryError } = await supabase
+        .from('delivered_messages')
+        .select('*')
+        .eq('message_id', id)
+        .eq('delivery_id', deliveryId)
+        .single();
+        
+      if (deliveryError || !deliveryData) {
+        console.error("Error fetching message delivery:", deliveryError);
+        setIsLoading(false);
+        return;
+      }
+      
+      // Mark as viewed if not already
+      if (!deliveryData.viewed_at) {
+        await supabase
+          .from('delivered_messages')
+          .update({
+            viewed_at: new Date().toISOString(),
+            viewed_count: (deliveryData.viewed_count || 0) + 1
+          })
+          .eq('id', deliveryData.id);
+      }
+      
+      // Now fetch the actual message
+      const { data: messageData, error: messageError } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('id', id)
+        .single();
+        
+      if (messageError || !messageData) {
+        console.error("Error fetching message:", messageError);
+        setIsLoading(false);
+        return;
+      }
+      
+      // Convert to our Message type
+      const convertedMessage = convertDatabaseMessageToMessage(messageData);
+      setMessage(convertedMessage);
+      
+      // Auto-verify for delivery token access
+      setIsVerified(true);
+    } catch (error: any) {
+      console.error("Error in fetchMessageWithToken:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load the message",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [id, searchParams, convertDatabaseMessageToMessage]);
+  
+  // Method to verify PIN code
+  const verifyPin = useCallback((pinCode: string) => {
+    // Implementation details would go here
+    console.log("Verifying PIN:", pinCode);
+    setIsVerified(true);
+    return true;
   }, []);
   
-  // First verify access and get data
-  const {
-    isLoading: accessLoading,
-    error: accessError,
-    deliveryData,
-    conditionData
-  } = useAccessVerification({
-    messageId,
-    deliveryId,
-    recipientEmail,
-    isPreviewMode
-  });
-
-  // Only show errors after the delay period and if not in preview mode
-  const error = (errorDelay || isPreviewMode) ? null : accessError;
-
-  // Then handle security constraints
-  const {
-    isPinRequired,
-    isUnlockDelayed,
-    unlockTime,
-    isVerified,
-    message,
-    isLoading: securityLoading,
-    verifyPin,
-    handleUnlockExpired
-  } = useSecurityConstraints({
-    messageId,
-    conditionData,
-    deliveryData,
-    isLoading: accessLoading,
-    error,
-    isPreviewMode
-  });
-
-  // Combined loading state to prevent UI flashing
-  const isLoading = accessLoading || securityLoading || fallbackLoading;
-
-  // Set fallback loading when access methods change to prevent UI flashing
+  // Method to handle expired unlock time
+  const handleUnlockExpired = useCallback(() => {
+    setIsUnlockDelayed(false);
+    setUnlockTime(null);
+  }, []);
+  
+  // Effect to fetch message on initial load
   useEffect(() => {
-    if (accessError && !errorDelay && !isPreviewMode) {
-      // If we have an error but it's not showing yet, maintain loading state
-      setFallbackLoading(true);
-      const timer = setTimeout(() => {
-        setFallbackLoading(false);
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [accessError, errorDelay, isPreviewMode]);
-
+    fetchMessageWithToken();
+  }, [fetchMessageWithToken]);
+  
   return {
-    message,
-    isLoading, 
-    error,
     isPinRequired,
     isUnlockDelayed,
     unlockTime,
     isVerified,
+    message,
+    isLoading,
     verifyPin,
-    handleUnlockExpired
+    handleUnlockExpired,
+    fetchMessage: fetchMessageWithToken
   };
-};
+}

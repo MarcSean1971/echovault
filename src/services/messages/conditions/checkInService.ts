@@ -1,3 +1,4 @@
+
 import { getAuthClient } from "@/lib/supabaseClient";
 import { CheckInResult, CheckInDeadlineResult } from "./types";
 import { updateConditionsLastChecked } from "./dbOperations";
@@ -86,19 +87,38 @@ export async function getNextCheckInDeadline(userId: string): Promise<CheckInDea
       // Ensure recipients is properly cast to Recipient[]
       let recipientsArray: Recipient[] = [];
       if (Array.isArray(item.recipients)) {
-        recipientsArray = item.recipients as Recipient[];
+        // Cast any[] to Recipient[] with proper handling
+        recipientsArray = (item.recipients as any[]).map(recipient => ({
+          id: recipient.id || '',
+          name: recipient.name || '',
+          email: recipient.email || '',
+          phone: recipient.phone,
+          relationship: recipient.relationship,
+          notes: recipient.notes,
+          deliveryId: recipient.deliveryId
+        }));
       } else if (item.recipients && typeof item.recipients === 'object') {
-        recipientsArray = [item.recipients as unknown as Recipient];
+        const recipient = item.recipients as any;
+        recipientsArray = [{
+          id: recipient.id || '',
+          name: recipient.name || '',
+          email: recipient.email || '',
+          phone: recipient.phone,
+          relationship: recipient.relationship,
+          notes: recipient.notes,
+          deliveryId: recipient.deliveryId
+        }];
       }
       
       return {
         id: item.id,
         message_id: item.message_id,
-        condition_type: item.condition_type as TriggerType, // Type casting
+        trigger_type: item.condition_type as TriggerType,
+        condition_type: item.condition_type,
         hours_threshold: item.hours_threshold,
         created_at: item.created_at,
         updated_at: item.updated_at,
-        last_checked: item.last_checked,
+        last_check_in: item.last_checked,
         recipients: recipientsArray,
         active: item.active,
         triggered: false,
