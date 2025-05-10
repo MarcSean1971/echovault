@@ -71,7 +71,7 @@ export function useAudioRecordingHandler() {
       // Track that we attempted initialization
       setIsInitializationAttempted(true);
       
-      // Start the actual recording - fixing the error by not passing any arguments
+      // Start the actual recording - FIX: Don't pass any arguments
       await startAudioRecordingInternal();
       return true;
     } catch (error) {
