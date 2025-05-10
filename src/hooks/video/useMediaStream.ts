@@ -13,11 +13,18 @@ export function useMediaStream() {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const isUnmountedRef = useRef(false);
+  const initTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     return () => {
       // Mark component as unmounted to prevent state updates
       isUnmountedRef.current = true;
+      
+      // Clear any pending initialization timeouts
+      if (initTimeoutRef.current) {
+        clearTimeout(initTimeoutRef.current);
+        initTimeoutRef.current = null;
+      }
       
       // Ensure we stop all tracks
       stopMediaStream();
@@ -87,6 +94,17 @@ export function useMediaStream() {
   // Initialize the media stream for preview before recording
   const initializeStream = async (forceNew = false, options: MediaOptions = { video: true, audio: true }) => {
     try {
+      // Set up a timeout to reset initialization state if it takes too long
+      const timeout = setTimeout(() => {
+        if (isInitializing && !isUnmountedRef.current) {
+          console.warn("Media initialization timeout reached, resetting state");
+          setIsInitializing(false);
+        }
+      }, 10000); // 10 second timeout
+      
+      // Store timeout ref for cleanup
+      initTimeoutRef.current = timeout;
+      
       // Check browser compatibility first
       if (!checkBrowserCompatibility()) {
         throw new Error("Your browser doesn't support media recording. Please try a modern browser like Chrome, Firefox, or Edge.");
@@ -95,6 +113,8 @@ export function useMediaStream() {
       // If we already have an active stream and don't need to force new, return it
       if (!forceNew && streamRef.current && isStreamActive()) {
         console.log("Reusing existing active stream");
+        clearTimeout(timeout);
+        initTimeoutRef.current = null;
         return streamRef.current;
       }
       
@@ -127,19 +147,32 @@ export function useMediaStream() {
         streamRef.current = stream;
         setPreviewStream(stream);
         setHasPermission(true);
+        
+        // Clear the timeout since initialization succeeded
+        clearTimeout(timeout);
+        initTimeoutRef.current = null;
       } else {
         // If component unmounted while we were initializing, clean up the stream
         console.log("Component unmounted during stream initialization. Cleaning up stream...");
         stream.getTracks().forEach(track => track.stop());
+        clearTimeout(timeout);
+        initTimeoutRef.current = null;
       }
       
       return stream;
     } catch (error: any) {
       console.error(`Error initializing ${options.video ? 'camera' : 'microphone'}:`, error);
       
-      // Only update state if component is still mounted
+      // IMPORTANT: Always reset initializing state on error
       if (!isUnmountedRef.current) {
+        setIsInitializing(false);
         setHasPermission(false);
+      }
+      
+      // Clear the timeout since we're handling the error now
+      if (initTimeoutRef.current) {
+        clearTimeout(initTimeoutRef.current);
+        initTimeoutRef.current = null;
       }
       
       // More specific error messages based on common issues
@@ -170,20 +203,8 @@ export function useMediaStream() {
       }
       
       throw new Error(errorMessage);
-    } finally {
-      // Only update state if component is still mounted
-      if (!isUnmountedRef.current) {
-        setIsInitializing(false);
-      }
     }
   };
-
-  // Clean up video stream when component unmounts
-  useEffect(() => {
-    return () => {
-      stopMediaStream();
-    };
-  }, []);
 
   return {
     previewStream,

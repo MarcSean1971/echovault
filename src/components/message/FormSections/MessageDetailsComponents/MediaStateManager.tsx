@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 
 interface MediaStateManagerProps {
   messageType: string;
@@ -28,6 +28,22 @@ export function MediaStateManager({
 }: MediaStateManagerProps) {
   const [hasAttemptedVideoInit, setHasAttemptedVideoInit] = useState(false);
   const [isInitializing, setIsInitializing] = useState(false);
+  const initTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const mountedRef = useRef(true);
+  
+  // Set up the mounted ref for cleanup
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      
+      // Clear any timeouts on unmount
+      if (initTimeoutRef.current) {
+        clearTimeout(initTimeoutRef.current);
+        initTimeoutRef.current = null;
+      }
+    };
+  }, []);
   
   // Debug log when props change
   useEffect(() => {
@@ -49,14 +65,23 @@ export function MediaStateManager({
     setHasAttemptedVideoInit(false);
     
     // Don't automatically show recording UI if we already have content
+    // This is critical: we must respect initializedFromMessage and existing video/audio content
     if (messageType === "video" && !videoUrl && !videoPreviewStream && !showInlineRecording && !initializedFromMessage) {
       console.log("Video mode detected without content. Setting showInlineRecording to true");
       setShowInlineRecording(true);
+    } else if (messageType === "video" && (videoUrl || initializedFromMessage)) {
+      console.log("Video mode with existing content detected. Not showing inline recording.");
+      // Make sure we don't show recording UI for existing video
+      setShowInlineRecording(false);
     }
     
     if (messageType === "audio" && !audioUrl && !showInlineRecording && !initializedFromMessage) {
       console.log("Audio mode detected without content. Setting showInlineRecording to true");
       setShowInlineRecording(true);
+    } else if (messageType === "audio" && (audioUrl || initializedFromMessage)) {
+      console.log("Audio mode with existing content detected. Not showing inline recording.");
+      // Make sure we don't show recording UI for existing audio
+      setShowInlineRecording(false);
     }
   }, [
     messageType, 
@@ -68,11 +93,17 @@ export function MediaStateManager({
     initializedFromMessage
   ]);
 
-  // Initialize camera preview when showing inline recording UI
+  // Initialize camera preview when showing inline recording UI with better error handling
   useEffect(() => {
     const initializeMedia = async () => {
       // Don't initialize if we're already initializing or if we already attempted
       if (isInitializing || hasAttemptedVideoInit) {
+        return;
+      }
+      
+      // CRITICAL: Don't initialize if we have existing media content
+      if ((messageType === "video" && videoUrl) || (messageType === "audio" && audioUrl) || initializedFromMessage) {
+        console.log("Skipping media initialization because content already exists or was initialized from message");
         return;
       }
       
@@ -81,15 +112,39 @@ export function MediaStateManager({
         console.log("Initializing camera preview for inline recording");
         setIsInitializing(true);
         
+        // Set a timeout to reset the initialization state if it takes too long
+        const timeout = setTimeout(() => {
+          if (mountedRef.current) {
+            console.log("Camera initialization timeout reached, resetting state");
+            setIsInitializing(false);
+            setHasAttemptedVideoInit(true);
+          }
+        }, 15000); // 15 seconds timeout
+        
+        initTimeoutRef.current = timeout;
+        
         try {
           // Use forceInitializeCamera to ensure we get a fresh stream
           await forceInitializeCamera();
           console.log("Camera initialization successful");
         } catch (error) {
           console.error("Failed to initialize camera stream:", error);
+          // Important: Reset state even on error
+          if (mountedRef.current) {
+            setIsInitializing(false);
+          }
         } finally {
-          setIsInitializing(false);
-          setHasAttemptedVideoInit(true);
+          // Always clean up the timeout
+          if (initTimeoutRef.current) {
+            clearTimeout(initTimeoutRef.current);
+            initTimeoutRef.current = null;
+          }
+          
+          // Always ensure we mark initialization as attempted
+          if (mountedRef.current) {
+            setIsInitializing(false);
+            setHasAttemptedVideoInit(true);
+          }
         }
       }
       
@@ -98,14 +153,37 @@ export function MediaStateManager({
         console.log("Initializing microphone for inline recording");
         setIsInitializing(true);
         
+        // Set a timeout to reset the initialization state if it takes too long
+        const timeout = setTimeout(() => {
+          if (mountedRef.current) {
+            console.log("Microphone initialization timeout reached, resetting state");
+            setIsInitializing(false);
+          }
+        }, 15000); // 15 seconds timeout
+        
+        initTimeoutRef.current = timeout;
+        
         try {
           // Use forceInitializeMicrophone to ensure we get a fresh stream
           await forceInitializeMicrophone();
           console.log("Microphone initialization successful");
         } catch (error) {
           console.error("Failed to initialize microphone stream:", error);
+          // Important: Reset state even on error
+          if (mountedRef.current) {
+            setIsInitializing(false);
+          }
         } finally {
-          setIsInitializing(false);
+          // Always clean up the timeout
+          if (initTimeoutRef.current) {
+            clearTimeout(initTimeoutRef.current);
+            initTimeoutRef.current = null;
+          }
+          
+          // Always ensure initializing state is reset
+          if (mountedRef.current) {
+            setIsInitializing(false);
+          }
         }
       }
     };
@@ -121,7 +199,8 @@ export function MediaStateManager({
     forceInitializeMicrophone,
     isAudioInitializationAttempted,
     hasAttemptedVideoInit,
-    isInitializing
+    isInitializing,
+    initializedFromMessage
   ]);
 
   // This component doesn't render anything, it just manages media state

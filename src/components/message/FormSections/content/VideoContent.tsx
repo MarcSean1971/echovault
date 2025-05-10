@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Label } from "@/components/ui/label";
 import { useMessageForm } from "../../MessageFormContext";
 
@@ -32,27 +32,39 @@ export function VideoContent({
   const { messageType } = useMessageForm();
   const [permissionError, setPermissionError] = useState<string | null>(null);
   const [showVideoPreview, setShowVideoPreview] = useState(!!videoUrl);
+  const mountedRef = useRef(true);
+  
+  // Set up mounted ref for cleanup
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
   
   // Reset showVideoPreview state whenever videoUrl changes or messageType changes
   useEffect(() => {
-    console.log("VideoContent: videoUrl changed:", { 
+    console.log("VideoContent: States updated:", { 
       videoUrl: videoUrl ? "present" : "null", 
       messageType,
-      previewStream: previewStream ? "active" : "null"
+      previewStream: previewStream ? "active" : "null",
+      isInitializing: isInitializing ? "yes" : "no"
     });
     
     // If we have a video URL, we should always show the video preview
     if (videoUrl) {
       console.log("VideoContent: Setting showVideoPreview to true because videoUrl exists");
       setShowVideoPreview(true);
+    } else if (previewStream) {
+      // Show camera preview if we have a stream but no recorded video
+      console.log("VideoContent: Setting showVideoPreview to true because previewStream exists");
+      setShowVideoPreview(true);
     } else {
-      // When videoUrl becomes null, reset showVideoPreview for rendering empty state
-      console.log("VideoContent: No videoUrl, checking if previewStream exists");
-      if (!previewStream) {
-        setShowVideoPreview(false);
-      }
+      // When videoUrl and previewStream are both null, reset showVideoPreview for rendering empty state
+      console.log("VideoContent: No videoUrl or previewStream, showing empty state");
+      setShowVideoPreview(false);
     }
-  }, [videoUrl, messageType, previewStream]);
+  }, [videoUrl, messageType, previewStream, isInitializing]);
   
   // Log for debugging
   useEffect(() => {
@@ -62,9 +74,10 @@ export function VideoContent({
       previewStream: previewStream ? "active" : "null",
       isRecording,
       showVideoPreview,
+      isInitializing,
       messageType
     });
-  }, [inDialog, videoUrl, previewStream, isRecording, showVideoPreview, messageType]);
+  }, [inDialog, videoUrl, previewStream, isRecording, showVideoPreview, messageType, isInitializing]);
   
   // Handle recording with better error handling
   const handleStartRecording = async () => {
@@ -75,12 +88,15 @@ export function VideoContent({
       console.log("Recording started successfully");
     } catch (error: any) {
       console.error("Error starting recording:", error);
-      setPermissionError(error.message || "Unable to access camera or microphone");
+      if (mountedRef.current) {
+        setPermissionError(error.message || "Unable to access camera or microphone");
+      }
     }
   };
   
   // Determine what to render based on current state
   const renderVideoContent = () => {
+    // First priority: show recorded video if available
     if (videoUrl && showVideoPreview) {
       return (
         <VideoPlayer
@@ -90,6 +106,7 @@ export function VideoContent({
       );
     }
     
+    // Second priority: show camera preview if available
     if (!videoUrl && previewStream) {
       return (
         <CameraPreview

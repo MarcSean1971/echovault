@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Camera, CameraOff, Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 interface VideoRecordButtonProps {
   isRecording: boolean;
@@ -17,43 +17,66 @@ export function VideoRecordButton({
   onStopRecording
 }: VideoRecordButtonProps) {
   const [isAttemptingToRecord, setIsAttemptingToRecord] = useState(false);
-  const [initTimeout, setInitTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [localInitializing, setLocalInitializing] = useState(isInitializing);
+  const initTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // Reset attempting state when initialization state changes
+  // Sync our local state with incoming prop
   useEffect(() => {
+    console.log("VideoRecordButton: isInitializing prop changed to", isInitializing);
+    setLocalInitializing(isInitializing);
+    
+    // If it's no longer initializing, also clear the attempting state
     if (!isInitializing && isAttemptingToRecord) {
       setIsAttemptingToRecord(false);
     }
   }, [isInitializing, isAttemptingToRecord]);
   
-  // Handle initialization timeout
+  // Clean up timeouts when unmounting
   useEffect(() => {
-    if (isInitializing) {
-      // Set a timeout to reset the initialization state if it takes too long
+    return () => {
+      if (initTimeoutRef.current) {
+        clearTimeout(initTimeoutRef.current);
+      }
+    };
+  }, []);
+  
+  // Handle initialization timeout with a more robust approach
+  useEffect(() => {
+    // Clear any existing timeout when states change
+    if (initTimeoutRef.current) {
+      clearTimeout(initTimeoutRef.current);
+      initTimeoutRef.current = null;
+    }
+    
+    // If we're initializing or attempting to record, set a new timeout
+    if (localInitializing || isAttemptingToRecord) {
       const timeout = setTimeout(() => {
-        if (isInitializing) {
-          console.log("Camera initialization timeout reached");
-          setIsAttemptingToRecord(false);
-        }
-      }, 10000); // 10 seconds timeout
+        console.log("Camera initialization timeout reached in button component");
+        
+        // Reset both states to ensure button becomes clickable again
+        setLocalInitializing(false);
+        setIsAttemptingToRecord(false);
+      }, 12000); // 12 seconds timeout - slightly longer than the MediaStateManager
       
-      setInitTimeout(timeout);
+      initTimeoutRef.current = timeout;
     }
     
     return () => {
-      if (initTimeout) {
-        clearTimeout(initTimeout);
+      if (initTimeoutRef.current) {
+        clearTimeout(initTimeoutRef.current);
       }
     };
-  }, [isInitializing]);
+  }, [localInitializing, isAttemptingToRecord]);
   
   // Handle the start recording button click
   const handleStartRecordingClick = async () => {
+    console.log("Start recording button clicked");
     setIsAttemptingToRecord(true);
     try {
       await onStartRecording();
     } catch (error) {
       console.error("Failed to start recording:", error);
+      // Reset attempts state on error
       setIsAttemptingToRecord(false);
     }
   };
@@ -74,7 +97,7 @@ export function VideoRecordButton({
   }
   
   // If initializing or attempting to record, show loading state
-  if (isInitializing || isAttemptingToRecord) {
+  if (localInitializing || isAttemptingToRecord) {
     return (
       <Button
         type="button"

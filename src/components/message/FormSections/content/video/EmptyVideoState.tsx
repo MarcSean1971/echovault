@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Camera, CameraOff, Loader2, Video } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 interface EmptyVideoStateProps {
   handleStartRecording: () => Promise<void>;
@@ -19,21 +19,64 @@ export function EmptyVideoState({
   inDialog
 }: EmptyVideoStateProps) {
   const [isAttemptingToEnable, setIsAttemptingToEnable] = useState(false);
+  const [localInitializing, setLocalInitializing] = useState(isInitializing);
+  const initTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Sync with parent's initialization state
+  useEffect(() => {
+    console.log("EmptyVideoState: isInitializing prop changed to", isInitializing);
+    setLocalInitializing(isInitializing);
+    
+    // If no longer initializing, also reset attempting state
+    if (!isInitializing && isAttemptingToEnable) {
+      setIsAttemptingToEnable(false);
+    }
+  }, [isInitializing, isAttemptingToEnable]);
+  
+  // Clean up on unmount
+  useEffect(() => {
+    return () => {
+      if (initTimeoutRef.current) {
+        clearTimeout(initTimeoutRef.current);
+      }
+    };
+  }, []);
+  
+  // Set up timeout for initialization states
+  useEffect(() => {
+    // Clear any existing timeout when states change
+    if (initTimeoutRef.current) {
+      clearTimeout(initTimeoutRef.current);
+      initTimeoutRef.current = null;
+    }
+    
+    // If we're initializing or attempting to enable, set a new timeout
+    if (localInitializing || isAttemptingToEnable) {
+      const timeout = setTimeout(() => {
+        console.log("Camera initialization timeout reached in EmptyVideoState component");
+        setLocalInitializing(false);
+        setIsAttemptingToEnable(false);
+      }, 12000); // 12 seconds timeout
+      
+      initTimeoutRef.current = timeout;
+    }
+  }, [localInitializing, isAttemptingToEnable]);
   
   // Handle the enable camera button click with better state management
   const onEnableCamera = async () => {
-    if (isInitializing || isAttemptingToEnable) return;
+    if (localInitializing || isAttemptingToEnable) {
+      console.log("Already initializing or attempting, ignoring click");
+      return;
+    }
     
+    console.log("Enable camera button clicked");
     setIsAttemptingToEnable(true);
     try {
       await handleStartRecording();
     } catch (error) {
       console.error("Error enabling camera:", error);
-    } finally {
-      // Reset after a short delay to ensure other state updates have completed
-      setTimeout(() => {
-        setIsAttemptingToEnable(false);
-      }, 500);
+      // Reset on error
+      setIsAttemptingToEnable(false);
     }
   };
   
@@ -64,10 +107,10 @@ export function EmptyVideoState({
         type="button"
         onClick={onEnableCamera}
         variant="default"
-        disabled={isInitializing || isAttemptingToEnable}
+        disabled={localInitializing || isAttemptingToEnable}
         className="hover:opacity-90 transition-all duration-200"
       >
-        {(isInitializing || isAttemptingToEnable) ? (
+        {(localInitializing || isAttemptingToEnable) ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             Preparing Camera...

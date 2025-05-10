@@ -1,5 +1,5 @@
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { VideoRecordButton } from "./VideoRecordButton";
 
 interface CameraPreviewProps {
@@ -18,21 +18,30 @@ export function CameraPreview({
   onStopRecording
 }: CameraPreviewProps) {
   const previewRef = useRef<HTMLVideoElement>(null);
+  const [videoError, setVideoError] = useState<string | null>(null);
   
   // Connect preview stream to video element
   useEffect(() => {
     if (previewStream && previewRef.current) {
       console.log("Connecting preview stream to video element");
-      previewRef.current.srcObject = previewStream;
       
-      // Play the preview (will be silent since we're not enabling audio)
-      previewRef.current.play().catch(err => {
-        console.error("Error playing preview:", err);
-      });
+      try {
+        previewRef.current.srcObject = previewStream;
+        
+        // Play the preview (will be silent since we're not enabling audio)
+        previewRef.current.play().catch(err => {
+          console.error("Error playing preview:", err);
+          setVideoError("Could not display camera preview. Please try again.");
+        });
+      } catch (err) {
+        console.error("Error connecting stream to video element:", err);
+        setVideoError("Error connecting to camera. Please refresh and try again.");
+      }
     }
     
     return () => {
       if (previewRef.current) {
+        console.log("Cleaning up video preview element");
         previewRef.current.srcObject = null;
       }
     };
@@ -47,6 +56,13 @@ export function CameraPreview({
         muted
         className="w-full h-full max-h-[300px]"
       />
+      
+      {/* Error message */}
+      {videoError && (
+        <div className="absolute top-0 left-0 right-0 p-2 bg-red-500/80 text-white text-center">
+          {videoError}
+        </div>
+      )}
       
       {/* Recording indicator overlay - only show when recording */}
       {isRecording && (
