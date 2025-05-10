@@ -112,6 +112,18 @@ export function MessageDetails({ message }: MessageDetailsProps) {
     }
   };
 
+  // Create a wrapper function for audio recording that explicitly returns Promise<void>
+  const handleStartAudioRecordingWrapper = async (): Promise<void> => {
+    try {
+      // Use void operator to explicitly discard the boolean return value
+      void await startAudioRecording();
+      // No return statement ensures Promise<void>
+    } catch (error) {
+      console.error("Error in handleStartAudioRecordingWrapper:", error);
+      // No re-throw to maintain Promise<void>
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Media state manager - handles initialization of camera/microphone */}
@@ -155,7 +167,7 @@ export function MessageDetails({ message }: MessageDetailsProps) {
           isAudioInitializing={isAudioInitializing}
           hasAudioPermission={hasAudioPermission}
           audioTranscription={audioTranscription}
-          onStartAudioRecording={startAudioRecording}
+          onStartAudioRecording={handleStartAudioRecordingWrapper}
           onStopAudioRecording={stopAudioRecording}
           onClearAudio={() => {
             clearAudio();
@@ -198,7 +210,7 @@ export function MessageDetails({ message }: MessageDetailsProps) {
         isAudioInitializing={isAudioInitializing}
         hasAudioPermission={hasAudioPermission}
         audioTranscription={audioTranscription}
-        startAudioRecording={startAudioRecording}
+        startAudioRecording={startAudioRecordingWrapper}
         stopAudioRecording={stopAudioRecording}
         clearAudio={() => {
           clearAudio();
