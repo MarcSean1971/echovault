@@ -12,7 +12,7 @@ interface UseMediaStreamInitializationProps {
   isAudioInitializationAttempted: boolean;
   initializedFromMessage: boolean;
   mountedRef: React.RefObject<boolean>;
-  initTimeoutRef: React.MutableRefObject<NodeJS.Timeout | null>; // Changed from RefObject to MutableRefObject
+  initTimeoutRef: React.MutableRefObject<NodeJS.Timeout | null>;
   setIsInitializing: (value: boolean) => void;
   setHasAttemptedVideoInit: (value: boolean) => void;
   forceInitializeCamera: () => Promise<boolean>;
@@ -64,12 +64,12 @@ export function useMediaStreamInitialization({
           }
         }, 15000); // 15 seconds timeout
         
-        initTimeoutRef.current = timeout; // Now this is allowed with MutableRefObject
+        initTimeoutRef.current = timeout;
         
         try {
-          // Use forceInitializeCamera to ensure we get a fresh stream
-          const success = await forceInitializeCamera();
-          console.log("Camera initialization " + (success ? "successful" : "failed"));
+          // Use void to explicitly discard the boolean return value
+          void await forceInitializeCamera();
+          console.log("Camera initialization completed");
         } catch (error) {
           console.error("Failed to initialize camera stream:", error);
           // Important: Reset state even on error
@@ -104,12 +104,12 @@ export function useMediaStreamInitialization({
           }
         }, 15000); // 15 seconds timeout
         
-        initTimeoutRef.current = timeout; // Now this is allowed with MutableRefObject
+        initTimeoutRef.current = timeout;
         
         try {
-          // Use forceInitializeMicrophone to ensure we get a fresh stream
-          const success = await forceInitializeMicrophone();
-          console.log("Microphone initialization " + (success ? "successful" : "failed"));
+          // Use void to explicitly discard the boolean return value
+          void await forceInitializeMicrophone();
+          console.log("Microphone initialization completed");
         } catch (error) {
           console.error("Failed to initialize microphone stream:", error);
           // Important: Reset state even on error

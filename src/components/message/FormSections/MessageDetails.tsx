@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { useMessageForm } from "../MessageFormContext";
@@ -102,9 +103,9 @@ export function MessageDetails({ message }: MessageDetailsProps) {
   // Create a wrapper function that explicitly returns Promise<void>
   const handleStartRecordingWrapper = async (): Promise<void> => {
     try {
-      // Call the function but explicitly ignore its return value
-      await forceInitializeCamera();
-      // No return statement to ensure void return type
+      // Use void operator to explicitly discard the return value
+      void await forceInitializeCamera();
+      // No return statement ensures Promise<void>
     } catch (error) {
       console.error("Error in handleStartRecordingWrapper:", error);
       // No re-throw to maintain Promise<void>

@@ -34,9 +34,9 @@ export function AudioSection({
   // Create a wrapper function that explicitly returns Promise<void>
   const handleStartAudioRecordingWrapper = async (): Promise<void> => {
     try {
-      // Call the function but explicitly ignore its return value
-      await startAudioRecording();
-      // No return statement to ensure void return type
+      // Use void operator to explicitly discard the boolean return value
+      void await startAudioRecording();
+      // No return statement ensures Promise<void>
     } catch (error) {
       console.error("Error in handleStartAudioRecordingWrapper:", error);
       // No re-throw to maintain Promise<void>

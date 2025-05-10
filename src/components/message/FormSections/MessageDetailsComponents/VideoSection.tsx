@@ -37,12 +37,12 @@ export function VideoSection({
   setShowVideoRecorder,
   handleClearVideoAndRecord
 }: VideoSectionProps) {
-  // Create a wrapper function that explicitly returns Promise<void> with proper void handling
+  // Create a wrapper function that explicitly returns Promise<void>
   const handleStartRecordingWrapper = async (): Promise<void> => {
     try {
-      // Call the function but explicitly ignore its return value
-      await startVideoRecording();
-      // No return statement to ensure void return type
+      // Use void operator to explicitly discard the boolean return value
+      void await startVideoRecording();
+      // No return statement ensures Promise<void>
     } catch (error) {
       console.error("Error in handleStartRecordingWrapper:", error);
       // No re-throw to maintain Promise<void>
