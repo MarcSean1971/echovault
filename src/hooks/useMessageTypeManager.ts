@@ -1,14 +1,18 @@
 
-import { useState, useEffect } from 'react';
 import { useVideoRecordingHandler } from './useVideoRecordingHandler';
 import { useAudioRecordingHandler } from './useAudioRecordingHandler';
-import { useMessageForm } from '@/components/message/MessageFormContext';
+import { useMessageTypeStore } from './message/useMessageTypeStore';
+import { useMediaTabSwitcher } from './message/useMediaTabSwitcher';
+import { useInitializedMediaHandler } from './message/useInitializedMediaHandler';
 
 export function useMessageTypeManager() {
-  const { setMessageType, videoContent, audioContent, textContent } = useMessageForm();
-  const [initializedFromMessage, setInitializedFromMessage] = useState(false);
+  // Use our message type store for basic state
+  const {
+    initializedFromMessage,
+    setInitializedFromMessage
+  } = useMessageTypeStore();
   
-  // Use our custom hooks
+  // Use our custom hooks for video and audio handling
   const {
     isRecording: isVideoRecording,
     isInitializing: isVideoInitializing,
@@ -51,87 +55,36 @@ export function useMessageTypeManager() {
     isInitializationAttempted: isAudioInitializationAttempted
   } = useAudioRecordingHandler();
 
-  // Handle clicking on text tab
-  const onTextTypeClick = () => {
-    console.log("Text message type selected");
-    setMessageType('text');
-    
-    // If we were recording video, stop
-    if (isVideoRecording) {
-      stopVideoRecording();
-    }
-    
-    // If we were recording audio, stop
-    if (isAudioRecording) {
-      stopAudioRecording();
-    }
-    
-    // Stop any active media streams when switching to text mode
-    // but don't clear the content - this is the critical fix
-    if (isVideoStreamActive()) {
-      console.log("Stopping active video stream when switching to text mode");
-      stopVideoStream();
-    }
-    
-    if (isAudioStreamActive()) {
-      console.log("Stopping active audio stream when switching to text mode");
-      stopAudioStream();
-    }
-    
-    // We do NOT clear the video or audio content here anymore
-    // This preserves the content when switching tabs
-  };
+  // Use our media tab switcher for handling tab changes
+  const {
+    onTextTypeClick,
+    onVideoTypeClick,
+    onAudioTypeClick
+  } = useMediaTabSwitcher(
+    isVideoRecording,
+    stopVideoRecording,
+    stopVideoStream,
+    isVideoStreamActive,
+    isAudioRecording,
+    stopAudioRecording,
+    stopAudioStream,
+    isAudioStreamActive
+  );
   
-  // Handle clicking on video tab
-  const onVideoTypeClick = () => {
-    console.log("Video message type selected");
-    setMessageType('video');
-    
-    // If we were recording audio, stop
-    if (isAudioRecording) {
-      stopAudioRecording();
-    }
-    
-    // Stop any active audio streams when switching to video mode
-    if (isAudioStreamActive()) {
-      console.log("Stopping active audio stream when switching to video mode");
-      stopAudioStream();
-    }
-    
-    // We do NOT clear the audio content here anymore
-  };
+  // Use our initialized media handler
+  const {
+    handleInitializedVideo: handleInitializedVideoBase,
+    handleInitializedAudio: handleInitializedAudioBase
+  } = useInitializedMediaHandler();
   
-  // Handle clicking on audio tab
-  const onAudioTypeClick = () => {
-    console.log("Audio message type selected");
-    setMessageType('audio');
-    
-    // If we were recording video, stop
-    if (isVideoRecording) {
-      stopVideoRecording();
-    }
-    
-    // Stop any active video streams when switching to audio mode
-    if (isVideoStreamActive()) {
-      console.log("Stopping active video stream when switching to audio mode");
-      stopVideoStream();
-    }
-    
-    // We do NOT clear the video content here anymore
-  };
-  
-  // Handle initialized video from existing message
+  // Wrapper for initialized video handler
   const handleInitializedVideo = (blob: Blob, url: string) => {
-    console.log("handleInitializedVideo with blob size:", blob.size);
-    setInitializedFromMessage(true);
-    restoreVideo(blob, url);
+    handleInitializedVideoBase(blob, url, setInitializedFromMessage, restoreVideo);
   };
-
-  // Handle initialized audio from existing message
+  
+  // Wrapper for initialized audio handler
   const handleInitializedAudio = (blob: Blob, url: string) => {
-    console.log("handleInitializedAudio with blob size:", blob.size);
-    setInitializedFromMessage(true);
-    restoreAudio(blob, url);
+    handleInitializedAudioBase(blob, url, setInitializedFromMessage, restoreAudio);
   };
 
   return {
