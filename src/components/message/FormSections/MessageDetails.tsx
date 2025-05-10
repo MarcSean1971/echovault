@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { useMessageForm } from "../MessageFormContext";
@@ -11,6 +10,7 @@ import { MediaRecorders } from "./MessageDetailsComponents/MediaRecorders";
 import { MessageTypeTabSelector } from "./MessageTypeTabSelector";
 import { MediaStateManager } from "./MessageDetailsComponents/MediaStateManager";
 import { VideoSection } from "./MessageDetailsComponents/VideoSection";
+// Still import AudioSection but we'll conditionally render it differently
 import { AudioSection } from "./MessageDetailsComponents/AudioSection";
 import { useContentKeys } from "./MessageDetailsComponents/ContentKeyManager";
 
@@ -200,24 +200,9 @@ export function MessageDetails({ message }: MessageDetailsProps) {
         handleClearVideoAndRecord={handleClearVideoAndRecord}
       />
 
-      {/* Audio Section (conditionally rendered) */}
-      <AudioSection 
-        messageType={messageType}
-        audioUrl={audioUrl}
-        audioBlob={audioBlob}
-        audioDuration={audioDuration}
-        isAudioRecording={isAudioRecording}
-        isAudioInitializing={isAudioInitializing}
-        hasAudioPermission={hasAudioPermission}
-        audioTranscription={audioTranscription}
-        startAudioRecording={startAudioRecording}  // Pass the original Promise<boolean> function directly
-        stopAudioRecording={stopAudioRecording}
-        clearAudio={() => {
-          clearAudio();
-          setAudioTranscription(null);
-        }}
-        onTranscribeAudio={handleTranscribeAudio}
-      />
+      {/* REMOVED: AudioSection - now only showing in the TabSelector */}
+      {/* The audio section is already rendered in the MessageTypeTabSelector */}
+      {/* We don't need to render it twice */}
 
       {/* Location section */}
       <LocationSection />
