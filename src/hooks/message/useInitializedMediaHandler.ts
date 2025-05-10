@@ -5,47 +5,58 @@ import { Message } from "@/types/message";
  * Hook to handle initialized media from existing messages
  */
 export function useInitializedMediaHandler() {
-  // Handle initialized video from existing message
+  // Handle initialized video from existing message with improved reliability
   const handleInitializedVideo = (
     blob: Blob, 
     url: string, 
     setInitializedFromMessage: (value: boolean) => void,
     restoreVideo: (blob: Blob, url: string) => void
   ) => {
-    console.log("handleInitializedVideo with blob size:", blob.size, "url:", url.substring(0, 30) + "...");
-    // Set the flag first, then restore the video to ensure proper state transition
-    setInitializedFromMessage(true);
+    console.log("handleInitializedVideo called with blob size:", blob.size, 
+                "blob type:", blob.type,
+                "url:", url.substring(0, 30) + "...");
+    
+    if (!blob || blob.size === 0) {
+      console.error("Invalid video blob received in handleInitializedVideo");
+      return;
+    }
     
     try {
-      // Use setTimeout to ensure the flag is set before we restore the video
-      // This fixes timing issues where the video was being initialized before state updates completed
-      setTimeout(() => {
-        console.log("Restoring video after initialization flag was set");
-        restoreVideo(blob, url);
-      }, 0);
+      // First restore the video to ensure it's displayed
+      restoreVideo(blob, url);
+      console.log("Video restored first, now setting initialization flag");
+      
+      // Set the initialization flag after restoring the video
+      // This ensures the video is displayed before any other logic runs
+      setInitializedFromMessage(true);
     } catch (error) {
       console.error("Error in handleInitializedVideo:", error);
     }
   };
 
-  // Handle initialized audio from existing message
+  // Handle initialized audio from existing message with improved reliability
   const handleInitializedAudio = (
     blob: Blob, 
     url: string, 
     setInitializedFromMessage: (value: boolean) => void,
     restoreAudio: (blob: Blob, url: string) => void
   ) => {
-    console.log("handleInitializedAudio with blob size:", blob.size, "url:", url.substring(0, 30) + "...");
-    // Set the flag first, then restore the audio to ensure proper state transition
-    setInitializedFromMessage(true);
+    console.log("handleInitializedAudio with blob size:", blob.size, 
+                "blob type:", blob.type,
+                "url:", url.substring(0, 30) + "...");
+    
+    if (!blob || blob.size === 0) {
+      console.error("Invalid audio blob received in handleInitializedAudio");
+      return;
+    }
     
     try {
-      // Use setTimeout to ensure the flag is set before we restore the audio
-      // This fixes timing issues where the audio was being initialized before state updates completed
-      setTimeout(() => {
-        console.log("Restoring audio after initialization flag was set");
-        restoreAudio(blob, url);
-      }, 0);
+      // First restore the audio to ensure it's displayed
+      restoreAudio(blob, url);
+      console.log("Audio restored first, now setting initialization flag");
+      
+      // Set the initialization flag after restoring the audio
+      setInitializedFromMessage(true);
     } catch (error) {
       console.error("Error in handleInitializedAudio:", error);
     }

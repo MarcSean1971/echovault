@@ -1,4 +1,3 @@
-
 import { useEffect } from 'react';
 
 interface UseMediaStreamInitializationProps {
@@ -38,28 +37,45 @@ export function useMediaStreamInitialization({
 }: UseMediaStreamInitializationProps) {
   // Initialize camera preview when showing inline recording UI with better error handling
   useEffect(() => {
+    // Log state for debugging
+    console.log("MediaStreamInitialization: State check", {
+      showInlineRecording,
+      messageType,
+      hasVideoUrl: !!videoUrl,
+      videoUrl: videoUrl ? videoUrl.substring(0, 30) + "..." : null,
+      hasVideoStream: !!videoPreviewStream,
+      hasAudioUrl: !!audioUrl,
+      isInitializing,
+      hasAttemptedVideoInit,
+      isAudioInitializationAttempted,
+      initializedFromMessage
+    });
+    
     // Function to handle initialization
     const initializeMedia = async () => {
       // Don't initialize if we're already initializing or if we already attempted
       if (isInitializing || hasAttemptedVideoInit) {
+        console.log("MediaStreamInitialization: Skipping - already initializing or attempted");
         return;
       }
       
-      // CRITICAL: Skip initialization if we already have content or initialized from message
-      if ((messageType === "video" && videoUrl) || 
-          (messageType === "audio" && audioUrl) || 
-          initializedFromMessage) {
-        console.log("Skipping media initialization because:", {
-          hasVideoUrl: !!videoUrl,
-          hasAudioUrl: !!audioUrl,
-          initializedFromMessage
-        });
+      // CRITICAL: If we already have a video URL, do NOT initialize camera
+      // This is key to fixing the edit mode issue
+      if (videoUrl) {
+        console.log("MediaStreamInitialization: Skipping - videoUrl exists:", 
+                    videoUrl.substring(0, 30) + "...");
+        return;
+      }
+      
+      // Skip if initialized from message - critical to prevent overriding existing content
+      if (initializedFromMessage) {
+        console.log("MediaStreamInitialization: Skipping - initializedFromMessage flag is set");
         return;
       }
       
       // For video mode without existing content
       if (showInlineRecording && messageType === "video" && !videoUrl && !videoPreviewStream) {
-        console.log("Initializing camera preview for inline recording");
+        console.log("MediaStreamInitialization: Initializing camera preview for inline recording");
         setIsInitializing(true);
         
         // Set a timeout to reset the initialization state if it takes too long

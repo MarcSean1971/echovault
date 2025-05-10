@@ -27,7 +27,9 @@ export function useMediaInitializer(
     console.log("MediaInitializer: Status check", {
       hasInitialized,
       hasVideoBlob: !!initialVideoBlob,
+      videoBlob: initialVideoBlob ? `${initialVideoBlob.size} bytes` : null,
       hasVideoUrl: !!initialVideoUrl,
+      videoUrl: initialVideoUrl ? `${initialVideoUrl.substring(0, 30)}...` : null,
       hasAudioBlob: !!initialAudioBlob, 
       hasAudioUrl: !!initialAudioUrl,
       initializedFromMessage,
@@ -40,32 +42,36 @@ export function useMediaInitializer(
       return;
     }
     
-    // Handle video initialization
+    // Handle video initialization with priority since we're seeing issues here
     if (initialVideoBlob && initialVideoUrl) {
-      console.log("MediaInitializer: Connecting initialized video to message type manager");
-      console.log("Initial video blob size:", initialVideoBlob.size);
+      console.log("MediaInitializer: Initializing video with blob size:", initialVideoBlob.size);
       
-      // Initialize the video with original blob and URL
-      try {
-        handleInitializedVideo(initialVideoBlob, initialVideoUrl);
-        console.log("MediaInitializer: Video initialization complete");
-      } catch (err) {
-        console.error("MediaInitializer: Error initializing video:", err);
-      }
+      // Force a small delay to ensure state updates have propagated
+      setTimeout(() => {
+        try {
+          handleInitializedVideo(initialVideoBlob, initialVideoUrl);
+          console.log("MediaInitializer: Video initialization triggered");
+        } catch (err) {
+          console.error("MediaInitializer: Error initializing video:", err);
+        }
+      }, 100);
     }
-    
     // Handle audio initialization
     else if (initialAudioBlob && initialAudioUrl) {
-      console.log("MediaInitializer: Connecting initialized audio to message type manager");
-      console.log("Initial audio blob size:", initialAudioBlob.size);
+      console.log("MediaInitializer: Initializing audio with blob size:", initialAudioBlob.size);
       
-      // Initialize the audio with original blob and URL
-      try {
-        handleInitializedAudio(initialAudioBlob, initialAudioUrl);
-        console.log("MediaInitializer: Audio initialization complete");
-      } catch (err) {
-        console.error("MediaInitializer: Error initializing audio:", err);
-      }
+      // Force a small delay to ensure state updates have propagated
+      setTimeout(() => {
+        try {
+          handleInitializedAudio(initialAudioBlob, initialAudioUrl);
+          console.log("MediaInitializer: Audio initialization triggered");
+        } catch (err) {
+          console.error("MediaInitializer: Error initializing audio:", err);
+        }
+      }, 100);
+    }
+    else {
+      console.log("MediaInitializer: No media to initialize");
     }
   }, [
     hasInitialized, 

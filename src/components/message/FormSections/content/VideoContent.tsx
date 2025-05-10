@@ -42,10 +42,24 @@ export function VideoContent({
     };
   }, []);
   
+  // Log initial props for debugging
+  useEffect(() => {
+    console.log("VideoContent: Initial props:", { 
+      hasVideoUrl: !!videoUrl, 
+      videoUrl: videoUrl ? videoUrl.substring(0, 30) + "..." : null,
+      messageType,
+      isRecording,
+      isInitializing: isInitializing ? "yes" : "no",
+      hasPermission: hasPermission === null ? "unknown" : hasPermission ? "yes" : "no",
+      hasPreviewStream: !!previewStream
+    });
+  }, []);
+  
   // Reset showVideoPreview state whenever videoUrl changes or messageType changes
   useEffect(() => {
     console.log("VideoContent: States updated:", { 
-      videoUrl: videoUrl ? "present" : "null", 
+      hasVideoUrl: !!videoUrl, 
+      videoUrl: videoUrl ? videoUrl.substring(0, 30) + "..." : null,
       messageType,
       previewStream: previewStream ? "active" : "null",
       isInitializing: isInitializing ? "yes" : "no"
@@ -83,8 +97,16 @@ export function VideoContent({
   
   // Determine what to render based on current state
   const renderVideoContent = () => {
+    console.log("VideoContent: Rendering with state:", {
+      hasVideoUrl: !!videoUrl,
+      hasPreviewStream: !!previewStream,
+      isRecording,
+      showVideoPreview
+    });
+    
     // First priority: show recorded video if available
     if (videoUrl) {
+      console.log("VideoContent: Rendering VideoPlayer with URL:", videoUrl.substring(0, 30) + "...");
       return (
         <VideoPlayer
           videoUrl={videoUrl}
@@ -96,6 +118,7 @@ export function VideoContent({
     
     // Second priority: show camera preview if available or recording
     if (previewStream || isRecording) {
+      console.log("VideoContent: Rendering CameraPreview");
       return (
         <CameraPreview
           previewStream={previewStream}
@@ -109,6 +132,7 @@ export function VideoContent({
     }
     
     // Default to empty state
+    console.log("VideoContent: Rendering EmptyVideoState");
     return (
       <EmptyVideoState
         handleStartRecording={handleStartRecording}
