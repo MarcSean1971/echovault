@@ -31,7 +31,7 @@ export function VideoPlayerControls({
         <Button
           variant="outline"
           size={inDialog ? "lg" : "default"}
-          className="bg-white/20 backdrop-blur-sm border-white/40 text-white hover:bg-white/30 hover:text-white transition-colors duration-200 hover:scale-105"
+          className="bg-white/20 backdrop-blur-sm border-white/40 text-white hover:bg-white/30 hover:text-white transition-all duration-200 hover:scale-105"
           onClick={(e) => handleButtonClick(e, togglePlayback)}
         >
           {isPlaying ? (
@@ -44,7 +44,7 @@ export function VideoPlayerControls({
         <Button
           variant="outline"
           size={inDialog ? "lg" : "default"}
-          className="bg-white/20 backdrop-blur-sm border-white/40 text-white hover:bg-destructive hover:text-destructive-foreground transition-colors duration-200 hover:scale-105"
+          className="bg-white/20 backdrop-blur-sm border-white/40 text-white hover:bg-destructive hover:text-destructive-foreground transition-all duration-200 hover:scale-105"
           onClick={(e) => handleButtonClick(e, onClearVideo)}
         >
           <Trash2 className="h-5 w-5" />
@@ -57,7 +57,7 @@ export function VideoPlayerControls({
           <Button
             variant="ghost"
             size="icon"
-            className="text-white hover:bg-white/20 hover:text-white transition-colors duration-200 h-10 w-10"
+            className="text-white hover:bg-white/20 hover:text-white transition-all duration-200 h-10 w-10"
             onClick={(e) => handleButtonClick(e, togglePlayback)}
           >
             {isPlaying ? (
@@ -70,7 +70,7 @@ export function VideoPlayerControls({
           <Button
             variant="ghost"
             size="icon"
-            className="text-white hover:bg-destructive/90 hover:text-white transition-colors duration-200 h-10 w-10"
+            className="text-white hover:bg-destructive/90 hover:text-white transition-all duration-200 h-10 w-10"
             onClick={(e) => handleButtonClick(e, onClearVideo)}
           >
             <Trash2 className="h-6 w-6" />
