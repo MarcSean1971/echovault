@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -173,6 +172,7 @@ export function AudioPlayerState({
               variant="destructive" 
               size="sm" 
               onClick={onClearAudio}
+              type="button"
               className="hover:bg-destructive/90 hover:scale-105 transition-all"
             >
               <Trash2 className="h-4 w-4" />
@@ -187,6 +187,7 @@ export function AudioPlayerState({
                 variant="outline" 
                 size="sm" 
                 className="mt-2"
+                type="button"
                 onClick={onClearAudio}
               >
                 Clear and try again
@@ -199,6 +200,7 @@ export function AudioPlayerState({
                 <Button
                   variant="outline"
                   size="icon"
+                  type="button"
                   className="h-10 w-10 rounded-full hover:bg-primary/10 hover:scale-105 transition-all"
                   onClick={togglePlayback}
                   disabled={!audioUrl}
@@ -231,6 +233,7 @@ export function AudioPlayerState({
                   ) : (
                     <Button
                       variant="outline"
+                      type="button"
                       onClick={handleTranscribe}
                       disabled={!onTranscribeAudio || isTranscribing}
                       className="w-full hover:bg-primary/10 hover:scale-105 transition-all"

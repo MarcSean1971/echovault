@@ -29,7 +29,7 @@ export function AudioRecordingState({
         <Button 
           onClick={onStopRecording}
           variant="destructive"
-          type="button" // Add type="button" to prevent form submission
+          type="button" 
           className="hover:bg-destructive/90 hover:scale-105 transition-all"
         >
           <MicOff className="h-4 w-4 mr-2" />
