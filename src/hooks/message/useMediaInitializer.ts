@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { Message } from "@/types/message";
 
 /**
- * Hook to manage initialization of media content from an existing message
+ * Hook to handle initialized media from existing messages
  */
 export function useMediaInitializer(
   message: Message | undefined,

@@ -22,8 +22,10 @@ export function useMessageInitializer(message?: Message) {
   const {
     videoUrl,
     videoBlob,
+    videoBase64,
     audioUrl,
     audioBlob,
+    audioBase64,
     hasInitialized,
     additionalText
   } = useInitializeMediaContent(message || null);
@@ -58,7 +60,7 @@ export function useMessageInitializer(message?: Message) {
       
       // If we have video content, store it
       if (hasVideo) {
-        console.log("Message contains video content");
+        console.log("Message contains video content - setting videoContent state");
         setVideoContent(message.content);
         
         // Check for additional text in the video content
@@ -104,8 +106,10 @@ export function useMessageInitializer(message?: Message) {
   return {
     videoUrl,
     videoBlob,
+    videoBase64,
     audioUrl,
     audioBlob,
+    audioBase64,
     hasInitialized,
     additionalText
   };
