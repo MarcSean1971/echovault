@@ -1,5 +1,5 @@
 
-import { VideoContent } from "../../FormSections/content/video/VideoContent";
+import { VideoContent } from "../../content/video/VideoContent";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useEffect } from "react";
 
