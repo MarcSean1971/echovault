@@ -1,15 +1,18 @@
 
-import { useEffect } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useMessageForm } from "@/components/message/MessageFormContext";
-import { useAudioRecorder } from "./audio/useAudioRecorder";
 import { useAudioManager } from "./audio/useAudioManager";
-import { useAudioStorageManager } from "./audio/useAudioStorageManager";
 import { useAudioProcessor } from "./audio/useAudioProcessor";
+import { useAudioRecorder } from "./audio/useAudioRecorder";
+import { useAudioStorage } from "./audio/useAudioStorage";
 
 export function useAudioRecordingHandler() {
-  const { setContent, setAudioContent } = useMessageForm();
+  const { setAudioContent } = useMessageForm();
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [audioDuration, setAudioDuration] = useState<number>(0);
   
-  // Use our refactored custom hooks
+  // Use our audio hooks
   const {
     previewStream,
     isInitializing,
@@ -24,62 +27,90 @@ export function useAudioRecordingHandler() {
   
   const {
     isRecording,
-    audioBlob,
-    audioUrl,
-    audioDuration,
-    startRecording,
+    startRecording: startRecordingInner,
     stopRecording,
-    setAudioBlob,
-    setAudioUrl,
-    cleanupResources
+    setAudioBlob: setAudioBlobInner,
+    setAudioDuration: setAudioDurationInner
   } = useAudioRecorder(previewStream, streamRef);
   
   const {
     showAudioRecorder,
     setShowAudioRecorder,
     clearAudio: clearAudioInner,
-    restoreAudio
-  } = useAudioStorageManager(setContent, setAudioContent);
+    restoreAudio: restoreAudioInner
+  } = useAudioStorage();
   
-  const { transcribeAudio } = useAudioProcessor();
+  const {
+    transcribeAudioBlob
+  } = useAudioProcessor();
   
-  // Cleanup effect when component unmounts
-  useEffect(() => {
-    return () => {
-      console.log("Audio recording handler unmounting, cleaning up resources");
-      
-      // Ensure we stop recording if it's still ongoing
-      if (isRecording) {
-        try {
-          stopRecording();
-        } catch (e) {
-          console.error("Error stopping recording during unmount:", e);
-        }
-      }
-      
-      // Clean up resources from the recorder
-      cleanupResources();
-      
-      // Stop any active media streams
-      if (isStreamActive()) {
-        stopMediaStream();
-      }
-      
-      // Clean up any audio URLs
-      if (audioUrl) {
-        try {
-          URL.revokeObjectURL(audioUrl);
-        } catch (e) {
-          console.warn("Failed to revoke audio URL during unmount:", e);
-        }
-      }
+  // Initialize stream
+  const initializeStreamWithSetup = useCallback(async () => {
+    try {
+      return await initializeStream();
+    } catch (error) {
+      console.error("Error initializing audio stream:", error);
+      throw error;
+    }
+  }, [initializeStream]);
+  
+  // Start recording wrapper
+  const startRecording = useCallback(async () => {
+    try {
+      await startRecordingInner((duration) => setAudioDuration(duration));
+      return true;
+    } catch (error) {
+      console.error("Error in startRecording wrapper:", error);
+      throw error;
+    }
+  }, [startRecordingInner]);
+  
+  // Clear audio
+  const clearAudio = useCallback(() => {
+    clearAudioInner(audioUrl, setAudioBlob, setAudioUrl);
+    setAudioContent('');
+    setAudioDuration(0);
+  }, [audioUrl, setAudioContent, clearAudioInner]);
+  
+  // Restore audio
+  const restoreAudio = useCallback((blob: Blob, url: string, duration?: number) => {
+    restoreAudioInner(blob, url, setAudioBlob, setAudioUrl);
+    
+    if (duration) {
+      setAudioDuration(duration);
+    }
+    
+    // Convert blob back to base64 and update audio content
+    const reader = new FileReader();
+    reader.readAsDataURL(blob);
+    reader.onloadend = () => {
+      const base64data = reader.result?.toString().split(',')[1] || '';
+      const formattedContent = JSON.stringify({
+        audioData: base64data,
+        timestamp: new Date().toISOString(),
+        duration: duration || 0
+      });
+      console.log("Restoring audio content in form state");
+      setAudioContent(formattedContent);
     };
-  }, [isRecording, stopRecording, cleanupResources, audioUrl, isStreamActive, stopMediaStream]);
+  }, [restoreAudioInner, setAudioContent]);
   
-  // Wrapper function for clearAudio using the storage manager
-  const clearAudio = () => {
-    clearAudioInner(isRecording, stopRecording, cleanupResources, isStreamActive, stopMediaStream);
-  };
+  // Transcribe audio
+  const transcribeAudio = useCallback(async () => {
+    if (!audioBlob) {
+      throw new Error("No audio to transcribe");
+    }
+    
+    try {
+      console.log("Transcribing audio...");
+      const transcription = await transcribeAudioBlob(audioBlob);
+      console.log("Audio transcription complete:", transcription);
+      return transcription;
+    } catch (error) {
+      console.error("Error transcribing audio:", error);
+      throw error;
+    }
+  }, [audioBlob, transcribeAudioBlob]);
   
   return {
     isRecording,
@@ -90,16 +121,16 @@ export function useAudioRecordingHandler() {
     audioDuration,
     showAudioRecorder,
     setShowAudioRecorder,
-    previewStream,
-    initializeStream,
+    previewStream: previewStream,
+    initializeStream: initializeStreamWithSetup,
     forceInitializeMicrophone,
     startRecording,
     stopRecording,
     clearAudio,
     restoreAudio,
+    transcribeAudio,
     stopMediaStream,
     isStreamActive,
-    transcribeAudio: () => transcribeAudio(audioBlob),
     isInitializationAttempted
   };
 }

@@ -63,13 +63,10 @@ export function MessageDetails({ message }: MessageDetailsProps) {
     }
   };
   
-  // Create a wrapper function for forceInitializeCamera that returns void
+  // Create a wrapper function for forceInitializeCamera that explicitly returns Promise<void>
   const handleStartRecordingWrapper = async (): Promise<void> => {
-    // Using void operator to explicitly discard the boolean result
-    void await forceInitializeCamera();
-    
-    // Explicitly return undefined to satisfy Promise<void>
-    return undefined;
+    await forceInitializeCamera();
+    // No return statement is needed, as the function will implicitly return undefined
   };
 
   // Generate stable content keys to avoid unnecessary remounts
@@ -185,7 +182,7 @@ export function MessageDetails({ message }: MessageDetailsProps) {
         isInitializing={isVideoInitializing}
         hasPermission={hasVideoPermission}
         previewStream={videoPreviewStream}
-        startRecording={handleStartRecordingWrapper} // Use the wrapper function that returns void
+        startRecording={handleStartRecordingWrapper} 
         stopRecording={stopVideoRecording}
         clearVideo={clearVideo}
       />

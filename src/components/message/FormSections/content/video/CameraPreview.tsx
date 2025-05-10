@@ -6,7 +6,7 @@ interface CameraPreviewProps {
   previewStream: MediaStream;
   isRecording: boolean;
   isInitializing: boolean;
-  onStartRecording: () => Promise<void>; // Updated to match the Promise<void> return type
+  onStartRecording: () => Promise<void>; // Ensuring this is Promise<void>
   onStopRecording: () => void;
 }
 

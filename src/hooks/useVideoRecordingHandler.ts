@@ -68,8 +68,8 @@ export function useVideoRecordingHandler() {
     };
   }, [cleanup]);
   
-  // Force initialize camera
-  const forceInitializeCamera = useCallback(async () => {
+  // Force initialize camera - returns boolean but used with wrapper for void
+  const forceInitializeCamera = useCallback(async (): Promise<boolean> => {
     try {
       setIsInitializationAttempted(true);
       

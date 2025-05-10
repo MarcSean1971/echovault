@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 interface VideoRecordButtonProps {
   isRecording: boolean;
   isInitializing?: boolean;
-  onStartRecording: () => Promise<void>; // Updated to match Promise<void> return type
+  onStartRecording: () => Promise<void>; // Ensuring this is Promise<void>
   onStopRecording: () => void;
   className?: string;
 }
