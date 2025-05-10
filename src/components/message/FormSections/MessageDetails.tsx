@@ -6,17 +6,23 @@ import { FileUploader } from "@/components/FileUploader";
 // Import our components
 import { TitleInput } from "./TitleInput";
 import { LocationSection } from "./LocationSection";
-import { MediaRecorders } from "./MessageDetailsComponents/MediaRecorders";
-import { MessageTypeTabSelector } from "./MessageTypeTabSelector";
 import { MediaStateManager } from "./MessageDetailsComponents/MediaStateManager";
+import { MessageTypeTabSelector } from "./MessageTypeTabSelector";
+import { MediaRecordersDialog } from "./MessageDetailsComponents/MediaRecordersDialog";
 import { VideoSection } from "./MessageDetailsComponents/VideoSection";
-// Still import AudioSection but we'll conditionally render it differently
-import { AudioSection } from "./MessageDetailsComponents/AudioSection";
 import { useContentKeys } from "./MessageDetailsComponents/ContentKeyManager";
+import { FileAttachmentsSection } from "./MessageDetailsComponents/FileAttachmentsSection";
 
 // Import custom hooks
 import { useMessageVideoHandler } from "@/hooks/useMessageVideoHandler";
 import { useContentUpdater } from "@/hooks/useContentUpdater";
+import { useAudioTranscription } from "@/hooks/message/useAudioTranscription";
+import { useMediaHandlers } from "@/hooks/message/useMediaHandlers";
+import { useRecordingWrappers } from "@/hooks/message/useRecordingWrappers";
+
+// Make sure we still import AudioSection so its import doesn't get cleaned up
+// We need this for type checking and it's used in MessageTypeTabSelector
+import { AudioSection } from "./MessageDetailsComponents/AudioSection";
 
 interface MessageDetailsProps {
   message?: any;  // Optional message prop for editing
@@ -24,11 +30,6 @@ interface MessageDetailsProps {
 
 export function MessageDetails({ message }: MessageDetailsProps) {
   const { files, setFiles } = useMessageForm();
-  const [showInlineRecording, setShowInlineRecording] = useState(false);
-  const [audioTranscription, setAudioTranscription] = useState<string | null>(null);
-  
-  // Get audio content updater from the hook
-  const { handleAudioContentUpdate, handleVideoContentUpdate } = useContentUpdater();
   
   // Use our custom hook for handling media
   const {
@@ -53,6 +54,17 @@ export function MessageDetails({ message }: MessageDetailsProps) {
     initializedFromMessage
   } = useMessageVideoHandler(message);
 
+  // Get audio content updater from the hook
+  const { handleAudioContentUpdate, handleVideoContentUpdate } = useContentUpdater();
+  
+  // Use our custom hooks for specific functionality
+  const { audioTranscription, setAudioTranscription, handleTranscribeAudio } = useAudioTranscription();
+  const { showInlineRecording, setShowInlineRecording, handleClearVideoAndRecord } = useMediaHandlers(clearVideo, setShowVideoRecorder);
+  const { handleStartVideoRecordingWrapper, handleStartAudioRecordingWrapper } = useRecordingWrappers(
+    forceInitializeCamera, 
+    startAudioRecording
+  );
+  
   // Handle tab change
   const handleTabChange = (value: string) => {
     console.log("Tab changed to:", value);
@@ -73,55 +85,9 @@ export function MessageDetails({ message }: MessageDetailsProps) {
     audioBlob
   });
   
-  // Handle audio transcription
-  const handleTranscribeAudio = async () => {
-    if (!audioBlob) return;
-    
-    try {
-      const transcription = await transcribeAudio();
-      setAudioTranscription(transcription);
-      
-      // Update the audio content with transcription
-      if (audioBlob) {
-        await handleAudioContentUpdate(audioBlob, transcription);
-      }
-    } catch (error) {
-      console.error("Error transcribing audio:", error);
-    }
-  };
-  
-  // Handle clearing video and showing record dialog
-  const handleClearVideoAndRecord = () => {
-    clearVideo();
-    setShowInlineRecording(false);
-    // Show the dialog after a slight delay to ensure state updates
-    setTimeout(() => {
-      setShowVideoRecorder(true);
-    }, 50);
-  };
-
-  // Create a wrapper function that explicitly returns Promise<void>
-  const handleStartRecordingWrapper = async (): Promise<void> => {
-    try {
-      // Use void operator to explicitly discard the return value
-      void await forceInitializeCamera();
-      // No return statement ensures Promise<void>
-    } catch (error) {
-      console.error("Error in handleStartRecordingWrapper:", error);
-      // No re-throw to maintain Promise<void>
-    }
-  };
-
-  // Create a wrapper function for audio recording that explicitly returns Promise<void>
-  const handleStartAudioRecordingWrapper = async (): Promise<void> => {
-    try {
-      // Use void operator to explicitly discard the boolean return value
-      void await startAudioRecording();
-      // No return statement ensures Promise<void>
-    } catch (error) {
-      console.error("Error in handleStartAudioRecordingWrapper:", error);
-      // No re-throw to maintain Promise<void>
-    }
+  // Handle audio transcription with our specific audio blob
+  const handleTranscribeAudioWrapper = () => {
+    handleTranscribeAudio(audioBlob, transcribeAudio);
   };
 
   return (
@@ -156,7 +122,7 @@ export function MessageDetails({ message }: MessageDetailsProps) {
           isVideoInitializing={isVideoInitializing}
           hasVideoPermission={hasVideoPermission}
           videoPreviewStream={videoPreviewStream}
-          onStartVideoRecording={handleStartRecordingWrapper} 
+          onStartVideoRecording={handleStartVideoRecordingWrapper} 
           onStopVideoRecording={stopVideoRecording}
           onClearVideo={handleClearVideoAndRecord}
           
@@ -174,7 +140,7 @@ export function MessageDetails({ message }: MessageDetailsProps) {
             setAudioTranscription(null);
             setShowInlineRecording(false);
           }}
-          onTranscribeAudio={handleTranscribeAudio}
+          onTranscribeAudio={handleTranscribeAudioWrapper}
           
           // Keys for component remounting
           getVideoContentKey={() => videoContentKey}
@@ -208,26 +174,20 @@ export function MessageDetails({ message }: MessageDetailsProps) {
       <LocationSection />
 
       {/* File attachments */}
-      <div className="space-y-2">
-        <Label>File Attachments</Label>
-        <FileUploader 
-          files={files} 
-          onChange={setFiles} 
-        />
-      </div>
+      <FileAttachmentsSection files={files} setFiles={setFiles} />
 
       {/* Media recorder dialogs - keeping this as a backup option */}
-      <MediaRecorders 
+      <MediaRecordersDialog 
         showVideoRecorder={showVideoRecorder}
         setShowVideoRecorder={setShowVideoRecorder}
         onVideoContentUpdate={handleVideoContentUpdate}
         videoUrl={videoUrl}
         videoBlob={videoBlob}
-        isRecording={isVideoRecording}
-        isInitializing={isVideoInitializing}
-        hasPermission={hasVideoPermission}
-        previewStream={videoPreviewStream}
-        startRecording={handleStartRecordingWrapper}
+        isVideoRecording={isVideoRecording}
+        isVideoInitializing={isVideoInitializing}
+        hasVideoPermission={hasVideoPermission}
+        videoPreviewStream={videoPreviewStream}
+        startRecording={handleStartVideoRecordingWrapper}
         stopRecording={stopVideoRecording}
         clearVideo={clearVideo}
       />
