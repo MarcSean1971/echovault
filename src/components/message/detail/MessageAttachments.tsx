@@ -16,7 +16,7 @@ export function MessageAttachments({ message, deliveryId, recipientEmail }: Mess
   }
   
   return (
-    <div className="space-y-2">
+    <div className={`space-y-2 ${HOVER_TRANSITION}`}>
       {message.attachments.map((attachment, index) => {
         const attachmentProps = {
           name: attachment.file_name || attachment.name || "Unknown file",

@@ -1,6 +1,7 @@
 
 import { Message, MessageAttachment } from "@/types/message";
 import { Card } from "@/components/ui/card";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 export interface MessageContentProps {
   message: Message;
@@ -17,9 +18,9 @@ export function MessageContent({ message, deliveryId, recipientEmail }: MessageC
     <div className="message-content">
       {/* Display the message content as plain text or formatted HTML */}
       {message.message_type === 'text' ? (
-        <div className="whitespace-pre-wrap">{message.content}</div>
+        <div className={`whitespace-pre-wrap ${HOVER_TRANSITION}`}>{message.content}</div>
       ) : (
-        <Card className="p-4">
+        <Card className={`p-4 ${HOVER_TRANSITION}`}>
           <p>This message type is not supported.</p>
         </Card>
       )}

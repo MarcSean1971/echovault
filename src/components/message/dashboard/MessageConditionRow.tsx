@@ -1,9 +1,9 @@
 
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { formatDistanceToNow, format } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 import { Button } from "@/components/ui/button";
-import { MessageCondition, TriggerType, Message, MessageDeliveryStatus } from "@/types/message";
+import { MessageCondition, TriggerType, Message } from "@/types/message";
 import { armMessage, disarmMessage } from "@/services/messages/conditionService";
 import { toast } from "@/components/ui/use-toast";
 import { Clock, ShieldAlert, Shield, AlertTriangle, CheckCircle, ArrowRight } from "lucide-react";

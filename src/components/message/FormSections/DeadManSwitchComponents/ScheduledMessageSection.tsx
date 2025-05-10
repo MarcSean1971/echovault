@@ -1,6 +1,7 @@
 
 import { RecurringPattern } from "@/types/message";
 import { ScheduledDateSection } from "./ScheduledDateSection";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface ScheduledMessageSectionProps {
   triggerDate: Date | null;
@@ -16,7 +17,7 @@ export function ScheduledMessageSection({
   setRecurringPattern
 }: ScheduledMessageSectionProps) {
   return (
-    <div className="space-y-4">
+    <div className={`space-y-4 ${HOVER_TRANSITION}`}>
       <ScheduledDateSection 
         triggerDate={triggerDate || undefined}
         setTriggerDate={(date) => setTriggerDate(date || null)}
