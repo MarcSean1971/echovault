@@ -68,20 +68,21 @@ export function MessageDetails({ message }: MessageDetailsProps) {
   const handleStartRecordingWrapper = async (): Promise<void> => {
     try {
       await forceInitializeCamera();
-      // We're explicitly not returning anything, which results in Promise<void>
+      // Not returning anything explicitly ensures Promise<void>
     } catch (error) {
       console.error("Error in handleStartRecordingWrapper:", error);
       // No re-throw to maintain Promise<void>
     }
   };
   
-  // Create a wrapper for startVideoRecording that returns Promise<void>
+  // Create a wrapper for startVideoRecording that explicitly returns Promise<void>
   const startVideoRecordingWrapper = async (): Promise<void> => {
     try {
       await startVideoRecording();
-      // We're explicitly not returning anything, which results in Promise<void>
+      // Not returning anything explicitly ensures Promise<void>
     } catch (error) {
       console.error("Error in startVideoRecordingWrapper:", error);
+      // No re-throw to maintain Promise<void>
     }
   };
 
@@ -146,7 +147,7 @@ export function MessageDetails({ message }: MessageDetailsProps) {
           isVideoInitializing={isVideoInitializing}
           hasVideoPermission={hasVideoPermission}
           videoPreviewStream={videoPreviewStream}
-          onStartVideoRecording={startVideoRecordingWrapper} // Use the wrapper here
+          onStartVideoRecording={startVideoRecordingWrapper} // Using wrapper function with Promise<void>
           onStopVideoRecording={stopVideoRecording}
           onClearVideo={() => {
             clearVideo();
@@ -198,7 +199,7 @@ export function MessageDetails({ message }: MessageDetailsProps) {
         isInitializing={isVideoInitializing}
         hasPermission={hasVideoPermission}
         previewStream={videoPreviewStream}
-        startRecording={handleStartRecordingWrapper} // Use the wrapper here
+        startRecording={handleStartRecordingWrapper} // Using wrapper function with Promise<void>
         stopRecording={stopVideoRecording}
         clearVideo={clearVideo}
       />

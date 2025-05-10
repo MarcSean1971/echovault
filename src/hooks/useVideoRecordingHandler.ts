@@ -68,7 +68,7 @@ export function useVideoRecordingHandler() {
     };
   }, [cleanup]);
   
-  // Force initialize camera - returns boolean but used with wrapper for void
+  // Force initialize camera - returns Promise<boolean> internally but we adapt the signature as needed
   const forceInitializeCamera = useCallback(async (): Promise<boolean> => {
     try {
       setIsInitializationAttempted(true);
@@ -88,8 +88,8 @@ export function useVideoRecordingHandler() {
     }
   }, [initializeStream, stopMediaStream, isStreamActive]);
   
-  // Start recording wrapper to handle form state
-  const startRecording = useCallback(async () => {
+  // Start recording wrapper to handle form state - explicitly returns Promise<boolean>
+  const startRecording = useCallback(async (): Promise<boolean> => {
     try {
       await startRecordingInner();
       return true;

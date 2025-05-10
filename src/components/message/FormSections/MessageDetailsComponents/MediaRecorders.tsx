@@ -13,7 +13,7 @@ interface MediaRecordersProps {
   isInitializing?: boolean;
   hasPermission?: boolean | null;
   previewStream?: MediaStream | null;
-  startRecording: () => Promise<void>; // Expecting Promise<void>
+  startRecording: () => Promise<void>; // Expects Promise<void>
   stopRecording?: () => void;
   clearVideo?: () => void;
 }
