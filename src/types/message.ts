@@ -1,9 +1,26 @@
 
 export type MessageType = "text";
 
-export type TriggerType = "no_check_in" | "panic_button" | "manual_trigger" | "scheduled";
-export type DeliveryOption = "immediate" | "recurring";
-export type RecurringPattern = "daily" | "weekly" | "monthly" | null;
+export type TriggerType = "no_check_in" | "panic_button" | "manual_trigger" | "scheduled" | "panic_trigger";
+export type DeliveryOption = "immediate" | "recurring" | "once";
+export type RecurringPatternType = 'daily' | 'weekly' | 'monthly' | 'yearly';
+
+export interface RecurringPattern {
+  type: RecurringPatternType;
+  interval: number;
+  day?: number;
+  month?: number;
+  startDate?: string;
+}
+
+export interface PanicTriggerConfig {
+  enabled: boolean;
+  methods: string[];
+  cancel_window_seconds: number;
+  bypass_logging: boolean;
+  keep_armed: boolean;
+  trigger_keyword?: string;
+}
 
 export interface Recipient {
   id: string;
@@ -12,6 +29,7 @@ export interface Recipient {
   phone?: string;
   relationship?: string;
   notes?: string;
+  deliveryId?: string;
 }
 
 export interface Message {
@@ -42,7 +60,7 @@ export interface MessageAttachment {
   created_at: string;
 }
 
-export interface FileAttachment extends File {
+export interface FileAttachment {
   file: File;
   id?: string;
   preview?: string;
@@ -52,6 +70,7 @@ export interface MessageCondition {
   id: string;
   message_id: string;
   trigger_type: TriggerType;
+  condition_type: string;
   hours_threshold?: number;
   minutes_threshold?: number;
   trigger_date?: string;
@@ -66,8 +85,12 @@ export interface MessageCondition {
   pin_code?: string;
   unlock_delay_hours?: number;
   expiry_hours?: number;
-  panic_trigger_config?: any;
+  panic_trigger_config?: PanicTriggerConfig;
+  panic_config?: PanicTriggerConfig;
   check_in_code?: string;
+  recipients?: Recipient[];
+  triggered?: boolean;
+  delivered?: boolean;
 }
 
 export interface DeliveredMessage {

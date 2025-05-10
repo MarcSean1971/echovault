@@ -3,7 +3,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect } from "react";
-import { RecurringPattern } from "@/types/message";
+import { RecurringPattern, RecurringPatternType } from "@/types/message";
 import { DatePicker } from "./DatePicker";
 import { format } from "date-fns";
 

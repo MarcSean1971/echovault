@@ -96,7 +96,7 @@ function MessageForm({ onCancel }: CreateMessageFormProps) {
         showUploadDialog={showUploadDialog}
         setShowUploadDialog={setShowUploadDialog}
         uploadProgress={uploadProgress}
-        files={files}
+        files={files as FileAttachment[]}
         isLoading={isLoading}
       />
     </>

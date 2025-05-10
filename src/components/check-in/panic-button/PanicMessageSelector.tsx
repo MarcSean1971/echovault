@@ -56,6 +56,7 @@ export function PanicMessageSelector({
         if (data) {
           data.forEach(message => {
             const condition = messages.find(c => c.message_id === message.id);
+            // Access recipients safely with optional chaining
             const recipientCount = condition?.recipients?.length || 0;
             
             // Ensure attachments is always treated as an array
@@ -134,6 +135,8 @@ export function PanicMessageSelector({
             messages.map((message) => {
               const details = messageDetails[message.message_id];
               const attachmentInfo = details ? getAttachmentInfo(message.message_id) : null;
+              // Access recipients safely with optional chaining
+              const recipientCount = message.recipients?.length || 0;
               
               return (
                 <div 
@@ -176,7 +179,7 @@ export function PanicMessageSelector({
                   )}
                   
                   <div className="text-xs text-gray-400 mt-1">
-                    Recipients: {message.recipients?.length || 0}
+                    Recipients: {recipientCount}
                   </div>
                 </div>
               );

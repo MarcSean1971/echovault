@@ -82,8 +82,10 @@ export function useFormActions() {
       // For text message type, use the textContent
       const messageContent = textContent;
       
-      // Extract only File objects from FileAttachment objects
-      const fileObjects: File[] = files.map(attachment => attachment.file);
+      // Create file attachment objects from File objects
+      const fileAttachments: FileAttachment[] = files.map(fileObj => ({
+        file: fileObj
+      }));
       
       // Create the basic message with location data if enabled
       const message = await createMessage(
@@ -91,7 +93,7 @@ export function useFormActions() {
         title, 
         messageContent, 
         messageType, 
-        fileObjects,
+        fileAttachments,
         // Location data
         shareLocation ? {
           latitude: locationLatitude,

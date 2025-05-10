@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { CustomTimeInput } from "./CustomTimeInput";
 import { ConditionTypeSelector } from "./ConditionTypeSelector";
@@ -81,7 +80,7 @@ export function DeliveryMethodContent({
   // Render the custom check-in code input
   const renderCustomCheckInCode = () => {
     // Only show for check-in related condition types
-    if (conditionType !== 'no_check_in' && conditionType !== 'regular_check_in') return null;
+    if (conditionType !== 'no_check_in') return null;
     
     return (
       <div className="space-y-2">
@@ -142,60 +141,12 @@ export function DeliveryMethodContent({
           </div>
         );
         
-      case 'regular_check_in':
-        return (
-          <div className="space-y-6">
-            <TimeThresholdSelector
-              conditionType={conditionType}
-              hoursThreshold={hoursThreshold}
-              setHoursThreshold={setHoursThreshold}
-            />
-            {/* Add custom check-in code input */}
-            {renderCustomCheckInCode()}
-          </div>
-        );
-        
-      case 'group_confirmation':
-        return (
-          <GroupConfirmation
-            confirmationsRequired={3}
-            setConfirmationsRequired={() => {}}
-          />
-        );
-        
       case 'panic_trigger':
+      case 'panic_button':
         return (
           <PanicTrigger
             config={panicTriggerConfig || defaultPanicConfig}
             setConfig={handlePanicConfigUpdate}
-          />
-        );
-        
-      case 'inactivity_to_recurring':
-        return (
-          <InactivityToRecurring
-            hoursThreshold={hoursThreshold}
-            setHoursThreshold={setHoursThreshold}
-            recurringPattern={recurringPattern}
-            setRecurringPattern={setRecurringPattern}
-            reminderHours={reminderHours}
-            setReminderHours={setReminderHours}
-          />
-        );
-        
-      case 'inactivity_to_date':
-        return (
-          <InactivityToDate
-            hoursThreshold={hoursThreshold}
-            setHoursThreshold={setHoursThreshold}
-            minutesThreshold={minutesThreshold}
-            setMinutesThreshold={setMinutesThreshold}
-            triggerDate={triggerDate}
-            setTriggerDate={setTriggerDate}
-            recurringPattern={recurringPattern}
-            setRecurringPattern={setRecurringPattern}
-            reminderHours={reminderHours}
-            setReminderHours={setReminderHours}
           />
         );
         

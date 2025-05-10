@@ -26,14 +26,16 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
     refreshConditions 
   } = useTriggerDashboard();
 
-  // Find panic message from conditions
+  // Find panic message from conditions - look for both condition_type and trigger_type
   const panicMessage = conditions.find(c => 
-    c.condition_type === 'panic_trigger' && c.active === true
+    (c.condition_type === 'panic_trigger' || c.trigger_type === 'panic_trigger' || c.trigger_type === 'panic_button') && 
+    c.active === true
   ) || null;
 
   // Find check-in related conditions - only count active conditions
   const hasCheckInConditions = conditions.some(c => 
-    (c.condition_type === 'no_check_in' || c.condition_type === 'regular_check_in') && 
+    ((c.condition_type === 'no_check_in' || c.trigger_type === 'no_check_in') || 
+    (c.condition_type === 'regular_check_in')) && 
     c.active === true
   );
 

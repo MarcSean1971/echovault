@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { FileText } from "lucide-react";
-import { HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { HOVER_TRANSITION, BUTTON_HOVER_EFFECTS } from "@/utils/hoverEffects";
 
 export function MessageTypeSelector() {
   return (
@@ -9,7 +9,7 @@ export function MessageTypeSelector() {
       <Button
         type="button"
         variant="default"
-        className={`${HOVER_TRANSITION}`}
+        className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
       >
         <FileText className="h-4 w-4 mr-2" />
         Text
