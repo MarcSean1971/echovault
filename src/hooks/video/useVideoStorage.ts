@@ -20,7 +20,7 @@ export function useVideoStorage() {
     console.log("Video cleared");
   };
   
-  // Function to restore video from blob and url
+  // Function to restore video from blob and url with improved error handling
   const restoreVideo = (blob: Blob, url: string, setVideoBlob: (blob: Blob) => void, setVideoUrl: (url: string) => void) => {
     console.log("Restoring video from blob:", blob.size, "bytes");
     

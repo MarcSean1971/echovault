@@ -16,12 +16,16 @@ export function useInitializedMediaHandler() {
     // Set the flag first, then restore the video to ensure proper state transition
     setInitializedFromMessage(true);
     
-    // Use setTimeout to ensure the flag is set before we restore the video
-    // This fixes timing issues where the video was being initialized before state updates completed
-    setTimeout(() => {
-      console.log("Restoring video after initialization flag was set");
-      restoreVideo(blob, url);
-    }, 0);
+    try {
+      // Use setTimeout to ensure the flag is set before we restore the video
+      // This fixes timing issues where the video was being initialized before state updates completed
+      setTimeout(() => {
+        console.log("Restoring video after initialization flag was set");
+        restoreVideo(blob, url);
+      }, 0);
+    } catch (error) {
+      console.error("Error in handleInitializedVideo:", error);
+    }
   };
 
   // Handle initialized audio from existing message
@@ -35,12 +39,16 @@ export function useInitializedMediaHandler() {
     // Set the flag first, then restore the audio to ensure proper state transition
     setInitializedFromMessage(true);
     
-    // Use setTimeout to ensure the flag is set before we restore the audio
-    // This fixes timing issues where the audio was being initialized before state updates completed
-    setTimeout(() => {
-      console.log("Restoring audio after initialization flag was set");
-      restoreAudio(blob, url);
-    }, 0);
+    try {
+      // Use setTimeout to ensure the flag is set before we restore the audio
+      // This fixes timing issues where the audio was being initialized before state updates completed
+      setTimeout(() => {
+        console.log("Restoring audio after initialization flag was set");
+        restoreAudio(blob, url);
+      }, 0);
+    } catch (error) {
+      console.error("Error in handleInitializedAudio:", error);
+    }
   };
 
   return {

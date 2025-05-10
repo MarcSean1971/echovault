@@ -105,8 +105,10 @@ export function useVideoRecordingHandler() {
     setVideoContent('');
   }, [videoUrl, setVideoContent, clearVideoInner]);
   
-  // Restore video wrapper
+  // Restore video wrapper with improved handling
   const restoreVideo = useCallback((blob: Blob, url: string) => {
+    console.log("restoreVideo called with blob size:", blob.size, "and url:", url.substring(0, 30) + "...");
+    
     restoreVideoInner(blob, url, setVideoBlob, setVideoUrl);
     
     // Convert blob back to base64 and update video content

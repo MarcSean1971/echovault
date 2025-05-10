@@ -46,7 +46,7 @@ export function VideoPlayer({ videoUrl, onClearVideo, inDialog = false }: VideoP
     };
   }, []);
   
-  // Show controls on hover
+  // Show controls on hover with improved transition
   const showControls = () => setIsControlsVisible(true);
   const hideControls = () => setIsControlsVisible(false);
   
@@ -58,6 +58,8 @@ export function VideoPlayer({ videoUrl, onClearVideo, inDialog = false }: VideoP
       onClick={togglePlayback}
       onMouseEnter={showControls}
       onMouseLeave={hideControls}
+      onTouchStart={showControls}
+      onTouchEnd={() => setTimeout(hideControls, 3000)}
     >
       {videoUrl && (
         <video 
@@ -73,6 +75,7 @@ export function VideoPlayer({ videoUrl, onClearVideo, inDialog = false }: VideoP
         togglePlayback={togglePlayback} 
         onClearVideo={onClearVideo}
         inDialog={inDialog}
+        isVisible={isControlsVisible}
       />
     </div>
   );
