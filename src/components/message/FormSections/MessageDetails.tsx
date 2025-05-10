@@ -210,7 +210,7 @@ export function MessageDetails({ message }: MessageDetailsProps) {
         isAudioInitializing={isAudioInitializing}
         hasAudioPermission={hasAudioPermission}
         audioTranscription={audioTranscription}
-        startAudioRecording={startAudioRecordingWrapper}
+        startAudioRecording={handleStartAudioRecordingWrapper}
         stopAudioRecording={stopAudioRecording}
         clearAudio={() => {
           clearAudio();
