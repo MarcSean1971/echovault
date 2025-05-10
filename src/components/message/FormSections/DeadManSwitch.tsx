@@ -79,7 +79,6 @@ export function DeadManSwitch() {
                 setPanicTriggerConfig={setPanicTriggerConfig}
                 reminderHours={reminderHours}
                 setReminderHours={setReminderHours}
-                setActiveTab={() => {}}
                 checkInCode={checkInCode}
                 setCheckInCode={setCheckInCode}
               />

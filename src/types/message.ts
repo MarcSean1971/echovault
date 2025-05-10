@@ -10,7 +10,6 @@ export interface RecurringPattern {
   interval: number;
   day?: number;
   month?: number;
-  startDate?: string;
 }
 
 export interface PanicTriggerConfig {

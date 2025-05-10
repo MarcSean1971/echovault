@@ -2,13 +2,10 @@
 import { useState, useEffect } from "react";
 import { TriggerType } from "@/types/message";
 import { RadioGroup } from "@/components/ui/radio-group";
-import { PanicButton } from "@/components/layout/panic-button";
 import { RadioCardOption } from "./RadioCardOption";
 import { NoCheckInSection } from "./NoCheckInSection";
 import { ScheduledMessageSection } from "./ScheduledMessageSection";
 import { Label } from "@/components/ui/label";
-import { InactivityToRecurring } from "./InactivityToRecurring";
-import { InactivityToDate } from "./InactivityToDate";
 import { PanicTrigger } from "./PanicTrigger";
 import { PanicTriggerConfig } from "@/types/message";
 
@@ -35,6 +32,15 @@ interface DeliveryMethodContentProps {
   // For panic trigger config
   panicTriggerConfig: PanicTriggerConfig | undefined;
   setPanicTriggerConfig: (config: PanicTriggerConfig) => void;
+  
+  // For delivery option
+  deliveryOption: string;
+  setDeliveryOption: (option: string) => void;
+  
+  // Optional properties
+  setActiveTab?: (tab: string) => void;
+  checkInCode?: string;
+  setCheckInCode?: (code: string) => void;
 }
 
 export function DeliveryMethodContent({
@@ -51,7 +57,11 @@ export function DeliveryMethodContent({
   recurringPattern,
   setRecurringPattern,
   panicTriggerConfig,
-  setPanicTriggerConfig
+  setPanicTriggerConfig,
+  deliveryOption,
+  setDeliveryOption,
+  checkInCode,
+  setCheckInCode
 }: DeliveryMethodContentProps) {
   // When conditionType or component mounts, ensure we have a default panic config
   useEffect(() => {
@@ -121,8 +131,8 @@ export function DeliveryMethodContent({
             setMinutesThreshold={setMinutesThreshold}
             recurringPattern={recurringPattern}
             setRecurringPattern={setRecurringPattern}
-            triggerDate={triggerDate}
-            setTriggerDate={setTriggerDate}
+            triggerDate={triggerDate || undefined}
+            setTriggerDate={(date) => setTriggerDate(date || null)}
             reminderHours={reminderHours}
             setReminderHours={setReminderHours}
           />
@@ -140,7 +150,7 @@ export function DeliveryMethodContent({
         {conditionType === "panic_button" && panicTriggerConfig && (
           <PanicTrigger
             config={panicTriggerConfig}
-            onChange={setPanicTriggerConfig}
+            setConfig={setPanicTriggerConfig}
           />
         )}
         

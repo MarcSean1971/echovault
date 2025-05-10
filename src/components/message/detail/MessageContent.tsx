@@ -23,8 +23,6 @@ export function MessageContent({ message, deliveryId, recipientEmail }: MessageC
           <p>This message type is not supported.</p>
         </Card>
       )}
-      
-      {/* This is where we'd render attachments if we had any */}
     </div>
   );
 }

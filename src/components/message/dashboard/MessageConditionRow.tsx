@@ -1,166 +1,208 @@
 
-import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { 
-  TableRow, 
-  TableCell 
-} from "@/components/ui/table";
+import { formatDistanceToNow, format } from "date-fns";
+import { Button } from "@/components/ui/button";
+import { MessageCondition, TriggerType, Message, MessageDeliveryStatus } from "@/types/message";
+import { armMessage, disarmMessage } from "@/services/messages/conditionService";
 import { toast } from "@/components/ui/use-toast";
-import { Message, MessageCondition, MessageDeliveryStatus, TriggerType } from "@/types/message";
-import { format } from "date-fns";
-import { 
-  Clock, 
-  Calendar, 
-  Users, 
-  Bell, 
-  Shield, 
-  Hourglass,
-  Repeat 
-} from "lucide-react";
-import { triggerPanicMessage } from "@/services/messages/conditionService";
+import { Clock, ShieldAlert, Shield, AlertTriangle, CheckCircle, ArrowRight } from "lucide-react";
+import { HOVER_TRANSITION, BUTTON_HOVER_EFFECTS } from "@/utils/hoverEffects";
 
 interface MessageConditionRowProps {
   condition: MessageCondition;
-  message?: Message;
-  userId?: string;
-  onRefreshConditions: () => void;
+  message: Message | undefined;
+  onRefresh: () => void;
+  userId: string | null;
 }
 
-export function MessageConditionRow({ 
-  condition, 
-  message, 
-  userId,
-  onRefreshConditions 
-}: MessageConditionRowProps) {
-  const navigate = useNavigate();
+export function MessageConditionRow({ condition, message, onRefresh, userId }: MessageConditionRowProps) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [status, setStatus] = useState<string>(condition.active ? "armed" : "disarmed");
   
-  // Helper function to determine message status
-  const getMessageStatus = (condition: MessageCondition): MessageDeliveryStatus => {
-    if (!condition.active) return 'cancelled';
-    if (condition.delivered) return 'delivered';
-    if (condition.triggered) return 'triggered';
-    return 'armed';
-  };
-  
-  const getTriggerTypeIcon = (type: TriggerType) => {
-    switch (type) {
-      case 'no_check_in':
-        return <Clock className="h-4 w-4" />;
-      case 'regular_check_in':
-        return <Bell className="h-4 w-4" />;
-      case 'group_confirmation':
-        return <Users className="h-4 w-4" />;
-      case 'panic_trigger':
-        return <Shield className="h-4 w-4" />;
-      case 'inactivity_to_recurring':
-        return <Hourglass className="h-4 w-4" />;
-      case 'inactivity_to_date':
-        return <Hourglass className="h-4 w-4" />;
-      default:
-        return <Clock className="h-4 w-4" />;
-    }
-  };
-  
-  const getStatusBadge = (status: MessageDeliveryStatus) => {
-    switch (status) {
-      case 'armed':
-        return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Armed</Badge>;
-      case 'triggered':
-        return <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">Triggered</Badge>;
-      case 'delivered':
-        return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Delivered</Badge>;
-      case 'viewed':
-        return <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">Viewed</Badge>;
-      case 'cancelled':
-        return <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200">Cancelled</Badge>;
-      case 'expired':
-        return <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200">Expired</Badge>;
-      default:
-        return <Badge variant="outline">Unknown</Badge>;
-    }
-  };
-  
-  // Format trigger description
-  const getTriggerDescription = (condition: MessageCondition) => {
-    switch (condition.condition_type) {
-      case 'no_check_in':
-        return `Sends if no check-in within ${condition.hours_threshold} hours`;
-      case 'regular_check_in':
-        return `Sent on regular schedule every ${condition.hours_threshold} hours`;
-      case 'group_confirmation':
-        return `Sends after ${condition.confirmation_required} confirmations`;
-      case 'panic_trigger':
-        return 'Manual panic trigger';
-      case 'inactivity_to_recurring':
-        return `Sends regularly after ${condition.hours_threshold} hours of inactivity`;
-      case 'inactivity_to_date':
-        return `Sends on specific date after ${condition.hours_threshold} hours of inactivity`;
-      default:
-        return 'Unknown trigger type';
-    }
-  };
-  
-  const handleTriggerPanic = async () => {
-    if (!userId || !condition.message_id) return;
+  // Update status when condition changes
+  useEffect(() => {
+    let newStatus: string = condition.active ? "armed" : "disarmed";
     
-    if (confirm("Are you sure you want to trigger this panic message? This cannot be undone.")) {
-      try {
-        await triggerPanicMessage(userId, condition.message_id);
-        toast({
-          title: "Panic message triggered",
-          description: "Your message has been sent to all recipients",
-        });
-        
-        // Refresh condition data
-        onRefreshConditions();
-      } catch (error: any) {
-        toast({
-          title: "Error",
-          description: error.message || "Could not trigger panic message",
-          variant: "destructive",
-        });
-      }
+    if (condition.triggered) {
+      newStatus = "triggered";
+    } else if (condition.delivered) {
+      newStatus = "delivered";
+    }
+    
+    setStatus(newStatus);
+  }, [condition]);
+  
+  // Get badge and status text for the current status
+  const getBadgeForStatus = () => {
+    switch (status) {
+      case "disarmed":
+        return (
+          <Badge variant="outline" className="bg-muted">
+            <Shield className="h-3 w-3 mr-1" />
+            Disarmed
+          </Badge>
+        );
+      case "armed":
+        return (
+          <Badge variant="secondary" className="bg-green-100 text-green-800">
+            <ShieldAlert className="h-3 w-3 mr-1" />
+            Armed
+          </Badge>
+        );
+      case "triggered":
+        return (
+          <Badge variant="destructive">
+            <AlertTriangle className="h-3 w-3 mr-1" />
+            Triggered
+          </Badge>
+        );
+      case "delivered":
+        return (
+          <Badge variant="default">
+            <CheckCircle className="h-3 w-3 mr-1" />
+            Delivered
+          </Badge>
+        );
+      default:
+        return (
+          <Badge variant="outline">
+            Unknown
+          </Badge>
+        );
     }
   };
   
+  // Format the condition type for display
+  const getConditionTypeDisplay = (): string => {
+    switch (condition.trigger_type) {
+      case "no_check_in":
+        return "Deadman's switch";
+      case "panic_button":
+        return "Panic button";
+      case "scheduled":
+        return "Scheduled message";
+      case "manual_trigger":
+        return "Manual trigger";
+      case "panic_trigger":
+        return "Panic trigger";
+      default:
+        return condition.trigger_type;
+    }
+  };
+  
+  // Get deadline display for the condition
+  const getDeadlineDisplay = (): string => {
+    if (!condition.next_deadline) {
+      return "—";
+    }
+    
+    try {
+      return formatDistanceToNow(new Date(condition.next_deadline), { addSuffix: true });
+    } catch (e) {
+      return "Invalid date";
+    }
+  };
+  
+  // Handle arming a message
+  const handleArm = async () => {
+    if (!userId || !condition.id) return;
+    
+    setIsLoading(true);
+    
+    try {
+      await armMessage(condition.id, userId);
+      toast({ title: "Message armed successfully" });
+      setStatus("armed");
+      onRefresh();
+    } catch (error: any) {
+      console.error("Error arming message:", error);
+      toast({ 
+        title: "Failed to arm message", 
+        description: error.message, 
+        variant: "destructive" 
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Handle disarming a message
+  const handleDisarm = async () => {
+    if (!userId || !condition.id) return;
+    
+    setIsLoading(true);
+    
+    try {
+      await disarmMessage(condition.id);
+      toast({ title: "Message disarmed successfully" });
+      setStatus("disarmed");
+      onRefresh();
+    } catch (error: any) {
+      console.error("Error disarming message:", error);
+      toast({ 
+        title: "Failed to disarm message", 
+        description: error.message, 
+        variant: "destructive" 
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <TableRow key={condition.id}>
-      <TableCell className="font-medium">
+    <div className="grid grid-cols-12 gap-4 items-center py-3 border-b last:border-0">
+      <div className="col-span-3 font-medium truncate">
         {message?.title || "Unknown message"}
-      </TableCell>
-      <TableCell>
-        <div className="flex items-center space-x-2">
-          {getTriggerTypeIcon(condition.condition_type)}
-          <span>{getTriggerDescription(condition)}</span>
-        </div>
-      </TableCell>
-      <TableCell>
-        {getStatusBadge(getMessageStatus(condition))}
-      </TableCell>
-      <TableCell>
-        {condition.recipients?.length || 0} recipient(s)
-      </TableCell>
-      <TableCell className="text-right">
-        <div className="flex justify-end gap-2">
+      </div>
+      
+      <div className="col-span-2">
+        {getBadgeForStatus()}
+      </div>
+      
+      <div className="col-span-2 text-sm">
+        {getConditionTypeDisplay()}
+      </div>
+      
+      <div className="col-span-2 text-sm">
+        {getDeadlineDisplay()}
+      </div>
+      
+      <div className="col-span-3 flex justify-end gap-2">
+        <Button 
+          size="sm" 
+          variant="outline" 
+          onClick={() => message && window.location.href = `/message/${message.id}`}
+          className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.muted}`}
+        >
+          Details
+          <ArrowRight className="h-3 w-3 ml-1" />
+        </Button>
+        
+        {status === "armed" ? (
           <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => navigate(`/message/${condition.message_id}`)}
+            size="sm" 
+            variant="ghost" 
+            onClick={handleDisarm}
+            disabled={isLoading}
+            className={`${HOVER_TRANSITION} bg-amber-50 hover:bg-amber-100 text-amber-700`}
           >
-            View
+            <Shield className="h-3 w-3 mr-1" />
+            Disarm
           </Button>
-          {condition.condition_type === 'panic_trigger' && (
-            <Button 
-              variant="destructive" 
-              size="sm"
-              onClick={handleTriggerPanic}
-            >
-              Trigger Now
-            </Button>
-          )}
-        </div>
-      </TableCell>
-    </TableRow>
+        ) : (
+          <Button 
+            size="sm" 
+            variant="ghost" 
+            onClick={handleArm}
+            disabled={isLoading}
+            className={`${HOVER_TRANSITION} bg-green-50 hover:bg-green-100 text-green-700`}
+          >
+            <ShieldAlert className="h-3 w-3 mr-1" />
+            Arm
+          </Button>
+        )}
+      </div>
+    </div>
   );
 }

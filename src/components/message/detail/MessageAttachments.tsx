@@ -17,19 +17,23 @@ export function MessageAttachments({ message, deliveryId, recipientEmail }: Mess
   
   return (
     <div className="space-y-2">
-      {message.attachments.map((attachment, index) => (
-        <AttachmentItem
-          key={index}
-          attachment={{
-            name: attachment.file_name,
-            size: attachment.file_size,
-            type: attachment.file_type,
-            path: attachment.url
-          }}
-          deliveryId={deliveryId}
-          recipientEmail={recipientEmail}
-        />
-      ))}
+      {message.attachments.map((attachment, index) => {
+        const attachmentProps = {
+          name: attachment.file_name || attachment.name || "Unknown file",
+          size: attachment.file_size || attachment.size || 0,
+          type: attachment.file_type || attachment.type || "",
+          path: attachment.url || attachment.path || ""
+        };
+        
+        return (
+          <AttachmentItem
+            key={index}
+            attachment={attachmentProps}
+            deliveryId={deliveryId}
+            recipientEmail={recipientEmail}
+          />
+        );
+      })}
     </div>
   );
 }

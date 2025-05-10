@@ -7,8 +7,8 @@ import { RadioCardOption } from "./RadioCardOption";
 import { RecurringPatternSelector } from "./RecurringPatternSelector";
 
 interface NoCheckInDeliveryOptionsProps {
-  deliveryOption: DeliveryOption;
-  setDeliveryOption: (option: DeliveryOption) => void;
+  deliveryOption: DeliveryOption | string;
+  setDeliveryOption: (option: DeliveryOption | string) => void;
   recurringPattern: RecurringPattern | null;
   setRecurringPattern: (pattern: RecurringPattern | null) => void;
   triggerDate: Date | null;
