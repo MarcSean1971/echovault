@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { useMessageForm } from "../MessageFormContext";
@@ -17,6 +18,7 @@ import { useContentUpdater } from "@/hooks/useContentUpdater";
 import { useAudioTranscription } from "@/hooks/message/useAudioTranscription";
 import { useMediaHandlers } from "@/hooks/message/useMediaHandlers";
 import { useRecordingWrappers } from "@/hooks/message/useRecordingWrappers";
+import { useContentKeys } from "@/components/message/FormSections/MessageDetailsComponents/ContentKeyManager"; // Fix: Import the hook correctly
 
 // Make sure we still import Video and AudioSection component types so their imports don't get cleaned up
 // We need these for type checking
@@ -59,6 +61,8 @@ export function MessageDetails({ message }: MessageDetailsProps) {
   // Use our custom hooks for specific functionality
   const { audioTranscription, setAudioTranscription, handleTranscribeAudio } = useAudioTranscription();
   const { showInlineRecording, setShowInlineRecording, handleClearVideoAndRecord } = useMediaHandlers(clearVideo, setShowVideoRecorder);
+  
+  // Fix: Ensure wrapper functions return Promise<void>
   const { handleStartVideoRecordingWrapper, handleStartAudioRecordingWrapper } = useRecordingWrappers(
     forceInitializeCamera, 
     startAudioRecording
@@ -84,9 +88,13 @@ export function MessageDetails({ message }: MessageDetailsProps) {
     audioBlob
   });
   
-  // Handle audio transcription with our specific audio blob
-  const handleTranscribeAudioWrapper = () => {
-    handleTranscribeAudio(audioBlob, transcribeAudio);
+  // Fix: Make this function return a Promise<void> to match the expected type
+  const handleTranscribeAudioWrapper = async (): Promise<void> => {
+    try {
+      await handleTranscribeAudio(audioBlob, transcribeAudio);
+    } catch (error) {
+      console.error("Error transcribing audio:", error);
+    }
   };
 
   return (

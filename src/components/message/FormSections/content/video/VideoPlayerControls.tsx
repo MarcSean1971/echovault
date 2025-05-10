@@ -28,9 +28,9 @@ export function VideoPlayerControls({
         className="bg-white/20 hover:bg-white/40 backdrop-blur-sm hover:scale-105 transition-all duration-200"
       >
         {isPlaying ? (
-          <Pause className="h-4 w-4 text-white" />
+          <Pause className="h-4 w-4 text-white hover:text-white/90 transition-colors" />
         ) : (
-          <Play className="h-4 w-4 text-white" />
+          <Play className="h-4 w-4 text-white hover:text-white/90 transition-colors" />
         )}
       </Button>
       
@@ -40,7 +40,7 @@ export function VideoPlayerControls({
         onClick={onClearVideo}
         className="bg-white/20 hover:bg-destructive/90 hover:text-destructive-foreground backdrop-blur-sm hover:scale-105 transition-all duration-200"
       >
-        <Trash2 className="h-4 w-4 mr-1" />
+        <Trash2 className="h-4 w-4 mr-1 hover:text-destructive-foreground transition-colors" />
         Clear
       </Button>
     </div>
