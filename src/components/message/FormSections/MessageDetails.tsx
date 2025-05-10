@@ -68,7 +68,8 @@ export function MessageDetails({ message }: MessageDetailsProps) {
   const handleStartRecordingWrapper = async (): Promise<void> => {
     // Call the original function but ignore its boolean result
     await forceInitializeCamera();
-    // No return value here, which implicitly returns undefined (void)
+    // Explicitly return to ensure void return type
+    return;
   };
 
   // Generate stable content keys to avoid unnecessary remounts

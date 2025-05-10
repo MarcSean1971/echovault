@@ -55,6 +55,7 @@ export function VideoRecordButton({
         "flex items-center gap-2 px-4 py-2 rounded-md transition-all duration-200", 
         buttonColor,
         "transform hover:scale-105", // Added hover effect (slight scale)
+        "hover:shadow-md", // Added hover shadow effect for consistency
         className
       )}
       type="button"
