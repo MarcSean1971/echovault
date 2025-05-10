@@ -35,10 +35,45 @@ export function blobToBase64(blob: Blob): Promise<string> {
  * @returns Blob created from the base64 string
  */
 export function base64ToBlob(base64: string, type: string): Blob {
-  const binaryString = window.atob(base64);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) {
-    bytes[i] = binaryString.charCodeAt(i);
+  try {
+    const binaryString = window.atob(base64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    return new Blob([bytes], { type });
+  } catch (e) {
+    console.error("Error in base64ToBlob:", e);
+    throw new Error(`Failed to convert base64 to blob: ${e}`);
   }
-  return new Blob([bytes], { type });
+}
+
+/**
+ * Safe wrapper for URL.createObjectURL that catches errors
+ * @param blob The blob to create a URL for
+ * @returns URL string or null if creation failed
+ */
+export function safeCreateObjectURL(blob: Blob | null): string | null {
+  if (!blob) return null;
+  
+  try {
+    return URL.createObjectURL(blob);
+  } catch (e) {
+    console.error("Error creating object URL:", e);
+    return null;
+  }
+}
+
+/**
+ * Safely revoke an object URL
+ * @param url The URL to revoke
+ */
+export function safeRevokeObjectURL(url: string | null): void {
+  if (!url) return;
+  
+  try {
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    console.error("Error revoking object URL:", e);
+  }
 }

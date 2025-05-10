@@ -30,7 +30,8 @@ export function useMediaInitializer(
       hasVideoUrl: !!initialVideoUrl,
       hasAudioBlob: !!initialAudioBlob, 
       hasAudioUrl: !!initialAudioUrl,
-      initializedFromMessage
+      initializedFromMessage,
+      messageType: message?.message_type
     });
     
     // Handle video initialization
@@ -39,7 +40,12 @@ export function useMediaInitializer(
       console.log("Initial video blob size:", initialVideoBlob.size);
       
       // Initialize the video with original blob and URL
-      handleInitializedVideo(initialVideoBlob, initialVideoUrl);
+      try {
+        handleInitializedVideo(initialVideoBlob, initialVideoUrl);
+        console.log("MediaInitializer: Video initialization complete");
+      } catch (err) {
+        console.error("MediaInitializer: Error initializing video:", err);
+      }
     }
     
     // Handle audio initialization
@@ -48,7 +54,12 @@ export function useMediaInitializer(
       console.log("Initial audio blob size:", initialAudioBlob.size);
       
       // Initialize the audio with original blob and URL
-      handleInitializedAudio(initialAudioBlob, initialAudioUrl);
+      try {
+        handleInitializedAudio(initialAudioBlob, initialAudioUrl);
+        console.log("MediaInitializer: Audio initialization complete");
+      } catch (err) {
+        console.error("MediaInitializer: Error initializing audio:", err);
+      }
     }
   }, [
     hasInitialized, 
@@ -59,7 +70,8 @@ export function useMediaInitializer(
     handleInitializedVideo, 
     handleInitializedAudio, 
     initializedFromMessage, 
-    setInitializedFromMessage
+    setInitializedFromMessage,
+    message
   ]);
 
   return {

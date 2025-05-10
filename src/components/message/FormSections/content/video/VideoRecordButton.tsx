@@ -52,7 +52,7 @@ export function VideoRecordButton({
         type="button"
         onClick={handleStopRecordingClick}
         variant="destructive"
-        className="hover:bg-destructive/90 transition-colors duration-200"
+        className="hover:bg-destructive/90 transition-colors duration-200 hover:scale-105"
       >
         <CameraOff className="mr-2 h-4 w-4" />
         Stop Recording
@@ -81,7 +81,7 @@ export function VideoRecordButton({
       type="button"
       onClick={handleStartRecordingClick}
       variant="default"
-      className="hover:bg-primary/90 transition-colors duration-200"
+      className="hover:bg-primary/90 transition-colors duration-200 hover:scale-105"
     >
       <Camera className="mr-2 h-4 w-4" />
       Start Recording
