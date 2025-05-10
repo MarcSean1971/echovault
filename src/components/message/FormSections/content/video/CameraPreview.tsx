@@ -19,6 +19,8 @@ export function CameraPreview({
 }: CameraPreviewProps) {
   const previewRef = useRef<HTMLVideoElement>(null);
   const [videoError, setVideoError] = useState<string | null>(null);
+  const retryAttemptsRef = useRef(0);
+  const maxRetryAttempts = 3;
   
   // Connect preview stream to video element
   useEffect(() => {
@@ -28,11 +30,44 @@ export function CameraPreview({
       try {
         previewRef.current.srcObject = previewStream;
         
+        // Clear any previous errors when we get a new stream
+        setVideoError(null);
+        
         // Play the preview (will be silent since we're not enabling audio)
         previewRef.current.play().catch(err => {
           console.error("Error playing preview:", err);
           setVideoError("Could not display camera preview. Please try again.");
+          
+          // Attempt automatic retry
+          if (retryAttemptsRef.current < maxRetryAttempts) {
+            retryAttemptsRef.current++;
+            const retryTimer = setTimeout(() => {
+              console.log(`Retry attempt ${retryAttemptsRef.current}...`);
+              if (previewRef.current) {
+                previewRef.current.play().catch(retryErr => {
+                  console.error(`Retry ${retryAttemptsRef.current} failed:`, retryErr);
+                });
+              }
+            }, 1000); // Wait 1 second before retry
+            
+            return () => clearTimeout(retryTimer);
+          }
         });
+        
+        // Add event listener to clear error when video plays successfully
+        const handlePlaying = () => {
+          console.log("Camera preview playing successfully");
+          setVideoError(null);
+          retryAttemptsRef.current = 0;
+        };
+        
+        previewRef.current.addEventListener('playing', handlePlaying);
+        
+        return () => {
+          if (previewRef.current) {
+            previewRef.current.removeEventListener('playing', handlePlaying);
+          }
+        };
       } catch (err) {
         console.error("Error connecting stream to video element:", err);
         setVideoError("Error connecting to camera. Please refresh and try again.");

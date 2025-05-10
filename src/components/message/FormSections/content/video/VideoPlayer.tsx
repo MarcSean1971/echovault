@@ -34,13 +34,17 @@ export function VideoPlayer({
     }
   }, [videoUrl]);
   
+  // Prevent navigation when toggling playback
   const togglePlayback = () => {
     if (!videoRef.current) return;
     
     if (isPlaying) {
       videoRef.current.pause();
     } else {
-      videoRef.current.play();
+      // Use play() but handle promise rejection
+      videoRef.current.play().catch(err => {
+        console.error("Error playing video:", err);
+      });
     }
     
     setIsPlaying(!isPlaying);
@@ -60,8 +64,13 @@ export function VideoPlayer({
     }
   }, [videoRef]);
   
+  // Prevent navigation or bubbling from video element itself
+  const preventNavigation = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+  
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" onClick={preventNavigation}>
       <div className="relative rounded-md overflow-hidden bg-black group">
         <video 
           ref={videoRef}
@@ -69,6 +78,7 @@ export function VideoPlayer({
           className="w-full h-full max-h-[300px]"
           onEnded={() => setIsPlaying(false)}
           key={videoUrl} // Key helps React recognize when to remount the video element
+          onClick={preventNavigation}
         />
         
         <VideoPlayerControls

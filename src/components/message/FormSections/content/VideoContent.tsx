@@ -94,6 +94,11 @@ export function VideoContent({
     }
   };
   
+  // Prevent clicks on this component from causing navigation
+  const preventNavigation = (e: React.MouseEvent) => {
+    e.stopPropagation();
+  };
+  
   // Determine what to render based on current state
   const renderVideoContent = () => {
     // First priority: show recorded video if available
@@ -132,7 +137,7 @@ export function VideoContent({
   };
   
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" onClick={preventNavigation}>
       {!inDialog && <Label htmlFor="videoContent">Video Message</Label>}
       {renderVideoContent()}
     </div>

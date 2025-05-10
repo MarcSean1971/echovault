@@ -21,7 +21,11 @@ export function EmptyVideoState({
   const [isAttemptingToEnable, setIsAttemptingToEnable] = useState(false);
   
   // Handle the enable camera button click
-  const onEnableCamera = async () => {
+  const onEnableCamera = async (e: React.MouseEvent) => {
+    // Prevent event bubbling to avoid navigation issues
+    e.preventDefault();
+    e.stopPropagation();
+    
     if (isInitializing || isAttemptingToEnable) {
       return;
     }
@@ -37,7 +41,10 @@ export function EmptyVideoState({
   };
   
   return (
-    <div className={`flex flex-col items-center ${!inDialog ? "border-2 border-dashed border-muted-foreground/30" : ""} rounded-md p-6 space-y-4`}>
+    <div 
+      className={`flex flex-col items-center ${!inDialog ? "border-2 border-dashed border-muted-foreground/30" : ""} rounded-md p-6 space-y-4`}
+      onClick={(e) => e.stopPropagation()} // Prevent clicks from bubbling up
+    >
       <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
         <Camera className="h-8 w-8 text-primary" />
       </div>

@@ -19,7 +19,11 @@ export function VideoRecordButton({
   const [isAttemptingToRecord, setIsAttemptingToRecord] = useState(false);
   
   // Handle the start recording button click
-  const handleStartRecordingClick = async () => {
+  const handleStartRecordingClick = async (e: React.MouseEvent) => {
+    // Prevent navigation or bubbling
+    e.preventDefault();
+    e.stopPropagation();
+    
     if (isInitializing || isAttemptingToRecord) return;
     
     setIsAttemptingToRecord(true);
@@ -31,13 +35,22 @@ export function VideoRecordButton({
       setIsAttemptingToRecord(false);
     }
   };
+  
+  // Handle the stop recording button click
+  const handleStopRecordingClick = (e: React.MouseEvent) => {
+    // Prevent navigation or bubbling
+    e.preventDefault();
+    e.stopPropagation();
+    
+    onStopRecording();
+  };
 
   // If recording, show stop button
   if (isRecording) {
     return (
       <Button
         type="button"
-        onClick={onStopRecording}
+        onClick={handleStopRecordingClick}
         variant="destructive"
         className="hover:bg-destructive/90 transition-colors duration-200"
       >

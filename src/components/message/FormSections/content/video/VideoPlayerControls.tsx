@@ -14,11 +14,27 @@ export function VideoPlayerControls({
   togglePlayback,
   onClearVideo
 }: VideoPlayerControlsProps) {
+  // Prevent event bubbling to avoid navigation issues
+  const handlePlaybackClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    togglePlayback();
+  };
+  
+  const handleClearVideo = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onClearVideo();
+  };
+  
   return (
-    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
+    <div 
+      className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center"
+      onClick={(e) => e.stopPropagation()} // Prevent clicks on the overlay from bubbling up
+    >
       <div className="flex gap-2 items-center">
         <Button 
-          onClick={togglePlayback} 
+          onClick={handlePlaybackClick} 
           variant="secondary" 
           size="icon"
           className="rounded-full hover:bg-primary/90 hover:text-primary-foreground transition-colors duration-200"
@@ -31,7 +47,7 @@ export function VideoPlayerControls({
         </Button>
         
         <Button
-          onClick={onClearVideo}
+          onClick={handleClearVideo}
           variant="ghost"
           size="icon"
           className="hover:bg-destructive/90 hover:text-destructive-foreground transition-colors duration-200"
