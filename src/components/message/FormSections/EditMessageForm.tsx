@@ -25,7 +25,6 @@ interface MessageFormValues {
 export function EditMessageForm({ message, onCancel }: { message: Message, onCancel: () => void }) {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { hasInitialized } = useMessageInitializer(message);
   
   const form = useForm<MessageFormValues>({
     defaultValues: {
@@ -78,6 +77,88 @@ export function EditMessageForm({ message, onCancel }: { message: Message, onCan
     }
   };
 
+  return (
+    <MessageFormProvider>
+      <div>
+        {/* Call useMessageInitializer inside MessageFormProvider context */}
+        <MessageInitializerWrapper message={message} />
+        
+        <Card>
+          <CardContent className="pt-6">
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <FormField
+                  control={form.control}
+                  name="title"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Message Title</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Enter a title for your message" 
+                          {...field} 
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                
+                <MessageTypeTabSelector />
+                
+                <TextContent />
+
+                <FormField
+                  control={form.control}
+                  name="shareLocation"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center space-x-2 space-y-0">
+                      <FormControl>
+                        <Checkbox 
+                          checked={field.value} 
+                          onCheckedChange={field.onChange} 
+                        />
+                      </FormControl>
+                      <FormLabel className="cursor-pointer">Share my location with this message</FormLabel>
+                    </FormItem>
+                  )}
+                />
+                
+                {form.watch('shareLocation') && <LocationSelector />}
+
+                <div className="flex justify-end space-x-2 pt-4">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={onCancel}
+                    disabled={isSubmitting}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Spinner size="sm" className="mr-2" />
+                        Saving...
+                      </>
+                    ) : 'Save Changes'}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      </div>
+    </MessageFormProvider>
+  );
+}
+
+// Helper component to use the hook inside the correct context
+function MessageInitializerWrapper({ message }: { message: Message }) {
+  const { hasInitialized } = useMessageInitializer(message);
+  
   if (!hasInitialized) {
     return (
       <div className="flex justify-center items-center p-8">
@@ -86,76 +167,6 @@ export function EditMessageForm({ message, onCancel }: { message: Message, onCan
       </div>
     );
   }
-
-  return (
-    <MessageFormProvider>
-      <Card>
-        <CardContent className="pt-6">
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <FormField
-                control={form.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Message Title</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="Enter a title for your message" 
-                        {...field} 
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              
-              <MessageTypeTabSelector />
-              
-              <TextContent />
-
-              <FormField
-                control={form.control}
-                name="shareLocation"
-                render={({ field }) => (
-                  <FormItem className="flex items-center space-x-2 space-y-0">
-                    <FormControl>
-                      <Checkbox 
-                        checked={field.value} 
-                        onCheckedChange={field.onChange} 
-                      />
-                    </FormControl>
-                    <FormLabel className="cursor-pointer">Share my location with this message</FormLabel>
-                  </FormItem>
-                )}
-              />
-              
-              {form.watch('shareLocation') && <LocationSelector />}
-
-              <div className="flex justify-end space-x-2 pt-4">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={onCancel}
-                  disabled={isSubmitting}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Spinner size="sm" className="mr-2" />
-                      Saving...
-                    </>
-                  ) : 'Save Changes'}
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
-    </MessageFormProvider>
-  );
+  
+  return null;
 }

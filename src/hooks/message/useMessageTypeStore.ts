@@ -1,57 +1,29 @@
 
-import { create } from 'zustand';
+import { useState, useCallback } from 'react';
+import { MessageType } from '@/types/message';
+import { useMessageForm } from '@/components/message/MessageFormContext';
 
-interface MessageTypeState {
-  messageType: 'text';
-  setMessageType: (type: 'text') => void;
+export function useMessageTypeStore() {
+  const { setMessageType } = useMessageForm();
+  const [initializedFromMessage, setInitializedFromMessage] = useState(false);
+  
+  const onTextTypeClick = useCallback(() => {
+    setMessageType('text');
+  }, [setMessageType]);
+  
+  const onVideoTypeClick = useCallback(() => {
+    setMessageType('video');
+  }, [setMessageType]);
+  
+  const onAudioTypeClick = useCallback(() => {
+    setMessageType('audio');
+  }, [setMessageType]);
+  
+  return {
+    initializedFromMessage,
+    setInitializedFromMessage,
+    onTextTypeClick,
+    onVideoTypeClick,
+    onAudioTypeClick
+  };
 }
-
-// Simplified message type store that only supports text messages
-export const useMessageTypeStore = create<MessageTypeState>((set) => ({
-  messageType: 'text',
-  setMessageType: (type) => {
-    if (type !== 'text') {
-      console.warn(`Message type ${type} not supported, defaulting to text`);
-      set({ messageType: 'text' });
-    } else {
-      set({ messageType: type });
-    }
-  },
-}));
-
-// Helper hooks
-export const useTextMode = () => {
-  const { messageType, setMessageType } = useMessageTypeStore();
-  const isTextMode = messageType === 'text';
-  
-  const activateTextMode = () => setMessageType('text');
-  
-  return { isTextMode, activateTextMode };
-};
-
-// For compatibility with code that expects these hooks
-export const useVideoMode = () => {
-  const { messageType } = useMessageTypeStore();
-  const isVideoMode = false; // Always false since we only support text
-  
-  const activateVideoMode = () => {
-    console.warn("Video mode not supported, falling back to text");
-    // Always use text mode
-    useMessageTypeStore.getState().setMessageType('text');
-  };
-  
-  return { isVideoMode, activateVideoMode };
-};
-
-export const useAudioMode = () => {
-  const { messageType } = useMessageTypeStore();
-  const isAudioMode = false; // Always false since we only support text
-  
-  const activateAudioMode = () => {
-    console.warn("Audio mode not supported, falling back to text");
-    // Always use text mode
-    useMessageTypeStore.getState().setMessageType('text');
-  };
-  
-  return { isAudioMode, activateAudioMode };
-};

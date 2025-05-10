@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { TimeThresholdSelector } from "./TimeThresholdSelector";
 import { ReminderSettings } from "./ReminderSettings";
-import { RecurringPattern } from "@/types/message";
+import { RecurringPattern, DeliveryOption } from "@/types/message";
 import { NoCheckInDeliveryOptions } from "./NoCheckInDeliveryOptions";
 
 interface NoCheckInSectionProps {
@@ -30,7 +30,7 @@ export function NoCheckInSection({
   reminderHours,
   setReminderHours
 }: NoCheckInSectionProps) {
-  const [deliveryOption, setDeliveryOption] = useState<"once" | "recurring">("once");
+  const [deliveryOption, setDeliveryOption] = useState<DeliveryOption>("once");
   
   return (
     <div className="space-y-6">
@@ -50,7 +50,7 @@ export function NoCheckInSection({
       
       <NoCheckInDeliveryOptions
         deliveryOption={deliveryOption}
-        setDeliveryOption={setDeliveryOption}
+        setDeliveryOption={(option) => setDeliveryOption(option as DeliveryOption)}
         recurringPattern={recurringPattern}
         setRecurringPattern={setRecurringPattern}
         triggerDate={triggerDate || null}

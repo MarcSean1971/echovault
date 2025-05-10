@@ -1,70 +1,78 @@
-import { useEffect } from "react";
+
+import { useState, useEffect } from "react";
 import { useMessageForm } from "@/components/message/MessageFormContext";
-import { Message } from "@/types/message";
-import { toast } from "@/components/ui/use-toast";
+import { useInitializeMediaContent } from "./useInitializeMediaContent";
+import { Message, MessageType } from "@/types/message";
 
-/**
- * Hook to initialize message data when editing an existing message
- */
-export function useMessageInitializer(message?: Message) {
+export function useMessageInitializer(message: Message | null) {
   const { 
-    setMessageType: setContextMessageType,
-    setContent,
-    setTextContent
+    setTitle, 
+    setContent, 
+    setTextContent, 
+    setMessageType, 
+    setShareLocation,
+    setLocationLatitude,
+    setLocationLongitude,
+    setLocationName
   } = useMessageForm();
+
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Initialize media content (will handle video/audio content)
+  const mediaContent = useInitializeMediaContent(message);
   
-  // Set initial message type based on the message being edited
+  // Initialize message data
   useEffect(() => {
-    if (message?.message_type) {
-      console.log("Initializing message type:", message.message_type);
+    if (!message || isInitialized) return;
+    
+    console.log("Initializing message data:", message.id);
+    
+    // Set basic message properties
+    setTitle(message.title || '');
+    
+    // Handle content based on message type
+    if (message.content) {
+      console.log("Setting content for message type:", message.message_type);
       
-      // If the message type is audio or video, convert it to text
-      if (message.message_type === 'audio' || message.message_type === 'video') {
-        setContextMessageType('text');
-        
-        // Show a notification about conversion to text
-        toast({
-          title: "Message Type Converted",
-          description: "Audio and video messages are no longer supported. Your message has been converted to text.",
-          variant: "default",
-          duration: 5000
-        });
-      } else {
-        // For text messages, keep the type as is
-        setContextMessageType('text');
+      // Handle different message types
+      const msgType = message.message_type as MessageType;
+      
+      // Set content appropriately
+      if (msgType === 'text') {
+        setTextContent(message.content);
       }
-    }
-  }, [message, setContextMessageType]);
-
-  // Initialize message content from the message being edited
-  useEffect(() => {
-    if (!message?.content) return;
-    
-    console.log("Initializing message content for editing:", 
-                message.content.substring(0, 100) + "...");
-    
-    // Set form content
-    setContent(message.content);
-    
-    // Try to extract text content from media messages
-    let textContent = message.content;
-    
-    try {
-      // Check for additional text in media content
-      const contentObj = JSON.parse(message.content);
-      if (contentObj.additionalText) {
-        console.log("Message contains additional text:", contentObj.additionalText);
-        textContent = contentObj.additionalText;
-      }
-    } catch (e) {
-      // If it's not JSON, it's likely just text
-      console.log("Message content appears to be plain text");
+      
+      // Always set the base content
+      setContent(message.content);
+      
+      // Set the message type
+      setMessageType(msgType);
     }
     
-    // Set text content state
-    setTextContent(textContent);
+    // Set location data if available
+    if (message.share_location) {
+      setShareLocation(true);
+      
+      if (message.location_latitude) {
+        setLocationLatitude(message.location_latitude);
+      }
+      
+      if (message.location_longitude) {
+        setLocationLongitude(message.location_longitude);
+      }
+      
+      if (message.location_name) {
+        setLocationName(message.location_name);
+      }
+    }
     
-  }, [message, setContent, setTextContent]);
-
-  return { hasInitialized: true };
+    setIsInitialized(true);
+    console.log("Message initialization complete");
+  }, [message, isInitialized, setTitle, setContent, setTextContent, setMessageType, 
+      setShareLocation, setLocationLatitude, setLocationLongitude, setLocationName]);
+  
+  return {
+    hasInitialized: isInitialized,
+    ...mediaContent
+  };
 }

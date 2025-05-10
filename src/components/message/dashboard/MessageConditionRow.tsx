@@ -43,7 +43,8 @@ export function MessageConditionRow({
     setIsLoading(true);
     
     try {
-      await armMessage(condition.id, userId);
+      // Fix the issue by making sure we only pass the condition.id parameter
+      await armMessage(condition.id);
       toast({ title: "Message armed successfully" });
       setStatus("armed");
       onRefreshConditions();

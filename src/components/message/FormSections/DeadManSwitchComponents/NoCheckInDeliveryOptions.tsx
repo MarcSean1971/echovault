@@ -30,7 +30,7 @@ export function NoCheckInDeliveryOptions({
         
         <RadioGroup 
           value={deliveryOption} 
-          onValueChange={(value) => setDeliveryOption(value as DeliveryOption)}
+          onValueChange={(value) => setDeliveryOption(value)}
           className="grid grid-cols-1 gap-3 mt-2"
         >
           <RadioCardOption

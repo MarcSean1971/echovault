@@ -1,5 +1,5 @@
 
-export type MessageType = "text";
+export type MessageType = "text" | "audio" | "video";
 
 export type TriggerType = "no_check_in" | "panic_button" | "manual_trigger" | "scheduled" | "panic_trigger";
 export type DeliveryOption = "immediate" | "once" | "recurring";
