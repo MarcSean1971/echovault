@@ -4,7 +4,7 @@ import { Camera, Loader2 } from "lucide-react";
 import { useState } from "react";
 
 interface EmptyVideoStateProps {
-  handleStartRecording: () => Promise<boolean | void>;
+  handleStartRecording: () => Promise<void>;
   isInitializing: boolean;
   permissionError: string | null;
   hasPermission: boolean | null;

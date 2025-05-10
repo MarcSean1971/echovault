@@ -24,7 +24,7 @@ export function VideoContent({
   isInitializing?: boolean;
   hasPermission?: boolean | null;
   previewStream?: MediaStream | null;
-  onStartRecording: () => Promise<boolean | void>; // Updated to accept both Promise<boolean> and Promise<void>
+  onStartRecording: () => Promise<void>; // Updated to only accept Promise<void>
   onStopRecording: () => void;
   onClearVideo: () => void;
   inDialog?: boolean;
@@ -80,7 +80,7 @@ export function VideoContent({
   }, [inDialog, videoUrl, previewStream, isRecording, showVideoPreview, messageType, isInitializing]);
   
   // Handle recording with better error handling
-  const handleStartRecording = async () => {
+  const handleStartRecording = async (): Promise<void> => {
     setPermissionError(null);
     try {
       console.log("Starting recording...");
