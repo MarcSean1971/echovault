@@ -1,5 +1,5 @@
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { toast } from "@/components/ui/use-toast";
 
 export function useAudioRecorder(audioStream: MediaStream | null, streamRef: React.RefObject<MediaStream | null>) {
@@ -11,6 +11,41 @@ export function useAudioRecorder(audioStream: MediaStream | null, streamRef: Rea
   const audioChunksRef = useRef<Blob[]>([]);
   const startTimeRef = useRef<number | null>(null);
   const durationTimerRef = useRef<number | null>(null);
+  
+  // Cleanup function to reset resources
+  const cleanupResources = () => {
+    console.log("Cleaning up audio recorder resources");
+    
+    // Clear duration timer
+    if (durationTimerRef.current) {
+      window.clearInterval(durationTimerRef.current);
+      durationTimerRef.current = null;
+      console.log("Audio duration timer cleared");
+    }
+    
+    // Reset recording state if needed
+    if (isRecording) {
+      setIsRecording(false);
+    }
+  };
+
+  // Effect to clean up when component unmounts
+  useEffect(() => {
+    return () => {
+      console.log("Audio recorder unmounting, cleaning up...");
+      cleanupResources();
+      
+      // If we have an audio URL, revoke it to prevent memory leaks
+      if (audioUrl) {
+        try {
+          URL.revokeObjectURL(audioUrl);
+          console.log("Audio URL revoked during unmount");
+        } catch (e) {
+          console.warn("Failed to revoke audio URL during unmount:", e);
+        }
+      }
+    };
+  }, [audioUrl]);
 
   // Function to update recording duration
   const updateDuration = () => {
@@ -42,61 +77,93 @@ export function useAudioRecorder(audioStream: MediaStream | null, streamRef: Rea
         throw new Error("No audio tracks available. Please check your microphone.");
       }
       
-      // Create and configure the media recorder
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
-      mediaRecorderRef.current = mediaRecorder;
+      // Verify that the tracks are actually active
+      const activeTracks = stream.getAudioTracks().filter(track => track.readyState === "live");
+      if (activeTracks.length === 0) {
+        console.error("No active audio tracks in the stream");
+        throw new Error("Microphone is not active. Please check your device settings.");
+      }
       
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          console.log("Received audio data chunk:", event.data.size, "bytes");
-          audioChunksRef.current.push(event.data);
-        }
-      };
-      
-      mediaRecorder.onstop = () => {
-        console.log("Media recorder stopped, processing audio...");
-        if (audioChunksRef.current.length === 0) {
-          console.error("No audio chunks recorded");
+      // Create and configure the media recorder with error handling
+      try {
+        const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+        mediaRecorderRef.current = mediaRecorder;
+        
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size > 0) {
+            console.log("Received audio data chunk:", event.data.size, "bytes");
+            audioChunksRef.current.push(event.data);
+          }
+        };
+        
+        mediaRecorder.onerror = (event) => {
+          console.error("MediaRecorder error:", event);
+          cleanupResources();
           toast({
             title: "Recording Error",
-            description: "No audio data was recorded. Please try again.",
+            description: "An error occurred during recording. Please try again.",
             variant: "destructive"
           });
-          return;
-        }
+        };
         
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        console.log("Created audio blob:", audioBlob.size, "bytes");
-        setAudioBlob(audioBlob);
+        mediaRecorder.onstop = () => {
+          console.log("Media recorder stopped, processing audio...");
+          if (audioChunksRef.current.length === 0) {
+            console.error("No audio chunks recorded");
+            toast({
+              title: "Recording Error",
+              description: "No audio data was recorded. Please try again.",
+              variant: "destructive"
+            });
+            return;
+          }
+          
+          try {
+            const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+            console.log("Created audio blob:", audioBlob.size, "bytes");
+            setAudioBlob(audioBlob);
+            
+            const audioUrl = URL.createObjectURL(audioBlob);
+            console.log("Created audio URL:", audioUrl);
+            setAudioUrl(audioUrl);
+            setIsRecording(false);
+            
+            // Stop the duration timer
+            if (durationTimerRef.current) {
+              window.clearInterval(durationTimerRef.current);
+              durationTimerRef.current = null;
+            }
+          } catch (error) {
+            console.error("Error processing audio after recording:", error);
+            cleanupResources();
+            toast({
+              title: "Processing Error",
+              description: "Failed to process the recorded audio.",
+              variant: "destructive"
+            });
+          }
+        };
         
-        const audioUrl = URL.createObjectURL(audioBlob);
-        console.log("Created audio URL:", audioUrl);
-        setAudioUrl(audioUrl);
-        setIsRecording(false);
+        // Start the recorder
+        mediaRecorder.start();
+        setIsRecording(true);
+        startTimeRef.current = Date.now();
+        setAudioDuration(0);
         
-        // Stop the duration timer
-        if (durationTimerRef.current) {
-          window.clearInterval(durationTimerRef.current);
-          durationTimerRef.current = null;
-        }
-      };
-      
-      // Start the recorder
-      mediaRecorder.start();
-      setIsRecording(true);
-      startTimeRef.current = Date.now();
-      setAudioDuration(0);
-      
-      // Start timer to update duration
-      durationTimerRef.current = window.setInterval(updateDuration, 1000);
-      
-      console.log("Audio recording started");
-      
-      // Show toast notification that recording has started
-      toast({
-        title: "Recording started",
-        description: "Your audio recording has begun"
-      });
+        // Start timer to update duration
+        durationTimerRef.current = window.setInterval(updateDuration, 1000);
+        
+        console.log("Audio recording started");
+        
+        // Show toast notification that recording has started
+        toast({
+          title: "Recording started",
+          description: "Your audio recording has begun"
+        });
+      } catch (error) {
+        console.error("Failed to create MediaRecorder:", error);
+        throw new Error("Could not start recording. Your browser might not support this feature.");
+      }
     } catch (error: any) {
       console.error("Error starting audio recording:", error);
       
@@ -109,11 +176,7 @@ export function useAudioRecorder(audioStream: MediaStream | null, streamRef: Rea
       });
       
       // Reset recording state
-      setIsRecording(false);
-      if (durationTimerRef.current) {
-        window.clearInterval(durationTimerRef.current);
-        durationTimerRef.current = null;
-      }
+      cleanupResources();
     }
   };
   
@@ -121,14 +184,28 @@ export function useAudioRecorder(audioStream: MediaStream | null, streamRef: Rea
   const stopRecording = () => {
     console.log("Stopping audio recording...");
     if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      console.log("Recording stopped via mediaRecorder.stop()");
-      
-      // Show toast notification that recording has stopped
-      toast({
-        title: "Recording complete",
-        description: "Your audio recording has been saved"
-      });
+      try {
+        mediaRecorderRef.current.stop();
+        console.log("Recording stopped via mediaRecorder.stop()");
+        
+        // Show toast notification that recording has stopped
+        toast({
+          title: "Recording complete",
+          description: "Your audio recording has been saved"
+        });
+      } catch (error) {
+        console.error("Error stopping recording:", error);
+        cleanupResources();
+        
+        toast({
+          title: "Error",
+          description: "Failed to properly stop recording. Your recording might be incomplete.",
+          variant: "destructive"
+        });
+      }
+    } else {
+      console.log("No active MediaRecorder to stop");
+      cleanupResources();
     }
   };
 
@@ -140,6 +217,7 @@ export function useAudioRecorder(audioStream: MediaStream | null, streamRef: Rea
     startRecording,
     stopRecording,
     setAudioBlob,
-    setAudioUrl
+    setAudioUrl,
+    cleanupResources
   };
 }
