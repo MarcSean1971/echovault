@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { parseVideoContent } from "@/services/messages/mediaService";
 import { Message } from "@/types/message";
 import { base64ToBlob } from "@/utils/mediaUtils";
+import { toast } from "@/components/ui/use-toast";
 
 /**
  * Hook to initialize media content when editing a message
@@ -64,6 +65,13 @@ export function useInitializeMediaContent(message: Message | null) {
         } catch (e) {
           console.error("Error creating blob from video data:", e);
           setInitializationError(`Failed to create video blob: ${e}`);
+          
+          // Show a toast for video initialization error
+          toast({
+            title: "Video Loading Error",
+            description: "There was a problem loading your video. You may need to re-record it.",
+            variant: "destructive"
+          });
         }
       } else {
         if (error) {
@@ -73,6 +81,13 @@ export function useInitializeMediaContent(message: Message | null) {
           if (message.message_type === "video") {
             setInitializationError(`Failed to parse video content: ${error}`);
             console.error("Video message initialization failed:", error, diagnostics);
+            
+            // Only show toast for expected video content
+            toast({
+              title: "Video Content Error",
+              description: "This message is marked as video but contains invalid content. Please re-record your video.",
+              variant: "destructive"
+            });
           }
         }
         
@@ -103,6 +118,13 @@ export function useInitializeMediaContent(message: Message | null) {
             } catch (e) {
               console.error("Error creating blob from audio data:", e);
               setInitializationError(`Failed to create audio blob: ${e}`);
+              
+              // Show toast for audio initialization error
+              toast({
+                title: "Audio Loading Error",
+                description: "There was a problem loading your audio. You may need to re-record it.",
+                variant: "destructive"
+              });
             }
           }
         } catch (e) {
@@ -112,6 +134,13 @@ export function useInitializeMediaContent(message: Message | null) {
           if (message.message_type === "audio") {
             setInitializationError(`Failed to parse audio content: ${e}`);
             console.error("Audio message initialization failed:", e);
+            
+            // Show toast for audio content error
+            toast({
+              title: "Audio Content Error",
+              description: "This message is marked as audio but contains invalid content. Please re-record your audio.",
+              variant: "destructive"
+            });
           }
         }
         
@@ -120,11 +149,27 @@ export function useInitializeMediaContent(message: Message | null) {
           console.log("Treating content as text message");
           setAdditionalText(message.content);
           setHasInitialized(true);
+          
+          // If message type is video/audio but content is text, show a warning
+          if (message.message_type !== "text") {
+            toast({
+              title: "Content Type Mismatch",
+              description: `This message is marked as ${message.message_type} but contains text content. You may need to re-record your media.`,
+              variant: "destructive"
+            });
+          }
         }
       }
     } catch (e) {
       console.error("Error initializing media content:", e);
       setInitializationError(`General initialization error: ${e}`);
+      
+      // Show a general error toast
+      toast({
+        title: "Content Loading Error",
+        description: "There was a problem loading your message content. You may need to recreate it.",
+        variant: "destructive"
+      });
     }
     
     // Cleanup function to revoke object URLs when unmounting

@@ -14,6 +14,7 @@ import {
   updateMessageCondition,
   createMessageCondition 
 } from "@/services/messages/conditionService";
+import { parseVideoContent } from "@/services/messages/mediaService";
 
 // Import the component files
 import { EditMessageHeader } from "./EditMessageHeader";
@@ -74,6 +75,7 @@ function MessageEditForm({ message, onCancel }: EditMessageFormComponentProps) {
   const [existingCondition, setExistingCondition] = useState<MessageCondition | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
   const [recipients, setRecipients] = useState<Recipient[]>([]);
+  const [contentValidationError, setContentValidationError] = useState<string | null>(null);
 
   // Load message condition data
   useEffect(() => {
@@ -184,6 +186,26 @@ function MessageEditForm({ message, onCancel }: EditMessageFormComponentProps) {
       })));
     }
     
+    // Validate the message content matches the type
+    if (message.message_type === "video" && message.content) {
+      const { videoData, error, diagnostics } = parseVideoContent(message.content);
+      if (!videoData) {
+        console.error("Invalid video content detected:", error, diagnostics);
+        setContentValidationError(`The message is marked as video type but contains invalid video content. You may need to re-record your video.`);
+        
+        // Auto-switch to text type if content appears to be text
+        if (diagnostics?.contentType === "plain-text") {
+          console.log("Auto-switching to text type due to plain text content");
+          setMessageType("text");
+          toast({
+            title: "Content Type Mismatch",
+            description: "This message was saved as video but contains text content. Switched to text mode.",
+            variant: "destructive",
+          });
+        }
+      }
+    }
+    
     loadMessageCondition();
   }, [message, setTitle, setContent, setMessageType, setFiles, setConditionType, setHoursThreshold, setMinutesThreshold, setSelectedRecipients, setRecipients, setRecurringPattern, setTriggerDate, setPanicTriggerConfig, setPinCode, setUnlockDelay, setExpiryHours, setDeliveryOption, setReminderHours, setCheckInCode]);
 
@@ -192,8 +214,14 @@ function MessageEditForm({ message, onCancel }: EditMessageFormComponentProps) {
     
     if (!message.id || !message.user_id) return;
     setIsLoading(true);
+    setContentValidationError(null);
     
     try {
+      // Validate content based on message type
+      if (messageType === "video" && (!videoContent || videoContent.trim() === "")) {
+        throw new Error("Video message type requires recorded video content. Please record a video before saving.");
+      }
+      
       // Upload any new files that haven't been uploaded
       const newFiles = files.filter(f => f.file && !f.isUploaded);
       let attachmentsToSave = [...(message.attachments || [])].filter(
@@ -216,7 +244,11 @@ function MessageEditForm({ message, onCancel }: EditMessageFormComponentProps) {
       let contentToSave = content;
       
       // If we have video content, we'll use that as the primary content
-      if (messageType === "video" && videoContent) {
+      if (messageType === "video") {
+        if (!videoContent || videoContent.trim() === "") {
+          throw new Error("Video message requires video content. Please record a video before saving.");
+        }
+        
         contentToSave = videoContent;
         
         // If we also have text content, add it to the video content
@@ -228,7 +260,15 @@ function MessageEditForm({ message, onCancel }: EditMessageFormComponentProps) {
             contentToSave = JSON.stringify(videoContentObj);
           } catch (error) {
             console.error("Error combining text and video content:", error);
+            throw new Error("Error preparing video content. Please try re-recording your video.");
           }
+        }
+        
+        // Validate that the content actually contains video data
+        const { videoData, error } = parseVideoContent(contentToSave);
+        if (!videoData) {
+          console.error("Invalid video content detected on save:", error);
+          throw new Error("The video content is invalid or corrupted. Please try re-recording your video.");
         }
       } else if (messageType === "text") {
         contentToSave = textContent;
@@ -311,6 +351,15 @@ function MessageEditForm({ message, onCancel }: EditMessageFormComponentProps) {
       navigate(`/message/${message.id}`);
     } catch (error: any) {
       console.error("Error updating message:", error);
+      
+      // Set content validation error if it's related to content
+      if (error.message && (
+        error.message.includes("video content") || 
+        error.message.includes("Video message")
+      )) {
+        setContentValidationError(error.message);
+      }
+      
       toast({
         title: "Error",
         description: error.message || "Failed to update the message",
@@ -333,6 +382,7 @@ function MessageEditForm({ message, onCancel }: EditMessageFormComponentProps) {
 
   const isFormValid = title.trim() !== "" && 
     (messageType !== "text" || content.trim() !== "") &&
+    (messageType !== "video" || videoContent) &&
     selectedRecipients.length > 0;
 
   if (initialLoading) {
@@ -349,6 +399,15 @@ function MessageEditForm({ message, onCancel }: EditMessageFormComponentProps) {
       <Card>
         <form onSubmit={handleSubmit}>
           <EditMessageHeader onCancel={onCancel} />
+          
+          {contentValidationError && (
+            <div className="p-4 mb-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive">
+              <strong>Content Error:</strong> {contentValidationError}
+              <div className="mt-1 text-sm">
+                You may need to re-record your video or change the message type to match your content.
+              </div>
+            </div>
+          )}
           
           <EditMessageContent 
             message={message}

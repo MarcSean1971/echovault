@@ -10,6 +10,19 @@ export function parseVideoContent(content: string | null): {
   if (!content) return { videoData: null };
   
   try {
+    // Check if content is just plain text (common error case)
+    if (!content.includes('{') && !content.includes('}')) {
+      console.error("Video content is plain text, not valid JSON:", content);
+      return { 
+        videoData: null, 
+        error: "Content is not in expected format",
+        diagnostics: { 
+          contentType: "plain-text", 
+          content: content
+        }
+      };
+    }
+    
     // First check if the content is JSON
     if (content.trim().startsWith('{') && content.trim().endsWith('}')) {
       try {
@@ -30,7 +43,8 @@ export function parseVideoContent(content: string | null): {
             diagnostics: { 
               contentType: "json", 
               contentStart: content.substring(0, 50),
-              hasVideoData: false
+              hasVideoData: false,
+              keys: Object.keys(parsedContent)
             }
           };
         }

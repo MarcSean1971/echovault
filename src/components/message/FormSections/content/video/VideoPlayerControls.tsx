@@ -50,7 +50,7 @@ export function VideoPlayerControls({
           onClick={handleClearVideo}
           variant="ghost"
           size="icon"
-          className="hover:bg-destructive/90 hover:text-destructive-foreground transition-colors duration-200 hover:scale-105"
+          className="rounded-full hover:bg-destructive/90 hover:text-destructive-foreground transition-colors duration-200 hover:scale-105"
         >
           <Trash2 className="h-4 w-4" />
         </Button>
