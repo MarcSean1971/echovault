@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { MessageCondition, Message } from "@/types/message";
 import { armMessage, disarmMessage } from "@/services/messages/conditionService";
 import { toast } from "@/components/ui/use-toast";
@@ -10,11 +10,16 @@ import { ConditionDetails } from "./condition-row/ConditionDetails";
 interface MessageConditionRowProps {
   condition: MessageCondition;
   message: Message | undefined;
-  onRefresh: () => void;
-  userId: string | null;
+  userId: string | undefined | null;
+  onRefreshConditions: () => void;
 }
 
-export function MessageConditionRow({ condition, message, onRefresh, userId }: MessageConditionRowProps) {
+export function MessageConditionRow({ 
+  condition, 
+  message, 
+  userId, 
+  onRefreshConditions 
+}: MessageConditionRowProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [status, setStatus] = useState<string>(condition.active ? "armed" : "disarmed");
   
@@ -41,7 +46,7 @@ export function MessageConditionRow({ condition, message, onRefresh, userId }: M
       await armMessage(condition.id, userId);
       toast({ title: "Message armed successfully" });
       setStatus("armed");
-      onRefresh();
+      onRefreshConditions();
     } catch (error: any) {
       console.error("Error arming message:", error);
       toast({ 
@@ -64,7 +69,7 @@ export function MessageConditionRow({ condition, message, onRefresh, userId }: M
       await disarmMessage(condition.id);
       toast({ title: "Message disarmed successfully" });
       setStatus("disarmed");
-      onRefresh();
+      onRefreshConditions();
     } catch (error: any) {
       console.error("Error disarming message:", error);
       toast({ 
