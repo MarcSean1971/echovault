@@ -107,6 +107,7 @@ export function VideoContent({
         <VideoPlayer
           videoUrl={videoUrl}
           onClearVideo={onClearVideo}
+          inDialog={inDialog}
         />
       );
     }
@@ -120,6 +121,7 @@ export function VideoContent({
           isInitializing={isInitializing || false}
           onStartRecording={handleStartRecording}
           onStopRecording={onStopRecording}
+          inDialog={inDialog}
         />
       );
     }

@@ -114,6 +114,16 @@ export function MessageDetails({ message }: MessageDetailsProps) {
       console.error("Error transcribing audio:", error);
     }
   };
+  
+  // Handle clearing video and showing record dialog
+  const handleClearVideoAndRecord = () => {
+    clearVideo();
+    setShowInlineRecording(false);
+    // Show the dialog after a slight delay to ensure state updates
+    setTimeout(() => {
+      setShowVideoRecorder(true);
+    }, 50);
+  };
 
   return (
     <div className="space-y-6">
@@ -149,10 +159,7 @@ export function MessageDetails({ message }: MessageDetailsProps) {
           videoPreviewStream={videoPreviewStream}
           onStartVideoRecording={startVideoRecordingWrapper} // Using wrapper function with Promise<void>
           onStopVideoRecording={stopVideoRecording}
-          onClearVideo={() => {
-            clearVideo();
-            setShowInlineRecording(false);
-          }}
+          onClearVideo={handleClearVideoAndRecord} // Use new handler to clear and show record dialog
           
           // Audio props
           audioUrl={audioUrl}

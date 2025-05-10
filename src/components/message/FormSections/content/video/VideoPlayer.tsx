@@ -7,11 +7,13 @@ import { AlertCircle } from "lucide-react";
 interface VideoPlayerProps {
   videoUrl: string;
   onClearVideo: () => void;
+  inDialog?: boolean;
 }
 
 export function VideoPlayer({
   videoUrl,
-  onClearVideo
+  onClearVideo,
+  inDialog = false
 }: VideoPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -20,9 +22,10 @@ export function VideoPlayer({
   // Log when props change for debugging
   useEffect(() => {
     console.log("VideoPlayer: Props updated:", { 
-      videoUrl: videoUrl ? "present" : "none"
+      videoUrl: videoUrl ? "present" : "none",
+      inDialog
     });
-  }, [videoUrl]);
+  }, [videoUrl, inDialog]);
   
   // Reset video when URL changes
   useEffect(() => {
@@ -110,21 +113,23 @@ export function VideoPlayer({
   }
   
   return (
-    <div className="space-y-2" onClick={preventNavigation}>
+    <div className={`space-y-2 ${inDialog ? "w-full" : ""}`} onClick={preventNavigation}>
       <div className="relative rounded-md overflow-hidden bg-black group">
         <video 
           ref={videoRef}
           src={videoUrl}
-          className="w-full h-full max-h-[300px]"
+          className={`w-full h-full ${inDialog ? "max-h-[50vh]" : "max-h-[300px]"}`}
           onEnded={() => setIsPlaying(false)}
           key={videoUrl} // Key helps React recognize when to remount the video element
           onClick={preventNavigation}
+          playsInline // Important for iOS devices
         />
         
         <VideoPlayerControls
           isPlaying={isPlaying}
           togglePlayback={togglePlayback}
           onClearVideo={onClearVideo}
+          inDialog={inDialog}
         />
       </div>
     </div>

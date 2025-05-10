@@ -30,7 +30,7 @@ export function VideoRecordButton({
     return (
       <Button
         variant="destructive"
-        size="sm"
+        size="lg" // Larger button for mobile touch targets
         onClick={onStopRecording}
         className="hover:scale-105 hover:bg-destructive/90 transition-all duration-200"
       >
@@ -44,7 +44,7 @@ export function VideoRecordButton({
     return (
       <Button
         variant="default"
-        size="sm"
+        size="lg" // Larger button for mobile touch targets
         disabled
         className="opacity-70"
       >
@@ -57,7 +57,7 @@ export function VideoRecordButton({
   return (
     <Button
       variant="default"
-      size="sm"
+      size="lg" // Larger button for mobile touch targets
       onClick={handleStartRecording}
       className="hover:scale-105 hover:bg-primary/90 transition-all duration-200"
     >

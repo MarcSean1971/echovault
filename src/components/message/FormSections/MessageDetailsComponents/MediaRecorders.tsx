@@ -1,5 +1,5 @@
 
-import { VideoContent } from "../content/VideoContent";
+import { VideoContent } from "../../FormSections/content/video/VideoContent";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useEffect } from "react";
 
@@ -39,7 +39,7 @@ export function MediaRecorders({
   
   return (
     <Dialog open={showVideoRecorder} onOpenChange={setShowVideoRecorder}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-w-[95vw] w-full p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle>Record Video Message</DialogTitle>
           <DialogDescription>

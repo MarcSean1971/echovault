@@ -42,7 +42,7 @@ export function EmptyVideoState({
   
   return (
     <div 
-      className={`flex flex-col items-center ${!inDialog ? "border-2 border-dashed border-muted-foreground/30" : ""} rounded-md p-6 space-y-4`}
+      className={`flex flex-col items-center ${!inDialog ? "border-2 border-dashed border-muted-foreground/30" : ""} rounded-md ${inDialog ? "p-4" : "p-6"} space-y-4`}
       onClick={(e) => e.stopPropagation()} // Prevent clicks from bubbling up
     >
       <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
@@ -55,13 +55,13 @@ export function EmptyVideoState({
       </div>
       
       {permissionError && (
-        <div className="bg-destructive/10 p-3 rounded-md text-sm text-destructive">
+        <div className="bg-destructive/10 p-3 rounded-md text-sm text-destructive max-w-full overflow-auto">
           {permissionError}
         </div>
       )}
       
       {hasPermission === false && (
-        <div className="bg-destructive/10 p-3 rounded-md text-sm text-destructive">
+        <div className="bg-destructive/10 p-3 rounded-md text-sm text-destructive max-w-full overflow-auto">
           Camera access was denied. Please check your browser permissions.
         </div>
       )}
@@ -70,6 +70,7 @@ export function EmptyVideoState({
         type="button"
         onClick={onEnableCamera}
         variant="default"
+        size={inDialog ? "lg" : "default"}
         disabled={isInitializing || isAttemptingToEnable}
         className="hover:scale-105 hover:opacity-90 transition-all duration-200"
       >
