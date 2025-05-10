@@ -31,7 +31,7 @@ export function VideoContent({
 }) {
   const { messageType } = useMessageForm();
   const [permissionError, setPermissionError] = useState<string | null>(null);
-  const [showVideoPreview, setShowVideoPreview] = useState(!!videoUrl);
+  const [showVideoPreview, setShowVideoPreview] = useState(false);
   const mountedRef = useRef(true);
   
   // Set up mounted ref for cleanup
@@ -51,7 +51,7 @@ export function VideoContent({
       isInitializing: isInitializing ? "yes" : "no"
     });
     
-    // If we have a video URL, we should always show the video preview
+    // CRITICAL: Always prioritize showing existing video content
     if (videoUrl) {
       console.log("VideoContent: Setting showVideoPreview to true because videoUrl exists");
       setShowVideoPreview(true);
@@ -65,19 +65,6 @@ export function VideoContent({
       setShowVideoPreview(false);
     }
   }, [videoUrl, messageType, previewStream, isInitializing]);
-  
-  // Log for debugging
-  useEffect(() => {
-    console.log("VideoContent: Rendering state:", { 
-      inDialog, 
-      videoUrl: videoUrl ? "present" : "null",
-      previewStream: previewStream ? "active" : "null",
-      isRecording,
-      showVideoPreview,
-      isInitializing,
-      messageType
-    });
-  }, [inDialog, videoUrl, previewStream, isRecording, showVideoPreview, messageType, isInitializing]);
   
   // Handle recording with better error handling
   const handleStartRecording = async (): Promise<void> => {
@@ -94,15 +81,10 @@ export function VideoContent({
     }
   };
   
-  // Prevent clicks on this component from causing navigation
-  const preventNavigation = (e: React.MouseEvent) => {
-    e.stopPropagation();
-  };
-  
   // Determine what to render based on current state
   const renderVideoContent = () => {
     // First priority: show recorded video if available
-    if (videoUrl && showVideoPreview) {
+    if (videoUrl) {
       return (
         <VideoPlayer
           videoUrl={videoUrl}
@@ -112,8 +94,8 @@ export function VideoContent({
       );
     }
     
-    // Second priority: show camera preview if available
-    if (!videoUrl && previewStream) {
+    // Second priority: show camera preview if available or recording
+    if (previewStream || isRecording) {
       return (
         <CameraPreview
           previewStream={previewStream}
@@ -136,6 +118,11 @@ export function VideoContent({
         inDialog={inDialog}
       />
     );
+  };
+  
+  // Prevent clicks on this component from causing navigation
+  const preventNavigation = (e: React.MouseEvent) => {
+    e.stopPropagation();
   };
   
   return (

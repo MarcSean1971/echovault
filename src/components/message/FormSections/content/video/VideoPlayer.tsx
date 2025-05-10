@@ -1,140 +1,79 @@
 
-import { useRef, useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { VideoPlayerControls } from "./VideoPlayerControls";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
 
 interface VideoPlayerProps {
-  videoUrl: string;
+  videoUrl: string | null;
   onClearVideo: () => void;
   inDialog?: boolean;
 }
 
-export function VideoPlayer({
-  videoUrl,
-  onClearVideo,
-  inDialog = false
-}: VideoPlayerProps) {
+export function VideoPlayer({ videoUrl, onClearVideo, inDialog = false }: VideoPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [isControlsVisible, setIsControlsVisible] = useState(false);
   
-  // Log when props change for debugging
-  useEffect(() => {
-    console.log("VideoPlayer: Props updated:", { 
-      videoUrl: videoUrl ? "present" : "none",
-      inDialog
-    });
-  }, [videoUrl, inDialog]);
-  
-  // Reset video when URL changes
-  useEffect(() => {
-    console.log("VideoPlayer: videoUrl changed:", videoUrl ? videoUrl.substring(0, 30) + "..." : "none");
-    
-    // When video URL changes, reset playback state and error state
-    setIsPlaying(false);
-    setLoadError(null);
-    
-    // Ensure video element loads the new URL correctly
-    if (videoRef.current) {
-      videoRef.current.load();
-    }
-  }, [videoUrl]);
-  
-  // Prevent navigation when toggling playback
+  // Handle play/pause toggle
   const togglePlayback = () => {
     if (!videoRef.current) return;
     
     if (isPlaying) {
       videoRef.current.pause();
     } else {
-      // Use play() but handle promise rejection
-      videoRef.current.play().catch(err => {
-        console.error("Error playing video:", err);
-        setLoadError(`Error playing video: ${err.message}`);
-      });
+      videoRef.current.play();
     }
     
     setIsPlaying(!isPlaying);
   };
   
-  // Handle ending playback
+  // Update isPlaying state when video events occur
   useEffect(() => {
-    const video = videoRef.current;
+    const videoElement = videoRef.current;
+    if (!videoElement) return;
     
-    if (video) {
-      const handleEnded = () => setIsPlaying(false);
-      const handleError = (e: Event) => {
-        const videoElement = e.target as HTMLVideoElement;
-        console.error("Video error:", videoElement.error);
-        setLoadError(`Video loading error: ${videoElement.error?.message || 'Unknown error'}`);
-      };
-      
-      video.addEventListener("ended", handleEnded);
-      video.addEventListener("error", handleError);
-      
-      return () => {
-        video.removeEventListener("ended", handleEnded);
-        video.removeEventListener("error", handleError);
-      };
-    }
-  }, [videoRef]);
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+    const handleEnded = () => setIsPlaying(false);
+    
+    videoElement.addEventListener('play', handlePlay);
+    videoElement.addEventListener('pause', handlePause);
+    videoElement.addEventListener('ended', handleEnded);
+    
+    return () => {
+      videoElement.removeEventListener('play', handlePlay);
+      videoElement.removeEventListener('pause', handlePause);
+      videoElement.removeEventListener('ended', handleEnded);
+    };
+  }, []);
   
-  // Prevent navigation or bubbling from video element itself
-  const preventNavigation = (e: React.MouseEvent) => {
-    e.stopPropagation();
-  };
-  
-  // If we have a load error, show an error message
-  if (loadError) {
-    return (
-      <div className="space-y-2" onClick={preventNavigation}>
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            {loadError}. Try re-recording the video.
-          </AlertDescription>
-        </Alert>
-        <div className="flex justify-end">
-          <Button 
-            variant="outline" 
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onClearVideo();
-            }}
-            className="hover:bg-destructive/90 hover:text-destructive-foreground transition-colors duration-200 hover:scale-105"
-          >
-            Clear Video
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  // Show controls on hover
+  const showControls = () => setIsControlsVisible(true);
+  const hideControls = () => setIsControlsVisible(false);
   
   return (
-    <div className={`space-y-2 ${inDialog ? "w-full" : ""}`} onClick={preventNavigation}>
-      <div className="relative rounded-md overflow-hidden bg-black group">
+    <div 
+      className={`relative rounded-lg overflow-hidden group cursor-pointer ${
+        inDialog ? 'w-full h-64 md:h-80' : 'w-full h-72 md:max-h-[450px]'
+      }`}
+      onClick={togglePlayback}
+      onMouseEnter={showControls}
+      onMouseLeave={hideControls}
+    >
+      {videoUrl && (
         <video 
           ref={videoRef}
           src={videoUrl}
-          className={`w-full h-full ${inDialog ? "max-h-[50vh]" : "max-h-[300px]"}`}
-          onEnded={() => setIsPlaying(false)}
-          key={videoUrl} // Key helps React recognize when to remount the video element
-          onClick={preventNavigation}
-          playsInline // Important for iOS devices
+          className="w-full h-full object-contain bg-black"
+          playsInline
         />
-        
-        <VideoPlayerControls
-          isPlaying={isPlaying}
-          togglePlayback={togglePlayback}
-          onClearVideo={onClearVideo}
-          inDialog={inDialog}
-        />
-      </div>
+      )}
+      
+      <VideoPlayerControls 
+        isPlaying={isPlaying} 
+        togglePlayback={togglePlayback} 
+        onClearVideo={onClearVideo}
+        inDialog={inDialog}
+      />
     </div>
   );
 }
-
-// Import Button for the error state
-import { Button } from "@/components/ui/button";

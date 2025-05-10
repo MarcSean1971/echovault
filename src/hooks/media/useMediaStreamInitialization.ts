@@ -38,15 +38,22 @@ export function useMediaStreamInitialization({
 }: UseMediaStreamInitializationProps) {
   // Initialize camera preview when showing inline recording UI with better error handling
   useEffect(() => {
+    // Function to handle initialization
     const initializeMedia = async () => {
       // Don't initialize if we're already initializing or if we already attempted
       if (isInitializing || hasAttemptedVideoInit) {
         return;
       }
       
-      // CRITICAL: Don't initialize if we have existing media content
-      if ((messageType === "video" && videoUrl) || (messageType === "audio" && audioUrl) || initializedFromMessage) {
-        console.log("Skipping media initialization because content already exists or was initialized from message");
+      // CRITICAL: Skip initialization if we already have content or initialized from message
+      if ((messageType === "video" && videoUrl) || 
+          (messageType === "audio" && audioUrl) || 
+          initializedFromMessage) {
+        console.log("Skipping media initialization because:", {
+          hasVideoUrl: !!videoUrl,
+          hasAudioUrl: !!audioUrl,
+          initializedFromMessage
+        });
         return;
       }
       

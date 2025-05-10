@@ -17,7 +17,7 @@ export function useMediaInitializer(
   handleInitializedVideo: (blob: Blob, url: string) => void,
   handleInitializedAudio: (blob: Blob, url: string) => void
 ) {
-  // Connect initialized video data to our message type manager
+  // Connect initialized video/audio data to our message type manager
   useEffect(() => {
     if (!hasInitialized) {
       console.log("MediaInitializer: Waiting for initialization");
@@ -34,8 +34,14 @@ export function useMediaInitializer(
       messageType: message?.message_type
     });
     
+    // Skip if we've already initialized the content
+    if (initializedFromMessage) {
+      console.log("MediaInitializer: Already initialized from message, skipping");
+      return;
+    }
+    
     // Handle video initialization
-    if (initialVideoBlob && initialVideoUrl && !initializedFromMessage) {
+    if (initialVideoBlob && initialVideoUrl) {
       console.log("MediaInitializer: Connecting initialized video to message type manager");
       console.log("Initial video blob size:", initialVideoBlob.size);
       
@@ -49,7 +55,7 @@ export function useMediaInitializer(
     }
     
     // Handle audio initialization
-    else if (initialAudioBlob && initialAudioUrl && !initializedFromMessage) {
+    else if (initialAudioBlob && initialAudioUrl) {
       console.log("MediaInitializer: Connecting initialized audio to message type manager");
       console.log("Initial audio blob size:", initialAudioBlob.size);
       

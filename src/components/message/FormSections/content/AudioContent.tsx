@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect } from "react";
 import { AudioEmptyState } from "./audio/AudioEmptyState";
 import { AudioRecordingState } from "./audio/AudioRecordingState";
 import { AudioPlayerState } from "./audio/AudioPlayerState";
@@ -31,18 +31,31 @@ export function AudioContent({
   onTranscribeAudio,
   inDialog = false
 }: AudioContentProps) {
-  // Render empty state when no audio
-  if (!audioUrl && !isRecording) {
+  // Log state changes to help with debugging
+  useEffect(() => {
+    console.log("AudioContent: Rendering with state", { 
+      audioUrl: audioUrl ? "present" : "null",
+      isRecording,
+      isInitializing,
+      hasTranscription: !!transcription
+    });
+  }, [audioUrl, isRecording, isInitializing, transcription]);
+
+  // CRITICAL: Always prioritize showing existing audio if available
+  if (audioUrl) {
     return (
-      <AudioEmptyState 
-        isInitializing={isInitializing}
-        hasPermission={hasPermission}
-        onStartRecording={onStartRecording}
+      <AudioPlayerState
+        audioUrl={audioUrl}
+        audioDuration={audioDuration}
+        transcription={transcription}
+        onClearAudio={onClearAudio}
+        onTranscribeAudio={onTranscribeAudio}
+        inDialog={inDialog}
       />
     );
   }
   
-  // Render recording state
+  // Next priority: Show recording state if actively recording
   if (isRecording) {
     return (
       <AudioRecordingState 
@@ -52,15 +65,12 @@ export function AudioContent({
     );
   }
   
-  // Render audio player
+  // Default: Show empty state when no audio and not recording
   return (
-    <AudioPlayerState
-      audioUrl={audioUrl}
-      audioDuration={audioDuration}
-      transcription={transcription}
-      onClearAudio={onClearAudio}
-      onTranscribeAudio={onTranscribeAudio}
-      inDialog={inDialog}
+    <AudioEmptyState 
+      isInitializing={isInitializing}
+      hasPermission={hasPermission}
+      onStartRecording={onStartRecording}
     />
   );
 }

@@ -1,37 +1,44 @@
 
-import { useState, useCallback } from "react";
-import { useMessageForm } from "@/components/message/MessageFormContext";
+import { useState } from 'react';
+import { useMessageForm } from '@/components/message/MessageFormContext';
+import { useMessageMediaStore } from './useMessageMediaStore';
 
 /**
- * Hook to manage message type selection and state transitions
+ * Hook for managing message type and media initialization state
  */
 export function useMessageTypeStore() {
-  const { setMessageType } = useMessageForm();
-  const [initializedFromMessage, setInitializedFromMessage] = useState(false);
+  const { messageType, setMessageType } = useMessageForm();
   
-  // Handle switching to text type
-  const onTextTypeClick = useCallback(() => {
-    console.log("Switching to text message type");
-    setMessageType("text");
-  }, [setMessageType]);
+  // Use our message media store for initialization state
+  const {
+    initializedFromMessage,
+    setInitializedFromMessage
+  } = useMessageMediaStore();
   
-  // Handle switching to video type
-  const onVideoTypeClick = useCallback(() => {
-    console.log("Switching to video message type");
-    setMessageType("video");
-  }, [setMessageType]);
+  // Handle clicking on text tab
+  const onTextTypeClick = () => {
+    console.log("Text message type selected");
+    setMessageType('text');
+  };
   
-  // Handle switching to audio type
-  const onAudioTypeClick = useCallback(() => {
-    console.log("Switching to audio message type");
-    setMessageType("audio");
-  }, [setMessageType]);
+  // Handle clicking on video tab 
+  const onVideoTypeClick = () => {
+    console.log("Video message type selected");
+    setMessageType('video');
+  };
+  
+  // Handle clicking on audio tab
+  const onAudioTypeClick = () => {
+    console.log("Audio message type selected");
+    setMessageType('audio');
+  };
   
   return {
+    messageType,
     initializedFromMessage,
     setInitializedFromMessage,
     onTextTypeClick,
-    onVideoTypeClick,
+    onVideoTypeClick, 
     onAudioTypeClick
   };
 }

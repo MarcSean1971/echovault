@@ -24,29 +24,37 @@ export function useMessageTypeEffect({
 }: UseMessageTypeEffectProps) {
   // Initialize the camera or microphone when switching to media mode
   useEffect(() => {
-    console.log("MessageDetails: messageType changed to", messageType);
+    console.log("MessageDetails: messageType changed to", messageType, {
+      videoUrl, 
+      audioUrl, 
+      initializedFromMessage, 
+      showInlineRecording
+    });
     
     // Reset the initialization state when the message type changes
     setHasAttemptedVideoInit(false);
     
     // Don't automatically show recording UI if we already have content
-    // This is critical: we must respect initializedFromMessage and existing video/audio content
-    if (messageType === "video" && !videoUrl && !videoPreviewStream && !showInlineRecording && !initializedFromMessage) {
-      console.log("Video mode detected without content. Setting showInlineRecording to true");
-      setShowInlineRecording(true);
-    } else if (messageType === "video" && (videoUrl || initializedFromMessage)) {
-      console.log("Video mode with existing content detected. Not showing inline recording.");
-      // Make sure we don't show recording UI for existing video
-      setShowInlineRecording(false);
+    if (messageType === "video") {
+      if (videoUrl || initializedFromMessage) {
+        console.log("Video mode with existing content detected. Not showing inline recording.");
+        // Make sure we don't show recording UI for existing video
+        setShowInlineRecording(false);
+      } else if (!videoUrl && !videoPreviewStream && !showInlineRecording) {
+        console.log("Video mode detected without content. Setting showInlineRecording to true");
+        setShowInlineRecording(true);
+      }
     }
     
-    if (messageType === "audio" && !audioUrl && !showInlineRecording && !initializedFromMessage) {
-      console.log("Audio mode detected without content. Setting showInlineRecording to true");
-      setShowInlineRecording(true);
-    } else if (messageType === "audio" && (audioUrl || initializedFromMessage)) {
-      console.log("Audio mode with existing content detected. Not showing inline recording.");
-      // Make sure we don't show recording UI for existing audio
-      setShowInlineRecording(false);
+    if (messageType === "audio") {
+      if (audioUrl || initializedFromMessage) {
+        console.log("Audio mode with existing content detected. Not showing inline recording.");
+        // Make sure we don't show recording UI for existing audio
+        setShowInlineRecording(false);
+      } else if (!audioUrl && !showInlineRecording) {
+        console.log("Audio mode detected without content. Setting showInlineRecording to true");
+        setShowInlineRecording(true);
+      }
     }
   }, [
     messageType, 
