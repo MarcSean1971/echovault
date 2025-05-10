@@ -6,10 +6,68 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
-import { Message } from "@/types/message";
+import { Message, MessageAttachment } from "@/types/message";
 import { EditMessageForm } from "@/components/message/FormSections/EditMessageForm";
 import { Spinner } from "@/components/ui/spinner";
 import { getConditionByMessageId } from "@/services/messages/conditionService";
+
+type DatabaseMessage = {
+  id: string;
+  title: string;
+  content: string;
+  message_type: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+  share_location?: boolean;
+  location_name?: string;
+  location_latitude?: number;
+  location_longitude?: number;
+  attachments?: any;
+};
+
+/**
+ * Convert database message to our app Message type
+ */
+function convertDatabaseMessageToMessage(dbMessage: DatabaseMessage): Message {
+  // Process attachments to ensure they match MessageAttachment type
+  let processedAttachments: MessageAttachment[] = [];
+  
+  if (dbMessage.attachments && Array.isArray(dbMessage.attachments)) {
+    processedAttachments = dbMessage.attachments.map(attachment => ({
+      id: attachment.id || "",
+      message_id: attachment.message_id || dbMessage.id,
+      file_name: attachment.file_name || attachment.name || "",
+      file_size: attachment.file_size || attachment.size || 0,
+      file_type: attachment.file_type || attachment.type || "",
+      url: attachment.url || attachment.path || "",
+      created_at: attachment.created_at || dbMessage.created_at,
+      // Add optional properties if they exist
+      path: attachment.path,
+      name: attachment.name,
+      size: attachment.size,
+      type: attachment.type
+    }));
+  }
+  
+  // Convert to Message type
+  const message: Message = {
+    id: dbMessage.id,
+    title: dbMessage.title,
+    content: dbMessage.content || "",
+    message_type: dbMessage.message_type as "text" | "audio" | "video",
+    user_id: dbMessage.user_id,
+    created_at: dbMessage.created_at,
+    updated_at: dbMessage.updated_at,
+    share_location: dbMessage.share_location || false,
+    location_name: dbMessage.location_name,
+    location_latitude: dbMessage.location_latitude,
+    location_longitude: dbMessage.location_longitude,
+    attachments: processedAttachments
+  };
+  
+  return message;
+}
 
 export default function MessageEdit() {
   const { id } = useParams<{ id: string }>();
@@ -48,7 +106,9 @@ export default function MessageEdit() {
           
         if (error) throw error;
         
-        setMessage(data as Message);
+        // Convert database result to our Message type
+        const convertedMessage = convertDatabaseMessageToMessage(data as DatabaseMessage);
+        setMessage(convertedMessage);
       } catch (error: any) {
         console.error("Error fetching message:", error);
         toast({

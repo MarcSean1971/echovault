@@ -4,7 +4,65 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/components/ui/use-toast";
 import { getConditionByMessageId, getMessageDeadline } from "@/services/messages/conditionService";
-import { Message } from "@/types/message";
+import { Message, MessageAttachment } from "@/types/message";
+
+type DatabaseMessage = {
+  id: string;
+  title: string;
+  content: string;
+  message_type: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+  share_location?: boolean;
+  location_name?: string;
+  location_latitude?: number;
+  location_longitude?: number;
+  attachments?: any;
+};
+
+/**
+ * Convert database message to our app Message type
+ */
+function convertDatabaseMessageToMessage(dbMessage: DatabaseMessage): Message {
+  // Process attachments to ensure they match MessageAttachment type
+  let processedAttachments: MessageAttachment[] = [];
+  
+  if (dbMessage.attachments && Array.isArray(dbMessage.attachments)) {
+    processedAttachments = dbMessage.attachments.map(attachment => ({
+      id: attachment.id || "",
+      message_id: attachment.message_id || dbMessage.id,
+      file_name: attachment.file_name || attachment.name || "",
+      file_size: attachment.file_size || attachment.size || 0,
+      file_type: attachment.file_type || attachment.type || "",
+      url: attachment.url || attachment.path || "",
+      created_at: attachment.created_at || dbMessage.created_at,
+      // Add optional properties if they exist
+      path: attachment.path,
+      name: attachment.name,
+      size: attachment.size,
+      type: attachment.type
+    }));
+  }
+  
+  // Convert to Message type
+  const message: Message = {
+    id: dbMessage.id,
+    title: dbMessage.title,
+    content: dbMessage.content || "",
+    message_type: dbMessage.message_type as "text" | "audio" | "video",
+    user_id: dbMessage.user_id,
+    created_at: dbMessage.created_at,
+    updated_at: dbMessage.updated_at,
+    share_location: dbMessage.share_location || false,
+    location_name: dbMessage.location_name,
+    location_latitude: dbMessage.location_latitude,
+    location_longitude: dbMessage.location_longitude,
+    attachments: processedAttachments
+  };
+  
+  return message;
+}
 
 /**
  * Custom hook for loading message details and conditions
@@ -36,7 +94,9 @@ export function useMessageDetail(messageId: string | undefined, onError: () => v
         
       if (error) throw error;
       
-      setMessage(data as Message);
+      // Convert database result to our Message type
+      const convertedMessage = convertDatabaseMessageToMessage(data as DatabaseMessage);
+      setMessage(convertedMessage);
       
       // Check if message has a condition and if it's armed
       const conditionData = await getConditionByMessageId(messageId);

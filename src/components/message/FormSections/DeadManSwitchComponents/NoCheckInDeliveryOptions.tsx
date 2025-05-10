@@ -1,14 +1,15 @@
 
-import { RadioGroup } from "@/components/ui/radio-group";
+import { useState, useEffect } from "react";
+import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Label } from "@/components/ui/label";
-import { Clock, Repeat } from "lucide-react";
-import { DeliveryOption, RecurringPattern } from "@/types/message";
-import { RadioCardOption } from "./RadioCardOption";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { RecurringPattern, DeliveryOption } from "@/types/message";
 import { RecurringPatternSelector } from "./RecurringPatternSelector";
+import { DateTimePicker } from "@/components/ui/date-time-picker";
 
 interface NoCheckInDeliveryOptionsProps {
-  deliveryOption: DeliveryOption | string;
-  setDeliveryOption: (option: DeliveryOption | string) => void;
+  deliveryOption: DeliveryOption;
+  setDeliveryOption: (option: DeliveryOption) => void;
   recurringPattern: RecurringPattern | null;
   setRecurringPattern: (pattern: RecurringPattern | null) => void;
   triggerDate: Date | null;
@@ -23,44 +24,63 @@ export function NoCheckInDeliveryOptions({
   triggerDate,
   setTriggerDate
 }: NoCheckInDeliveryOptionsProps) {
+  // Safe type cast for deliveryOption
+  const handleDeliveryOptionChange = (value: string) => {
+    setDeliveryOption(value as DeliveryOption);
+  };
+  
   return (
-    <div className="space-y-6 mt-4">
+    <div className="space-y-4">
       <div>
-        <Label className="font-medium">How should the message be delivered?</Label>
-        
+        <Label>Delivery Options</Label>
         <RadioGroup 
-          value={deliveryOption} 
-          onValueChange={(value) => setDeliveryOption(value)}
-          className="grid grid-cols-1 gap-3 mt-2"
+          defaultValue={deliveryOption} 
+          value={deliveryOption}
+          onValueChange={handleDeliveryOptionChange}
+          className="mt-2 space-y-3"
         >
-          <RadioCardOption
-            value="once"
-            id="delivery-once"
-            label="Once off"
-            description="Send the message only once if you don't check in"
-            icon={<Clock className="h-4 w-4" />}
-            isSelected={deliveryOption === "once"}
-          />
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="once" id="once" />
+            <Label htmlFor="once" className="cursor-pointer">
+              Once (immediately deliver message)
+            </Label>
+          </div>
           
-          <RadioCardOption
-            value="recurring"
-            id="delivery-recurring"
-            label="Regular schedule"
-            description="Send the message repeatedly on a schedule if you don't check in"
-            icon={<Repeat className="h-4 w-4" />}
-            isSelected={deliveryOption === "recurring"}
-          />
+          <div className="flex items-center space-x-2">
+            <RadioGroupItem value="recurring" id="recurring" />
+            <Label htmlFor="recurring" className="cursor-pointer">
+              Recurring (deliver message regularly)
+            </Label>
+          </div>
         </RadioGroup>
       </div>
-
+      
+      {deliveryOption === "once" && (
+        <div className="p-4 border rounded-md bg-muted/30">
+          <Label>Trigger Date</Label>
+          <div className="mt-2">
+            <DateTimePicker
+              date={triggerDate || undefined}
+              setDate={(date) => setTriggerDate(date || null)}
+              granularity="minute"
+              hideTimeZone
+            />
+          </div>
+          <p className="text-sm text-muted-foreground mt-2">
+            Message will be sent once on this date if no check-in is detected.
+          </p>
+        </div>
+      )}
+      
       {deliveryOption === "recurring" && (
-        <div className="mt-6 border-t pt-4">
-          <Label className="font-medium mb-3 block">Regular Schedule Options</Label>
+        <div className="p-4 border rounded-md bg-muted/30">
           <RecurringPatternSelector
             recurringPattern={recurringPattern}
             setRecurringPattern={setRecurringPattern}
-            forceEnabled={true}
           />
+          <p className="text-sm text-muted-foreground mt-2">
+            Message will be sent on a recurring schedule if no check-in is detected.
+          </p>
         </div>
       )}
     </div>

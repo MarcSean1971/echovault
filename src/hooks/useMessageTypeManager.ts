@@ -1,6 +1,6 @@
 
 import { useVideoRecordingHandler } from './useVideoRecordingHandler';
-import { useAudioRecordingHandler } from './useAudioRecordingHandler';
+import { useAudioRecordingHandler, AudioRecordingHandlerResult } from './useAudioRecordingHandler';
 import { useMessageTypeStore } from './message/useMessageTypeStore';
 import { useMediaTabSwitcher } from './message/useMediaTabSwitcher';
 import { useInitializedMediaHandler } from './message/useInitializedMediaHandler';
@@ -35,7 +35,9 @@ export function useMessageTypeManager() {
     isStreamActive: isVideoStreamActive
   } = useVideoRecordingHandler();
 
-  // Use our audio recording hook
+  // Use our audio recording hook with proper type
+  const audioRecordingHandler: AudioRecordingHandlerResult = useAudioRecordingHandler();
+  
   const {
     isRecording: isAudioRecording,
     isInitializing: isAudioInitializing,
@@ -55,7 +57,7 @@ export function useMessageTypeManager() {
     stopMediaStream: stopAudioStream,
     isStreamActive: isAudioStreamActive,
     isInitializationAttempted: isAudioInitializationAttempted
-  } = useAudioRecordingHandler();
+  } = audioRecordingHandler;
 
   // Use our media tab switcher for handling tab changes
   const mediaTabSwitcher = useMediaTabSwitcher(

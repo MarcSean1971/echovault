@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Message } from "@/types/message";
 import { toast } from "@/components/ui/use-toast";
@@ -92,10 +91,18 @@ export const loadMessageDirect = async (
         ...data,
         attachments: Array.isArray(data.attachments) 
           ? data.attachments.map((att: any) => ({
-              path: att.path || '',
-              name: att.name || '',
-              size: att.size || 0,
-              type: att.type || '',
+              id: att.id || "",
+              message_id: att.message_id || messageId,
+              file_name: att.name || "",
+              file_size: att.size || 0,
+              file_type: att.type || "",
+              url: att.path || "",
+              created_at: new Date().toISOString(),
+              // Keep additional fields
+              path: att.path,
+              name: att.name,
+              size: att.size,
+              type: att.type
             }))
           : null,
         // Add the required properties that might be missing from the database
@@ -153,10 +160,18 @@ export const loadMessageSecure = async (
         ...edgeFnResult.message,
         attachments: Array.isArray(edgeFnResult.message.attachments)
           ? edgeFnResult.message.attachments.map((att: any) => ({
-              path: att.path || '',
-              name: att.name || '',
-              size: att.size || 0,
-              type: att.type || ''
+              id: att.id || "",
+              message_id: att.message_id || messageId,
+              file_name: att.name || "",
+              file_size: att.size || 0,
+              file_type: att.type || "",
+              url: att.path || "",
+              created_at: new Date().toISOString(),
+              // Keep additional fields
+              path: att.path,
+              name: att.name,
+              size: att.size,
+              type: att.type
             }))
           : null,
         // Ensure expires_at and sender_name are present in the transformed message
@@ -208,10 +223,18 @@ export const loadMessageBypass = async (
         ...edgeFnResult.message,
         attachments: Array.isArray(edgeFnResult.message.attachments)
           ? edgeFnResult.message.attachments.map((att: any) => ({
-              path: att.path || '',
-              name: att.name || '',
-              size: att.size || 0,
-              type: att.type || ''
+              id: att.id || "",
+              message_id: att.message_id || messageId,
+              file_name: att.name || "",
+              file_size: att.size || 0,
+              file_type: att.type || "",
+              url: att.path || "",
+              created_at: new Date().toISOString(),
+              // Keep additional fields
+              path: att.path,
+              name: att.name,
+              size: att.size,
+              type: att.type
             }))
           : null,
         // Ensure expires_at and sender_name are present in the transformed message

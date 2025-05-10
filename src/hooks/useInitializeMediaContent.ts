@@ -124,7 +124,7 @@ export function useInitializeMediaContent(message: Message | null) {
           console.log("Video parsing error:", error, diagnostics);
           
           // If this was expected to be a video message but we failed to parse it
-          if (message.message_type === "video") {
+          if (message && message.message_type !== "text") {
             setInitializationError(`Failed to parse video content: ${error}`);
             console.error("Video message initialization failed:", error, diagnostics);
             
@@ -177,7 +177,7 @@ export function useInitializeMediaContent(message: Message | null) {
           // Not JSON or error parsing audio content
           console.log("Failed to parse audio content:", e);
           
-          if (message.message_type === "audio") {
+          if (message && message.message_type === "audio") {
             setInitializationError(`Failed to parse audio content: ${e}`);
             console.error("Audio message initialization failed:", e);
             
@@ -197,7 +197,7 @@ export function useInitializeMediaContent(message: Message | null) {
           setHasInitialized(true);
           
           // If message type is video/audio but content is text, show a warning
-          if (message.message_type !== "text") {
+          if (message && message.message_type !== "text") {
             toast({
               title: "Content Type Mismatch",
               description: `This message is marked as ${message.message_type} but contains text content. You may need to re-record your media.`,
