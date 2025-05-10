@@ -13,7 +13,7 @@ interface MediaRecordersProps {
   isInitializing?: boolean;
   hasPermission?: boolean | null;
   previewStream?: MediaStream | null;
-  startRecording?: () => Promise<void>;
+  startRecording?: () => Promise<boolean>;
   stopRecording?: () => void;
   clearVideo?: () => void;
 }
@@ -28,7 +28,7 @@ export function MediaRecorders({
   isInitializing = false,
   hasPermission = null,
   previewStream = null,
-  startRecording = async () => {},
+  startRecording = async () => true,
   stopRecording = () => {},
   clearVideo = () => {}
 }: MediaRecordersProps) {

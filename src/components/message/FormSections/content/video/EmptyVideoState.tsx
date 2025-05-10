@@ -4,7 +4,7 @@ import { Camera, Loader2 } from "lucide-react";
 import { useState } from "react";
 
 interface EmptyVideoStateProps {
-  handleStartRecording: () => Promise<void>;
+  handleStartRecording: () => Promise<boolean | void>;
   isInitializing: boolean;
   permissionError: string | null;
   hasPermission: boolean | null;
@@ -71,7 +71,7 @@ export function EmptyVideoState({
         onClick={onEnableCamera}
         variant="default"
         disabled={isInitializing || isAttemptingToEnable}
-        className="hover:opacity-90 transition-opacity duration-200"
+        className="hover:scale-105 hover:opacity-90 transition-all duration-200"
       >
         {(isInitializing || isAttemptingToEnable) ? (
           <>

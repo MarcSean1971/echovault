@@ -13,6 +13,10 @@ import { MediaStateManager } from "./MessageDetailsComponents/MediaStateManager"
 // Import custom hooks
 import { useMessageVideoHandler } from "@/hooks/useMessageVideoHandler";
 
+// Import Button from UI components for Record Video button
+import { Button } from "@/components/ui/button";
+import { Video } from "lucide-react";
+
 interface MessageDetailsProps {
   message?: any;  // Optional message prop for editing
 }
@@ -85,18 +89,6 @@ export function MessageDetails({ message }: MessageDetailsProps) {
     } catch (error) {
       console.error("Error transcribing audio:", error);
     }
-  };
-
-  // Wrapper for forceInitializeCamera that returns void
-  const handleInitializeCamera = async (): Promise<void> => {
-    await forceInitializeCamera();
-    // We ignore the boolean result to match the expected void return type
-  };
-  
-  // Wrapper for forceInitializeMicrophone that returns void
-  const handleInitializeMicrophone = async (): Promise<void> => {
-    await forceInitializeMicrophone();
-    // We ignore the boolean result to match the expected void return type
   };
 
   return (
@@ -183,14 +175,10 @@ export function MessageDetails({ message }: MessageDetailsProps) {
         isInitializing={isVideoInitializing}
         hasPermission={hasVideoPermission}
         previewStream={videoPreviewStream}
-        startRecording={handleInitializeCamera}
+        startRecording={forceInitializeCamera}
         stopRecording={stopVideoRecording}
         clearVideo={clearVideo}
       />
     </div>
   );
 }
-
-// Import Button from UI components for Record Video button
-import { Button } from "@/components/ui/button";
-import { Video } from "lucide-react";

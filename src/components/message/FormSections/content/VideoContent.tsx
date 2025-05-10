@@ -24,7 +24,7 @@ export function VideoContent({
   isInitializing?: boolean;
   hasPermission?: boolean | null;
   previewStream?: MediaStream | null;
-  onStartRecording: () => Promise<void>;
+  onStartRecording: () => Promise<boolean | void>;
   onStopRecording: () => void;
   onClearVideo: () => void;
   inDialog?: boolean;
