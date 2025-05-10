@@ -4,6 +4,7 @@ import { Message } from "@/types/message";
 
 /**
  * Hook to handle initialized media from existing messages
+ * Prioritizes showing existing video/audio when editing a message
  */
 export function useMediaInitializer(
   message: Message | undefined,
@@ -17,14 +18,14 @@ export function useMediaInitializer(
   handleInitializedVideo: (blob: Blob, url: string) => void,
   handleInitializedAudio: (blob: Blob, url: string) => void
 ) {
-  // Connect initialized video/audio data to our message type manager
+  // Connect initialized video/audio data to our message type manager with priority for existing content
   useEffect(() => {
     if (!hasInitialized) {
       console.log("MediaInitializer: Waiting for initialization");
       return;
     }
 
-    console.log("MediaInitializer: Status check", {
+    console.log("MediaInitializer: Checking for existing media content", {
       hasInitialized,
       hasVideoBlob: !!initialVideoBlob,
       videoBlob: initialVideoBlob ? `${initialVideoBlob.size} bytes` : null,
@@ -36,40 +37,27 @@ export function useMediaInitializer(
       messageType: message?.message_type
     });
     
-    // Flag to prevent double-initialization
-    let didInitialize = false;
-    
-    // Handle video initialization with priority
+    // Immediately initialize existing video content without any delays or complex checks
     if (initialVideoBlob && initialVideoUrl && !initializedFromMessage) {
-      console.log("MediaInitializer: Initializing video with blob size:", initialVideoBlob.size);
-      
-      // Process immediately without delay or initialization checks
+      console.log("MediaInitializer: Initializing existing video content immediately");
       try {
         handleInitializedVideo(initialVideoBlob, initialVideoUrl);
-        console.log("MediaInitializer: Video initialization processed immediately");
         setInitializedFromMessage(true);
-        didInitialize = true;
       } catch (err) {
         console.error("MediaInitializer: Error initializing video:", err);
       }
+      return; // Exit early after handling video
     }
-    // Handle audio initialization
-    else if (initialAudioBlob && initialAudioUrl && !initializedFromMessage && !didInitialize) {
-      console.log("MediaInitializer: Initializing audio with blob size:", initialAudioBlob.size);
-      
+    
+    // Handle audio initialization only if no video was found
+    if (initialAudioBlob && initialAudioUrl && !initializedFromMessage) {
+      console.log("MediaInitializer: Initializing existing audio content");
       try {
         handleInitializedAudio(initialAudioBlob, initialAudioUrl);
-        console.log("MediaInitializer: Audio initialization processed immediately");
         setInitializedFromMessage(true);
       } catch (err) {
         console.error("MediaInitializer: Error initializing audio:", err);
       }
-    }
-    else if (!initialVideoBlob && !initialAudioBlob) {
-      console.log("MediaInitializer: No media to initialize");
-    }
-    else if (initializedFromMessage) {
-      console.log("MediaInitializer: Already initialized from message");
     }
   }, [
     hasInitialized, 

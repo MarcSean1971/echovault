@@ -1,8 +1,5 @@
 
-import { useState } from "react";
 import { VideoContent } from "../content/VideoContent";
-import { Button } from "@/components/ui/button";
-import { Video } from "lucide-react";
 
 interface VideoSectionProps {
   messageType: string;
@@ -24,31 +21,24 @@ interface VideoSectionProps {
 export function VideoSection({
   messageType,
   videoUrl,
-  videoBlob,
   isVideoRecording,
   isVideoInitializing,
   hasVideoPermission,
   videoPreviewStream,
   startVideoRecording,
   stopVideoRecording,
-  clearVideo,
-  handleVideoContentUpdate,
-  showVideoRecorder,
-  setShowVideoRecorder,
   handleClearVideoAndRecord
 }: VideoSectionProps) {
   // Create a wrapper function that explicitly returns Promise<void>
   const handleStartRecordingWrapper = async (): Promise<void> => {
     try {
-      // Use void operator to explicitly discard the boolean return value
-      void await startVideoRecording();
-      // No return statement ensures Promise<void>
+      await startVideoRecording();
     } catch (error) {
       console.error("Error in handleStartRecordingWrapper:", error);
-      // No re-throw to maintain Promise<void>
     }
   };
 
+  // Only render when message type is video
   if (messageType !== "video") return null;
 
   return (
