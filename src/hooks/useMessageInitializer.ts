@@ -1,10 +1,7 @@
-
-import { useEffect, useCallback } from "react";
+import { useEffect } from "react";
 import { useMessageForm } from "@/components/message/MessageFormContext";
 import { Message } from "@/types/message";
 import { toast } from "@/components/ui/use-toast";
-import { parseVideoContent } from '@/services/messages/mediaService';
-import { useInitializeMediaContent } from "./useInitializeMediaContent";
 
 /**
  * Hook to initialize message data when editing an existing message
@@ -13,28 +10,29 @@ export function useMessageInitializer(message?: Message) {
   const { 
     setMessageType: setContextMessageType,
     setContent,
-    setTextContent,
-    setVideoContent,
-    setAudioContent
+    setTextContent
   } = useMessageForm();
   
-  // Use our media content initializer hook
-  const {
-    videoUrl,
-    videoBlob,
-    videoBase64,
-    audioUrl,
-    audioBlob,
-    audioBase64,
-    hasInitialized,
-    additionalText
-  } = useInitializeMediaContent(message || null);
-
   // Set initial message type based on the message being edited
   useEffect(() => {
     if (message?.message_type) {
       console.log("Initializing message type:", message.message_type);
-      setContextMessageType(message.message_type);
+      
+      // If the message type is audio or video, convert it to text
+      if (message.message_type === 'audio' || message.message_type === 'video') {
+        setContextMessageType('text');
+        
+        // Show a notification about conversion to text
+        toast({
+          title: "Message Type Converted",
+          description: "Audio and video messages are no longer supported. Your message has been converted to text.",
+          variant: "default",
+          duration: 5000
+        });
+      } else {
+        // For text messages, keep the type as is
+        setContextMessageType('text');
+      }
     }
   }, [message, setContextMessageType]);
 
@@ -44,96 +42,29 @@ export function useMessageInitializer(message?: Message) {
     
     console.log("Initializing message content for editing:", 
                 message.content.substring(0, 100) + "...");
-    console.log("Message type:", message.message_type);
     
-    // Set form content regardless of message type
+    // Set form content
     setContent(message.content);
     
-    // Reset all content types first to avoid overlap
-    setTextContent('');
-    setVideoContent('');
-    setAudioContent('');
-    
-    // Check if the content has video or audio data
-    let hasVideo = false;
-    let hasAudio = false;
+    // Try to extract text content from media messages
+    let textContent = message.content;
     
     try {
-      // Check for video content
-      const { videoData } = parseVideoContent(message.content);
-      hasVideo = !!videoData;
-      
-      // If we have video content, store it
-      if (hasVideo || message.message_type === "video") {
-        console.log("Message contains video content - setting videoContent state");
-        setVideoContent(message.content);
-        
-        // Check for additional text in the video content
-        try {
-          const contentObj = JSON.parse(message.content);
-          if (contentObj.additionalText) {
-            console.log("Message contains additional text with video:", contentObj.additionalText);
-            // Set text content regardless of message type to ensure it's preserved
-            setTextContent(contentObj.additionalText);
-          }
-        } catch (e) {
-          console.error("Error parsing additional text from video content:", e);
-        }
-      }
-      
-      // Check for audio content
-      try {
-        const contentObj = JSON.parse(message.content);
-        if (contentObj.audioData || message.message_type === "audio") {
-          console.log("Message contains audio content - setting audioContent state");
-          hasAudio = true;
-          setAudioContent(message.content);
-          
-          // Check for additional text in the audio content
-          if (contentObj.additionalText) {
-            console.log("Message contains additional text with audio:", contentObj.additionalText);
-            // Set text content regardless of message type to ensure it's preserved
-            setTextContent(contentObj.additionalText);
-          }
-        }
-      } catch (e) {
-        console.error("Error parsing audio content:", e);
+      // Check for additional text in media content
+      const contentObj = JSON.parse(message.content);
+      if (contentObj.additionalText) {
+        console.log("Message contains additional text:", contentObj.additionalText);
+        textContent = contentObj.additionalText;
       }
     } catch (e) {
-      hasVideo = false;
+      // If it's not JSON, it's likely just text
+      console.log("Message content appears to be plain text");
     }
     
-    // For text content or fallback
-    if (!hasVideo && !hasAudio || message.message_type === "text") {
-      // If this is a text message, set the text content directly
-      setTextContent(message.content);
-    }
+    // Set text content state
+    setTextContent(textContent);
     
-    // FIXED: Check for type/content mismatch and display appropriate warning
-    if ((message.message_type === "video" && !hasVideo) || 
-        (message.message_type === "audio" && !hasAudio)) {
-      console.warn(`Message type (${message.message_type}) doesn't match content - using text fallback`);
-      // Only show toast for genuine mismatches, not for empty edits
-      if (message.content && message.content.trim() !== "") {
-        toast({
-          title: "Content Type Mismatch",
-          description: `This message is marked as ${message.message_type} but contains different content. You can change the type if needed.`,
-          variant: "default",
-          duration: 5000
-        });
-      }
-    }
-    
-  }, [message, setContent, setTextContent, setVideoContent, setAudioContent]);
+  }, [message, setContent, setTextContent]);
 
-  return {
-    videoUrl,
-    videoBlob,
-    videoBase64,
-    audioUrl,
-    audioBlob,
-    audioBase64,
-    hasInitialized,
-    additionalText
-  };
+  return { hasInitialized: true };
 }

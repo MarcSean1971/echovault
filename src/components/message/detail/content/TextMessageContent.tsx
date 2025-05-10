@@ -1,16 +1,26 @@
 
 import React from "react";
-import { Message } from "@/types/message";
+import { Card } from "@/components/ui/card";
 
 interface TextMessageContentProps {
-  content?: string | null;
-  message: Message;
+  content: string;
 }
 
-export function TextMessageContent({ message }: TextMessageContentProps) {
+export function TextMessageContent({ content }: TextMessageContentProps) {
+  // If no content, show placeholder
+  if (!content || content.trim() === "") {
+    return (
+      <div className="p-4 bg-muted/40 rounded-md text-center text-muted-foreground">
+        No message content
+      </div>
+    );
+  }
+  
   return (
-    <div className="whitespace-pre-wrap prose dark:prose-invert max-w-none text-sm md:text-base">
-      {message.content || <span className="text-muted-foreground italic">No content</span>}
-    </div>
+    <Card className="p-4">
+      <div className="prose dark:prose-invert max-w-none break-words">
+        <p className="whitespace-pre-wrap">{content}</p>
+      </div>
+    </Card>
   );
 }
