@@ -63,15 +63,10 @@ export function useAudioRecorder(audioStream: MediaStream | null, streamRef: Rea
   };
 
   // Function to start recording (accepts optional duration callback)
-  const startRecording = async (onDurationUpdate?: (duration: number) => void) => {
+  const startRecording = async () => {
     try {
       console.log("Starting audio recording...");
       audioChunksRef.current = [];
-      
-      // Store the callback if provided
-      if (onDurationUpdate) {
-        durationCallbackRef.current = onDurationUpdate;
-      }
       
       // Check stream from both sources (streamRef is the most reliable)
       let stream = streamRef.current || audioStream;
