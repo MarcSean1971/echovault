@@ -1,13 +1,23 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMessageForm } from '@/components/message/MessageFormContext';
 
 /**
  * Hook to manage message type selection and state
  */
 export function useMessageTypeStore() {
-  const { setMessageType } = useMessageForm();
+  const { setMessageType, messageType } = useMessageForm();
   const [initializedFromMessage, setInitializedFromMessage] = useState(false);
+  
+  // Add debug logging when initialization state changes
+  useEffect(() => {
+    console.log("MessageTypeStore: initializedFromMessage changed to", initializedFromMessage);
+  }, [initializedFromMessage]);
+  
+  // Add debug logging when message type changes
+  useEffect(() => {
+    console.log("MessageTypeStore: messageType changed to", messageType);
+  }, [messageType]);
   
   // Handle clicking on text tab
   const onTextTypeClick = () => {

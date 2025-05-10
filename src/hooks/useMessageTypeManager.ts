@@ -9,7 +9,10 @@ export function useMessageTypeManager() {
   // Use our message type store for basic state
   const {
     initializedFromMessage,
-    setInitializedFromMessage
+    setInitializedFromMessage,
+    onTextTypeClick,
+    onVideoTypeClick,
+    onAudioTypeClick
   } = useMessageTypeStore();
   
   // Use our custom hooks for video and audio handling
@@ -56,11 +59,7 @@ export function useMessageTypeManager() {
   } = useAudioRecordingHandler();
 
   // Use our media tab switcher for handling tab changes
-  const {
-    onTextTypeClick,
-    onVideoTypeClick,
-    onAudioTypeClick
-  } = useMediaTabSwitcher(
+  const mediaTabSwitcher = useMediaTabSwitcher(
     isVideoRecording,
     stopVideoRecording,
     stopVideoStream,
@@ -79,11 +78,13 @@ export function useMessageTypeManager() {
   
   // Wrapper for initialized video handler
   const handleInitializedVideo = (blob: Blob, url: string) => {
+    console.log("useMessageTypeManager: Initializing video with blob size:", blob.size);
     handleInitializedVideoBase(blob, url, setInitializedFromMessage, restoreVideo);
   };
   
   // Wrapper for initialized audio handler
   const handleInitializedAudio = (blob: Blob, url: string) => {
+    console.log("useMessageTypeManager: Initializing audio with blob size:", blob.size);
     handleInitializedAudioBase(blob, url, setInitializedFromMessage, restoreAudio);
   };
 
@@ -111,6 +112,7 @@ export function useMessageTypeManager() {
     clearVideo,
     forceInitializeCamera,
     handleInitializedVideo,
+    isVideoStreamActive,
     
     // Audio
     onAudioTypeClick,

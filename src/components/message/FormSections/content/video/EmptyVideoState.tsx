@@ -1,6 +1,7 @@
 
 import { Button } from "@/components/ui/button";
-import { Camera, CameraOff, Video } from "lucide-react";
+import { Camera, CameraOff, Loader2, Video } from "lucide-react";
+import { useState } from "react";
 
 interface EmptyVideoStateProps {
   handleStartRecording: () => Promise<void>;
@@ -17,6 +18,25 @@ export function EmptyVideoState({
   hasPermission,
   inDialog
 }: EmptyVideoStateProps) {
+  const [isAttemptingToEnable, setIsAttemptingToEnable] = useState(false);
+  
+  // Handle the enable camera button click with better state management
+  const onEnableCamera = async () => {
+    if (isInitializing || isAttemptingToEnable) return;
+    
+    setIsAttemptingToEnable(true);
+    try {
+      await handleStartRecording();
+    } catch (error) {
+      console.error("Error enabling camera:", error);
+    } finally {
+      // Reset after a short delay to ensure other state updates have completed
+      setTimeout(() => {
+        setIsAttemptingToEnable(false);
+      }, 500);
+    }
+  };
+  
   return (
     <div className={`flex flex-col items-center ${!inDialog ? "border-2 border-dashed border-muted-foreground/30" : ""} rounded-md p-6 space-y-4`}>
       <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
@@ -42,14 +62,14 @@ export function EmptyVideoState({
       
       <Button
         type="button"
-        onClick={handleStartRecording}
+        onClick={onEnableCamera}
         variant="default"
-        disabled={isInitializing}
-        className="hover:opacity-90 transition-all"
+        disabled={isInitializing || isAttemptingToEnable}
+        className="hover:opacity-90 transition-all duration-200"
       >
-        {isInitializing ? (
+        {(isInitializing || isAttemptingToEnable) ? (
           <>
-            <CameraOff className="mr-2 h-4 w-4" />
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             Preparing Camera...
           </>
         ) : (

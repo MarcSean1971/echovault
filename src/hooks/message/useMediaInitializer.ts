@@ -19,27 +19,48 @@ export function useMediaInitializer(
 ) {
   // Connect initialized video data to our message type manager
   useEffect(() => {
-    if (hasInitialized && initialVideoBlob && initialVideoUrl && !initializedFromMessage) {
-      console.log("MessageMediaInitializer: Connecting initialized video to message type manager");
+    if (!hasInitialized) {
+      console.log("MediaInitializer: Waiting for initialization");
+      return;
+    }
+
+    console.log("MediaInitializer: Status check", {
+      hasInitialized,
+      hasVideoBlob: !!initialVideoBlob,
+      hasVideoUrl: !!initialVideoUrl,
+      hasAudioBlob: !!initialAudioBlob, 
+      hasAudioUrl: !!initialAudioUrl,
+      initializedFromMessage
+    });
+    
+    // Handle video initialization
+    if (initialVideoBlob && initialVideoUrl && !initializedFromMessage) {
+      console.log("MediaInitializer: Connecting initialized video to message type manager");
       console.log("Initial video blob size:", initialVideoBlob.size);
       
-      // Set the flag first to prevent double initialization
-      setInitializedFromMessage(true);
+      // Initialize the video with original blob and URL
       handleInitializedVideo(initialVideoBlob, initialVideoUrl);
     }
-  }, [hasInitialized, initialVideoBlob, initialVideoUrl, handleInitializedVideo, initializedFromMessage, setInitializedFromMessage]);
-
-  // Connect initialized audio data to our message type manager
-  useEffect(() => {
-    if (hasInitialized && initialAudioBlob && initialAudioUrl && !initializedFromMessage) {
-      console.log("MessageMediaInitializer: Connecting initialized audio to message type manager");
+    
+    // Handle audio initialization
+    else if (initialAudioBlob && initialAudioUrl && !initializedFromMessage) {
+      console.log("MediaInitializer: Connecting initialized audio to message type manager");
       console.log("Initial audio blob size:", initialAudioBlob.size);
       
-      // Set the flag first to prevent double initialization
-      setInitializedFromMessage(true);
+      // Initialize the audio with original blob and URL
       handleInitializedAudio(initialAudioBlob, initialAudioUrl);
     }
-  }, [hasInitialized, initialAudioBlob, initialAudioUrl, handleInitializedAudio, initializedFromMessage, setInitializedFromMessage]);
+  }, [
+    hasInitialized, 
+    initialVideoBlob, 
+    initialVideoUrl, 
+    initialAudioBlob, 
+    initialAudioUrl, 
+    handleInitializedVideo, 
+    handleInitializedAudio, 
+    initializedFromMessage, 
+    setInitializedFromMessage
+  ]);
 
   return {
     mediaInitialized: initializedFromMessage
