@@ -14,7 +14,8 @@ export const BUTTON_HOVER_EFFECTS = {
   success: "hover:bg-green-600",
   warning: "hover:bg-amber-600",
   danger: "hover:bg-red-600",
-  info: "hover:bg-blue-600"
+  info: "hover:bg-blue-600",
+  muted: "hover:bg-muted/50" // Add the missing muted property
 };
 
 // Icon hover effect variations

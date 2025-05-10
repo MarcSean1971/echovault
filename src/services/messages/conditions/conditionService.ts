@@ -7,7 +7,7 @@ import {
   updateConditionInDb,
   deleteConditionFromDb,
   mapDbConditionToMessageCondition
-} from "./conditions/dbOperations";
+} from "@/services/messages/conditions/dbOperations";
 
 // Create a message condition
 export async function createMessageCondition(
@@ -42,7 +42,7 @@ export async function deleteMessageCondition(conditionId: string): Promise<void>
 export async function getConditionByMessageId(messageId: string): Promise<MessageCondition | null> {
   try {
     // Import here to avoid circular imports
-    const { getConditionByMessageId: fetchCondition } = await import('./conditions/messageConditionService');
+    const { getConditionByMessageId: fetchCondition } = await import('@/services/messages/conditions/messageConditionService');
     return await fetchCondition(messageId);
   } catch (error) {
     console.error("Error in getConditionByMessageId:", error);
@@ -51,13 +51,13 @@ export async function getConditionByMessageId(messageId: string): Promise<Messag
 }
 
 // Re-export check-in functions
-export { performCheckIn, getNextCheckInDeadline } from './conditions/checkInService';
+export { performCheckIn, getNextCheckInDeadline } from '@/services/messages/conditions/checkInService';
 
 // Re-export panic trigger functions
-export { triggerPanicMessage } from './conditions/panicTriggerService';
+export { triggerPanicMessage } from '@/services/messages/conditions/panicTriggerService';
 
 // Re-export message status functions
-export { getMessageStatus } from './conditions/messageStatusService';
+export { getMessageStatus } from '@/services/messages/conditions/messageStatusService';
 
 // Re-export arming/disarming functions
-export { armMessage, disarmMessage, getMessageDeadline } from './conditions/messageArmingService';
+export { armMessage, disarmMessage, getMessageDeadline } from '@/services/messages/conditions/messageArmingService';

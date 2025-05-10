@@ -1,3 +1,4 @@
+
 import { getAuthClient } from "@/lib/supabaseClient";
 import { CheckInResult, CheckInDeadlineResult } from "./types";
 import { updateConditionsLastChecked } from "./dbOperations";
@@ -120,7 +121,7 @@ export async function getNextCheckInDeadline(userId: string): Promise<CheckInDea
       return {
         id: item.id,
         message_id: item.message_id,
-        trigger_type: (item.trigger_type || item.condition_type) as TriggerType,
+        trigger_type: item.condition_type as TriggerType, // Use condition_type instead of trigger_type
         condition_type: item.condition_type,
         hours_threshold: item.hours_threshold,
         created_at: item.created_at,

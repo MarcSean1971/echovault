@@ -1,10 +1,18 @@
+
 import { useState, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { Message } from "@/types/message";
 import { supabase } from "@/integrations/supabase/client";
 import { useSecurityConstraints } from "@/hooks/message-access/useSecurityConstraints";
 
-export function usePublicMessageAccess() {
+interface PublicMessageAccessProps {
+  messageId?: string;
+  deliveryId?: string | null;
+  recipientEmail?: string | null;
+  isPreviewMode?: boolean;
+}
+
+export function usePublicMessageAccess(props?: PublicMessageAccessProps) {
   const [isPinRequired, setIsPinRequired] = useState(false);
   const [isUnlockDelayed, setIsUnlockDelayed] = useState(false);
   const [unlockTime, setUnlockTime] = useState<Date>(new Date());
@@ -14,6 +22,9 @@ export function usePublicMessageAccess() {
   const [error, setError] = useState<string | null>(null);
   const { convertDatabaseMessageToMessage } = useSecurityConstraints();
   const { id } = useParams<{ id: string }>();
+  
+  // Use either the provided messageId or the one from URL params
+  const messageId = props?.messageId || id;
   
   const verifyPin = (pinCode: string) => {
     // In a real implementation, this would verify against the stored pin
@@ -30,7 +41,7 @@ export function usePublicMessageAccess() {
   };
   
   const fetchMessage = useCallback(async () => {
-    if (!id) {
+    if (!messageId) {
       setError("No message ID provided");
       setIsLoading(false);
       return null;
@@ -43,7 +54,7 @@ export function usePublicMessageAccess() {
       const { data, error: fetchError } = await supabase
         .from('messages')
         .select('*')
-        .eq('id', id)
+        .eq('id', messageId)
         .single();
         
       if (fetchError) {
@@ -68,7 +79,7 @@ export function usePublicMessageAccess() {
       setIsLoading(false);
       return null;
     }
-  }, [id, convertDatabaseMessageToMessage]);
+  }, [messageId, convertDatabaseMessageToMessage]);
   
   return {
     isPinRequired,
