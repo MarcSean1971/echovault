@@ -16,7 +16,8 @@ export function useAudioProcessor() {
   };
 
   // Transcribe audio to text (placeholder implementation)
-  const transcribeAudio = async (audioBlob: Blob | null): Promise<string> => {
+  // Changed to accept Blob parameter explicitly
+  const transcribeAudio = async (audioBlob: Blob): Promise<string> => {
     try {
       if (!audioBlob) {
         throw new Error("No audio to transcribe");

@@ -11,6 +11,7 @@ export function useAudioRecorder(audioStream: MediaStream | null, streamRef: Rea
   const audioChunksRef = useRef<Blob[]>([]);
   const startTimeRef = useRef<number | null>(null);
   const durationTimerRef = useRef<number | null>(null);
+  const durationCallbackRef = useRef<((duration: number) => void) | null>(null);
   
   // Cleanup function to reset resources
   const cleanupResources = () => {
@@ -52,14 +53,24 @@ export function useAudioRecorder(audioStream: MediaStream | null, streamRef: Rea
     if (startTimeRef.current) {
       const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
       setAudioDuration(elapsed);
+      
+      // Call duration callback if provided
+      if (durationCallbackRef.current) {
+        durationCallbackRef.current(elapsed);
+      }
     }
   };
 
-  // Function to start recording
-  const startRecording = async () => {
+  // Function to start recording (accepts optional duration callback)
+  const startRecording = async (onDurationUpdate?: (duration: number) => void) => {
     try {
       console.log("Starting audio recording...");
       audioChunksRef.current = [];
+      
+      // Store the callback if provided
+      if (onDurationUpdate) {
+        durationCallbackRef.current = onDurationUpdate;
+      }
       
       // Check stream from both sources (streamRef is the most reliable)
       let stream = streamRef.current || audioStream;

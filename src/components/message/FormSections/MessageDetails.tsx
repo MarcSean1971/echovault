@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from "react";
 import { Label } from "@/components/ui/label";
 import { useMessageForm } from "../MessageFormContext";
@@ -63,10 +64,16 @@ export function MessageDetails({ message }: MessageDetailsProps) {
     }
   };
   
-  // Create a wrapper function for forceInitializeCamera that explicitly returns Promise<void>
+  // Create a proper wrapper function that explicitly returns Promise<void>
   const handleStartRecordingWrapper = async (): Promise<void> => {
-    await forceInitializeCamera();
-    // No return statement is needed, as the function will implicitly return undefined
+    try {
+      // Call the original function but discard its return value
+      await forceInitializeCamera();
+      // No return statement needed - will implicitly return undefined, which is void
+    } catch (error) {
+      console.error("Error in handleStartRecordingWrapper:", error);
+      // No re-throw to maintain Promise<void>
+    }
   };
 
   // Generate stable content keys to avoid unnecessary remounts

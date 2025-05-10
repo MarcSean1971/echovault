@@ -13,7 +13,7 @@ interface MediaRecordersProps {
   isInitializing?: boolean;
   hasPermission?: boolean | null;
   previewStream?: MediaStream | null;
-  startRecording: () => Promise<void>; // Notice this is Promise<void>
+  startRecording: () => Promise<void>; // Expecting Promise<void>
   stopRecording?: () => void;
   clearVideo?: () => void;
 }
@@ -62,17 +62,3 @@ export function MediaRecorders({
     </Dialog>
   );
 }
-
-// Helper function to convert blob to base64 (can be used if needed)
-const blobToBase64 = (blob: Blob): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      const base64 = result.split(',')[1];
-      resolve(base64);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-};
