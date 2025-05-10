@@ -2,7 +2,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useMessageForm } from "@/components/message/MessageFormContext";
 import { safeCreateObjectURL, safeRevokeObjectURL } from "@/utils/mediaUtils";
-import { useMediaStream } from "./media/useMediaStream";
+import { useMediaStream } from "./video/useMediaStream"; // Fixed import path
 import { useAudioRecorder } from "./audio/useAudioRecorder";
 import { useAudioProcessor } from "./audio/useAudioProcessor";
 
@@ -39,13 +39,16 @@ export function useAudioRecordingHandler() {
     isRecording,
     startRecording: startAudioRecordingInternal,
     stopRecording,
-    elapsedTime
+    audioBlob: recorderAudioBlob, // Store the blob from recorder
+    audioDuration: recorderAudioDuration // Store the duration from recorder
   } = useAudioRecorder(previewStream, streamRef, setAudioBlob, setAudioUrl);
   
-  // Update duration when elapsed time changes
+  // Update duration from the recorder
   useEffect(() => {
-    setAudioDuration(elapsedTime);
-  }, [elapsedTime]);
+    if (recorderAudioDuration !== undefined) {
+      setAudioDuration(recorderAudioDuration);
+    }
+  }, [recorderAudioDuration]);
   
   // Clean up URLs on unmount
   useEffect(() => {
@@ -89,7 +92,7 @@ export function useAudioRecordingHandler() {
       
       // Request a new audio-only stream
       const stream = await initializeStream();
-      return !!stream;
+      return stream !== null; // Fix void conditional check
     } catch (error) {
       console.error("Force initialize microphone failed:", error);
       return false;

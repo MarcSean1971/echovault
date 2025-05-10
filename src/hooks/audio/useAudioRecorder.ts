@@ -231,6 +231,9 @@ export function useAudioRecorder(audioStream: MediaStream | null, streamRef: Rea
       console.log("No active MediaRecorder to stop");
       cleanupResources();
     }
+    
+    // Return the current blob for compatibility with existing code
+    return Promise.resolve(audioBlob);
   };
 
   return {
