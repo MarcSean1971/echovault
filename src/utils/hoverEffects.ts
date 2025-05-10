@@ -8,7 +8,8 @@ export const BUTTON_HOVER_EFFECTS = {
   subtle: "hover:bg-opacity-90 hover:shadow-sm",
   primary: "hover:bg-primary-600 hover:shadow-md",
   destructive: "hover:bg-red-600 hover:shadow-md",
-  muted: "hover:bg-muted/60"
+  muted: "hover:bg-muted/60",
+  outline: "hover:bg-accent hover:text-accent-foreground"
 };
 
 // Icon hover effects
@@ -18,5 +19,7 @@ export const ICON_HOVER_EFFECTS = {
   rotate: "hover:rotate-12",
   bouncy: "hover:animate-bounce",
   glow: "hover:text-primary hover:shadow-glow",
-  colorShift: "hover:text-blue-500 dark:hover:text-blue-400"
+  colorShift: "hover:text-blue-500 dark:hover:text-blue-400",
+  primary: "hover:text-primary",
+  muted: "hover:text-muted-foreground/80"
 };

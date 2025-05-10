@@ -18,7 +18,7 @@ export function FileUploader({ files, onChange }: FileUploaderProps) {
       size: file.size,
       type: file.type,
       lastModified: file.lastModified,
-    } as FileAttachment));
+    }));
     
     onChange([...files, ...newFiles]);
   };
@@ -49,7 +49,7 @@ export function FileUploader({ files, onChange }: FileUploaderProps) {
           <ul className="text-sm space-y-1">
             {files.map((file, index) => (
               <li key={index} className="flex justify-between items-center p-2 bg-muted rounded">
-                <span>{file.name}</span>
+                <span>{file.file.name}</span>
                 <button 
                   type="button"
                   onClick={() => removeFile(index)}

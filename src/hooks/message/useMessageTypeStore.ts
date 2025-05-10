@@ -1,44 +1,57 @@
 
-import { useState } from 'react';
-import { useMessageForm } from '@/components/message/MessageFormContext';
-import { useMessageMediaStore } from './useMessageMediaStore';
+import { create } from 'zustand';
 
-/**
- * Hook for managing message type and media initialization state
- */
-export function useMessageTypeStore() {
-  const { messageType, setMessageType } = useMessageForm();
-  
-  // Use our message media store for initialization state
-  const {
-    initializedFromMessage,
-    setInitializedFromMessage
-  } = useMessageMediaStore();
-  
-  // Handle clicking on text tab
-  const onTextTypeClick = () => {
-    console.log("Text message type selected");
-    setMessageType('text');
-  };
-  
-  // Handle clicking on video tab 
-  const onVideoTypeClick = () => {
-    console.log("Video message type selected");
-    setMessageType('video');
-  };
-  
-  // Handle clicking on audio tab
-  const onAudioTypeClick = () => {
-    console.log("Audio message type selected");
-    setMessageType('audio');
-  };
-  
-  return {
-    messageType,
-    initializedFromMessage,
-    setInitializedFromMessage,
-    onTextTypeClick,
-    onVideoTypeClick, 
-    onAudioTypeClick
-  };
+interface MessageTypeState {
+  messageType: 'text';
+  setMessageType: (type: 'text') => void;
 }
+
+// Simplified message type store that only supports text messages
+export const useMessageTypeStore = create<MessageTypeState>((set) => ({
+  messageType: 'text',
+  setMessageType: (type) => {
+    if (type !== 'text') {
+      console.warn(`Message type ${type} not supported, defaulting to text`);
+      set({ messageType: 'text' });
+    } else {
+      set({ messageType: type });
+    }
+  },
+}));
+
+// Helper hooks
+export const useTextMode = () => {
+  const { messageType, setMessageType } = useMessageTypeStore();
+  const isTextMode = messageType === 'text';
+  
+  const activateTextMode = () => setMessageType('text');
+  
+  return { isTextMode, activateTextMode };
+};
+
+// For compatibility with code that expects these hooks
+export const useVideoMode = () => {
+  const { messageType } = useMessageTypeStore();
+  const isVideoMode = false; // Always false since we only support text
+  
+  const activateVideoMode = () => {
+    console.warn("Video mode not supported, falling back to text");
+    // Always use text mode
+    useMessageTypeStore.getState().setMessageType('text');
+  };
+  
+  return { isVideoMode, activateVideoMode };
+};
+
+export const useAudioMode = () => {
+  const { messageType } = useMessageTypeStore();
+  const isAudioMode = false; // Always false since we only support text
+  
+  const activateAudioMode = () => {
+    console.warn("Audio mode not supported, falling back to text");
+    // Always use text mode
+    useMessageTypeStore.getState().setMessageType('text');
+  };
+  
+  return { isAudioMode, activateAudioMode };
+};

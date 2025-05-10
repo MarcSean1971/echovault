@@ -3,6 +3,7 @@ import { useMessageForm } from '@/components/message/MessageFormContext';
 
 /**
  * Hook to handle media tab switching and cleanup
+ * This is a simplified version that only works with text content
  */
 export function useMediaTabSwitcher(
   isVideoRecording: boolean,
@@ -14,9 +15,9 @@ export function useMediaTabSwitcher(
   stopAudioStream: () => void,
   isAudioStreamActive: () => boolean
 ) {
-  const { setMessageType, setTextContent, setVideoContent, setAudioContent } = useMessageForm();
+  const { setMessageType } = useMessageForm();
   
-  // Handle clicking on text tab
+  // Handle clicking on text tab (the only option in this version)
   const onTextTypeClick = () => {
     console.log("Text message type selected");
     setMessageType('text');
@@ -42,49 +43,19 @@ export function useMediaTabSwitcher(
       stopAudioStream();
     }
     
-    // FIXED: Don't clear other content types when switching modes
-    // This allows users to switch back and forth between tabs without losing content
     console.log("Keeping video and audio content when switching to text mode");
   };
   
-  // Handle clicking on video tab
+  // These functions are kept for API compatibility but only support text
   const onVideoTypeClick = () => {
-    console.log("Video message type selected");
-    setMessageType('video');
-    
-    // If we were recording audio, stop
-    if (isAudioRecording) {
-      stopAudioRecording();
-    }
-    
-    // Stop any active audio streams when switching to video mode
-    if (isAudioStreamActive()) {
-      console.log("Stopping active audio stream when switching to video mode");
-      stopAudioStream();
-    }
-    
-    // FIXED: Don't clear other content types when switching modes
-    console.log("Keeping text and audio content when switching to video mode");
+    console.log("Video message type is not supported in this version");
+    onTextTypeClick(); // Fallback to text mode
   };
   
-  // Handle clicking on audio tab
+  // Handle clicking on audio tab - not supported, fallback to text
   const onAudioTypeClick = () => {
-    console.log("Audio message type selected");
-    setMessageType('audio');
-    
-    // If we were recording video, stop
-    if (isVideoRecording) {
-      stopVideoRecording();
-    }
-    
-    // Stop any active video streams when switching to audio mode
-    if (isVideoStreamActive()) {
-      console.log("Stopping active video stream when switching to audio mode");
-      stopVideoStream();
-    }
-    
-    // FIXED: Don't clear other content types when switching modes
-    console.log("Keeping text and video content when switching to audio mode");
+    console.log("Audio message type is not supported in this version");
+    onTextTypeClick(); // Fallback to text mode
   };
   
   return {

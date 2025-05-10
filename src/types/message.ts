@@ -48,6 +48,9 @@ export interface Message {
   location_name?: string;
   latitude?: number;
   longitude?: number;
+  location_latitude?: number;
+  location_longitude?: number;
+  attachments?: MessageAttachment[];
 }
 
 export interface MessageAttachment {
@@ -64,6 +67,10 @@ export interface FileAttachment {
   file: File;
   id?: string;
   preview?: string;
+  name?: string;
+  size?: number;
+  type?: string;
+  lastModified?: number;
 }
 
 export interface MessageCondition {
@@ -91,6 +98,9 @@ export interface MessageCondition {
   recipients?: Recipient[];
   triggered?: boolean;
   delivered?: boolean;
+  confirmation_required?: number;
+  condition_type?: string;
+  last_checked?: string;
 }
 
 export interface DeliveredMessage {
@@ -104,3 +114,5 @@ export interface DeliveredMessage {
   recipient_name?: string;
   status: 'sent' | 'delivered' | 'read' | 'failed';
 }
+
+export type MessageDeliveryStatus = 'pending' | 'sent' | 'delivered' | 'read' | 'failed';

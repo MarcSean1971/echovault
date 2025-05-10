@@ -5,6 +5,7 @@ import { LocationSection } from "./LocationSection";
 import { TextContent } from "./content/TextContent";
 import { FileAttachmentsSection } from "./MessageDetailsComponents/FileAttachmentsSection";
 import { MessageTypeTabSelector } from "./MessageTypeTabSelector";
+import { FileAttachment } from "@/types/message";
 
 interface MessageDetailsProps {
   message?: any;  // Optional message prop for editing
@@ -30,7 +31,10 @@ export function MessageDetails({ message }: MessageDetailsProps) {
       <LocationSection />
 
       {/* File attachments */}
-      <FileAttachmentsSection files={files} setFiles={setFiles} />
+      <FileAttachmentsSection 
+        files={files} 
+        setFiles={(newFiles: FileAttachment[]) => setFiles(newFiles)} 
+      />
     </div>
   );
 }

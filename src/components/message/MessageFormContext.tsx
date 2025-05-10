@@ -14,8 +14,8 @@ export interface MessageFormContextType {
   setMessageType: (type: MessageType) => void;
   
   // File attachments
-  files: File[];
-  setFiles: (files: File[]) => void;
+  files: FileAttachment[];
+  setFiles: (files: FileAttachment[]) => void;
   
   // UI state
   isLoading: boolean;
@@ -78,6 +78,10 @@ export interface MessageFormContextType {
   // Check-in code
   checkInCode: string;
   setCheckInCode: (code: string) => void;
+
+  // For compatibility with hooks expecting these
+  setVideoContent?: (content: string) => void;
+  setAudioContent?: (content: string) => void;
 }
 
 const MessageFormContext = createContext<MessageFormContextType | undefined>(undefined);
@@ -90,7 +94,7 @@ export function MessageFormProvider({ children }: { children: React.ReactNode })
   const [messageType, setMessageType] = useState<MessageType>("text");
   
   // File attachments
-  const [files, setFiles] = useState<File[]>([]);
+  const [files, setFiles] = useState<FileAttachment[]>([]);
   
   // UI state
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -133,6 +137,14 @@ export function MessageFormProvider({ children }: { children: React.ReactNode })
   
   // Check-in code
   const [checkInCode, setCheckInCode] = useState<string>("");
+
+  // Empty functions for compatibility
+  const setVideoContent = (content: string) => {
+    console.log("Video content setting not supported");
+  };
+  const setAudioContent = (content: string) => {
+    console.log("Audio content setting not supported");
+  };
 
   const value = {
     title,
@@ -184,7 +196,9 @@ export function MessageFormProvider({ children }: { children: React.ReactNode })
     locationName,
     setLocationName,
     checkInCode,
-    setCheckInCode
+    setCheckInCode,
+    setVideoContent,
+    setAudioContent
   };
 
   return <MessageFormContext.Provider value={value}>{children}</MessageFormContext.Provider>;

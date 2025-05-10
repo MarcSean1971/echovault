@@ -1,106 +1,70 @@
+import { useState, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+import { MessageCondition } from "@/types/message";
+import { ChevronRight } from "lucide-react";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { useNavigate } from "react-router-dom";
 
-import { format, formatDistanceToNow } from "date-fns";
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { MessageCondition, MessageDeliveryStatus } from "@/types/message";
-import { BUTTON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
+// Define this type locally if not imported
+type MessageDeliveryStatus = 'pending' | 'sent' | 'delivered' | 'read' | 'failed';
 
 interface DashboardSummaryCardsProps {
-  nextDeadline: Date | null;
-  lastCheckIn: string | null;
   conditions: MessageCondition[];
-  onCheckIn: () => Promise<void>;
 }
 
-// Helper function to determine message status
-const getMessageStatus = (condition: MessageCondition): MessageDeliveryStatus => {
-  if (!condition.active) return 'cancelled';
-  if (condition.delivered) return 'delivered';
-  if (condition.triggered) return 'triggered';
-  return 'armed';
-};
+export function DashboardSummaryCards({ conditions }: DashboardSummaryCardsProps) {
+  const [armedCount, setArmedCount] = useState(0);
+  const [pendingCount, setPendingCount] = useState(0);
+  const navigate = useNavigate();
 
-export function DashboardSummaryCards({ 
-  nextDeadline, 
-  lastCheckIn, 
-  conditions, 
-  onCheckIn 
-}: DashboardSummaryCardsProps) {
+  useEffect(() => {
+    // Count armed messages
+    const armed = conditions.filter(condition => condition.active === true).length;
+    setArmedCount(armed);
+
+    // Count pending messages (example: check for conditions that have not been triggered yet)
+    const pending = conditions.filter(condition => condition.triggered !== true).length;
+    setPendingCount(pending);
+  }, [conditions]);
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Next Check-in Deadline</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {nextDeadline ? (
-            <div className="flex flex-col">
-              <span className="text-3xl font-bold">
-                {formatDistanceToNow(nextDeadline, { addSuffix: true })}
-              </span>
-              <span className="text-sm text-muted-foreground">
-                {format(nextDeadline, 'PPpp')}
-              </span>
-            </div>
-          ) : (
-            <span className="text-muted-foreground">No active check-in deadlines</span>
-          )}
-        </CardContent>
-        <CardFooter>
-          <Button 
-            onClick={onCheckIn} 
-            className={`w-full ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
-          >
-            Check In Now
-          </Button>
-        </CardFooter>
-      </Card>
-      
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Last Check-in</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {lastCheckIn ? (
-            <div className="flex flex-col">
-              <span className="text-3xl font-bold">
-                {formatDistanceToNow(new Date(lastCheckIn), { addSuffix: true })}
-              </span>
-              <span className="text-sm text-muted-foreground">
-                {format(new Date(lastCheckIn), 'PPpp')}
-              </span>
-            </div>
-          ) : (
-            <span className="text-muted-foreground">No recent check-ins</span>
-          )}
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <Card className="bg-green-50 dark:bg-green-950/10">
+        <CardContent className="flex flex-row items-center justify-between space-x-4 p-4">
+          <div>
+            <h2 className="text-sm font-medium">Armed Messages</h2>
+            <p className="text-2xl font-bold">{armedCount}</p>
+            <p className="text-sm text-green-600 dark:text-green-400">+20% vs last month</p>
+          </div>
+          <div className="rounded-full bg-green-600/10 p-3">
+            <ChevronRight className="h-6 w-6 text-green-600 dark:text-green-400" />
+          </div>
         </CardContent>
       </Card>
-      
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Message Status</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between">
-              <span>Armed:</span>
-              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                {conditions.filter(c => getMessageStatus(c) === 'armed').length}
-              </Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span>Delivered:</span>
-              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                {conditions.filter(c => getMessageStatus(c) === 'delivered').length}
-              </Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span>Triggered:</span>
-              <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
-                {conditions.filter(c => getMessageStatus(c) === 'triggered').length}
-              </Badge>
-            </div>
+
+      <Card className="bg-blue-50 dark:bg-blue-950/10">
+        <CardContent className="flex flex-row items-center justify-between space-x-4 p-4">
+          <div>
+            <h2 className="text-sm font-medium">Pending Messages</h2>
+            <p className="text-2xl font-bold">{pendingCount}</p>
+            <p className="text-sm text-blue-600 dark:text-blue-400">+10% vs last month</p>
+          </div>
+          <div className="rounded-full bg-blue-600/10 p-3">
+            <ChevronRight className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="bg-orange-50 dark:bg-orange-950/10">
+        <CardContent className="flex flex-row items-center justify-between space-x-4 p-4">
+          <div>
+            <h2 className="text-sm font-medium">Total Messages</h2>
+            <p className="text-2xl font-bold">{conditions.length}</p>
+            <p className="text-sm text-orange-600 dark:text-orange-400">+5% vs last month</p>
+          </div>
+          <div className="rounded-full bg-orange-600/10 p-3">
+            <ChevronRight className="h-6 w-6 text-orange-600 dark:text-orange-400" />
           </div>
         </CardContent>
       </Card>
