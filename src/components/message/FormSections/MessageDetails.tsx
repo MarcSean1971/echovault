@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from "react";
 import { Label } from "@/components/ui/label";
 import { useMessageForm } from "../MessageFormContext";
@@ -64,8 +63,8 @@ export function MessageDetails({ message }: MessageDetailsProps) {
     }
   };
   
-  // Create a wrapper function for forceInitializeCamera that ignores the return value
-  const handleStartRecordingWrapper = async () => {
+  // Create a wrapper function for forceInitializeCamera that returns void
+  const handleStartRecordingWrapper = async (): Promise<void> => {
     await forceInitializeCamera();
     // Void return type, ignoring the boolean result
   };
