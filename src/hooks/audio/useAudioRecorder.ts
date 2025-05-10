@@ -62,7 +62,7 @@ export function useAudioRecorder(audioStream: MediaStream | null, streamRef: Rea
     }
   };
 
-  // Function to start recording (accepts optional duration callback)
+  // Function to start recording (with no parameters to match the usage in useAudioRecordingHandler)
   const startRecording = async () => {
     try {
       console.log("Starting audio recording...");
