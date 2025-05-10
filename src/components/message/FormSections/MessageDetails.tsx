@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from "react";
 import { Label } from "@/components/ui/label";
 import { useMessageForm } from "../MessageFormContext";
@@ -66,8 +65,7 @@ export function MessageDetails({ message }: MessageDetailsProps) {
   
   // Create a wrapper function for forceInitializeCamera that returns void
   const handleStartRecordingWrapper = async (): Promise<void> => {
-    // Call the original function but completely ignore its boolean result
-    // Using void operator to explicitly ensure void return type
+    // Using void operator to explicitly discard the boolean result
     void await forceInitializeCamera();
     
     // Explicitly return undefined to satisfy Promise<void>
