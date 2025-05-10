@@ -29,7 +29,7 @@ export function useMediaInitialization({
 }: UseMediaInitializationProps) {
   const [hasAttemptedVideoInit, setHasAttemptedVideoInit] = useState(false);
   const [isInitializing, setIsInitializing] = useState(false);
-  const initTimeoutRef = useRef<NodeJS.Timeout | null>(null); // No longer specifying as RefObject
+  const initTimeoutRef = useRef<NodeJS.Timeout | null>(null); // Using useRef without specifying RefObject
   const mountedRef = useRef(true);
   
   // Set up the mounted ref for cleanup

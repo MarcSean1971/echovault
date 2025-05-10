@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from "react";
 import { Label } from "@/components/ui/label";
 import { useMessageForm } from "../MessageFormContext";
@@ -61,6 +62,12 @@ export function MessageDetails({ message }: MessageDetailsProps) {
     } else if (value === "audio") {
       onAudioTypeClick();
     }
+  };
+  
+  // Create a wrapper function for forceInitializeCamera that ignores the return value
+  const handleStartRecordingWrapper = async () => {
+    await forceInitializeCamera();
+    // Void return type, ignoring the boolean result
   };
 
   // Generate stable content keys to avoid unnecessary remounts
@@ -175,7 +182,7 @@ export function MessageDetails({ message }: MessageDetailsProps) {
         isInitializing={isVideoInitializing}
         hasPermission={hasVideoPermission}
         previewStream={videoPreviewStream}
-        startRecording={forceInitializeCamera}
+        startRecording={handleStartRecordingWrapper} // Use the wrapper function that returns void
         stopRecording={stopVideoRecording}
         clearVideo={clearVideo}
       />

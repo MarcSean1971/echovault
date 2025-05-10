@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Record, StopCircle } from "lucide-react";
+import { Mic, StopCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface VideoRecordButtonProps {
@@ -30,7 +30,7 @@ export function VideoRecordButton({
   // Determine button style based on recording state
   let buttonVariant = "outline";
   let buttonColor = "bg-zinc-100 text-zinc-900 hover:bg-zinc-200 hover:text-zinc-900";
-  let icon = <Record className="w-6 h-6" />;
+  let icon = <Mic className="w-6 h-6" />;
   let buttonText = "Record";
   let spinnerClass = "";
   
