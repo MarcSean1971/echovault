@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from "react";
 import { Label } from "@/components/ui/label";
 import { useMessageForm } from "../MessageFormContext";
@@ -78,6 +79,12 @@ export function MessageDetails({ message }: MessageDetailsProps) {
     const hasContent = Boolean(videoUrl || videoBlob);
     return `video-content-${hasContent ? 'has-video' : 'no-video'}`;
   }, [videoUrl, videoBlob]);
+  
+  // Add back the audioContentKey that was missing
+  const audioContentKey = useMemo(() => {
+    const hasContent = Boolean(audioUrl || audioBlob);
+    return `audio-content-${hasContent ? 'has-audio' : 'no-audio'}`;
+  }, [audioUrl, audioBlob]);
   
   // Handle audio transcription
   const handleTranscribeAudio = async () => {
