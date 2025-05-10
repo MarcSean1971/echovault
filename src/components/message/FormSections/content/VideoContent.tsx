@@ -34,6 +34,7 @@ export function VideoContent({
   const [showVideoPreview, setShowVideoPreview] = useState(false);
   const mountedRef = useRef(true);
   const lastVideoUrlRef = useRef<string | null>(null);
+  const renderCountRef = useRef(0);
   
   // Set up mounted ref for cleanup
   useEffect(() => {
@@ -45,7 +46,8 @@ export function VideoContent({
   
   // Log initial props for debugging
   useEffect(() => {
-    console.log("VideoContent: Initial render with props:", { 
+    renderCountRef.current++;
+    console.log(`VideoContent: Render #${renderCountRef.current} with props:`, { 
       hasVideoUrl: !!videoUrl, 
       videoUrl: videoUrl ? videoUrl.substring(0, 30) + "..." : null,
       messageType,
@@ -57,7 +59,7 @@ export function VideoContent({
     
     // Track the latest videoUrl reference
     if (videoUrl !== lastVideoUrlRef.current) {
-      console.log(`VideoContent: videoUrl changed from ${lastVideoUrlRef.current?.substring(0, 30)}... to ${videoUrl?.substring(0, 30)}...`);
+      console.log(`VideoContent: videoUrl changed from ${lastVideoUrlRef.current?.substring(0, 30) || "null"}... to ${videoUrl?.substring(0, 30) || "null"}...`);
       lastVideoUrlRef.current = videoUrl;
     }
   }, [videoUrl, messageType, isRecording, isInitializing, hasPermission, previewStream]);
@@ -78,6 +80,20 @@ export function VideoContent({
       setShowVideoPreview(false);
     }
   }, [videoUrl, previewStream]);
+  
+  // Add an aggressive check for videoUrl changes
+  useEffect(() => {
+    // This is a safety measure to ensure we don't miss videoUrl updates
+    // It's redundant but helps catch edge cases
+    const checkVideoUrlTimer = setInterval(() => {
+      if (videoUrl && !showVideoPreview) {
+        console.log("VideoContent: Safety check detected videoUrl but showVideoPreview was false. Correcting.");
+        setShowVideoPreview(true);
+      }
+    }, 1000);
+    
+    return () => clearInterval(checkVideoUrlTimer);
+  }, [videoUrl, showVideoPreview]);
   
   // Handle recording with better error handling
   const handleStartRecording = async (): Promise<void> => {

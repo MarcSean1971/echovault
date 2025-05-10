@@ -20,7 +20,7 @@ export function VideoPlayerControls({
   return (
     <div 
       className={`absolute bottom-0 left-0 right-0 p-3 flex justify-between items-center bg-gradient-to-t from-black/70 to-transparent 
-        opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
+        transition-all duration-300 ${isVisible ? 'opacity-100' : 'opacity-0'}`}
       onClick={(e) => e.stopPropagation()}
     >
       <Button 

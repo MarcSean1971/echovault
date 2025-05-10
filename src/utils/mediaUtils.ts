@@ -44,7 +44,29 @@ export function base64ToBlob(base64: string, type: string): Blob {
     return new Blob([bytes], { type });
   } catch (e) {
     console.error("Error in base64ToBlob:", e);
-    throw new Error(`Failed to convert base64 to blob: ${e}`);
+    
+    // Try alternative approach
+    try {
+      const byteChars = atob(base64);
+      const byteArrays = [];
+      
+      for (let offset = 0; offset < byteChars.length; offset += 512) {
+        const slice = byteChars.slice(offset, offset + 512);
+        
+        const byteNumbers = new Array(slice.length);
+        for (let i = 0; i < slice.length; i++) {
+          byteNumbers[i] = slice.charCodeAt(i);
+        }
+        
+        const byteArray = new Uint8Array(byteNumbers);
+        byteArrays.push(byteArray);
+      }
+      
+      return new Blob(byteArrays, { type });
+    } catch (e2) {
+      console.error("Alternative base64ToBlob approach also failed:", e2);
+      throw new Error(`Failed to convert base64 to blob: ${e2}`);
+    }
   }
 }
 
@@ -57,10 +79,23 @@ export function safeCreateObjectURL(blob: Blob | null): string | null {
   if (!blob) return null;
   
   try {
-    return URL.createObjectURL(blob);
+    const url = URL.createObjectURL(blob);
+    console.log("safeCreateObjectURL created URL:", url.substring(0, 30) + "...");
+    return url;
   } catch (e) {
     console.error("Error creating object URL:", e);
-    return null;
+    
+    // Try an alternative approach
+    try {
+      // Create a new blob with explicit type
+      const newBlob = new Blob([blob], { type: blob.type || 'video/webm' });
+      const url = URL.createObjectURL(newBlob);
+      console.log("safeCreateObjectURL created URL with new blob:", url.substring(0, 30) + "...");
+      return url;
+    } catch (e2) {
+      console.error("Alternative approach in safeCreateObjectURL also failed:", e2);
+      return null;
+    }
   }
 }
 
@@ -73,7 +108,25 @@ export function safeRevokeObjectURL(url: string | null): void {
   
   try {
     URL.revokeObjectURL(url);
+    console.log("Successfully revoked URL:", url.substring(0, 30) + "...");
   } catch (e) {
     console.error("Error revoking object URL:", e);
   }
+}
+
+/**
+ * Create a direct data URI from a blob
+ * This can be used as a fallback when URL.createObjectURL fails
+ * @param blob The blob to create a data URI for
+ * @returns Promise resolving to a data URI string
+ */
+export function createDataUri(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      resolve(reader.result as string);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 }

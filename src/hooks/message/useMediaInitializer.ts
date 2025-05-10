@@ -36,8 +36,11 @@ export function useMediaInitializer(
       messageType: message?.message_type
     });
     
+    // Flag to prevent double-initialization
+    let didInitialize = false;
+    
     // Handle video initialization with priority
-    if (initialVideoBlob && initialVideoUrl) {
+    if (initialVideoBlob && initialVideoUrl && !initializedFromMessage) {
       console.log("MediaInitializer: Initializing video with blob size:", initialVideoBlob.size);
       
       // Process immediately without delay or initialization checks
@@ -45,12 +48,13 @@ export function useMediaInitializer(
         handleInitializedVideo(initialVideoBlob, initialVideoUrl);
         console.log("MediaInitializer: Video initialization processed immediately");
         setInitializedFromMessage(true);
+        didInitialize = true;
       } catch (err) {
         console.error("MediaInitializer: Error initializing video:", err);
       }
     }
     // Handle audio initialization
-    else if (initialAudioBlob && initialAudioUrl) {
+    else if (initialAudioBlob && initialAudioUrl && !initializedFromMessage && !didInitialize) {
       console.log("MediaInitializer: Initializing audio with blob size:", initialAudioBlob.size);
       
       try {
@@ -61,8 +65,11 @@ export function useMediaInitializer(
         console.error("MediaInitializer: Error initializing audio:", err);
       }
     }
-    else {
+    else if (!initialVideoBlob && !initialAudioBlob) {
       console.log("MediaInitializer: No media to initialize");
+    }
+    else if (initializedFromMessage) {
+      console.log("MediaInitializer: Already initialized from message");
     }
   }, [
     hasInitialized, 

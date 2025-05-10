@@ -14,6 +14,8 @@ export function VideoPlayer({ videoUrl, onClearVideo, inDialog = false }: VideoP
   const [isControlsVisible, setIsControlsVisible] = useState(false);
   const [videoError, setVideoError] = useState<string | null>(null);
   const [videoLoaded, setVideoLoaded] = useState(false);
+  const loadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const videoUrlRef = useRef<string | null>(null);
   
   // Handle play/pause toggle
   const togglePlayback = () => {
@@ -44,17 +46,48 @@ export function VideoPlayer({ videoUrl, onClearVideo, inDialog = false }: VideoP
     const videoElement = videoRef.current;
     if (!videoElement) return;
     
-    const handlePlay = () => setIsPlaying(true);
-    const handlePause = () => setIsPlaying(false);
-    const handleEnded = () => setIsPlaying(false);
+    const handlePlay = () => {
+      console.log("Video play event fired");
+      setIsPlaying(true);
+    };
+    
+    const handlePause = () => {
+      console.log("Video pause event fired");
+      setIsPlaying(false);
+    };
+    
+    const handleEnded = () => {
+      console.log("Video ended event fired");
+      setIsPlaying(false);
+    };
+    
     const handleError = (e: Event) => {
       console.error("Video error event:", e);
       setVideoError("Error playing video. Please try reloading the page.");
       setIsPlaying(false);
+      setVideoLoaded(false); // Mark as not loaded on error
     };
+    
     const handleLoadedData = () => {
       console.log("Video loaded data successfully");
       setVideoLoaded(true);
+      setVideoError(null);
+      
+      // Clear any pending timeout
+      if (loadTimeoutRef.current) {
+        clearTimeout(loadTimeoutRef.current);
+        loadTimeoutRef.current = null;
+      }
+    };
+    
+    const handleLoadedMetadata = () => {
+      console.log("Video metadata loaded");
+    };
+    
+    const handleCanPlay = () => {
+      console.log("Video can play event fired");
+      setVideoLoaded(true);
+      setVideoError(null);
     };
     
     videoElement.addEventListener('play', handlePlay);
@@ -62,6 +95,8 @@ export function VideoPlayer({ videoUrl, onClearVideo, inDialog = false }: VideoP
     videoElement.addEventListener('ended', handleEnded);
     videoElement.addEventListener('error', handleError);
     videoElement.addEventListener('loadeddata', handleLoadedData);
+    videoElement.addEventListener('loadedmetadata', handleLoadedMetadata);
+    videoElement.addEventListener('canplay', handleCanPlay);
     
     return () => {
       videoElement.removeEventListener('play', handlePlay);
@@ -69,6 +104,8 @@ export function VideoPlayer({ videoUrl, onClearVideo, inDialog = false }: VideoP
       videoElement.removeEventListener('ended', handleEnded);
       videoElement.removeEventListener('error', handleError);
       videoElement.removeEventListener('loadeddata', handleLoadedData);
+      videoElement.removeEventListener('loadedmetadata', handleLoadedMetadata);
+      videoElement.removeEventListener('canplay', handleCanPlay);
     };
   }, []);
   
@@ -76,6 +113,9 @@ export function VideoPlayer({ videoUrl, onClearVideo, inDialog = false }: VideoP
   useEffect(() => {
     console.log("VideoPlayer: videoUrl changed:", 
                 videoUrl ? videoUrl.substring(0, 30) + "..." : "null");
+    
+    // Store the current URL for recovery attempts
+    videoUrlRef.current = videoUrl;
     
     // Reset video error when URL changes
     setVideoError(null);
@@ -87,13 +127,36 @@ export function VideoPlayer({ videoUrl, onClearVideo, inDialog = false }: VideoP
     // If we have a video element and a URL, manually trigger a load
     if (videoRef.current && videoUrl) {
       try {
+        // Set the src directly first
+        videoRef.current.src = videoUrl;
+        
         // Force a reload
         videoRef.current.load();
         console.log("Forced video element to reload with new URL");
+        
+        // Set a safety timeout that will hide the loading indicator after 5 seconds
+        // even if the video doesn't load properly
+        if (loadTimeoutRef.current) {
+          clearTimeout(loadTimeoutRef.current);
+        }
+        
+        loadTimeoutRef.current = setTimeout(() => {
+          console.log("Safety timeout triggered - assuming video is loaded after 5 seconds");
+          setVideoLoaded(true);
+        }, 5000);
       } catch (err) {
         console.error("Error loading video:", err);
+        setVideoError(`Failed to load video: ${err}`);
       }
     }
+    
+    // Clean up timeout on unmount or URL change
+    return () => {
+      if (loadTimeoutRef.current) {
+        clearTimeout(loadTimeoutRef.current);
+        loadTimeoutRef.current = null;
+      }
+    };
   }, [videoUrl]);
   
   // Show controls on hover with improved transition
@@ -114,7 +177,7 @@ export function VideoPlayer({ videoUrl, onClearVideo, inDialog = false }: VideoP
     if (!videoLoaded && videoUrl && videoRef.current) {
       // Start a recovery timer
       const timer = setTimeout(() => {
-        if (!videoLoaded && videoRef.current) {
+        if (!videoLoaded && videoRef.current && videoUrl) {
           console.log("Attempting video recovery after load timeout");
           try {
             // Try setting the src attribute directly
@@ -122,11 +185,17 @@ export function VideoPlayer({ videoUrl, onClearVideo, inDialog = false }: VideoP
             
             // Force a reload
             videoRef.current.load();
+            
+            // Give it a bit more time
+            setTimeout(() => {
+              console.log("Setting videoLoaded=true after recovery attempt");
+              setVideoLoaded(true);
+            }, 1000);
           } catch (err) {
             console.error("Video recovery attempt failed:", err);
           }
         }
-      }, 1000); // Wait 1 second for normal loading before attempting recovery
+      }, 2000); // Wait 2 seconds for normal loading before attempting recovery
       
       return () => clearTimeout(timer);
     }
@@ -163,9 +232,19 @@ export function VideoPlayer({ videoUrl, onClearVideo, inDialog = false }: VideoP
       ) : null}
       
       {!videoLoaded && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white">
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 text-white">
           <div className="animate-spin w-8 h-8 border-t-2 border-blue-500 rounded-full"></div>
-          <span className="ml-2">Loading video...</span>
+          <span className="mt-2">Loading video...</span>
+          <button 
+            className="mt-4 px-3 py-1 bg-blue-500/70 hover:bg-blue-600 rounded text-sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              setVideoLoaded(true);
+              console.log("Force-hiding loading indicator via button click");
+            }}
+          >
+            Hide loading indicator
+          </button>
         </div>
       )}
       
@@ -177,7 +256,8 @@ export function VideoPlayer({ videoUrl, onClearVideo, inDialog = false }: VideoP
         preload="auto"
         onError={(e) => {
           console.error("Video error:", e);
-          setVideoError("Error loading video. Please try reloading the page.");
+          setVideoError("Error loading video. Please try again.");
+          setVideoLoaded(false);
         }}
       />
       

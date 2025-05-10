@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { parseVideoContent } from "@/services/messages/mediaService";
 import { Message } from "@/types/message";
-import { base64ToBlob } from "@/utils/mediaUtils";
+import { base64ToBlob, safeCreateObjectURL, safeRevokeObjectURL } from "@/utils/mediaUtils";
 import { toast } from "@/components/ui/use-toast";
 
 /**
@@ -19,6 +19,7 @@ export function useInitializeMediaContent(message: Message | null) {
   const [hasInitialized, setHasInitialized] = useState(false);
   const [additionalText, setAdditionalText] = useState<string | null>(null);
   const [initializationError, setInitializationError] = useState<string | null>(null);
+  const [attemptCount, setAttemptCount] = useState(0);
   
   // Parse the message content when the message changes
   useEffect(() => {
@@ -33,6 +34,29 @@ export function useInitializeMediaContent(message: Message | null) {
     // Clear any previous initialization errors
     setInitializationError(null);
     
+    // Function to create blob URL with retry mechanism
+    const createBlobUrlWithRetry = (blob: Blob, mimeType: string): string => {
+      try {
+        // Try creating a URL the normal way first
+        const url = URL.createObjectURL(blob);
+        console.log("Created blob URL successfully:", url.substring(0, 30) + "...");
+        return url;
+      } catch (e) {
+        console.error("Error creating blob URL directly:", e);
+        
+        try {
+          // Try recreating the blob with explicit mime type
+          const newBlob = new Blob([blob], { type: mimeType });
+          const url = URL.createObjectURL(newBlob);
+          console.log("Created blob URL via new blob:", url.substring(0, 30) + "...");
+          return url;
+        } catch (e2) {
+          console.error("Failed to create URL even with new blob:", e2);
+          throw e2;
+        }
+      }
+    };
+    
     try {
       // Try to handle video content first
       const { videoData, error, diagnostics } = parseVideoContent(message.content);
@@ -40,9 +64,12 @@ export function useInitializeMediaContent(message: Message | null) {
       if (videoData) {
         console.log("Processing video data from message content");
         try {
-          // Create a Blob URL for the video player
+          // Create a Blob URL for the video player with improved handling
           const blob = base64ToBlob(videoData, 'video/webm');
-          const url = URL.createObjectURL(blob);
+          console.log("Created video blob of size:", blob.size, "bytes");
+          
+          // Try to create a URL with retry
+          const url = createBlobUrlWithRetry(blob, 'video/webm');
           
           console.log("Created video blob URL:", url);
           console.log("Video blob size:", blob.size);
@@ -66,12 +93,32 @@ export function useInitializeMediaContent(message: Message | null) {
           console.error("Error creating blob from video data:", e);
           setInitializationError(`Failed to create video blob: ${e}`);
           
-          // Show a toast for video initialization error
-          toast({
-            title: "Video Loading Error",
-            description: "There was a problem loading your video. You may need to re-record it.",
-            variant: "destructive"
-          });
+          // Try one more time with direct approach on failure
+          try {
+            console.log("Attempting alternate video blob creation approach");
+            const binaryString = window.atob(videoData);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+            const blob = new Blob([bytes], { type: 'video/webm' });
+            const url = URL.createObjectURL(blob);
+            
+            console.log("Created video blob URL via alternate method:", url);
+            setVideoUrl(url);
+            setVideoBase64(videoData);
+            setVideoBlob(blob);
+            setHasInitialized(true);
+          } catch (retryError) {
+            console.error("Even alternate approach failed:", retryError);
+            
+            // Show a toast for video initialization error
+            toast({
+              title: "Video Loading Error",
+              description: "There was a problem loading your video. You may need to re-record it.",
+              variant: "destructive"
+            });
+          }
         }
       } else {
         if (error) {
@@ -164,25 +211,51 @@ export function useInitializeMediaContent(message: Message | null) {
       console.error("Error initializing media content:", e);
       setInitializationError(`General initialization error: ${e}`);
       
-      // Show a general error toast
-      toast({
-        title: "Content Loading Error",
-        description: "There was a problem loading your message content. You may need to recreate it.",
-        variant: "destructive"
-      });
+      // If we failed but haven't tried many times, try again
+      if (attemptCount < 2) {
+        console.log("Retrying initialization, attempt:", attemptCount + 1);
+        setAttemptCount(prev => prev + 1);
+        
+        // Try again after a short delay
+        setTimeout(() => {
+          const retryEvent = new CustomEvent('retry-media-init', { detail: { messageId: message.id } });
+          window.dispatchEvent(retryEvent);
+        }, 500);
+      } else {
+        // Show a general error toast
+        toast({
+          title: "Content Loading Error",
+          description: "There was a problem loading your message content. You may need to recreate it.",
+          variant: "destructive"
+        });
+      }
     }
     
     // Cleanup function to revoke object URLs when unmounting
     return () => {
       if (audioUrl) {
         console.log("Revoking audio URL on cleanup");
-        URL.revokeObjectURL(audioUrl);
+        safeRevokeObjectURL(audioUrl);
       }
       if (videoUrl) {
         console.log("Revoking video URL on cleanup");
-        URL.revokeObjectURL(videoUrl);
+        safeRevokeObjectURL(videoUrl);
       }
     };
+  }, [message, attemptCount]);
+  
+  // Add effect for retry event listener
+  useEffect(() => {
+    const handleRetry = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (message && customEvent.detail?.messageId === message.id) {
+        console.log("Handling retry event for message:", message.id);
+        setAttemptCount(prev => prev + 1);
+      }
+    };
+    
+    window.addEventListener('retry-media-init', handleRetry);
+    return () => window.removeEventListener('retry-media-init', handleRetry);
   }, [message]);
   
   return {
