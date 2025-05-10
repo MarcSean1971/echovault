@@ -16,6 +16,7 @@ interface AudioContentProps {
   onClearAudio: () => void;
   onTranscribeAudio?: () => Promise<void>;
   inDialog?: boolean;
+  initAttempted?: boolean;
 }
 
 export function AudioContent({
@@ -29,7 +30,8 @@ export function AudioContent({
   onStopRecording,
   onClearAudio,
   onTranscribeAudio,
-  inDialog = false
+  inDialog = false,
+  initAttempted = false
 }: AudioContentProps) {
   // Log state changes to help with debugging
   useEffect(() => {
@@ -37,9 +39,11 @@ export function AudioContent({
       audioUrl: audioUrl ? "present" : "null",
       isRecording,
       isInitializing,
-      hasTranscription: !!transcription
+      hasPermission,
+      hasTranscription: !!transcription,
+      initAttempted
     });
-  }, [audioUrl, isRecording, isInitializing, transcription]);
+  }, [audioUrl, isRecording, isInitializing, transcription, hasPermission, initAttempted]);
 
   // CRITICAL: Always prioritize showing existing audio if available
   if (audioUrl) {

@@ -20,15 +20,20 @@ export function useAudioManager() {
   // Track whether we've already attempted initialization to prevent loops
   const [isInitializationAttempted, setIsInitializationAttempted] = useState(false);
   const initializationAttemptedRef = useRef(false);
+  // Add retry counter for multiple initialization attempts
+  const [retryCount, setRetryCount] = useState(0);
+  const MAX_RETRIES = 3;
   
   // Initialize stream specifically for audio
   const initializeStream = async (forceNew = false) => {
     try {
       console.log("Audio recorder: initializing audio stream with forceNew =", forceNew);
       
-      // Set attempted flag immediately to prevent multiple rapid attempts
-      setIsInitializationAttempted(true);
-      initializationAttemptedRef.current = true;
+      // Only update the attempt flag if we're not retrying
+      if (!forceNew) {
+        setIsInitializationAttempted(true);
+        initializationAttemptedRef.current = true;
+      }
       
       // Always force new when explicitly requesting a new stream
       return await initializeVideoStream(forceNew, { audio: true, video: false });
@@ -38,27 +43,53 @@ export function useAudioManager() {
     }
   };
 
+  // Reset the initialization attempt flag to allow retry
+  const resetInitializationAttempted = () => {
+    setIsInitializationAttempted(false);
+    initializationAttemptedRef.current = false;
+    console.log("Reset initialization attempted flag");
+  };
+
   // Force initialize microphone with enhanced error handling
   const forceInitializeMicrophone = async () => {
     try {
-      // Set the flag to prevent re-initialization
-      setIsInitializationAttempted(true);
-      initializationAttemptedRef.current = true;
-      
       // Make sure any existing streams are stopped first
       if (isStreamActive()) {
         console.log("Stopping existing media stream before microphone initialization");
         stopMediaStream();
       }
       
-      console.log("Forcing microphone initialization...");
+      console.log("Forcing microphone initialization... (attempt #", retryCount + 1, ")");
       
       // Request a new stream with audio only
       await initializeStream(true);
       console.log("Force microphone initialization successful");
+      
+      // Reset retry counter on success
+      setRetryCount(0);
+      
+      // Only set the flag after successful initialization
+      setIsInitializationAttempted(true);
+      initializationAttemptedRef.current = true;
+      
       return true;
     } catch (error: any) {
       console.error("Force microphone initialization failed:", error);
+      
+      // Increment retry counter
+      const newRetryCount = retryCount + 1;
+      setRetryCount(newRetryCount);
+      
+      // If we have retries left, don't mark as attempted yet
+      if (newRetryCount < MAX_RETRIES) {
+        console.log(`Microphone initialization failed, retries left: ${MAX_RETRIES - newRetryCount}`);
+        setIsInitializationAttempted(false);
+        initializationAttemptedRef.current = false;
+      } else {
+        // Mark as attempted after max retries
+        setIsInitializationAttempted(true);
+        initializationAttemptedRef.current = true;
+      }
       
       // Provide user feedback on common errors
       let errorMessage = "Could not initialize microphone";
@@ -90,6 +121,8 @@ export function useAudioManager() {
     stopMediaStream,
     isStreamActive,
     forceInitializeMicrophone,
-    isInitializationAttempted
+    isInitializationAttempted,
+    resetInitializationAttempted,
+    retryCount
   };
 }

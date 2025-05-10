@@ -37,19 +37,19 @@ export function useMediaInitializer(
       messageType: message?.message_type
     });
     
-    // Immediately initialize existing video content without any delays or complex checks
+    // Always check if we should initialize video first - important when editing messages
     if (initialVideoBlob && initialVideoUrl && !initializedFromMessage) {
       console.log("MediaInitializer: Initializing existing video content immediately");
       try {
         handleInitializedVideo(initialVideoBlob, initialVideoUrl);
         setInitializedFromMessage(true);
+        return; // Exit early after handling video
       } catch (err) {
         console.error("MediaInitializer: Error initializing video:", err);
       }
-      return; // Exit early after handling video
     }
     
-    // Handle audio initialization only if no video was found
+    // Check if we should initialize audio - this is important for the current issue
     if (initialAudioBlob && initialAudioUrl && !initializedFromMessage) {
       console.log("MediaInitializer: Initializing existing audio content");
       try {

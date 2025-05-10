@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AudioContent } from "../content/AudioContent";
 
 interface AudioSectionProps {
@@ -31,11 +31,27 @@ export function AudioSection({
   clearAudio,
   onTranscribeAudio
 }: AudioSectionProps) {
+  const [initAttempted, setInitAttempted] = useState(false);
+  
+  // Track when initialization is attempted
+  useEffect(() => {
+    if (isAudioInitializing && !initAttempted) {
+      setInitAttempted(true);
+    }
+  }, [isAudioInitializing, initAttempted]);
+  
   // Create a wrapper function that explicitly returns Promise<void>
   const handleStartRecordingWrapper = async (): Promise<void> => {
     try {
+      // Mark that we're attempting initialization
+      setInitAttempted(true);
+      
       // Use void operator to explicitly discard the boolean return value
-      void await startAudioRecording();
+      const success = await startAudioRecording();
+      
+      if (!success) {
+        console.error("Audio recording failed to start");
+      }
       // No return statement ensures Promise<void>
     } catch (error) {
       console.error("Error in handleStartRecordingWrapper:", error);
@@ -58,6 +74,7 @@ export function AudioSection({
       onClearAudio={clearAudio}
       onTranscribeAudio={onTranscribeAudio}
       inDialog={false}
+      initAttempted={initAttempted}
     />
   );
 }
