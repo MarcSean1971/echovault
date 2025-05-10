@@ -1,11 +1,11 @@
 
-import { Message } from "@/types/message";
+import { Message, MessageAttachment } from "@/types/message";
 import { Card } from "@/components/ui/card";
 
 export interface MessageContentProps {
   message: Message;
-  deliveryId?: string;
-  recipientEmail?: string;
+  deliveryId?: string | null;
+  recipientEmail?: string | null;
 }
 
 export function MessageContent({ message, deliveryId, recipientEmail }: MessageContentProps) {

@@ -1,38 +1,40 @@
-import { Button } from "@/components/ui/button";
-import { CustomTimeInput } from "./CustomTimeInput";
-import { ConditionTypeSelector } from "./ConditionTypeSelector";
-import { TimeThresholdSelector } from "./TimeThresholdSelector";
-import { ReminderSettings } from "./ReminderSettings";
-import { NoCheckInDeliveryOptions } from "./NoCheckInDeliveryOptions";
-import { GroupConfirmation } from "./GroupConfirmation";
-import { InactivityToDate } from "./InactivityToDate";
-import { InactivityToRecurring } from "./InactivityToRecurring";
-import { PanicTrigger } from "./PanicTrigger";
-import { TriggerType, DeliveryOption, RecurringPattern, PanicTriggerConfig } from "@/types/message";
-import { Input } from "@/components/ui/input";
+
+import { useState, useEffect } from "react";
+import { TriggerType } from "@/types/message";
+import { RadioGroup } from "@/components/ui/radio-group";
+import { PanicButton } from "@/components/layout/panic-button";
+import { RadioCardOption } from "./RadioCardOption";
+import { NoCheckInSection } from "./NoCheckInSection";
+import { ScheduledMessageSection } from "./ScheduledMessageSection";
 import { Label } from "@/components/ui/label";
-import { AlertTriangle } from "lucide-react";
+import { InactivityToRecurring } from "./InactivityToRecurring";
+import { InactivityToDate } from "./InactivityToDate";
+import { PanicTrigger } from "./PanicTrigger";
+import { PanicTriggerConfig } from "@/types/message";
 
 interface DeliveryMethodContentProps {
   conditionType: TriggerType;
   setConditionType: (type: TriggerType) => void;
+  
+  // For no check-in
   hoursThreshold: number;
-  setHoursThreshold: (hours: number) => void;
+  setHoursThreshold: (value: number) => void;
   minutesThreshold: number;
-  setMinutesThreshold: (minutes: number) => void;
-  deliveryOption: DeliveryOption;
-  setDeliveryOption: (option: DeliveryOption) => void;
-  recurringPattern: RecurringPattern | null;
-  setRecurringPattern: (pattern: RecurringPattern | null) => void;
+  setMinutesThreshold: (value: number) => void;
+  reminderHours: number[];
+  setReminderHours: (value: number[]) => void;
+  
+  // For scheduled messages
   triggerDate: Date | null;
   setTriggerDate: (date: Date | null) => void;
+  
+  // For recurring patterns
+  recurringPattern: any;
+  setRecurringPattern: (pattern: any) => void;
+  
+  // For panic trigger config
   panicTriggerConfig: PanicTriggerConfig | undefined;
   setPanicTriggerConfig: (config: PanicTriggerConfig) => void;
-  reminderHours: number[];
-  setReminderHours: (hours: number[]) => void;
-  setActiveTab: (tab: string) => void;
-  checkInCode: string;
-  setCheckInCode: (code: string) => void;
 }
 
 export function DeliveryMethodContent({
@@ -42,134 +44,112 @@ export function DeliveryMethodContent({
   setHoursThreshold,
   minutesThreshold,
   setMinutesThreshold,
-  deliveryOption,
-  setDeliveryOption,
-  recurringPattern,
-  setRecurringPattern,
-  triggerDate,
-  setTriggerDate,
-  panicTriggerConfig,
-  setPanicTriggerConfig,
   reminderHours,
   setReminderHours,
-  setActiveTab,
-  checkInCode,
-  setCheckInCode
+  triggerDate,
+  setTriggerDate,
+  recurringPattern,
+  setRecurringPattern,
+  panicTriggerConfig,
+  setPanicTriggerConfig
 }: DeliveryMethodContentProps) {
-  
-  // Initialize default panicTriggerConfig if not provided
-  const defaultPanicConfig: PanicTriggerConfig = {
-    enabled: true,
-    methods: ['app'],
-    cancel_window_seconds: 10,
-    bypass_logging: false,
-    keep_armed: false
-  };
-
-  // Ensure we have a valid config object
-  const handlePanicConfigUpdate = (config: PanicTriggerConfig) => {
-    setPanicTriggerConfig(config);
-    console.log("Updated panic trigger config:", config);
-  };
-  
-  // Custom check-in code validation
-  const isValidCheckInCode = (code: string) => {
-    return /^[A-Za-z0-9]+$/.test(code) || code === "";
-  };
-  
-  // Render the custom check-in code input
-  const renderCustomCheckInCode = () => {
-    // Only show for check-in related condition types
-    if (conditionType !== 'no_check_in') return null;
-    
-    return (
-      <div className="space-y-2">
-        <Label htmlFor="check-in-code">Custom WhatsApp Check-In Code</Label>
-        <Input
-          id="check-in-code"
-          placeholder="CHECKIN" 
-          value={checkInCode}
-          onChange={(e) => {
-            const value = e.target.value.trim();
-            if (isValidCheckInCode(value)) {
-              setCheckInCode(value);
-            }
-          }}
-          className="max-w-xs"
-        />
-        <p className="text-sm text-muted-foreground">
-          Set a custom code for WhatsApp check-ins. Default codes "CHECKIN" and "CODE" will still work.
-        </p>
-        {checkInCode && !isValidCheckInCode(checkInCode) && (
-          <div className="flex items-center text-amber-600 text-sm">
-            <AlertTriangle className="h-4 w-4 mr-1" />
-            <span>Code can only contain letters and numbers without spaces.</span>
-          </div>
-        )}
-      </div>
-    );
-  };
-  
-  // Render different options based on selected condition type
-  const renderConditionOptions = () => {
-    switch (conditionType) {
-      case 'no_check_in':
-        return (
-          <div className="space-y-6">
-            <CustomTimeInput
-              hours={hoursThreshold}
-              setHours={setHoursThreshold}
-              minutes={minutesThreshold}
-              setMinutes={setMinutesThreshold}
-              label="Time without check-in before message is sent"
-            />
-            <NoCheckInDeliveryOptions
-              deliveryOption={deliveryOption}
-              setDeliveryOption={setDeliveryOption}
-              recurringPattern={recurringPattern}
-              setRecurringPattern={setRecurringPattern}
-              triggerDate={triggerDate}
-              setTriggerDate={setTriggerDate}
-            />
-            {/* Only show reminder settings for non-panic trigger types */}
-            <ReminderSettings
-              reminderHours={reminderHours}
-              setReminderHours={setReminderHours}
-            />
-            {/* Add custom check-in code input */}
-            {renderCustomCheckInCode()}
-          </div>
-        );
-        
-      case 'panic_trigger':
-      case 'panic_button':
-        return (
-          <PanicTrigger
-            config={panicTriggerConfig || defaultPanicConfig}
-            setConfig={handlePanicConfigUpdate}
-          />
-        );
-        
-      default:
-        return null;
+  // When conditionType or component mounts, ensure we have a default panic config
+  useEffect(() => {
+    if (conditionType === "panic_button" && !panicTriggerConfig) {
+      setPanicTriggerConfig({
+        enabled: true,
+        methods: ["app"],
+        cancel_window_seconds: 30,
+        bypass_logging: false,
+        keep_armed: false
+      });
     }
-  };
+  }, [conditionType, panicTriggerConfig, setPanicTriggerConfig]);
   
   return (
     <div className="space-y-6">
-      <ConditionTypeSelector
-        conditionType={conditionType}
-        setConditionType={(type) => {
-          setConditionType(type);
+      <div>
+        <Label className="text-base font-medium mb-4 block">
+          How should this message be triggered?
+        </Label>
+        <RadioGroup 
+          value={conditionType} 
+          onValueChange={(value) => setConditionType(value as TriggerType)}
+          className="grid grid-cols-1 md:grid-cols-2 gap-3"
+        >
+          <RadioCardOption
+            value="no_check_in"
+            id="condition-no-check-in"
+            label="If I don't check in"
+            description="Message gets sent if you don't check in within a time period"
+            isSelected={conditionType === "no_check_in"}
+          />
           
-          // If switching to panic trigger, initialize the config if needed
-          if (type === 'panic_trigger' && !panicTriggerConfig) {
-            setPanicTriggerConfig(defaultPanicConfig);
-          }
-        }}
-      />
+          <RadioCardOption
+            value="scheduled"
+            id="condition-scheduled"
+            label="On a scheduled date"
+            description="Message gets sent on a specific date you choose"
+            isSelected={conditionType === "scheduled"}
+          />
+          
+          <RadioCardOption
+            value="panic_button"
+            id="condition-panic"
+            label="Emergency button"
+            description="Message gets sent when you press a panic button"
+            isSelected={conditionType === "panic_button"}
+          />
+          
+          <RadioCardOption
+            value="manual_trigger"
+            id="condition-manual"
+            label="Manual trigger only"
+            description="You'll need to manually trigger this message"
+            isSelected={conditionType === "manual_trigger"}
+          />
+        </RadioGroup>
+      </div>
       
-      {renderConditionOptions()}
+      {/* Show appropriate configuration based on selected condition type */}
+      <div className="pt-4 border-t">
+        {conditionType === "no_check_in" && (
+          <NoCheckInSection 
+            hoursThreshold={hoursThreshold}
+            setHoursThreshold={setHoursThreshold}
+            minutesThreshold={minutesThreshold}
+            setMinutesThreshold={setMinutesThreshold}
+            recurringPattern={recurringPattern}
+            setRecurringPattern={setRecurringPattern}
+            triggerDate={triggerDate}
+            setTriggerDate={setTriggerDate}
+            reminderHours={reminderHours}
+            setReminderHours={setReminderHours}
+          />
+        )}
+        
+        {conditionType === "scheduled" && (
+          <ScheduledMessageSection 
+            triggerDate={triggerDate}
+            setTriggerDate={setTriggerDate}
+            recurringPattern={recurringPattern}
+            setRecurringPattern={setRecurringPattern}
+          />
+        )}
+        
+        {conditionType === "panic_button" && panicTriggerConfig && (
+          <PanicTrigger
+            config={panicTriggerConfig}
+            onChange={setPanicTriggerConfig}
+          />
+        )}
+        
+        {conditionType === "manual_trigger" && (
+          <div className="text-sm text-muted-foreground">
+            <p>This message will not be sent automatically. You'll need to manually trigger it.</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

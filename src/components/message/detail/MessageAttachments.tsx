@@ -1,5 +1,5 @@
 
-import { Message } from "@/types/message";
+import { Message, MessageAttachment } from "@/types/message";
 import { Paperclip } from "lucide-react";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { AttachmentItem } from "./attachment/AttachmentItem";
@@ -20,7 +20,12 @@ export function MessageAttachments({ message, deliveryId, recipientEmail }: Mess
       {message.attachments.map((attachment, index) => (
         <AttachmentItem
           key={index}
-          attachment={attachment}
+          attachment={{
+            name: attachment.file_name,
+            size: attachment.file_size,
+            type: attachment.file_type,
+            path: attachment.url
+          }}
           deliveryId={deliveryId}
           recipientEmail={recipientEmail}
         />

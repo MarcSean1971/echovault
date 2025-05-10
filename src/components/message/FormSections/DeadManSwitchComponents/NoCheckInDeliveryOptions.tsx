@@ -5,7 +5,6 @@ import { Clock, Repeat } from "lucide-react";
 import { DeliveryOption, RecurringPattern } from "@/types/message";
 import { RadioCardOption } from "./RadioCardOption";
 import { RecurringPatternSelector } from "./RecurringPatternSelector";
-import { Separator } from "@/components/ui/separator";
 
 interface NoCheckInDeliveryOptionsProps {
   deliveryOption: DeliveryOption;
@@ -58,8 +57,8 @@ export function NoCheckInDeliveryOptions({
         <div className="mt-6 border-t pt-4">
           <Label className="font-medium mb-3 block">Regular Schedule Options</Label>
           <RecurringPatternSelector
-            pattern={recurringPattern}
-            setPattern={setRecurringPattern}
+            recurringPattern={recurringPattern}
+            setRecurringPattern={setRecurringPattern}
             forceEnabled={true}
           />
         </div>

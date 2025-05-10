@@ -8,7 +8,7 @@ import { useMessageForm } from "@/components/message/MessageFormContext";
 import { useFormValidation } from "@/hooks/useFormValidation";
 import { simulateUploadProgress } from "@/utils/uploadProgress";
 import { fetchRecipients } from "@/services/messages/recipientService";
-import { TriggerType } from "@/types/message";
+import { TriggerType, FileAttachment } from "@/types/message";
 
 export function useFormActions() {
   const navigate = useNavigate();

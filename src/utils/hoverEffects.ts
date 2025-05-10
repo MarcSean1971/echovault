@@ -23,3 +23,10 @@ export const ICON_HOVER_EFFECTS = {
   primary: "hover:text-primary",
   muted: "hover:text-muted-foreground/80"
 };
+
+// Confirmation animation effects
+export const CONFIRMATION_ANIMATION = {
+  pulse: "animate-pulse",
+  shake: "animate-shake",
+  highlight: "animate-highlight"
+};

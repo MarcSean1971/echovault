@@ -1,22 +1,9 @@
-
 import { useState } from "react";
 import { Upload, X, File as FileIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-
-export interface FileAttachment {
-  file: File | null;
-  id?: string;
-  url?: string;
-  type?: string;
-  name: string;
-  size: number;
-  uploading?: boolean;
-  progress?: number;
-  path?: string;
-  isUploaded?: boolean;
-}
+import { FileAttachment } from "@/types/message";
 
 interface FileUploaderProps {
   files: FileAttachment[];

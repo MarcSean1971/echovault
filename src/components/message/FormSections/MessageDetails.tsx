@@ -33,7 +33,7 @@ export function MessageDetails({ message }: MessageDetailsProps) {
       {/* File attachments */}
       <FileAttachmentsSection 
         files={files} 
-        setFiles={(newFiles: FileAttachment[]) => setFiles(newFiles)} 
+        setFiles={setFiles} 
       />
     </div>
   );

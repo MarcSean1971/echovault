@@ -1,18 +1,20 @@
+
 import { useState, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Calendar } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { RecurringPattern, RecurringPatternType } from "@/types/message";
 
 interface RecurringPatternSelectorProps {
   recurringPattern: RecurringPattern | null;
   setRecurringPattern: (pattern: RecurringPattern | null) => void;
+  forceEnabled?: boolean;
 }
 
 export function RecurringPatternSelector({
   recurringPattern,
-  setRecurringPattern
+  setRecurringPattern,
+  forceEnabled = false
 }: RecurringPatternSelectorProps) {
   const [patternType, setPatternType] = useState<RecurringPatternType>('daily');
   const [interval, setInterval] = useState(1);
@@ -23,9 +25,9 @@ export function RecurringPatternSelector({
   // Initialize form with existing pattern if available
   useEffect(() => {
     if (recurringPattern) {
-      if (typeof recurringPattern !== 'string') {
+      if (typeof recurringPattern !== 'string' && recurringPattern.type) {
         setPatternType(recurringPattern.type);
-        setInterval(recurringPattern.interval);
+        setInterval(recurringPattern.interval || 1);
         setDay(recurringPattern.day);
         setMonth(recurringPattern.month);
         setStartDate(recurringPattern.startDate ? new Date(recurringPattern.startDate) : undefined);

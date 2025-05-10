@@ -2,7 +2,7 @@
 export type MessageType = "text";
 
 export type TriggerType = "no_check_in" | "panic_button" | "manual_trigger" | "scheduled" | "panic_trigger";
-export type DeliveryOption = "immediate" | "recurring" | "once";
+export type DeliveryOption = "immediate" | "once" | "recurring";
 export type RecurringPatternType = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
 export interface RecurringPattern {
@@ -61,23 +61,34 @@ export interface MessageAttachment {
   file_type: string;
   url: string;
   created_at: string;
+  path?: string;
+  name?: string;
+  size?: number;
+  type?: string;
 }
 
 export interface FileAttachment {
   file: File;
   id?: string;
   preview?: string;
-  name?: string;
-  size?: number;
+  name: string;
+  size: number;
   type?: string;
   lastModified?: number;
+  path?: string;
+  url?: string;
+  isUploaded?: boolean;
+  uploading?: boolean;
+  progress?: number;
 }
+
+export type MessageDeliveryStatus = 'pending' | 'sent' | 'delivered' | 'read' | 'failed' | 'armed' | 'triggered' | 'viewed' | 'cancelled' | 'expired';
 
 export interface MessageCondition {
   id: string;
   message_id: string;
   trigger_type: TriggerType;
-  condition_type: string;
+  condition_type?: string;
   hours_threshold?: number;
   minutes_threshold?: number;
   trigger_date?: string;
@@ -99,7 +110,6 @@ export interface MessageCondition {
   triggered?: boolean;
   delivered?: boolean;
   confirmation_required?: number;
-  condition_type?: string;
   last_checked?: string;
 }
 
@@ -114,5 +124,3 @@ export interface DeliveredMessage {
   recipient_name?: string;
   status: 'sent' | 'delivered' | 'read' | 'failed';
 }
-
-export type MessageDeliveryStatus = 'pending' | 'sent' | 'delivered' | 'read' | 'failed';

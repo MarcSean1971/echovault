@@ -1,182 +1,144 @@
 
-import { useState, useRef, useCallback, useEffect } from "react";
-import { useMessageForm } from "@/components/message/MessageFormContext";
-import { safeCreateObjectURL, safeRevokeObjectURL } from "@/utils/mediaUtils";
-import { useMediaStream } from "./video/useMediaStream"; // Keep correct import path
-import { useAudioRecorder } from "./audio/useAudioRecorder"; // Fix import path
-import { useAudioProcessor } from "./audio/useAudioProcessor";
+import { useState, useEffect, useRef } from 'react';
+import { useMessageForm } from '@/components/message/MessageFormContext';
 
-/**
- * Hook for handling audio recording functionality
- */
 export function useAudioRecordingHandler() {
-  // Get the message form context to set audio content
-  const { setAudioContent, messageType, setMessageType } = useMessageForm();
+  const { messageType } = useMessageForm();
+  const [isRecording, setIsRecording] = useState(false);
+  const [audioURL, setAudioURL] = useState<string | null>(null);
+  const [isInitializing, setIsInitializing] = useState(false);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [error, setError] = useState<string | null>(null);
   
-  // Audio state
-  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [audioDuration, setAudioDuration] = useState(0);
-  const [showAudioRecorder, setShowAudioRecorder] = useState(false);
-  const [isInitializationAttempted, setIsInitializationAttempted] = useState(false);
-  
-  // Audio processor for formatting audio content
-  const { formatAudioContent } = useAudioProcessor();
-  
-  // Media stream handling
-  const {
-    previewStream,
-    isInitializing,
-    hasPermission,
-    streamRef,
-    initializeStream,
-    stopMediaStream,
-    isStreamActive
-  } = useMediaStream('audio');
-  
-  // Audio recorder
-  const {
-    isRecording,
-    startRecording: startAudioRecordingInternal,
-    stopRecording,
-    audioBlob: recorderAudioBlob, // Store the blob from recorder
-    audioDuration: recorderAudioDuration // Store the duration from recorder
-  } = useAudioRecorder(previewStream, streamRef);
-  
-  // Update duration from the recorder
-  useEffect(() => {
-    if (recorderAudioDuration !== undefined) {
-      setAudioDuration(recorderAudioDuration);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioStreamRef = useRef<MediaStream | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+
+  // Initialize audio recording when prompted
+  const initializeAudio = async () => {
+    setIsInitializing(true);
+    setError(null);
+    
+    try {
+      // Request audio permission
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      
+      audioStreamRef.current = stream;
+      mediaRecorderRef.current = new MediaRecorder(stream);
+      setHasPermission(true);
+      
+      // Set up event handlers for the MediaRecorder
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+      
+      mediaRecorderRef.current.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+        const url = URL.createObjectURL(audioBlob);
+        setAudioURL(url);
+        
+        // Reset chunks for next recording
+        audioChunksRef.current = [];
+        
+        setIsRecording(false);
+        console.log("Audio recording stopped and processed");
+      };
+      
+      console.log("Audio recording initialized successfully");
+    } catch (err: any) {
+      console.error("Error initializing audio recording:", err);
+      setError(err.message || "Error accessing microphone");
+      setHasPermission(false);
+    } finally {
+      setIsInitializing(false);
     }
-  }, [recorderAudioDuration]);
-  
-  // Clean up URLs on unmount
+  };
+
+  // Start recording
+  const startRecording = () => {
+    if (!mediaRecorderRef.current || !hasPermission) {
+      console.error("Cannot start recording: recorder not initialized or permission denied");
+      return;
+    }
+    
+    try {
+      // Clear previous recording if any
+      if (audioURL) {
+        URL.revokeObjectURL(audioURL);
+        setAudioURL(null);
+      }
+      
+      audioChunksRef.current = [];
+      mediaRecorderRef.current.start();
+      setIsRecording(true);
+      console.log("Audio recording started");
+    } catch (err) {
+      console.error("Error starting audio recording:", err);
+      setError("Failed to start recording");
+    }
+  };
+
+  // Stop recording
+  const stopRecording = () => {
+    if (!mediaRecorderRef.current || !isRecording) {
+      console.log("No active recording to stop");
+      return;
+    }
+    
+    try {
+      mediaRecorderRef.current.stop();
+      console.log("Audio recording stopping...");
+      // The onstop handler will set isRecording to false
+    } catch (err) {
+      console.error("Error stopping audio recording:", err);
+      setError("Failed to stop recording");
+      setIsRecording(false);
+    }
+  };
+
+  // Stop and release audio stream
+  const stopStream = () => {
+    if (audioStreamRef.current) {
+      audioStreamRef.current.getTracks().forEach(track => track.stop());
+      audioStreamRef.current = null;
+      console.log("Audio stream stopped and released");
+    }
+  };
+
+  // Check if audio stream is active
+  const isStreamActive = () => {
+    return !!audioStreamRef.current;
+  };
+
+  // Clean up resources when component unmounts
   useEffect(() => {
     return () => {
-      if (audioUrl) {
-        safeRevokeObjectURL(audioUrl);
+      if (audioURL) {
+        URL.revokeObjectURL(audioURL);
       }
+      stopStream();
     };
-  }, [audioUrl]);
-  
-  // Initialize the audio stream with attempt tracking
-  const initializeStreamWithAttemptTracking = useCallback(async () => {
-    setIsInitializationAttempted(true);
-    return await initializeStream();
-  }, [initializeStream]);
-  
-  // Start recording with content updating
-  const startRecording = useCallback(async (): Promise<boolean> => {
-    try {
-      // Track that we attempted initialization
-      setIsInitializationAttempted(true);
-      
-      // Start the actual recording - FIX: Don't pass any arguments
-      await startAudioRecordingInternal();
-      return true;
-    } catch (error) {
-      console.error("Error starting audio recording:", error);
-      return false;
+  }, [audioURL]);
+
+  // Auto-stop recording if user switches away from audio mode
+  useEffect(() => {
+    if (messageType !== "text" && isRecording) {
+      stopRecording();
     }
-  }, [startAudioRecordingInternal]);
-  
-  // Force microphone initialization
-  const forceInitializeMicrophone = useCallback(async (): Promise<boolean> => {
-    try {
-      setIsInitializationAttempted(true);
-      
-      // Stop any existing stream
-      if (isStreamActive()) {
-        stopMediaStream();
-      }
-      
-      // Request a new audio-only stream
-      const stream = await initializeStream();
-      return stream !== null;
-    } catch (error) {
-      console.error("Force initialize microphone failed:", error);
-      return false;
-    }
-  }, [initializeStream, stopMediaStream, isStreamActive]);
-  
-  // Handle stopping recording with content update
-  const handleStopRecording = useCallback(async (): Promise<void> => {
-    try {
-      // First stop the recording which should set the audioBlob and audioUrl
-      const recordedBlob = await stopRecording();
-      
-      if (recordedBlob) {
-        // Format the audio content and update the form
-        const formattedContent = await formatAudioContent(recordedBlob);
-        setAudioContent(formattedContent);
-      } else {
-        console.error("No audio blob available after recording");
-      }
-    } catch (error) {
-      console.error("Error stopping audio recording:", error);
-    }
-  }, [stopRecording, formatAudioContent, setAudioContent]);
-  
-  // Clear audio - FIXED: Added option to switch message type
-  const clearAudio = useCallback(() => {
-    // Revoke object URL if it exists
-    if (audioUrl) {
-      safeRevokeObjectURL(audioUrl);
-    }
-    
-    // Clear state
-    setAudioUrl(null);
-    setAudioBlob(null);
-    setAudioContent('');
-    setAudioDuration(0);
-    
-    // FIXED: If currently in audio mode, switch to text mode since we just cleared the audio
-    if (messageType === 'audio') {
-      console.log("Cleared audio content while in audio mode - switching to text type");
-      setMessageType('text');
-    }
-    
-    // Stop any active stream
-    if (isStreamActive()) {
-      stopMediaStream();
-    }
-  }, [audioUrl, setAudioContent, stopMediaStream, isStreamActive, messageType, setMessageType]);
-  
-  // Restore audio
-  const restoreAudio = useCallback((blob: Blob, url: string) => {
-    // Set state
-    setAudioBlob(blob);
-    setAudioUrl(url);
-    
-    // Format content and update form
-    formatAudioContent(blob)
-      .then(content => {
-        setAudioContent(content);
-        console.log("Restored audio content in form state");
-      })
-      .catch(error => {
-        console.error("Error formatting restored audio:", error);
-      });
-  }, [formatAudioContent, setAudioContent]);
+  }, [messageType, isRecording]);
 
   return {
-    audioBlob,
-    audioUrl,
-    audioDuration,
-    showAudioRecorder,
-    setShowAudioRecorder,
     isRecording,
+    audioURL,
     isInitializing,
     hasPermission,
-    previewStream,
-    initializeStream: initializeStreamWithAttemptTracking,
-    forceInitializeMicrophone,
+    error,
+    initializeAudio,
     startRecording,
-    stopRecording: handleStopRecording,
-    clearAudio,
-    restoreAudio,
-    stopMediaStream,
-    isStreamActive,
-    isInitializationAttempted
+    stopRecording,
+    stopStream,
+    isStreamActive
   };
 }
