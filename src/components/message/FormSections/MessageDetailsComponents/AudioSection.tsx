@@ -10,11 +10,9 @@ interface AudioSectionProps {
   isAudioRecording: boolean;
   isAudioInitializing: boolean;
   hasAudioPermission: boolean | null;
-  audioTranscription: string | null;
   startAudioRecording: () => Promise<boolean>;  // Keep as Promise<boolean>
   stopAudioRecording: () => void;
   clearAudio: () => void;
-  onTranscribeAudio: () => Promise<void>;
 }
 
 export function AudioSection({
@@ -25,11 +23,9 @@ export function AudioSection({
   isAudioRecording,
   isAudioInitializing,
   hasAudioPermission,
-  audioTranscription,
   startAudioRecording,
   stopAudioRecording,
-  clearAudio,
-  onTranscribeAudio
+  clearAudio
 }: AudioSectionProps) {
   const [initAttempted, setInitAttempted] = useState(false);
   
@@ -79,11 +75,9 @@ export function AudioSection({
       isRecording={isAudioRecording}
       isInitializing={isAudioInitializing}
       hasPermission={hasAudioPermission}
-      transcription={audioTranscription}
       onStartRecording={handleStartRecordingWrapper}
       onStopRecording={stopAudioRecording}
       onClearAudio={clearAudio}
-      onTranscribeAudio={onTranscribeAudio}
       inDialog={false}
       initAttempted={initAttempted}
     />

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { parseVideoContent } from "@/services/messages/mediaService";
 import { Message } from "@/types/message";

@@ -10,11 +10,9 @@ interface AudioContentProps {
   isRecording: boolean;
   isInitializing: boolean;
   hasPermission: boolean | null;
-  transcription?: string | null;
   onStartRecording: () => Promise<void>;
   onStopRecording: () => void;
   onClearAudio: () => void;
-  onTranscribeAudio?: () => Promise<void>;
   inDialog?: boolean;
   initAttempted?: boolean;
 }
@@ -25,11 +23,9 @@ export function AudioContent({
   isRecording,
   isInitializing,
   hasPermission,
-  transcription,
   onStartRecording,
   onStopRecording,
   onClearAudio,
-  onTranscribeAudio,
   inDialog = false,
   initAttempted = false
 }: AudioContentProps) {
@@ -40,11 +36,10 @@ export function AudioContent({
       isRecording,
       isInitializing,
       hasPermission,
-      hasTranscription: !!transcription,
       initAttempted,
       audioDuration
     });
-  }, [audioUrl, isRecording, isInitializing, transcription, hasPermission, initAttempted, audioDuration]);
+  }, [audioUrl, isRecording, isInitializing, hasPermission, initAttempted, audioDuration]);
 
   // CRITICAL: Always prioritize showing existing audio if available
   // Explicitly check if audioUrl exists rather than relying on type coercion
@@ -54,9 +49,7 @@ export function AudioContent({
       <AudioPlayerState
         audioUrl={audioUrl}
         audioDuration={audioDuration}
-        transcription={transcription}
         onClearAudio={onClearAudio}
-        onTranscribeAudio={onTranscribeAudio}
         inDialog={inDialog}
       />
     );

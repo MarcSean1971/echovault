@@ -54,7 +54,6 @@ export function useMessageTypeManager() {
     restoreAudio,
     stopMediaStream: stopAudioStream,
     isStreamActive: isAudioStreamActive,
-    transcribeAudio,
     isInitializationAttempted: isAudioInitializationAttempted
   } = useAudioRecordingHandler();
 
@@ -162,7 +161,6 @@ export function useMessageTypeManager() {
     clearAudio,
     forceInitializeMicrophone,
     handleInitializedAudio,
-    transcribeAudio,
     isAudioInitializationAttempted
   };
 }

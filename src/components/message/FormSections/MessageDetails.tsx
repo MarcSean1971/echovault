@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { useMessageForm } from "../MessageFormContext";
@@ -15,10 +14,9 @@ import { FileAttachmentsSection } from "./MessageDetailsComponents/FileAttachmen
 // Import custom hooks
 import { useMessageVideoHandler } from "@/hooks/useMessageVideoHandler";
 import { useContentUpdater } from "@/hooks/useContentUpdater";
-import { useAudioTranscription } from "@/hooks/message/useAudioTranscription";
 import { useMediaHandlers } from "@/hooks/message/useMediaHandlers";
 import { useRecordingWrappers } from "@/hooks/message/useRecordingWrappers";
-import { useContentKeys } from "@/components/message/FormSections/MessageDetailsComponents/ContentKeyManager"; // Fix: Import the hook correctly
+import { useContentKeys } from "@/components/message/FormSections/MessageDetailsComponents/ContentKeyManager";
 
 // Make sure we still import Video and AudioSection component types so their imports don't get cleaned up
 // We need these for type checking
@@ -49,7 +47,7 @@ export function MessageDetails({ message }: MessageDetailsProps) {
     audioUrl, audioBlob, audioDuration, 
     isAudioRecording, isAudioInitializing, hasAudioPermission,
     startAudioRecording, stopAudioRecording, clearAudio, forceInitializeMicrophone,
-    transcribeAudio, isAudioInitializationAttempted,
+    isAudioInitializationAttempted,
     
     // Initialization state
     initializedFromMessage
@@ -59,7 +57,6 @@ export function MessageDetails({ message }: MessageDetailsProps) {
   const { handleAudioContentUpdate, handleVideoContentUpdate } = useContentUpdater();
   
   // Use our custom hooks for specific functionality
-  const { audioTranscription, setAudioTranscription, handleTranscribeAudio } = useAudioTranscription();
   const { showInlineRecording, setShowInlineRecording, handleClearVideoAndRecord } = useMediaHandlers(clearVideo, setShowVideoRecorder);
   
   // Fix: Ensure wrapper functions return Promise<void>
@@ -87,15 +84,6 @@ export function MessageDetails({ message }: MessageDetailsProps) {
     audioUrl,
     audioBlob
   });
-  
-  // Fix: Make this function return a Promise<void> to match the expected type
-  const handleTranscribeAudioWrapper = async (): Promise<void> => {
-    try {
-      await handleTranscribeAudio(audioBlob, transcribeAudio);
-    } catch (error) {
-      console.error("Error transcribing audio:", error);
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -139,15 +127,12 @@ export function MessageDetails({ message }: MessageDetailsProps) {
           isAudioRecording={isAudioRecording}
           isAudioInitializing={isAudioInitializing}
           hasAudioPermission={hasAudioPermission}
-          audioTranscription={audioTranscription}
           onStartAudioRecording={handleStartAudioRecordingWrapper}
           onStopAudioRecording={stopAudioRecording}
           onClearAudio={() => {
             clearAudio();
-            setAudioTranscription(null);
             setShowInlineRecording(false);
           }}
-          onTranscribeAudio={handleTranscribeAudioWrapper}
           
           // Keys for component remounting
           getVideoContentKey={() => videoContentKey}

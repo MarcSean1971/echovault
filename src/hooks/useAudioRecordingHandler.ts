@@ -1,22 +1,29 @@
 
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useMessageForm } from "@/components/message/MessageFormContext";
-import { useAudioManager } from "./audio/useAudioManager";
-import { useAudioProcessor } from "./audio/useAudioProcessor";
+import { safeCreateObjectURL, safeRevokeObjectURL } from "@/utils/mediaUtils";
+import { useMediaStream } from "./media/useMediaStream";
 import { useAudioRecorder } from "./audio/useAudioRecorder";
-import { useAudioStorage } from "./audio/useAudioStorage";
-import { toast } from "@/components/ui/use-toast";
-import { blobToBase64 } from "@/utils/mediaUtils";
+import { useAudioProcessor } from "./audio/useAudioProcessor";
 
+/**
+ * Hook for handling audio recording functionality
+ */
 export function useAudioRecordingHandler() {
+  // Get the message form context to set audio content
   const { setAudioContent } = useMessageForm();
+  
+  // Audio state
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [audioDuration, setAudioDuration] = useState<number>(0);
-  const [initRetryCount, setInitRetryCount] = useState(0);
-  const MAX_RETRIES = 3;
+  const [audioDuration, setAudioDuration] = useState(0);
+  const [showAudioRecorder, setShowAudioRecorder] = useState(false);
+  const [isInitializationAttempted, setIsInitializationAttempted] = useState(false);
   
-  // Use our audio hooks
+  // Audio processor for formatting audio content
+  const { formatAudioContent } = useAudioProcessor();
+  
+  // Media stream handling
   const {
     previewStream,
     isInitializing,
@@ -24,258 +31,143 @@ export function useAudioRecordingHandler() {
     streamRef,
     initializeStream,
     stopMediaStream,
-    isStreamActive,
-    forceInitializeMicrophone,
-    isInitializationAttempted,
-    resetInitializationAttempted,
-    retryCount
-  } = useAudioManager();
+    isStreamActive
+  } = useMediaStream('audio');
   
+  // Audio recorder
   const {
     isRecording,
-    startRecording: startRecordingInner,
-    stopRecording: stopRecordingInner,
-    setAudioBlob: setAudioBlobInner,
-    setAudioUrl: setAudioUrlInner,
-    cleanupResources
-  } = useAudioRecorder(previewStream, streamRef);
+    startRecording: startAudioRecordingInternal,
+    stopRecording,
+    elapsedTime
+  } = useAudioRecorder(previewStream, streamRef, setAudioBlob, setAudioUrl);
   
-  const {
-    showAudioRecorder,
-    setShowAudioRecorder,
-    clearAudio: clearAudioInner,
-    restoreAudio: restoreAudioInner
-  } = useAudioStorage();
+  // Update duration when elapsed time changes
+  useEffect(() => {
+    setAudioDuration(elapsedTime);
+  }, [elapsedTime]);
   
-  const {
-    transcribeAudio: transcribeAudioInner,
-    formatAudioContent
-  } = useAudioProcessor();
+  // Clean up URLs on unmount
+  useEffect(() => {
+    return () => {
+      if (audioUrl) {
+        safeRevokeObjectURL(audioUrl);
+      }
+    };
+  }, [audioUrl]);
   
-  // Function to update audio content in the form
-  const updateAudioContent = useCallback((blob: Blob, duration: number) => {
-    console.log("Updating audio content in form with blob size:", blob.size, "and duration:", duration);
-    
-    // Update local state
-    setAudioBlob(blob);
-    setAudioDuration(duration);
-    
-    // Convert blob to base64 and update form state
-    blobToBase64(blob).then(base64data => {
-      const formattedContent = JSON.stringify({
-        audioData: base64data,
-        timestamp: new Date().toISOString(),
-        duration: duration || 0
-      });
-      
-      console.log("Setting audio content in form state with data length:", base64data.length);
-      setAudioContent(formattedContent);
-    }).catch(err => {
-      console.error("Error converting blob to base64:", err);
-    });
-  }, [setAudioContent]);
-  
-  // Initialize stream with better error handling
-  const initializeStreamWithSetup = useCallback(async () => {
-    try {
-      console.log("Initializing audio stream with setup");
-      // Reset retry count on fresh initialization
-      setInitRetryCount(0);
-      return await initializeStream();
-    } catch (error) {
-      console.error("Error initializing audio stream:", error);
-      throw error;
-    }
+  // Initialize the audio stream with attempt tracking
+  const initializeStreamWithAttemptTracking = useCallback(async () => {
+    setIsInitializationAttempted(true);
+    return await initializeStream();
   }, [initializeStream]);
   
-  // Enhanced initialization with retries
-  const ensureAudioStreamInitialized = useCallback(async () => {
-    if (audioBlob || audioUrl) {
-      console.log("Audio already initialized with existing content, skipping");
-      return true;
-    }
-    
-    console.log("Ensuring audio stream is initialized");
-    
+  // Start recording with content updating
+  const startRecording = useCallback(async (): Promise<boolean> => {
     try {
-      if (isStreamActive()) {
-        console.log("Stream already active, using existing stream");
-        return true;
-      }
+      // Track that we attempted initialization
+      setIsInitializationAttempted(true);
       
-      // Reset initialization attempted flag to allow a retry
-      resetInitializationAttempted();
-      
-      // Force initialize microphone
-      const success = await forceInitializeMicrophone();
-      if (success) {
-        console.log("Microphone initialization successful");
-        return true;
-      }
-      
-      // If we have retries left, try again
-      if (initRetryCount < MAX_RETRIES) {
-        const newRetryCount = initRetryCount + 1;
-        setInitRetryCount(newRetryCount);
-        console.log(`Retry attempt ${newRetryCount}/${MAX_RETRIES}`);
-        
-        // Small delay before retry
-        await new Promise(resolve => setTimeout(resolve, 500));
-        return await ensureAudioStreamInitialized();
-      }
-      
-      throw new Error("Failed to initialize microphone after multiple attempts");
+      // Start the actual recording
+      await startAudioRecordingInternal();
+      return true;
     } catch (error) {
-      console.error("Error in ensureAudioStreamInitialized:", error);
-      
-      toast({
-        title: "Microphone Error",
-        description: "Could not initialize microphone. Please check your browser permissions and device connections.",
-        variant: "destructive"
-      });
-      
+      console.error("Error starting audio recording:", error);
       return false;
     }
-  }, [
-    audioBlob, 
-    audioUrl, 
-    isStreamActive, 
-    forceInitializeMicrophone, 
-    resetInitializationAttempted,
-    initRetryCount, 
-    MAX_RETRIES
-  ]);
+  }, [startAudioRecordingInternal]);
   
-  // Handle recording completed
-  const handleRecordingCompleted = useCallback((blob: Blob, url: string, duration: number) => {
-    console.log("Audio recording completed. Blob size:", blob.size, "URL:", url.substring(0, 30) + "...", "Duration:", duration);
-    
-    // Update local state first
-    setAudioBlob(blob);
-    setAudioUrl(url);
-    setAudioDuration(duration);
-    
-    // Update form content immediately
-    updateAudioContent(blob, duration);
-    
-    // Show confirmation
-    toast({
-      title: "Audio Recorded",
-      description: "Your audio has been recorded successfully."
-    });
-  }, [updateAudioContent]);
-  
-  // Start recording wrapper with enhanced initialization
-  const startRecording = useCallback(async () => {
+  // Force microphone initialization
+  const forceInitializeMicrophone = useCallback(async (): Promise<boolean> => {
     try {
-      console.log("Starting audio recording with enhanced initialization");
+      setIsInitializationAttempted(true);
       
-      // Make sure we have an initialized audio stream before recording
-      const isInitialized = await ensureAudioStreamInitialized();
-      if (!isInitialized) {
-        console.error("Cannot start recording: Microphone not ready");
-        toast({
-          title: "Recording Error",
-          description: "Microphone is not ready. Please try again.",
-          variant: "destructive"
-        });
-        return false;
+      // Stop any existing stream
+      if (isStreamActive()) {
+        stopMediaStream();
       }
       
-      // Pass a callback to update duration
-      await startRecordingInner((duration) => {
-        setAudioDuration(duration);
-      });
-      
-      return true;
+      // Request a new audio-only stream
+      const stream = await initializeStream();
+      return !!stream;
     } catch (error) {
-      console.error("Error in startRecording wrapper:", error);
-      
-      toast({
-        title: "Recording Error",
-        description: "Failed to start recording. Please try again.",
-        variant: "destructive"
-      });
-      
-      throw error;
+      console.error("Force initialize microphone failed:", error);
+      return false;
     }
-  }, [ensureAudioStreamInitialized, startRecordingInner]);
+  }, [initializeStream, stopMediaStream, isStreamActive]);
   
-  // Enhanced stop recording with content update
-  const stopRecording = useCallback(() => {
-    console.log("Stopping audio recording with content update");
-    
-    // Use the enhanced stopRecording with callback
-    stopRecordingInner(handleRecordingCompleted);
-  }, [stopRecordingInner, handleRecordingCompleted]);
+  // Handle stopping recording with content update
+  const handleStopRecording = useCallback(async (): Promise<void> => {
+    try {
+      // First stop the recording which should set the audioBlob and audioUrl
+      const recordedBlob = await stopRecording();
+      
+      if (recordedBlob) {
+        // Format the audio content and update the form
+        const formattedContent = await formatAudioContent(recordedBlob);
+        setAudioContent(formattedContent);
+      } else {
+        console.error("No audio blob available after recording");
+      }
+    } catch (error) {
+      console.error("Error stopping audio recording:", error);
+    }
+  }, [stopRecording, formatAudioContent, setAudioContent]);
   
   // Clear audio
   const clearAudio = useCallback(() => {
-    clearAudioInner(audioUrl, setAudioBlob, setAudioUrl);
+    // Revoke object URL if it exists
+    if (audioUrl) {
+      safeRevokeObjectURL(audioUrl);
+    }
+    
+    // Clear state
+    setAudioUrl(null);
+    setAudioBlob(null);
     setAudioContent('');
     setAudioDuration(0);
-  }, [audioUrl, setAudioContent, clearAudioInner]);
+    
+    // Stop any active stream
+    if (isStreamActive()) {
+      stopMediaStream();
+    }
+  }, [audioUrl, setAudioContent, stopMediaStream, isStreamActive]);
   
   // Restore audio
-  const restoreAudio = useCallback((blob: Blob, url: string, duration?: number) => {
-    restoreAudioInner(blob, url, setAudioBlob, setAudioUrl);
+  const restoreAudio = useCallback((blob: Blob, url: string) => {
+    // Set state
+    setAudioBlob(blob);
+    setAudioUrl(url);
     
-    if (duration) {
-      setAudioDuration(duration);
-    }
-    
-    // Convert blob back to base64 and update audio content
-    blobToBase64(blob).then(base64data => {
-      const formattedContent = JSON.stringify({
-        audioData: base64data,
-        timestamp: new Date().toISOString(),
-        duration: duration || 0
+    // Format content and update form
+    formatAudioContent(blob)
+      .then(content => {
+        setAudioContent(content);
+        console.log("Restored audio content in form state");
+      })
+      .catch(error => {
+        console.error("Error formatting restored audio:", error);
       });
-      console.log("Restoring audio content in form state");
-      setAudioContent(formattedContent);
-    }).catch(err => {
-      console.error("Error converting blob to base64:", err);
-    });
-  }, [restoreAudioInner, setAudioContent]);
-  
-  // Transcribe audio
-  const transcribeAudio = useCallback(async () => {
-    if (!audioBlob) {
-      throw new Error("No audio to transcribe");
-    }
-    
-    try {
-      console.log("Transcribing audio...");
-      // Use transcribeAudioInner with the correct argument
-      const transcription = await transcribeAudioInner(audioBlob);
-      console.log("Audio transcription complete:", transcription);
-      return transcription;
-    } catch (error) {
-      console.error("Error transcribing audio:", error);
-      throw error;
-    }
-  }, [audioBlob, transcribeAudioInner]);
-  
+  }, [formatAudioContent, setAudioContent]);
+
   return {
-    isRecording,
-    isInitializing,
-    hasPermission,
     audioBlob,
     audioUrl,
     audioDuration,
     showAudioRecorder,
     setShowAudioRecorder,
-    previewStream: previewStream,
-    initializeStream: initializeStreamWithSetup,
+    isRecording,
+    isInitializing,
+    hasPermission,
+    previewStream,
+    initializeStream: initializeStreamWithAttemptTracking,
     forceInitializeMicrophone,
     startRecording,
-    stopRecording,
+    stopRecording: handleStopRecording,
     clearAudio,
     restoreAudio,
-    transcribeAudio,
     stopMediaStream,
     isStreamActive,
-    isInitializationAttempted,
-    ensureAudioStreamInitialized
+    isInitializationAttempted
   };
 }

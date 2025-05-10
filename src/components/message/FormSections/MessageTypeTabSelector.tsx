@@ -24,11 +24,9 @@ interface MessageTypeTabSelectorProps {
   isAudioRecording: boolean;
   isAudioInitializing: boolean;
   hasAudioPermission: boolean | null;
-  audioTranscription?: string | null;
   onStartAudioRecording: () => Promise<void>;
   onStopAudioRecording: () => void;
   onClearAudio: () => void;
-  onTranscribeAudio?: () => Promise<void>;
   
   getVideoContentKey: () => string;
   getAudioContentKey: () => string;
@@ -54,11 +52,9 @@ export function MessageTypeTabSelector({
   isAudioRecording,
   isAudioInitializing,
   hasAudioPermission,
-  audioTranscription,
   onStartAudioRecording,
   onStopAudioRecording,
   onClearAudio,
-  onTranscribeAudio,
   
   getVideoContentKey,
   getAudioContentKey
@@ -128,11 +124,9 @@ export function MessageTypeTabSelector({
           isRecording={isAudioRecording}
           isInitializing={isAudioInitializing}
           hasPermission={hasAudioPermission}
-          transcription={audioTranscription}
           onStartRecording={onStartAudioRecording}
           onStopRecording={onStopAudioRecording}
           onClearAudio={onClearAudio}
-          onTranscribeAudio={onTranscribeAudio}
         />
       </TabsContent>
 

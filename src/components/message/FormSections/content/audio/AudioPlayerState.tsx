@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,24 +10,19 @@ import { toast } from "@/components/ui/use-toast";
 interface AudioPlayerStateProps {
   audioUrl: string | null;
   audioDuration?: number;
-  transcription?: string | null;
   onClearAudio: () => void;
-  onTranscribeAudio?: () => Promise<void>;
   inDialog?: boolean;
 }
 
 export function AudioPlayerState({
   audioUrl,
   audioDuration = 0,
-  transcription,
   onClearAudio,
-  onTranscribeAudio,
   inDialog = false
 }: AudioPlayerStateProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [isTranscribing, setIsTranscribing] = useState(false);
   const [audioError, setAudioError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const animationRef = useRef<number>();
@@ -133,25 +129,6 @@ export function AudioPlayerState({
     }
     cancelAnimationFrame(animationRef.current!);
   };
-  
-  // Handle transcribing audio
-  const handleTranscribe = async () => {
-    if (onTranscribeAudio) {
-      setIsTranscribing(true);
-      try {
-        await onTranscribeAudio();
-      } catch (error) {
-        console.error("Error during transcription:", error);
-        toast({
-          title: "Transcription Error",
-          description: "Failed to transcribe audio. Please try again.",
-          variant: "destructive"
-        });
-      } finally {
-        setIsTranscribing(false);
-      }
-    }
-  };
 
   return (
     <div className="space-y-4">
@@ -221,35 +198,6 @@ export function AudioPlayerState({
                   </div>
                 </div>
               </div>
-              
-              {/* Transcription */}
-              {!inDialog && (
-                <div className="mt-4">
-                  {transcription ? (
-                    <div className="p-3 bg-slate-100 dark:bg-slate-900 rounded text-sm">
-                      <h4 className="text-xs uppercase text-muted-foreground mb-1">Transcription</h4>
-                      <p>{transcription}</p>
-                    </div>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      type="button"
-                      onClick={handleTranscribe}
-                      disabled={!onTranscribeAudio || isTranscribing}
-                      className="w-full hover:bg-primary/10 hover:scale-105 transition-all"
-                    >
-                      {isTranscribing ? (
-                        <>
-                          <Spinner size="sm" className="mr-2" />
-                          Transcribing...
-                        </>
-                      ) : (
-                        "Transcribe Audio"
-                      )}
-                    </Button>
-                  )}
-                </div>
-              )}
             </>
           )}
         </div>

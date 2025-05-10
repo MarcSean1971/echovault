@@ -29,7 +29,7 @@ export function useMessageVideoHandler(message?: Message) {
     audioBlob, audioUrl, audioDuration, showAudioRecorder, setShowAudioRecorder,
     isAudioRecording, isAudioInitializing, hasAudioPermission, audioPreviewStream,
     initializeAudioStream, startAudioRecording, stopAudioRecording, clearAudio,
-    forceInitializeMicrophone, handleInitializedAudio, transcribeAudio,
+    forceInitializeMicrophone, handleInitializedAudio,
     isAudioInitializationAttempted,
     
     // Common
@@ -94,7 +94,6 @@ export function useMessageVideoHandler(message?: Message) {
     stopAudioRecording,
     clearAudio,
     forceInitializeMicrophone,
-    transcribeAudio,
     handleAudioContentUpdate,
     isAudioInitializationAttempted,
     
