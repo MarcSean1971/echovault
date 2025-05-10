@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { useMessageForm } from "../MessageFormContext";
@@ -78,6 +77,7 @@ function MessageEditForm({ message, onCancel }: EditMessageFormComponentProps) {
   const [initialLoading, setInitialLoading] = useState(true);
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [contentValidationError, setContentValidationError] = useState<string | null>(null);
+  const [isEditingMode, setIsEditingMode] = useState(true);
 
   // Load message condition data
   useEffect(() => {
@@ -175,6 +175,7 @@ function MessageEditForm({ message, onCancel }: EditMessageFormComponentProps) {
     setTitle(message.title);
     setContent(message.content || "");
     setMessageType(message.message_type);
+    setIsEditingMode(true);
     
     // If there are attachments, set them
     if (message.attachments && Array.isArray(message.attachments)) {
@@ -219,14 +220,27 @@ function MessageEditForm({ message, onCancel }: EditMessageFormComponentProps) {
     setContentValidationError(null);
     
     try {
-      // Validate content based on message type
+      // Improved content validation based on message type
+      // FIXED: Allow saving a message with no content if in edit mode - the user might just want to change the type
       if (messageType === "video" && (!videoContent || videoContent.trim() === "")) {
-        throw new Error("Video message type requires recorded video content. Please record a video before saving.");
+        if (!isEditingMode) {
+          throw new Error("Video message type requires recorded video content. Please record a video before saving.");
+        } else {
+          // Auto-switch to text type if video content is empty in edit mode
+          console.log("No video content but video type selected - auto-switching to text type");
+          setMessageType('text');
+        }
       }
       
-      // Validate audio content for audio message type
+      // FIXED: Improved audio validation with auto-type switching in edit mode
       if (messageType === "audio" && (!audioContent || audioContent.trim() === "")) {
-        throw new Error("Audio message type requires recorded audio content. Please record audio before saving.");
+        if (!isEditingMode) {
+          throw new Error("Audio message type requires recorded audio content. Please record audio before saving.");
+        } else {
+          // Auto-switch to text type if audio content is empty in edit mode
+          console.log("No audio content but audio type selected - auto-switching to text type");
+          setMessageType('text');
+        }
       }
       
       // Upload any new files that haven't been uploaded
@@ -247,68 +261,71 @@ function MessageEditForm({ message, onCancel }: EditMessageFormComponentProps) {
       }
       
       // Determine which content to use based on message type
-      // For combined content support, we'll use a special approach
       let contentToSave = content;
       
-      // If we have video content, we'll use that as the primary content
+      // If we have video content and video type, use that
       if (messageType === "video") {
-        if (!videoContent || videoContent.trim() === "") {
-          throw new Error("Video message requires video content. Please record a video before saving.");
-        }
-        
-        contentToSave = videoContent;
-        
-        // If we also have text content, add it to the video content
-        if (textContent && textContent.trim() !== '') {
-          try {
-            // Parse the video content to add text content to it
-            const videoContentObj = JSON.parse(videoContent);
-            videoContentObj.additionalText = textContent;
-            contentToSave = JSON.stringify(videoContentObj);
-          } catch (error) {
-            console.error("Error combining text and video content:", error);
-            throw new Error("Error preparing video content. Please try re-recording your video.");
+        if (videoContent && videoContent.trim() !== "") {
+          contentToSave = videoContent;
+          
+          // If we also have text content, add it to the video content
+          if (textContent && textContent.trim() !== '') {
+            try {
+              // Parse the video content to add text content to it
+              const videoContentObj = JSON.parse(videoContent);
+              videoContentObj.additionalText = textContent;
+              contentToSave = JSON.stringify(videoContentObj);
+            } catch (error) {
+              console.error("Error combining text and video content:", error);
+              throw new Error("Error preparing video content. Please try re-recording your video.");
+            }
           }
-        }
-        
-        // Validate that the content actually contains video data
-        const { videoData, error } = parseVideoContent(contentToSave);
-        if (!videoData) {
-          console.error("Invalid video content detected on save:", error);
-          throw new Error("The video content is invalid or corrupted. Please try re-recording your video.");
+          
+          // FIXED: Only validate content if we actually have video content to save
+          const { videoData, error } = parseVideoContent(contentToSave);
+          if (!videoData) {
+            console.error("Invalid video content detected on save:", error);
+            throw new Error("The video content is invalid or corrupted. Please try re-recording your video.");
+          }
+        } else {
+          // If selected video type but no content, save as text type instead
+          contentToSave = textContent || "";
+          setMessageType('text');
         }
       } 
       // Handle audio message type specifically
       else if (messageType === "audio") {
-        if (!audioContent || audioContent.trim() === "") {
-          throw new Error("Audio message requires audio content. Please record audio before saving.");
-        }
-        
-        contentToSave = audioContent;
-        
-        // If we also have text content, add it to the audio content
-        if (textContent && textContent.trim() !== '') {
+        if (audioContent && audioContent.trim() !== "") {
+          contentToSave = audioContent;
+          
+          // If we also have text content, add it to the audio content
+          if (textContent && textContent.trim() !== '') {
+            try {
+              // Parse the audio content to add text content to it
+              const audioContentObj = JSON.parse(audioContent);
+              audioContentObj.additionalText = textContent;
+              contentToSave = JSON.stringify(audioContentObj);
+            } catch (error) {
+              console.error("Error combining text and audio content:", error);
+              throw new Error("Error preparing audio content. Please try re-recording your audio.");
+            }
+          }
+          
+          // FIXED: Only validate audio content if we actually have audio content to save
           try {
-            // Parse the audio content to add text content to it
-            const audioContentObj = JSON.parse(audioContent);
-            audioContentObj.additionalText = textContent;
-            contentToSave = JSON.stringify(audioContentObj);
+            const audioContentObj = JSON.parse(contentToSave);
+            if (!audioContentObj.audioData) {
+              console.error("Invalid audio content detected on save: missing audioData");
+              throw new Error("The audio content is invalid or corrupted. Please try re-recording your audio.");
+            }
           } catch (error) {
-            console.error("Error combining text and audio content:", error);
-            throw new Error("Error preparing audio content. Please try re-recording your audio.");
+            console.error("Error validating audio content:", error);
+            throw new Error("Invalid audio content format. Please try re-recording your audio.");
           }
-        }
-        
-        // Validate that the content actually contains audio data
-        try {
-          const audioContentObj = JSON.parse(contentToSave);
-          if (!audioContentObj.audioData) {
-            console.error("Invalid audio content detected on save: missing audioData");
-            throw new Error("The audio content is invalid or corrupted. Please try re-recording your audio.");
-          }
-        } catch (error) {
-          console.error("Error validating audio content:", error);
-          throw new Error("Invalid audio content format. Please try re-recording your audio.");
+        } else {
+          // If selected audio type but no content, save as text type instead
+          contentToSave = textContent || "";
+          setMessageType('text');
         }
       } 
       else if (messageType === "text") {
@@ -423,9 +440,14 @@ function MessageEditForm({ message, onCancel }: EditMessageFormComponentProps) {
     }
   };
 
+  // FIXED: Updated form validation to be more lenient in edit mode
   const isFormValid = title.trim() !== "" && 
-    (messageType !== "text" || content.trim() !== "") &&
-    (messageType !== "video" || videoContent) &&
+    ((messageType !== "text" || content.trim() !== "") ||
+    (messageType === "text" && textContent.trim() !== "")) &&
+    // FIXED: Don't require video content in edit mode
+    ((messageType !== "video") || (videoContent && videoContent.trim() !== "") || isEditingMode) &&
+    // FIXED: Don't require audio content in edit mode
+    ((messageType !== "audio") || (audioContent && audioContent.trim() !== "") || isEditingMode) &&
     selectedRecipients.length > 0;
 
   if (initialLoading) {
@@ -447,7 +469,7 @@ function MessageEditForm({ message, onCancel }: EditMessageFormComponentProps) {
             <div className="p-4 mb-4 bg-destructive/10 border border-destructive/20 rounded-md text-destructive">
               <strong>Content Error:</strong> {contentValidationError}
               <div className="mt-1 text-sm">
-                You may need to re-record your video or change the message type to match your content.
+                You may need to re-record your video/audio or change the message type to match your content.
               </div>
             </div>
           )}
@@ -487,4 +509,3 @@ export function EditMessageForm({ message, onCancel }: EditMessageFormComponentP
 
 // Import MessageFormProvider here so it's available for the exported component
 import { MessageFormProvider } from "../MessageFormContext";
-

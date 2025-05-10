@@ -20,10 +20,10 @@ export function TextContent() {
     setTextContent(newContent);
     setDisplayContent(newContent);
     
-    // Only update the main content if we're in text mode
-    if (messageType === 'text') {
-      setContent(newContent);
-    }
+    // Update the main content if we're in text mode
+    // FIXED: Always update text content, even in non-text modes
+    // This allows users to edit text that will be associated with audio/video
+    setContent(newContent);
   };
 
   // Safety check to prevent showing JSON data in text field
@@ -43,20 +43,24 @@ export function TextContent() {
 
   return (
     <>
-      <Label htmlFor="content">Message Content</Label>
+      <Label htmlFor="content">
+        {messageType === 'text' ? 'Message Content' : 'Additional Text (Optional)'}
+      </Label>
       <textarea
         id="content"
         value={displayContent}
         onChange={handleContentChange}
         className={`w-full p-2 border rounded-md min-h-[150px] ${HOVER_TRANSITION} focus:ring-2 focus:ring-primary/20 focus:border-primary hover:border-primary/50`}
-        placeholder="Enter your message content"
+        placeholder={messageType === 'text' ? 
+          "Enter your message content" : 
+          "Add optional text to accompany your media (optional)"
+        }
       />
       <div className="flex justify-end mt-2">
         <AIEnhancer content={displayContent} onChange={(enhancedContent) => {
           setTextContent(enhancedContent);
-          if (messageType === 'text') {
-            setContent(enhancedContent);
-          }
+          // Always update content for text mode, and for additional text in media modes
+          setContent(enhancedContent);
           setDisplayContent(enhancedContent);
         }} />
       </div>

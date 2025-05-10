@@ -11,7 +11,7 @@ import { useAudioProcessor } from "./audio/useAudioProcessor";
  */
 export function useAudioRecordingHandler() {
   // Get the message form context to set audio content
-  const { setAudioContent } = useMessageForm();
+  const { setAudioContent, messageType, setMessageType } = useMessageForm();
   
   // Audio state
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
@@ -117,7 +117,7 @@ export function useAudioRecordingHandler() {
     }
   }, [stopRecording, formatAudioContent, setAudioContent]);
   
-  // Clear audio
+  // Clear audio - FIXED: Added option to switch message type
   const clearAudio = useCallback(() => {
     // Revoke object URL if it exists
     if (audioUrl) {
@@ -130,11 +130,17 @@ export function useAudioRecordingHandler() {
     setAudioContent('');
     setAudioDuration(0);
     
+    // FIXED: If currently in audio mode, switch to text mode since we just cleared the audio
+    if (messageType === 'audio') {
+      console.log("Cleared audio content while in audio mode - switching to text type");
+      setMessageType('text');
+    }
+    
     // Stop any active stream
     if (isStreamActive()) {
       stopMediaStream();
     }
-  }, [audioUrl, setAudioContent, stopMediaStream, isStreamActive]);
+  }, [audioUrl, setAudioContent, stopMediaStream, isStreamActive, messageType, setMessageType]);
   
   // Restore audio
   const restoreAudio = useCallback((blob: Blob, url: string) => {

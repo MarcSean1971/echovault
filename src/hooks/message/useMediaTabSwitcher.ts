@@ -42,10 +42,9 @@ export function useMediaTabSwitcher(
       stopAudioStream();
     }
     
-    // IMPORTANT: Clear other content types when switching to text mode
-    // but preserve text content
-    setVideoContent('');
-    setAudioContent('');
+    // FIXED: Don't clear other content types when switching modes
+    // This allows users to switch back and forth between tabs without losing content
+    console.log("Keeping video and audio content when switching to text mode");
   };
   
   // Handle clicking on video tab
@@ -64,9 +63,8 @@ export function useMediaTabSwitcher(
       stopAudioStream();
     }
     
-    // IMPORTANT: Clear other content types when switching to video mode
-    // Text can coexist with video as additionalText, so we don't clear it
-    setAudioContent('');
+    // FIXED: Don't clear other content types when switching modes
+    console.log("Keeping text and audio content when switching to video mode");
   };
   
   // Handle clicking on audio tab
@@ -85,9 +83,8 @@ export function useMediaTabSwitcher(
       stopVideoStream();
     }
     
-    // IMPORTANT: Clear other content types when switching to audio mode
-    // Text can coexist with audio as additionalText, so we don't clear it
-    setVideoContent('');
+    // FIXED: Don't clear other content types when switching modes
+    console.log("Keeping text and video content when switching to audio mode");
   };
   
   return {

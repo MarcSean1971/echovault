@@ -73,10 +73,8 @@ export function useMessageInitializer(message?: Message) {
           const contentObj = JSON.parse(message.content);
           if (contentObj.additionalText) {
             console.log("Message contains additional text with video:", contentObj.additionalText);
-            // Only set text content if we're in video mode - this is crucial!
-            if (message.message_type === "video") {
-              setTextContent(contentObj.additionalText);
-            }
+            // Set text content regardless of message type to ensure it's preserved
+            setTextContent(contentObj.additionalText);
           }
         } catch (e) {
           console.error("Error parsing additional text from video content:", e);
@@ -94,10 +92,8 @@ export function useMessageInitializer(message?: Message) {
           // Check for additional text in the audio content
           if (contentObj.additionalText) {
             console.log("Message contains additional text with audio:", contentObj.additionalText);
-            // Only set text content if we're in audio mode - this is crucial!
-            if (message.message_type === "audio") {
-              setTextContent(contentObj.additionalText);
-            }
+            // Set text content regardless of message type to ensure it's preserved
+            setTextContent(contentObj.additionalText);
           }
         }
       } catch (e) {
@@ -107,10 +103,25 @@ export function useMessageInitializer(message?: Message) {
       hasVideo = false;
     }
     
-    // For text content, we consider any non-JSON content or message type="text" as text
-    if (message.message_type === "text") {
-      // If this is a true text message, just set the text content directly
+    // For text content or fallback
+    if (!hasVideo && !hasAudio || message.message_type === "text") {
+      // If this is a text message, set the text content directly
       setTextContent(message.content);
+    }
+    
+    // FIXED: Check for type/content mismatch and display appropriate warning
+    if ((message.message_type === "video" && !hasVideo) || 
+        (message.message_type === "audio" && !hasAudio)) {
+      console.warn(`Message type (${message.message_type}) doesn't match content - using text fallback`);
+      // Only show toast for genuine mismatches, not for empty edits
+      if (message.content && message.content.trim() !== "") {
+        toast({
+          title: "Content Type Mismatch",
+          description: `This message is marked as ${message.message_type} but contains different content. You can change the type if needed.`,
+          variant: "default",
+          duration: 5000
+        });
+      }
     }
     
   }, [message, setContent, setTextContent, setVideoContent, setAudioContent]);
