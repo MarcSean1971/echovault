@@ -1,13 +1,11 @@
 
 import { useEffect, useState } from "react";
-import { Badge } from "@/components/ui/badge";
-import { formatDistanceToNow } from "date-fns";
-import { Button } from "@/components/ui/button";
-import { MessageCondition, TriggerType, Message } from "@/types/message";
+import { MessageCondition, Message } from "@/types/message";
 import { armMessage, disarmMessage } from "@/services/messages/conditionService";
 import { toast } from "@/components/ui/use-toast";
-import { Clock, ShieldAlert, Shield, AlertTriangle, CheckCircle, ArrowRight } from "lucide-react";
-import { HOVER_TRANSITION, BUTTON_HOVER_EFFECTS } from "@/utils/hoverEffects";
+import { StatusBadge } from "./condition-row/StatusBadge";
+import { ConditionActions } from "./condition-row/ConditionActions";
+import { ConditionDetails } from "./condition-row/ConditionDetails";
 
 interface MessageConditionRowProps {
   condition: MessageCondition;
@@ -32,77 +30,6 @@ export function MessageConditionRow({ condition, message, onRefresh, userId }: M
     
     setStatus(newStatus);
   }, [condition]);
-  
-  // Get badge and status text for the current status
-  const getBadgeForStatus = () => {
-    switch (status) {
-      case "disarmed":
-        return (
-          <Badge variant="outline" className="bg-muted">
-            <Shield className="h-3 w-3 mr-1" />
-            Disarmed
-          </Badge>
-        );
-      case "armed":
-        return (
-          <Badge variant="secondary" className="bg-green-100 text-green-800">
-            <ShieldAlert className="h-3 w-3 mr-1" />
-            Armed
-          </Badge>
-        );
-      case "triggered":
-        return (
-          <Badge variant="destructive">
-            <AlertTriangle className="h-3 w-3 mr-1" />
-            Triggered
-          </Badge>
-        );
-      case "delivered":
-        return (
-          <Badge variant="default">
-            <CheckCircle className="h-3 w-3 mr-1" />
-            Delivered
-          </Badge>
-        );
-      default:
-        return (
-          <Badge variant="outline">
-            Unknown
-          </Badge>
-        );
-    }
-  };
-  
-  // Format the condition type for display
-  const getConditionTypeDisplay = (): string => {
-    switch (condition.trigger_type) {
-      case "no_check_in":
-        return "Deadman's switch";
-      case "panic_button":
-        return "Panic button";
-      case "scheduled":
-        return "Scheduled message";
-      case "manual_trigger":
-        return "Manual trigger";
-      case "panic_trigger":
-        return "Panic trigger";
-      default:
-        return condition.trigger_type;
-    }
-  };
-  
-  // Get deadline display for the condition
-  const getDeadlineDisplay = (): string => {
-    if (!condition.next_deadline) {
-      return "—";
-    }
-    
-    try {
-      return formatDistanceToNow(new Date(condition.next_deadline), { addSuffix: true });
-    } catch (e) {
-      return "Invalid date";
-    }
-  };
   
   // Handle arming a message
   const handleArm = async () => {
@@ -157,51 +84,22 @@ export function MessageConditionRow({ condition, message, onRefresh, userId }: M
       </div>
       
       <div className="col-span-2">
-        {getBadgeForStatus()}
+        <StatusBadge status={status as "disarmed" | "armed" | "triggered" | "delivered"} />
       </div>
       
-      <div className="col-span-2 text-sm">
-        {getConditionTypeDisplay()}
-      </div>
+      <ConditionDetails 
+        triggerType={condition.trigger_type} 
+        nextDeadline={condition.next_deadline} 
+      />
       
-      <div className="col-span-2 text-sm">
-        {getDeadlineDisplay()}
-      </div>
-      
-      <div className="col-span-3 flex justify-end gap-2">
-        <Button 
-          size="sm" 
-          variant="outline" 
-          onClick={() => message && window.location.href = `/message/${message.id}`}
-          className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.muted}`}
-        >
-          Details
-          <ArrowRight className="h-3 w-3 ml-1" />
-        </Button>
-        
-        {status === "armed" ? (
-          <Button 
-            size="sm" 
-            variant="ghost" 
-            onClick={handleDisarm}
-            disabled={isLoading}
-            className={`${HOVER_TRANSITION} bg-amber-50 hover:bg-amber-100 text-amber-700`}
-          >
-            <Shield className="h-3 w-3 mr-1" />
-            Disarm
-          </Button>
-        ) : (
-          <Button 
-            size="sm" 
-            variant="ghost" 
-            onClick={handleArm}
-            disabled={isLoading}
-            className={`${HOVER_TRANSITION} bg-green-50 hover:bg-green-100 text-green-700`}
-          >
-            <ShieldAlert className="h-3 w-3 mr-1" />
-            Arm
-          </Button>
-        )}
+      <div className="col-span-3">
+        <ConditionActions 
+          status={status}
+          messageId={message?.id}
+          isLoading={isLoading}
+          onDisarm={handleDisarm}
+          onArm={handleArm}
+        />
       </div>
     </div>
   );
