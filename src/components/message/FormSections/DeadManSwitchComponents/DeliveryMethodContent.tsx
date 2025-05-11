@@ -128,6 +128,8 @@ export function DeliveryMethodContent({
               reminderHours={reminderHours}
               setReminderHours={setReminderHours}
             />
+            {/* Add custom check-in code input - moved to be after ReminderSettings */}
+            {renderCustomCheckInCode()}
             <NoCheckInDeliveryOptions
               deliveryOption={deliveryOption}
               setDeliveryOption={setDeliveryOption}
@@ -136,8 +138,6 @@ export function DeliveryMethodContent({
               triggerDate={triggerDate}
               setTriggerDate={setTriggerDate}
             />
-            {/* Add custom check-in code input */}
-            {renderCustomCheckInCode()}
           </div>
         );
         
