@@ -11,6 +11,6 @@ export interface DownloadHandlerResult {
   directUrl: string | null;
   downloadFile: (method: AccessMethod) => Promise<boolean>;
   openFile: (method: AccessMethod) => Promise<boolean>;
-  tryDirectAccess: () => boolean;
+  tryDirectAccess: () => Promise<{ success: boolean; url: string | null; method: AccessMethod | null }>;
   retryAccess: () => Promise<boolean>;
 }

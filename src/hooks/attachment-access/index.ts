@@ -1,97 +1,110 @@
 
-import { useEffect } from "react";
-import { AttachmentAccessProps, AttachmentAccessResult, AttachmentAccessUtilities } from "./types";
+import { useState, useCallback } from "react";
+import { AccessMethod } from "@/components/message/detail/attachment/types";
+import { useDownloadHandlers } from "./useDownloadHandlers";
 import { useAttachmentState } from "./useAttachmentState";
-import { useDownloadHandlers } from "./download-handlers";
+import { AttachmentAccessResult, AttachmentAccessProps } from "./types";
 
 /**
- * Main hook for attachment access functionality
+ * Master hook for attachment access functionality
  */
-export function useAttachmentAccess(props: AttachmentAccessProps): AttachmentAccessResult {
-  // Use the state management hook
+export function useAttachmentAccess(
+  props: AttachmentAccessProps
+): AttachmentAccessResult {
+  // Create state values and utilities
   const {
-    state,
-    updateMethodStatus,
-    setLoading,
+    isLoading,
+    hasError,
+    retryCount,
+    showDebug,
+    accessUrl,
+    downloadMethod,
+    lastSuccessMethod,
+    downloadActive,
+    attemptedMethods,
+    currentMethodStatus,
+    setIsLoading,
     setHasError,
-    setDownloadActive,
     incrementRetryCount,
-    toggleDebug,
     setAccessUrl,
     setDownloadMethod,
-    toggleDownloadMethod
-  } = useAttachmentState();
-  
-  // Create utilities object to pass to handlers
-  const utilities: AttachmentAccessUtilities = {
-    updateMethodStatus,
-    setLoading,
-    setHasError,
+    setLastSuccessMethod,
     setDownloadActive,
+    updateMethodStatus,
+    toggleDebug
+  } = useAttachmentState();
+
+  // Create utilities object for handlers
+  const utilities = {
+    setIsLoading,
+    setHasError,
     incrementRetryCount,
     setAccessUrl,
-    setDownloadMethod
+    setDownloadMethod,
+    setLastSuccessMethod,
+    setDownloadActive,
+    updateMethodStatus,
   };
-  
-  // Use the download handlers
+
+  // Get download handlers
   const {
     directUrl,
-    downloadFile: executeDownload,
-    openFile: executeOpenFile,
-    tryDirectAccess,
-    retryAccess: executeRetry
+    downloadFile: doDownload,
+    openFile: doOpenFile,
+    tryDirectAccess: doTryDirectAccess,
+    retryAccess: doRetryAccess
   } = useDownloadHandlers(props, utilities);
   
-  // Update download active state after a short period
-  useEffect(() => {
-    if (state.downloadActive) {
-      const timer = setTimeout(() => {
-        setDownloadActive(false);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [state.downloadActive]);
+  // Wrapper for download function
+  const downloadFile = useCallback(async () => {
+    setDownloadActive(true);
+    return await doDownload(downloadMethod);
+  }, [doDownload, downloadMethod, setDownloadActive]);
+  
+  // Wrapper for open function
+  const openFile = useCallback(async () => {
+    return await doOpenFile(downloadMethod);
+  }, [doOpenFile, downloadMethod]);
+  
+  // Wrapper for direct access function (now handles Promise correctly)
+  const tryDirectAccess = useCallback(async () => {
+    setIsLoading(true);
+    const result = await doTryDirectAccess();
+    setIsLoading(false);
+    return result;
+  }, [doTryDirectAccess, setIsLoading]);
+  
+  // Wrapper for retry function
+  const retryAccess = useCallback(async () => {
+    return await doRetryAccess();
+  }, [doRetryAccess]);
+  
+  // Toggle function to cycle through download methods
+  const toggleDownloadMethod = useCallback(() => {
+    const methods: AccessMethod[] = ['secure', 'signed', 'direct'];
+    const currentIndex = methods.indexOf(downloadMethod);
+    const nextIndex = (currentIndex + 1) % methods.length;
+    setDownloadMethod(methods[nextIndex]);
+  }, [downloadMethod, setDownloadMethod]);
 
-  // Update method status when methods change
-  useEffect(() => {
-    const newStatus = state.lastSuccessMethod === state.downloadMethod 
-      ? 'success' 
-      : state.hasError 
-        ? 'error' 
-        : 'idle';
-        
-    if (newStatus !== state.currentMethodStatus) {
-      setHasError(state.hasError);
-    }
-  }, [state.downloadMethod, state.lastSuccessMethod, state.hasError]);
-  
-  // Handler functions that use the internal handlers
-  const downloadFile = async () => {
-    if (state.isLoading) return;
-    await executeDownload(state.downloadMethod);
-  };
-  
-  const openFile = async () => {
-    if (state.isLoading) return;
-    await executeOpenFile(state.downloadMethod);
-  };
-  
-  // Fix the return type to ensure it's Promise<void>
-  const retryAccess = async (): Promise<void> => {
-    await executeRetry();
-    // Removed the return statement to ensure void return type
-  };
-
-  // Return combined state and handlers
   return {
-    ...state,
+    isLoading,
+    hasError,
+    retryCount,
+    showDebug,
+    accessUrl,
+    downloadMethod,
+    lastSuccessMethod,
+    downloadActive,
+    attemptedMethods,
+    currentMethodStatus,
     directUrl,
     retryAccess,
     toggleDownloadMethod,
     downloadFile,
     openFile,
     tryDirectAccess,
-    toggleDebug
+    toggleDebug,
   };
 }
 

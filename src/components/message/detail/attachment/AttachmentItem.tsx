@@ -1,4 +1,3 @@
-
 import React from "react";
 import { FileIcon, AlertCircle, FileCheck, Shield, ExternalLink } from "lucide-react";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
@@ -32,7 +31,8 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
     currentMethodStatus,
     downloadFile,
     openFile,
-    toggleDownloadMethod
+    toggleDownloadMethod,
+    tryDirectAccess
   } = useAttachmentAccess({
     filePath: attachment.path,
     fileName: attachment.name,
@@ -61,6 +61,13 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
     }
     
     return <FileIcon className={`h-4 w-4 flex-shrink-0 ${HOVER_TRANSITION}`} />;
+  };
+  
+  // Handle direct access click with async function
+  const handleDirectAccess = async () => {
+    if (tryDirectAccess) {
+      await tryDirectAccess();
+    }
   };
   
   return (

@@ -10,7 +10,18 @@ export interface AttachmentAccessProps {
   recipientEmail?: string;
 }
 
-export interface AttachmentAccessState {
+export interface AttachmentAccessUtilities {
+  setIsLoading: (loading: boolean) => void;
+  setHasError: (hasError: boolean) => void;
+  incrementRetryCount: () => void;
+  setAccessUrl: (url: string | null) => void;
+  setDownloadMethod: (method: AccessMethod) => void;
+  setLastSuccessMethod: (method: AccessMethod | null) => void;
+  setDownloadActive: (active: boolean) => void;
+  updateMethodStatus: (method: AccessMethod, success: boolean) => void;
+}
+
+export interface AttachmentAccessResult {
   isLoading: boolean;
   hasError: boolean;
   retryCount: number;
@@ -21,25 +32,11 @@ export interface AttachmentAccessState {
   downloadActive: boolean;
   attemptedMethods: {[key in AccessMethod]?: boolean};
   currentMethodStatus: 'idle' | 'success' | 'error';
-}
-
-export interface AttachmentAccessResult extends AttachmentAccessState {
   directUrl: string | null;
-  retryAccess: () => Promise<void>;
+  retryAccess: () => Promise<boolean>;
   toggleDownloadMethod: () => void;
-  downloadFile: () => Promise<void>;
-  openFile: () => Promise<void>;
-  tryDirectAccess: () => void;
+  downloadFile: () => Promise<boolean>;
+  openFile: () => Promise<boolean>;
+  tryDirectAccess: () => Promise<{ success: boolean; url: string | null; method: AccessMethod | null }>;
   toggleDebug: () => void;
-}
-
-// New interface for state utilities passed to handlers
-export interface AttachmentAccessUtilities {
-  updateMethodStatus: (method: AccessMethod, success: boolean) => void;
-  setLoading: (isLoading: boolean) => void;
-  setHasError: (hasError: boolean) => void;
-  setDownloadActive: (downloadActive: boolean) => void;
-  incrementRetryCount: () => void;
-  setAccessUrl: (url: string | null) => void;
-  setDownloadMethod: (method: AccessMethod) => void;
 }
