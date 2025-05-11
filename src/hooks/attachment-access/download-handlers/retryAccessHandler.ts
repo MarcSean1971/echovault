@@ -1,3 +1,4 @@
+
 import { toast } from "@/components/ui/use-toast";
 import { FileAccessManager } from "@/services/messages/fileAccess";
 import { AccessMethod } from "@/components/message/detail/attachment/types";
@@ -13,7 +14,7 @@ export function useRetryAccessHandler({ props, utilities }: DownloadHandlerProps
   
   const {
     updateMethodStatus,
-    setIsLoading,
+    setIsLoading, // Changed from setLoading to setIsLoading
     setHasError,
     incrementRetryCount,
     setAccessUrl,

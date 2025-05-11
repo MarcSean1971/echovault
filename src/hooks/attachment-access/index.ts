@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
 import { AccessMethod } from "@/components/message/detail/attachment/types";
 import { useDownloadHandlers } from "./useDownloadHandlers";
 import { useAttachmentState } from "./useAttachmentState";

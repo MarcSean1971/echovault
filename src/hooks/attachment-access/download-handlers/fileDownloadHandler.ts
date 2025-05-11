@@ -1,3 +1,4 @@
+
 import { toast } from "@/components/ui/use-toast";
 import { FileAccessManager } from "@/services/messages/fileAccess";
 import { AccessMethod } from "@/components/message/detail/attachment/types";
@@ -16,7 +17,7 @@ export function useFileDownloadHandler({ props, utilities }: DownloadHandlerProp
   
   const {
     updateMethodStatus,
-    setIsLoading, // Changed from setLoading to setIsLoading
+    setIsLoading, // Updated from setLoading to setIsLoading
     setHasError,
     setDownloadActive,
     setDownloadMethod,

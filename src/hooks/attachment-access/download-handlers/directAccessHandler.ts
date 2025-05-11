@@ -17,7 +17,8 @@ export function useDirectAccessHandler({ props, utilities }: DownloadHandlerProp
     updateMethodStatus,
     setHasError,
     incrementRetryCount,
-    setAccessUrl
+    setAccessUrl,
+    setIsLoading,
   } = utilities;
   
   // Create file access manager
@@ -29,8 +30,12 @@ export function useDirectAccessHandler({ props, utilities }: DownloadHandlerProp
   // Try to use direct access as fallback
   const tryDirectAccess = async () => {
     try {
+      setIsLoading(true);
       incrementRetryCount();
-      console.log(`[DirectAccessHandler] Attempting direct access as fallback for ${filePath}`);
+      
+      console.log(`[DirectAccessHandler] Attempting direct access for ${filePath}`);
+      console.log(`[DirectAccessHandler] Delivery ID: ${props.deliveryId || 'Not provided'}`);
+      console.log(`[DirectAccessHandler] Recipient: ${props.recipientEmail || 'Not provided'}`);
       
       // Check if we're authenticated and no delivery ID is provided
       // This means we're viewing in authenticated context
@@ -45,34 +50,66 @@ export function useDirectAccessHandler({ props, utilities }: DownloadHandlerProp
           const { url, method: resultMethod } = await fileAccessManager.getAccessUrl('signed');
           
           if (url) {
+            console.log("[DirectAccessHandler] Successfully obtained signed URL in authenticated context");
             updateMethodStatus('signed', true);
             setHasError(false);
             setAccessUrl(url);
             return { success: true, url, method: 'signed' as AccessMethod };
+          } else {
+            console.warn("[DirectAccessHandler] Failed to get signed URL in authenticated context");
           }
+        } else {
+          console.log("[DirectAccessHandler] Not authenticated and no delivery context");
         }
       }
       
-      // Try direct access method
+      // Try direct access method if signed URL fails or in public context
       if (directUrl) {
         console.log("[DirectAccessHandler] Using direct public URL access");
         updateMethodStatus('direct', true);
         setHasError(false);
         setAccessUrl(directUrl);
+        
+        // Show success toast
+        toast({
+          title: "Direct access successful",
+          description: "Switched to direct URL access method",
+        });
+        
         return { success: true, url: directUrl, method: 'direct' as AccessMethod };
+      }
+      
+      // If no direct URL is available, try one more time with secure method
+      if (props.deliveryId && props.recipientEmail) {
+        console.log("[DirectAccessHandler] Trying secure method as last resort");
+        const { url, method: resultMethod } = await fileAccessManager.getAccessUrl('secure');
+        
+        if (url && resultMethod) {
+          updateMethodStatus(resultMethod, true);
+          setHasError(false);
+          setAccessUrl(url);
+          return { success: true, url, method: resultMethod };
+        }
       }
       
       setHasError(true);
       toast({
         title: "Access error",
-        description: "Could not access file via direct method",
+        description: "Could not access file via any method",
         variant: "destructive"
       });
       return { success: false, url: null, method: null };
     } catch (error) {
       console.error("Error using direct access:", error);
       setHasError(true);
+      toast({
+        title: "Access error",
+        description: "An error occurred while trying to access the file directly",
+        variant: "destructive"
+      });
       return { success: false, url: null, method: null };
+    } finally {
+      setIsLoading(false);
     }
   };
 
