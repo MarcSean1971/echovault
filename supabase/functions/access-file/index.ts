@@ -145,28 +145,31 @@ serve(async (req: Request) => {
     const recipientEmail = url.searchParams.get('recipient');
     const downloadMode = url.searchParams.has('download-file') || 
                          url.searchParams.get('mode') === 'download';
+    const debugMode = url.searchParams.has('debug');
 
     // Get auth token from header, URL parameter, or fallback to service role
     let authHeader = req.headers.get('Authorization');
     const authParamToken = url.searchParams.get('auth_token');
     
-    console.log(`[AccessFile] GET params - File: ${filePath}, Delivery: ${deliveryId || 'none'}, Download: ${downloadMode}`);
+    console.log(`[AccessFile] GET params - File: ${filePath}, Delivery: ${deliveryId || 'none'}, Download: ${downloadMode}, Debug: ${debugMode}`);
     console.log(`[AccessFile] Auth Header: ${authHeader ? 'Present' : 'Missing'}, Auth Param: ${authParamToken ? 'Present' : 'Missing'}`);
     
-    // For delivery-based access, validate parameters with improved flexibility
+    // For delivery-based access, validate parameters
     if (deliveryId && recipientEmail) {
       console.log("[AccessFile] Processing delivery-based access request");
       console.log(`[AccessFile] Delivery ID exact value: '${deliveryId}'`);
       
       // Create Supabase client with service role key
-      const supabase = createSupabaseClient(authHeader);
+      const supabase = createSupabaseClient(null); // Always use service role
       
-      // First, get the delivered_message record with more flexible matching
-      // Try exact match first
+      // First, get the delivered_message record
       let deliveryData = null;
       let deliveryError = null;
       
       try {
+        // Log the exact SQL that we would be executing (for debugging)
+        console.log(`[AccessFile] SQL equivalent: SELECT * FROM delivered_messages WHERE delivery_id = '${deliveryId}' LIMIT 1`);
+        
         const result = await supabase
           .from('delivered_messages')
           .select('message_id, recipient_id, condition_id')
@@ -176,22 +179,25 @@ serve(async (req: Request) => {
         deliveryData = result.data;
         deliveryError = result.error;
         
-        if (deliveryError || !deliveryData) {
-          console.log(`[AccessFile] Exact delivery ID match failed, trying with ILIKE: ${deliveryError?.message || "No data found"}`);
+        if (deliveryError) {
+          console.error(`[AccessFile] Delivery lookup error:`, deliveryError);
+          console.log(`[AccessFile] Full error details:`, JSON.stringify(deliveryError));
           
-          // If exact match fails, try case-insensitive match or partial match
-          const similarResult = await supabase
-            .from('delivered_messages')
-            .select('message_id, recipient_id, condition_id, delivery_id')
-            .filter('delivery_id', 'ilike', `%${deliveryId}%`)
-            .limit(1);
+          // Try a direct RPC call if the standard query fails
+          if (debugMode) {
+            console.log("[AccessFile] Debug mode: Attempting direct SQL query via RPC");
             
-          if (similarResult.data && similarResult.data.length > 0) {
-            deliveryData = similarResult.data[0];
-            deliveryError = null;
-            console.log(`[AccessFile] Found similar delivery ID: ${deliveryData.delivery_id}`);
-          } else {
-            console.log(`[AccessFile] No similar delivery ID found`);
+            const { data: rpcData, error: rpcError } = await supabase.rpc('get_delivery_by_id', {
+              p_delivery_id: deliveryId
+            });
+            
+            if (!rpcError && rpcData && rpcData.length > 0) {
+              deliveryData = rpcData[0];
+              deliveryError = null;
+              console.log("[AccessFile] Direct RPC query succeeded:", deliveryData);
+            } else {
+              console.error("[AccessFile] Direct RPC query also failed:", rpcError);
+            }
           }
         }
       } catch (queryError) {
@@ -199,17 +205,13 @@ serve(async (req: Request) => {
         deliveryError = queryError;
       }
         
-      if (deliveryError) {
-        console.error(`[AccessFile] Delivery error: ${deliveryError.message}`);
+      if (deliveryError || !deliveryData) {
         return new Response(
-          JSON.stringify({ error: "Invalid delivery ID" }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      
-      if (!deliveryData) {
-        return new Response(
-          JSON.stringify({ error: "Delivery ID not found" }),
+          JSON.stringify({ 
+            error: "Invalid delivery ID", 
+            details: deliveryError ? deliveryError.message : "No matching delivery found",
+            delivery_id: deliveryId
+          }),
           { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -229,12 +231,10 @@ serve(async (req: Request) => {
         );
       }
       
-      // Verify the recipient email with more flexibility
+      // Verify the recipient email with case-insensitive comparison
       if (recipientData.email.toLowerCase() !== recipientEmail.toLowerCase()) {
         // Log email comparison details
         console.log(`[AccessFile] Email mismatch - DB: '${recipientData.email.toLowerCase()}', Request: '${recipientEmail.toLowerCase()}'`);
-        
-        // Add more flexible checking logic here if needed
         
         return new Response(
           JSON.stringify({ error: "Recipient email does not match" }),

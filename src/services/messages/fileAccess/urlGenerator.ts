@@ -73,11 +73,11 @@ export class FileUrlGenerator {
         throw new Error("Could not generate direct URL");
       }
       
-      // Signed URL method - preferred for authenticated users
+      // Signed URL method - preferred for all cases when possible
       if (method === 'signed' || isAuthContext) {
         const url = await getAuthenticatedFileUrl(
           this.filePath, 
-          false, 
+          true, // Include fallback logic
           accessMode === 'download'
         );
         
@@ -105,25 +105,6 @@ export class FileUrlGenerator {
         } catch (secureError) {
           console.error("[FileAccess] Error with secure method:", secureError);
           // Continue to fallback methods
-        }
-      }
-      
-      // Try fallback methods if requested method fails
-      if (method !== 'signed') {
-        console.log("[FileAccess] Trying signed URL as fallback");
-        try {
-          const signedUrl = await getAuthenticatedFileUrl(
-            this.filePath, 
-            true, // include fallback
-            accessMode === 'download'
-          );
-          
-          if (signedUrl) {
-            console.log(`[FileAccess] Generated signed URL as fallback`);
-            return { url: signedUrl, method: 'signed' };
-          }
-        } catch (signedError) {
-          console.error("[FileAccess] Signed URL fallback failed:", signedError);
         }
       }
       

@@ -32,27 +32,9 @@ export function useDirectAccessHandler({ props, utilities }: DownloadHandlerProp
       console.log(`[DirectAccess] Attempting direct access for file: ${filePath}`);
       console.log(`[DirectAccess] Delivery context - ID: ${props.deliveryId || 'none'}, Recipient: ${props.recipientEmail ? props.recipientEmail.substring(0, 3) + '...' : 'none'}`);
       
-      // Try secure method first
+      // Try signed URL first as it's more reliable
       try {
-        console.log('[DirectAccess] Trying secure edge function method first');
-        const { url, method } = await fileAccessManager.getAccessUrl('secure');
-        
-        if (url && method === 'secure') {
-          console.log('[DirectAccess] Secure access successful');
-          updateMethodStatus(method, true);
-          setAccessUrl(url);
-          setDownloadMethod(method);
-          setIsLoading(false);
-          return { success: true, url, method };
-        }
-      } catch (secureError) {
-        console.warn('[DirectAccess] Secure access failed:', secureError);
-        updateMethodStatus('secure', false);
-      }
-      
-      // Try signed URL next
-      try {
-        console.log('[DirectAccess] Trying signed URL method');
+        console.log('[DirectAccess] Trying signed URL method first (now preferred)');
         const { url, method } = await fileAccessManager.getAccessUrl('signed');
         
         if (url && method === 'signed') {
@@ -66,6 +48,24 @@ export function useDirectAccessHandler({ props, utilities }: DownloadHandlerProp
       } catch (signedError) {
         console.warn('[DirectAccess] Signed URL access failed:', signedError);
         updateMethodStatus('signed', false);
+      }
+      
+      // Try secure method next
+      try {
+        console.log('[DirectAccess] Trying secure edge function method');
+        const { url, method } = await fileAccessManager.getAccessUrl('secure');
+        
+        if (url && method === 'secure') {
+          console.log('[DirectAccess] Secure access successful');
+          updateMethodStatus(method, true);
+          setAccessUrl(url);
+          setDownloadMethod(method);
+          setIsLoading(false);
+          return { success: true, url, method };
+        }
+      } catch (secureError) {
+        console.warn('[DirectAccess] Secure access failed:', secureError);
+        updateMethodStatus('secure', false);
       }
       
       // Fall back to direct URL

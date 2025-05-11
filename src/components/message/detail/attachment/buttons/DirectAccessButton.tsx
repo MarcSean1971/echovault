@@ -47,7 +47,7 @@ export const DirectAccessButton: React.FC<DirectAccessButtonProps> = ({
       onClick={handleClick}
       icon={<Link className={`h-4 w-4 ${HOVER_TRANSITION} transform hover:scale-105`} />}
       tooltipText="Use direct URL"
-      className="bg-amber-100 hover:bg-amber-200"
+      className="bg-amber-100 hover:bg-amber-200 transition-all duration-200"
     />
   );
 };
