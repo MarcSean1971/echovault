@@ -72,16 +72,23 @@ export function MessageContent({
   const renderMessageContent = () => {
     return (
       <>
+        {/* If this is text only (not mixed with video), show text content */}
+        {message.message_type === "text" && !hasVideoContent && (
+          <TextMessageContent message={message} content={message.content} />
+        )}
+        
+        {/* Additional text from a video message */}
+        {additionalText && (
+          <div className="mb-6">
+            <TextMessageContent message={{...message, content: additionalText}} content={additionalText} />
+          </div>
+        )}
+        
         {/* If this is a video message type or contains video data, show video content */}
         {(message.message_type === "video" || hasVideoContent) && (
           <div className="mb-6">
             <VideoMessageContent message={message} />
           </div>
-        )}
-        
-        {/* If this is text only (not mixed with video), show text content */}
-        {message.message_type === "text" && !hasVideoContent && (
-          <TextMessageContent message={message} content={message.content} />
         )}
         
         {/* If we don't recognize the content type, use the unknown component */}
