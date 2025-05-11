@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -36,23 +36,62 @@ export function SecurityOptions({
     ![48, 168, 336, 720].includes(expiryHours) && expiryHours > 0
   );
 
+  // Effect to sync with external prop changes
+  useEffect(() => {
+    // Update enablePin state based on pinCode prop
+    setEnablePin(!!pinCode && pinCode.trim() !== "");
+    
+    // Update enableDelay state based on unlockDelay prop
+    const hasDelay = unlockDelay > 0;
+    setEnableDelay(hasDelay);
+    
+    // Update customDelaySelected based on unlockDelay prop
+    if (hasDelay) {
+      setCustomDelaySelected(![6, 12, 24, 48, 72].includes(unlockDelay));
+    }
+    
+    // Update enableExpiry state based on expiryHours prop
+    const hasExpiry = expiryHours > 0;
+    setEnableExpiry(hasExpiry);
+    
+    // Update customExpirySelected based on expiryHours prop
+    if (hasExpiry) {
+      setCustomExpirySelected(![48, 168, 336, 720].includes(expiryHours));
+    }
+  }, [pinCode, unlockDelay, expiryHours]);
+
   const handlePinToggle = (checked: boolean) => {
     setEnablePin(checked);
-    if (!checked) setPinCode("");
+    if (!checked) {
+      // Clear pin code when disabled
+      setPinCode("");
+    }
   };
 
   const handleDelayToggle = (checked: boolean) => {
     setEnableDelay(checked);
-    if (checked) setUnlockDelay(24);
-    else setUnlockDelay(0);
-    setCustomDelaySelected(false);
+    if (checked) {
+      // Set default delay when enabled
+      setUnlockDelay(24);
+      setCustomDelaySelected(false);
+    } else {
+      // Clear delay when disabled
+      setUnlockDelay(0);
+      setCustomDelaySelected(false);
+    }
   };
 
   const handleExpiryToggle = (checked: boolean) => {
     setEnableExpiry(checked);
-    if (checked) setExpiryHours(168); // 1 week default
-    else setExpiryHours(0);
-    setCustomExpirySelected(false);
+    if (checked) {
+      // Set default expiry when enabled
+      setExpiryHours(168); // 1 week default
+      setCustomExpirySelected(false);
+    } else {
+      // Clear expiry when disabled
+      setExpiryHours(0);
+      setCustomExpirySelected(false);
+    }
   };
 
   const handleDelayChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -101,7 +140,7 @@ export function SecurityOptions({
     <Collapsible
       open={open}
       onOpenChange={setOpen}
-      className="border rounded-md px-4 py-3 mt-4"
+      className="border rounded-md px-4 py-3 mt-4 hover:border-blue-200 transition-colors"
     >
       <CollapsibleTrigger className="flex items-center justify-between w-full">
         <div className="flex items-center">
