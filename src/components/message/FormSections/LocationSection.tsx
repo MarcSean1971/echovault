@@ -7,6 +7,8 @@ import { MapPin } from "lucide-react";
 import { BUTTON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { Separator } from "@/components/ui/separator";
 import { useMessageForm } from "../MessageFormContext";
+import MapDisplay from "@/components/location/MapDisplay";
+import { reverseGeocode } from "@/services/location/mapboxService";
 
 export function LocationSection() {
   const { 
@@ -21,40 +23,44 @@ export function LocationSection() {
   } = useMessageForm();
   
   const [isCapturingLocation, setIsCapturingLocation] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Function to capture user's current location
   const captureLocation = () => {
     if (!navigator.geolocation) {
-      console.error("Geolocation is not supported by your browser");
+      setError("Geolocation is not supported by your browser");
       return;
     }
 
     setIsCapturingLocation(true);
+    setError(null);
     
     navigator.geolocation.getCurrentPosition(
       async (position) => {
-        setLocationLatitude(position.coords.latitude);
-        setLocationLongitude(position.coords.longitude);
+        const { latitude, longitude } = position.coords;
+        setLocationLatitude(latitude);
+        setLocationLongitude(longitude);
         
-        // Attempt to reverse geocode the location
+        // Use our secure mapbox service for reverse geocoding
         try {
-          const response = await fetch(
-            `https://api.mapbox.com/geocoding/v5/mapbox.places/${position.coords.longitude},${position.coords.latitude}.json?access_token=${import.meta.env.VITE_MAPBOX_PUBLIC_TOKEN}`
-          );
-          const data = await response.json();
-          
-          if (data.features && data.features.length > 0) {
-            setLocationName(data.features[0].place_name);
-          }
+          const placeName = await reverseGeocode(latitude, longitude);
+          setLocationName(placeName || "Unknown location");
         } catch (error) {
           console.error("Error getting location name:", error);
+          setLocationName("Location captured (address unavailable)");
         }
         
         setIsCapturingLocation(false);
       },
       (error) => {
         console.error("Error getting location:", error);
+        setError(`Could not capture location: ${error.message}`);
         setIsCapturingLocation(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
       }
     );
   };
@@ -86,6 +92,7 @@ export function LocationSection() {
           id="share-location"
           checked={shareLocation}
           onCheckedChange={setShareLocation}
+          className={HOVER_TRANSITION}
         />
       </div>
       
@@ -97,14 +104,29 @@ export function LocationSection() {
               : "Recipients will see your current location when viewing this message."}
           </p>
           
+          {error && (
+            <div className="p-3 border border-red-200 bg-red-50 rounded-md text-red-600 text-sm">
+              {error}
+            </div>
+          )}
+          
           {locationLatitude && locationLongitude ? (
-            <div className="space-y-2">
+            <div className="space-y-4">
+              {/* Map display */}
+              <MapDisplay 
+                latitude={locationLatitude} 
+                longitude={locationLongitude} 
+                locationName={locationName}
+                height="200px"
+              />
+              
               <div className="p-3 border rounded-lg bg-background">
                 <p className="font-semibold">{locationName || 'Location captured'}</p>
-                <p className="text-sm text-muted-foreground">
-                  Lat: {locationLatitude.toFixed(6)}, Long: {locationLongitude.toFixed(6)}
+                <p className="text-sm text-muted-foreground mt-1">
+                  Coordinates: {locationLatitude.toFixed(6)}, {locationLongitude.toFixed(6)}
                 </p>
               </div>
+              
               <Button
                 type="button"
                 variant="outline"
