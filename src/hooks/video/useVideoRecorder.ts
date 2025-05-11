@@ -2,7 +2,7 @@
 import { useState, useRef } from "react";
 import { toast } from "@/components/ui/use-toast";
 import { useMessageForm } from "@/components/message/MessageFormContext";
-import { formatVideoContent } from "@/services/messages/transcriptionService";
+import { formatVideoContent, transcribeVideoContent } from "@/services/messages/transcriptionService";
 
 export function useVideoRecorder(previewStream: MediaStream | null, streamRef: React.RefObject<MediaStream | null>) {
   const [isRecording, setIsRecording] = useState(false);
@@ -52,7 +52,23 @@ export function useVideoRecorder(previewStream: MediaStream | null, streamRef: R
           console.log("Updating form context with new video content");
           console.log("Current text content before updating:", textContent ? textContent.substring(0, 30) + "..." : "none");
           
-          const formattedContent = await formatVideoContent(videoBlob, null);
+          // Start transcription process automatically when recording stops
+          console.log("Starting automatic transcription process");
+          let transcription = null;
+          try {
+            // Attempt to transcribe with Whisper API
+            transcription = await transcribeVideoContent(videoBlob);
+            toast({
+              title: "Transcription complete",
+              description: "Video has been automatically transcribed"
+            });
+          } catch (err) {
+            console.error("Automatic transcription failed:", err);
+            // Continue anyway, even without transcription
+          }
+          
+          // Format video content with transcription (if available)
+          const formattedContent = await formatVideoContent(videoBlob, transcription);
           setVideoContent(formattedContent);
           
           // We set the content to the video content but don't clear text content

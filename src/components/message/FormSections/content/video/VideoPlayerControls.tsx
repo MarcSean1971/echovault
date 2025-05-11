@@ -1,12 +1,13 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Play, Pause, Trash2, Mic } from "lucide-react";
+import { Play, Pause, Trash2, FileText } from "lucide-react";
+import { BUTTON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface VideoPlayerControlsProps {
   isPlaying: boolean;
   togglePlayback: () => void;
-  handleTranscribe: () => Promise<void>;
+  handleTranscribe: () => void;
   isTranscribing: boolean;
   onClearVideo: () => void;
 }
@@ -19,42 +20,38 @@ export function VideoPlayerControls({
   onClearVideo
 }: VideoPlayerControlsProps) {
   return (
-    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center">
-      <div className="flex gap-2 items-center">
-        <Button 
-          onClick={togglePlayback} 
-          variant="secondary" 
-          size="icon"
-          type="button" // Explicitly set type to button to prevent form submission
-          className="rounded-full hover:bg-primary/90 hover:text-primary-foreground transition-colors duration-200"
-        >
-          {isPlaying ? (
-            <Pause className="h-5 w-5" />
-          ) : (
-            <Play className="h-5 w-5" />
-          )}
-        </Button>
-        
+    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity flex justify-between items-center">
+      <Button 
+        variant="ghost" 
+        size="icon"
+        onClick={togglePlayback}
+        className={`text-white hover:bg-white/20 ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.subtle}`}
+      >
+        {isPlaying ? (
+          <Pause className="h-5 w-5" />
+        ) : (
+          <Play className="h-5 w-5" />
+        )}
+      </Button>
+      
+      <div className="flex items-center gap-2">
         <Button
-          onClick={handleTranscribe}
-          variant="secondary"
-          size="sm"
-          type="button" // Explicitly set type to button to prevent form submission
-          disabled={isTranscribing}
-          className="hover:bg-primary/90 hover:text-primary-foreground transition-colors duration-200"
-        >
-          <Mic className="h-4 w-4 mr-1" />
-          {isTranscribing ? "Transcribing..." : "Transcribe"}
-        </Button>
-        
-        <Button
-          onClick={onClearVideo}
           variant="ghost"
           size="icon"
-          type="button" // Explicitly set type to button to prevent form submission
-          className="hover:bg-destructive/90 hover:text-destructive-foreground transition-colors duration-200"
+          onClick={handleTranscribe}
+          disabled={isTranscribing}
+          className={`text-white hover:bg-white/20 ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.subtle}`}
         >
-          <Trash2 className="h-4 w-4" />
+          <FileText className="h-5 w-5" />
+        </Button>
+        
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onClearVideo}
+          className={`text-white hover:bg-white/20 ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.subtle}`}
+        >
+          <Trash2 className="h-5 w-5" />
         </Button>
       </div>
     </div>

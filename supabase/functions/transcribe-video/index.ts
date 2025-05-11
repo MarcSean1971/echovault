@@ -33,7 +33,6 @@ serve(async (req) => {
     
     // Create a blob with the correct MIME type for Whisper API
     // Whisper API supports: flac, m4a, mp3, mp4, mpeg, mpga, oga, ogg, wav, webm
-    // We'll explicitly use webm which is widely supported and matches our input format
     const blob = new Blob([bytes], { type: 'audio/webm' });
     
     // Create FormData for the OpenAI API

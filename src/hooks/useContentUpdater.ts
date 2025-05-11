@@ -85,79 +85,46 @@ export function useContentUpdater() {
           // Show success notification
           toast({
             title: "Video transcribed",
-            description: "Video transcription completed successfully"
+            description: "Transcription has been generated successfully"
           });
         } catch (error: any) {
-          console.error("Transcription error:", error);
+          console.error("Error generating transcription:", error);
           setTranscriptionError(error.message || "Failed to transcribe video");
           
-          // We'll continue even if transcription fails
+          // Show error notification
           toast({
-            title: "Transcription Warning",
-            description: "Transcription failed, but your video will still be saved",
-            variant: "default"
+            title: "Transcription failed",
+            description: error.message || "An error occurred during transcription",
+            variant: "destructive"
           });
         }
-      } else {
-        console.log("Skipping transcription as requested");
       }
       
-      // Format video content for storage
+      // Format the video content with transcription
+      console.log("Formatting video content with transcription", !!transcription);
       const formattedContent = await formatVideoContent(videoBlob, transcription);
       
-      // Log the formatted content structure
-      console.log("Video content formatted with transcription:", !!transcription);
-      console.log("Formatted content sample:", formattedContent.substring(0, 100) + "...");
-      
-      // Update the video-specific content
+      // Update form state with new content
       setVideoContent(formattedContent);
+      setContent(formattedContent);
       
-      // Get current text content to preserve it
-      const currentTextContent = textContent;
+      // Preserve text content
+      console.log("Preserving text content:", textContent ? textContent.substring(0, 30) + "..." : "none");
       
-      if (currentTextContent && currentTextContent.trim() !== '') {
-        try {
-          // Parse the video content to add text content to it
-          const videoContentObj = JSON.parse(formattedContent);
-          videoContentObj.additionalText = currentTextContent;
-          const combinedContent = JSON.stringify(videoContentObj);
-          console.log("Combined content created with additional text");
-          setVideoContent(combinedContent);
-          setContent(combinedContent);
-        } catch (error) {
-          console.error("Error combining text and video content:", error);
-          setContent(formattedContent);
-        }
-      } else {
-        setContent(formattedContent);
-      }
-      
-      return { 
-        success: true, 
-        transcription, 
-        videoContent: formattedContent 
-      };
-    } catch (error: any) {
+      return { success: true, transcription };
+    } catch (error) {
       console.error("Error updating video content:", error);
-      setTranscriptionError(error.message || "Failed to process video content");
-      
-      toast({
-        title: "Error",
-        description: "Failed to process video content",
-        variant: "destructive"
-      });
-      
       return { success: false, error };
     } finally {
       setIsTranscribingVideo(false);
     }
   };
-
+  
   return {
     handleVideoContentUpdate,
-    isTranscribingVideo,
-    transcriptionError,
     getTranscriptionFromContent,
-    hasVideoData
+    hasVideoData,
+    isTranscribingVideo,
+    transcriptionError
   };
 }
