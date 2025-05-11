@@ -21,7 +21,7 @@ export function ScheduledDateSection({
       <DatePicker
         selectedDate={triggerDate}
         setSelectedDate={setTriggerDate}
-        label="Select Delivery Date & Time"
+        label="Earliest Delivery Date & Time"
       />
       
       <RecurringPatternSelector

@@ -58,14 +58,14 @@ export function NoCheckInDeliveryOptions({
       {deliveryOption === "once" && (
         <div className="mt-6 border-t pt-4">
           <div className="space-y-2">
-            <Label className="font-medium mb-2 block">Not Before (Optional)</Label>
+            <Label className="font-medium mb-2 block">Earliest Possible Delivery (Optional)</Label>
             <p className="text-sm text-muted-foreground mb-3">
-              If specified, the message will not be sent before this date and time, even if triggered.
+              If specified, the message will only be delivered on or after this date, even if triggered earlier.
             </p>
             <DatePicker 
               selectedDate={triggerDate} 
               setSelectedDate={setTriggerDate}
-              label="Not Before Date & Time" 
+              label="Earliest Delivery Date & Time" 
             />
           </div>
         </div>

@@ -244,11 +244,14 @@ export function RecurringPatternSelector({
           )}
           
           <div>
-            <Label className="mb-2 block">Start date and time (optional)</Label>
+            <Label className="mb-2 block">Earliest Possible Delivery (Optional)</Label>
+            <p className="text-sm text-muted-foreground mb-3">
+              If specified, recurring messages will only begin on or after this date, even if triggered earlier.
+            </p>
             <DatePicker
               selectedDate={startDate}
               setSelectedDate={handleDateChange}
-              label=""
+              label="Earliest Delivery Date & Time"
             />
           </div>
         </div>
