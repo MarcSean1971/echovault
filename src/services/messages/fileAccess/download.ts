@@ -45,16 +45,17 @@ export class FileDownloader {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
       
-      // Add auth token as a URL parameter if it's available and not already included
-      // This is critical for ensuring the edge function receives authentication
-      if (token && !parsedUrl.searchParams.has('auth_token')) {
+      // Always add auth token as a URL parameter if it's available
+      // This is helpful when the edge function uses the service role key for authorization
+      if (token) {
         console.log("[FileDownloader] Adding auth token to request");
-        parsedUrl.searchParams.append('auth_token', token);
-      } else if (!token) {
+        parsedUrl.searchParams.set('auth_token', token);
+      } else {
         console.log("[FileDownloader] No auth token available - using public access");
       }
       
       finalUrl = parsedUrl.toString();
+      console.log("[FileDownloader] Final URL:", finalUrl);
     } catch (error) {
       console.error("[FileDownloader] Error parsing URL:", error);
       // If URL parsing fails, fall back to simple string concat

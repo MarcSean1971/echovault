@@ -1,6 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
+import { createSupabaseClient } from "./supabase-client.ts";
 
 // Simple CORS headers
 const corsHeaders = {
@@ -9,7 +9,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-console.log("[AccessFile] Starting simplified file access function");
+console.log("[AccessFile] Starting simplified file access function with hardcoded authentication");
 
 serve(async (req: Request) => {
   // Handle OPTIONS requests for CORS
@@ -77,11 +77,13 @@ serve(async (req: Request) => {
                          url.searchParams.get('mode') === 'download';
 
     // Get auth token from header, URL parameter, or fallback to service role
+    // Note: We'll create the client with the auth token but it will be ignored in favor of the service role key
     let authToken = req.headers.get('Authorization');
     const authParamToken = url.searchParams.get('auth_token');
     
     console.log(`[AccessFile] File: ${filePath}, Delivery: ${deliveryId}, Download: ${downloadMode}`);
     console.log(`[AccessFile] Auth Header: ${authToken ? 'Present' : 'Missing'}, Auth Param: ${authParamToken ? 'Present' : 'Missing'}`);
+    console.log(`[AccessFile] NOTICE: Using service role key for authentication regardless of auth token`);
     
     // Validate required parameters
     if (!deliveryId || !recipientEmail) {
@@ -91,32 +93,8 @@ serve(async (req: Request) => {
       );
     }
 
-    // Create Supabase client
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    
-    if (!supabaseUrl || !supabaseKey) {
-      return new Response(
-        JSON.stringify({ error: "Server configuration error" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-    
-    // Create Supabase client - forward the authorization header if present
-    // This is critical to fix the "Missing authorization header" error
-    const supabase = createClient(supabaseUrl, supabaseKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false
-      },
-      global: {
-        headers: authToken ? { 
-          Authorization: authToken 
-        } : (authParamToken ? {
-          Authorization: `Bearer ${authParamToken}`
-        } : {})
-      }
-    });
+    // Create Supabase client with service role key (ignoring auth token)
+    const supabase = createSupabaseClient(authToken);
     
     // First, get the delivered_message record
     const { data: deliveryData, error: deliveryError } = await supabase

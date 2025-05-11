@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { AttachmentAccessState, AttachmentAccessProps } from "./types";
 import { AccessMethod } from "@/components/message/detail/attachment/types";
@@ -13,7 +12,7 @@ export function useAttachmentState() {
     retryCount: 0,
     showDebug: false,
     accessUrl: null,
-    downloadMethod: 'signed', // Using 'signed' as default method
+    downloadMethod: 'direct', // Changed default to 'direct' for better public access
     lastSuccessMethod: null,
     downloadActive: false,
     attemptedMethods: {
@@ -77,8 +76,9 @@ export function useAttachmentState() {
   };
 
   const toggleDownloadMethod = () => {
-    // Cycle through the methods: signed -> direct -> secure -> signed
-    const methods: AccessMethod[] = ['signed', 'direct', 'secure'];
+    // Cycle through the methods: direct -> secure -> signed -> direct
+    // Modified to prioritize direct access first
+    const methods: AccessMethod[] = ['direct', 'secure', 'signed'];
     const currentIndex = methods.indexOf(state.downloadMethod);
     const nextMethod = methods[(currentIndex + 1) % methods.length];
     
