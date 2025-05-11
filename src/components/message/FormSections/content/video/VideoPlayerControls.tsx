@@ -24,6 +24,7 @@ export function VideoPlayerControls({
       <Button 
         variant="ghost" 
         size="icon"
+        type="button"
         onClick={togglePlayback}
         className={`text-white hover:bg-white/20 ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.subtle}`}
       >
@@ -38,6 +39,7 @@ export function VideoPlayerControls({
         <Button
           variant="ghost"
           size="icon"
+          type="button"
           onClick={handleTranscribe}
           disabled={isTranscribing}
           className={`text-white hover:bg-white/20 ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.subtle}`}
@@ -48,6 +50,7 @@ export function VideoPlayerControls({
         <Button
           variant="ghost"
           size="icon"
+          type="button"
           onClick={onClearVideo}
           className={`text-white hover:bg-white/20 ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.subtle}`}
         >
