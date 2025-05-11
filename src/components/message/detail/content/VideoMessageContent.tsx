@@ -29,7 +29,8 @@ export function VideoMessageContent({ message }: { message: Message }) {
         
         setTranscription(extractedTranscription);
         
-        // Check for additional text in the content
+        // Still extract additional text for internal state tracking
+        // but we won't render it here since it's handled in MessageContent.tsx
         try {
           const contentObj = JSON.parse(message.content);
           if (contentObj.additionalText) {
@@ -78,14 +79,7 @@ export function VideoMessageContent({ message }: { message: Message }) {
         </div>
       )}
       
-      {additionalText && (
-        <div className="mt-4 space-y-2">
-          <h3 className="text-sm font-medium">Additional Text</h3>
-          <Card className="p-3 bg-muted/40">
-            <p className="whitespace-pre-wrap">{additionalText}</p>
-          </Card>
-        </div>
-      )}
+      {/* Removed the additional text section as it's now handled in MessageContent.tsx */}
     </div>
   );
 }
