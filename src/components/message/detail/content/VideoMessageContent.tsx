@@ -6,13 +6,14 @@ import { Card } from "@/components/ui/card";
 
 export function VideoMessageContent({ message }: { message: Message }) {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [transcription, setTranscription] = useState<string | null>(null);
   const [additionalText, setAdditionalText] = useState<string | null>(null);
   
   useEffect(() => {
     if (message.content) {
       try {
         // Parse video data from message content
-        const { videoData } = parseVideoContent(message.content);
+        const { videoData, transcription: extractedTranscription } = parseVideoContent(message.content);
         
         if (videoData) {
           // Create a blob URL from the base64 data
@@ -25,6 +26,8 @@ export function VideoMessageContent({ message }: { message: Message }) {
           const url = URL.createObjectURL(blob);
           setVideoUrl(url);
         }
+        
+        setTranscription(extractedTranscription);
         
         // Check for additional text in the content
         try {
@@ -65,6 +68,15 @@ export function VideoMessageContent({ message }: { message: Message }) {
           className="w-full max-h-[400px]"
         />
       </div>
+      
+      {transcription && (
+        <div className="mt-4 space-y-2">
+          <h3 className="text-sm font-medium">Video Transcription</h3>
+          <Card className="p-3 bg-muted/40">
+            <p className="whitespace-pre-wrap">{transcription}</p>
+          </Card>
+        </div>
+      )}
       
       {additionalText && (
         <div className="mt-4 space-y-2">

@@ -1,96 +1,106 @@
 
-import { useState, useCallback } from "react";
-import { useParams } from "react-router-dom";
-import { Message } from "@/types/message";
-import { supabase } from "@/integrations/supabase/client";
-import { useSecurityConstraints } from "@/hooks/message-access/useSecurityConstraints";
+import { useAccessVerification } from './message-access/useAccessVerification';
+import { useSecurityConstraints } from './message-access/useSecurityConstraints';
+import { Message } from '@/types/message';
+import { useState, useEffect } from 'react';
 
-interface PublicMessageAccessProps {
-  messageId?: string;
-  deliveryId?: string | null;
-  recipientEmail?: string | null;
-  isPreviewMode?: boolean;
+interface UsePublicMessageAccessProps {
+  messageId: string | undefined;
+  deliveryId: string | null;
+  recipientEmail: string | null;
+  isPreviewMode?: boolean; // Add preview mode parameter
 }
 
-export function usePublicMessageAccess(props?: PublicMessageAccessProps) {
-  const [isPinRequired, setIsPinRequired] = useState(false);
-  const [isUnlockDelayed, setIsUnlockDelayed] = useState(false);
-  const [unlockTime, setUnlockTime] = useState<Date>(new Date());
-  const [isVerified, setIsVerified] = useState(false);
-  const [message, setMessage] = useState<Message | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const { convertDatabaseMessageToMessage } = useSecurityConstraints();
-  const { id } = useParams<{ id: string }>();
+interface PublicMessageAccessResult {
+  message: Message | null;
+  isLoading: boolean;
+  error: string | null;
+  isPinRequired: boolean;
+  isUnlockDelayed: boolean;
+  unlockTime: Date | null;
+  isVerified: boolean;
+  verifyPin: (pinCode: string) => Promise<boolean>;
+  handleUnlockExpired: () => Promise<void>;
+}
+
+export const usePublicMessageAccess = ({ 
+  messageId, 
+  deliveryId, 
+  recipientEmail,
+  isPreviewMode = false
+}: UsePublicMessageAccessProps): PublicMessageAccessResult => {
+  // Track if enough time has passed to show error messages
+  const [errorDelay, setErrorDelay] = useState(true);
+  // Track if we're in a fallback loading state
+  const [fallbackLoading, setFallbackLoading] = useState(false);
   
-  // Use either the provided messageId or the one from URL params
-  const messageId = props?.messageId || id;
+  // Set up a timer to determine when we can show error states
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setErrorDelay(false);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, []);
   
-  const verifyPin = (pinCode: string) => {
-    // In a real implementation, this would verify against the stored pin
-    // For now, we'll just accept any non-empty pin
-    if (pinCode.trim()) {
-      setIsVerified(true);
-      return true;
-    }
-    return false;
-  };
-  
-  const handleUnlockExpired = () => {
-    setIsUnlockDelayed(false);
-  };
-  
-  const fetchMessage = useCallback(async () => {
-    if (!messageId) {
-      setError("No message ID provided");
-      setIsLoading(false);
-      return null;
-    }
-    
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      const { data, error: fetchError } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('id', messageId)
-        .single();
-        
-      if (fetchError) {
-        setError(fetchError.message);
-        setIsLoading(false);
-        return null;
-      }
-      
-      if (!data) {
-        setError("Message not found");
-        setIsLoading(false);
-        return null;
-      }
-      
-      const convertedMessage = convertDatabaseMessageToMessage(data);
-      setMessage(convertedMessage);
-      setIsLoading(false);
-      return convertedMessage;
-    } catch (err) {
-      console.error("Error fetching message:", err);
-      setError(err instanceof Error ? err.message : "An unknown error occurred");
-      setIsLoading(false);
-      return null;
-    }
-  }, [messageId, convertDatabaseMessageToMessage]);
-  
-  return {
+  // First verify access and get data
+  const {
+    isLoading: accessLoading,
+    error: accessError,
+    deliveryData,
+    conditionData
+  } = useAccessVerification({
+    messageId,
+    deliveryId,
+    recipientEmail,
+    isPreviewMode
+  });
+
+  // Only show errors after the delay period and if not in preview mode
+  const error = (errorDelay || isPreviewMode) ? null : accessError;
+
+  // Then handle security constraints
+  const {
     isPinRequired,
     isUnlockDelayed,
     unlockTime,
     isVerified,
     message,
-    isLoading,
+    isLoading: securityLoading,
     verifyPin,
-    handleUnlockExpired,
-    fetchMessage,
-    error
+    handleUnlockExpired
+  } = useSecurityConstraints({
+    messageId,
+    conditionData,
+    deliveryData,
+    isLoading: accessLoading,
+    error,
+    isPreviewMode
+  });
+
+  // Combined loading state to prevent UI flashing
+  const isLoading = accessLoading || securityLoading || fallbackLoading;
+
+  // Set fallback loading when access methods change to prevent UI flashing
+  useEffect(() => {
+    if (accessError && !errorDelay && !isPreviewMode) {
+      // If we have an error but it's not showing yet, maintain loading state
+      setFallbackLoading(true);
+      const timer = setTimeout(() => {
+        setFallbackLoading(false);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [accessError, errorDelay, isPreviewMode]);
+
+  return {
+    message,
+    isLoading, 
+    error,
+    isPinRequired,
+    isUnlockDelayed,
+    unlockTime,
+    isVerified,
+    verifyPin,
+    handleUnlockExpired
   };
-}
+};

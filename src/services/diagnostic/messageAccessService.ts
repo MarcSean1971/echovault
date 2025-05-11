@@ -1,176 +1,229 @@
 
-// Fix the type conversion in messageAccessService
-import { Message, MessageType } from "@/types/message";
+import { supabase } from "@/integrations/supabase/client";
+import { Message } from "@/types/message";
+import { toast } from "@/components/ui/use-toast";
 
-// Add the missing functions for DiagnosticAccess.tsx
-export const checkDeliveryRecord = async (messageId: string, deliveryId: string, addLog: (text: string) => void) => {
-  addLog(`Checking delivery record for message ${messageId} with delivery ID ${deliveryId}`);
-  // Mock implementation - would connect to database in real app
-  return {
-    found: true,
-    deliveryId,
-    messageId,
-    recipient: "test@example.com",
-    deliveredAt: new Date().toISOString()
-  };
-};
+type LogCallback = (text: string) => void;
 
-export const loadMessageDirect = async (messageId: string, addLog: (text: string) => void) => {
-  addLog(`Loading message directly with ID: ${messageId}`);
-  // Mock implementation - would connect to database in real app
-  const mockMessage = {
-    id: messageId,
-    title: "Emergency Message",
-    content: "This is a test emergency message.",
-    message_type: "text" as MessageType,
-    user_id: "user123",
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    expires_at: new Date(Date.now() + 3600000).toISOString(), // Expires in 1 hour
-    sender_name: "John Doe",
-    share_location: true,
-    location_name: "Central Park",
-    latitude: 40.7829,
-    longitude: -73.9654,
-    attachments: []
-  };
+export const checkDeliveryRecord = async (
+  messageId: string,
+  deliveryId: string,
+  addLog: LogCallback
+) => {
+  if (!messageId || !deliveryId) {
+    toast({
+      title: "Missing Parameters",
+      description: "Please provide both Message ID and Delivery ID",
+      variant: "destructive"
+    });
+    return false;
+  }
   
-  return mockMessage as Message;
-};
-
-export const loadMessageSecure = async (messageId: string, deliveryId: string, recipientEmail: string, addLog: (text: string) => void) => {
-  addLog(`Loading message securely with ID: ${messageId}, delivery: ${deliveryId}, recipient: ${recipientEmail}`);
-  // Mock implementation - would verify credentials and access rights in real app
-  const mockMessage = {
-    id: messageId,
-    title: "Secure Emergency Message",
-    content: "This is a securely accessed test message.",
-    message_type: "text" as MessageType,
-    user_id: "user123",
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    expires_at: new Date(Date.now() + 3600000).toISOString(),
-    sender_name: "John Doe",
-    share_location: true,
-    location_name: "Central Park",
-    latitude: 40.7829,
-    longitude: -73.9654,
-    attachments: []
-  };
+  addLog(`Checking delivery record: message=${messageId}, delivery=${deliveryId}`);
   
-  return mockMessage as Message;
-};
-
-export const loadMessageBypass = async (messageId: string, addLog: (text: string) => void) => {
-  addLog(`BYPASSING SECURITY for message ID: ${messageId} - THIS IS FOR DEBUG USE ONLY!`);
-  // Mock implementation - would bypass security checks in real app
-  const mockMessage = {
-    id: messageId,
-    title: "DEBUG MODE: Bypassed Security",
-    content: "This message has been loaded with security checks bypassed.",
-    message_type: "text" as MessageType,
-    user_id: "user123", 
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    expires_at: new Date(Date.now() + 3600000).toISOString(),
-    sender_name: "John Doe",
-    share_location: true,
-    location_name: "Central Park",
-    latitude: 40.7829,
-    longitude: -73.9654,
-    attachments: []
-  };
-  
-  return mockMessage as Message;
-};
-
-export const getPublicMessage = async (messageId: string, pinCode?: string) => {
-  // Mock implementation - replace with actual data fetching
-  const mockMessage = {
-    id: messageId,
-    title: "Emergency Message",
-    content: "This is a test emergency message.",
-    message_type: "text" as MessageType,
-    user_id: "user123",
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    expires_at: new Date(Date.now() + 3600000).toISOString(), // Expires in 1 hour
-    sender_name: "John Doe",
-    share_location: true,
-    location_name: "Central Park",
-    latitude: 40.7829,
-    longitude: -73.9654,
-    attachments: []
-  };
-
-  const mockAttachments = [
-    {
-      id: "attachment1",
-      message_id: messageId,
-      file_name: "document.pdf",
-      file_size: 2048,
-      file_type: "application/pdf",
-      url: "https://example.com/document.pdf",
-      created_at: new Date().toISOString(),
-      path: "/path/to/document.pdf",
-      name: "document.pdf",
-      size: 2048,
-      type: "application/pdf"
+  try {
+    const { data, error } = await supabase
+      .from('delivered_messages')
+      .select('*')
+      .eq('message_id', messageId)
+      .eq('delivery_id', deliveryId);
+      
+    if (error) {
+      addLog(`Error: ${error.message}`);
+      toast({
+        title: "Database Error",
+        description: error.message,
+        variant: "destructive"
+      });
+      return false;
+    } else if (!data || data.length === 0) {
+      addLog('No delivery record found');
+      toast({
+        title: "Not Found",
+        description: "No delivery record matching these parameters",
+        variant: "destructive"
+      });
+      return false;
+    } else {
+      addLog(`Success! Found delivery record: ${JSON.stringify(data[0])}`);
+      toast({
+        title: "Delivery Found",
+        description: "A matching delivery record exists in the database"
+      });
+      return true;
     }
-  ];
-
-  // Simulate pin verification and unlock delay
-  const isPinRequired = !!pinCode;
-  const isUnlockDelayed = false;
-  const unlockTime = new Date();
-  const isVerified = !isPinRequired || pinCode === "1234";
-
-  return {
-    isPinRequired,
-    isUnlockDelayed,
-    unlockTime,
-    isVerified,
-    message: {
-      ...mockMessage,
-      attachments: mockAttachments
-    } as Message,
-    isLoading: false,
-    verifyPin: (pin: string) => pin === "1234",
-    handleUnlockExpired: () => console.log("Unlock expired"),
-    fetchMessage: async () => mockMessage as Message
-  };
+  } catch (e) {
+    addLog(`Exception: ${(e as Error).message}`);
+    return false;
+  }
 };
 
-// Mock function to simulate fetching message status
-export const getMessageAccessStatus = async (messageId: string) => {
-  // Simulate different access statuses based on messageId
-  const status = {
-    id: messageId,
-    message_id: messageId,
-    status: "active",
-    active: true,
-    condition_type: "no_check_in"
-  };
-
-  return status;
-};
-
-// Mock function to simulate fetching message recipients
-export const getMessageRecipients = async (messageId: string) => {
-  // Simulate different recipients based on messageId
-  const recipients = [
-    {
-      id: "recipient1",
-      message_id: messageId,
-      recipient_id: "user456",
-      delivery_id: "delivery789",
-      sent_at: new Date().toISOString(),
-      opened_at: new Date().toISOString(),
-      recipient_email: "test@example.com",
-      recipient_name: "Test User",
-      status: "delivered"
+export const loadMessageDirect = async (
+  messageId: string,
+  addLog: LogCallback
+): Promise<Message | null> => {
+  if (!messageId) {
+    toast({
+      title: "Missing Message ID",
+      description: "Please provide a Message ID",
+      variant: "destructive"
+    });
+    return null;
+  }
+  
+  addLog(`Direct message load attempt for: ${messageId}`);
+  
+  try {
+    const { data, error } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('id', messageId)
+      .maybeSingle();
+      
+    if (error) {
+      addLog(`Error: ${error.message}`);
+      throw new Error(error.message);
+    } else if (!data) {
+      addLog('Message not found');
+      throw new Error("Message not found");
+    } else {
+      // Transform the raw data to match the Message type format with all required properties
+      const transformedMessage: Message = {
+        ...data,
+        attachments: Array.isArray(data.attachments) 
+          ? data.attachments.map((att: any) => ({
+              path: att.path || '',
+              name: att.name || '',
+              size: att.size || 0,
+              type: att.type || '',
+            }))
+          : null,
+        // Add the required properties that might be missing from the database
+        // Use type assertion to tell TypeScript that data might have these properties
+        expires_at: (data as any).expires_at || null,
+        sender_name: (data as any).sender_name || null
+      };
+      addLog(`Success! Loaded message: "${data.title}"`);
+      return transformedMessage;
     }
-  ];
+  } catch (e) {
+    addLog(`Exception: ${(e as Error).message}`);
+    throw e;
+  }
+};
 
-  return recipients;
+export const loadMessageSecure = async (
+  messageId: string,
+  deliveryId: string,
+  recipientEmail: string,
+  addLog: LogCallback
+): Promise<Message | null> => {
+  if (!messageId || !deliveryId || !recipientEmail) {
+    toast({
+      title: "Missing Parameters",
+      description: "Please provide Message ID, Delivery ID and Recipient Email",
+      variant: "destructive"
+    });
+    return null;
+  }
+  
+  addLog(`Secure message load attempt: message=${messageId}, delivery=${deliveryId}, recipient=${recipientEmail}`);
+  
+  try {
+    // Try the edge function first
+    addLog("Attempting to use edge function...");
+    const { data: edgeFnResult, error: edgeFnError } = await supabase.functions.invoke("access-message", {
+      body: { 
+        messageId, 
+        deliveryId, 
+        recipientEmail: recipientEmail,
+        bypassSecurity: false
+      }
+    });
+    
+    if (edgeFnError) {
+      addLog(`Edge function error: ${edgeFnError.message}`);
+      throw new Error(`Edge function error: ${edgeFnError.message}`);
+    } else if (edgeFnResult.error) {
+      addLog(`Access verification failed: ${edgeFnResult.error}`);
+      throw new Error(edgeFnResult.error);
+    } else if (edgeFnResult.success) {
+      // Transform the message to ensure it conforms to our expected Message type
+      const transformedMessage: Message = {
+        ...edgeFnResult.message,
+        attachments: Array.isArray(edgeFnResult.message.attachments)
+          ? edgeFnResult.message.attachments.map((att: any) => ({
+              path: att.path || '',
+              name: att.name || '',
+              size: att.size || 0,
+              type: att.type || ''
+            }))
+          : null,
+        // Ensure expires_at and sender_name are present in the transformed message
+        // Use type assertion to tell TypeScript that edgeFnResult.message might have these properties
+        expires_at: (edgeFnResult.message as any).expires_at || null,
+        sender_name: (edgeFnResult.message as any).sender_name || null
+      };
+      addLog(`Success! Edge function loaded message: "${edgeFnResult.message.title}"`);
+      return transformedMessage;
+    }
+    return null;
+  } catch (e) {
+    throw e;
+  }
+};
+
+export const loadMessageBypass = async (
+  messageId: string,
+  addLog: LogCallback
+): Promise<Message | null> => {
+  if (!messageId) {
+    toast({
+      title: "Missing Message ID",
+      description: "Please provide a Message ID",
+      variant: "destructive"
+    });
+    return null;
+  }
+  
+  addLog(`Bypass security message load for: ${messageId}`);
+  
+  try {
+    const { data: edgeFnResult, error: edgeFnError } = await supabase.functions.invoke("access-message", {
+      body: { 
+        messageId, 
+        bypassSecurity: true
+      }
+    });
+    
+    if (edgeFnError) {
+      addLog(`Edge function error: ${edgeFnError.message}`);
+      throw new Error(`Edge function error: ${edgeFnError.message}`);
+    } else if (edgeFnResult.error) {
+      addLog(`Access verification failed: ${edgeFnResult.error}`);
+      throw new Error(edgeFnResult.error);
+    } else if (edgeFnResult.success) {
+      // Transform the message to ensure it conforms to our expected Message type
+      const transformedMessage: Message = {
+        ...edgeFnResult.message,
+        attachments: Array.isArray(edgeFnResult.message.attachments)
+          ? edgeFnResult.message.attachments.map((att: any) => ({
+              path: att.path || '',
+              name: att.name || '',
+              size: att.size || 0,
+              type: att.type || ''
+            }))
+          : null,
+        // Ensure expires_at and sender_name are present in the transformed message
+        // Use type assertion to tell TypeScript that edgeFnResult.message might have these properties
+        expires_at: (edgeFnResult.message as any).expires_at || null,
+        sender_name: (edgeFnResult.message as any).sender_name || null
+      };
+      addLog(`Success! Bypass mode loaded message: "${edgeFnResult.message.title}"`);
+      return transformedMessage;
+    }
+    return null;
+  } catch (e) {
+    throw e;
+  }
 };

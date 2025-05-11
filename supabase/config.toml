@@ -25,10 +25,3 @@ enabled = true
 [functions]
 [functions.transcribe-video]
 verify_jwt = true
-
-[functions.access-file]
-verify_jwt = false
-
-[functions.whatsapp-webhook]
-verify_jwt = false
-

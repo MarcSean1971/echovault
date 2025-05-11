@@ -59,12 +59,11 @@ export function PanicButtonCard({ userId, panicMessage, panicMessages, isCheckin
   useEffect(() => {
     if (panicMessage) {
       console.log("Panic message loaded:", panicMessage);
-      
-      // Check both panic_config and panic_trigger_config for compatibility
-      const panicConfig = panicMessage.panic_config || panicMessage.panic_trigger_config;
-      
-      if (panicConfig) {
-        console.log("Panic config:", panicConfig);
+      if (panicMessage.panic_trigger_config) {
+        console.log("Panic config (panic_trigger_config):", panicMessage.panic_trigger_config);
+      }
+      if (panicMessage.panic_config) {
+        console.log("Panic config (panic_config):", panicMessage.panic_config);
       }
     }
     

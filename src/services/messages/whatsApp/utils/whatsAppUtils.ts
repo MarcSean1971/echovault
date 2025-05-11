@@ -1,7 +1,7 @@
+
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Recipient } from "@/types/message";
-import { Json } from "@/types/supabase";
 
 /**
  * Get recipient details from message condition
@@ -31,10 +31,7 @@ export async function getMessageRecipients(messageId: string): Promise<{
     }
     
     // Type checking to ensure recipients is an array before using array methods
-    const recipients = Array.isArray(condition.recipients) 
-      ? (condition.recipients as Json[]).map(jsonToRecipient)
-      : [];
-    
+    const recipients = condition.recipients;
     if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
       toast({
         title: "No recipients",
@@ -196,26 +193,4 @@ export function showWhatsAppSuccess(recipient: Recipient) {
     title: "WhatsApp message sent",
     description: `Sent to ${recipient.phone}`,
   });
-}
-
-// Add Json to Recipient conversion in the whatsApp utils
-function jsonToRecipient(json: Json): Recipient {
-  if (typeof json !== 'object' || json === null) {
-    return {
-      id: '',
-      name: '',
-      email: '',
-    };
-  }
-  
-  const obj = json as Record<string, any>;
-  return {
-    id: obj.id || '',
-    name: obj.name || '',
-    email: obj.email || '',
-    phone: obj.phone,
-    relationship: obj.relationship,
-    notes: obj.notes,
-    deliveryId: obj.deliveryId
-  };
 }

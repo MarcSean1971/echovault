@@ -25,8 +25,8 @@ export function ScheduledDateSection({
       />
       
       <RecurringPatternSelector
-        recurringPattern={recurringPattern}
-        setRecurringPattern={setRecurringPattern}
+        pattern={recurringPattern}
+        setPattern={setRecurringPattern}
       />
     </div>
   );

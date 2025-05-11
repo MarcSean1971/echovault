@@ -1,18 +1,14 @@
 
-import { useState, useRef, useCallback, useEffect } from "react";
-import { useMessageForm } from "@/components/message/MessageFormContext";
-import { safeCreateObjectURL, safeRevokeObjectURL } from "@/utils/mediaUtils";
+import { useState } from "react";
 import { useMediaStream } from "./video/useMediaStream";
 import { useVideoRecorder } from "./video/useVideoRecorder";
 import { useVideoStorage } from "./video/useVideoStorage";
+import { useMessageForm } from "@/components/message/MessageFormContext";
+import { formatVideoContent } from "@/services/messages/transcriptionService";
 
 export function useVideoRecordingHandler() {
-  const { setVideoContent } = useMessageForm();
-  const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
-  const [videoUrl, setVideoUrl] = useState<string | null>(null);
-  const [isInitializationAttempted, setIsInitializationAttempted] = useState(false);
-  
-  // Use our modular hooks
+  const { setContent, setVideoContent } = useMessageForm();
+  // Use our custom hooks
   const {
     previewStream,
     isInitializing,
@@ -25,105 +21,67 @@ export function useVideoRecordingHandler() {
   
   const {
     isRecording,
-    startRecording: startRecordingInner,
+    videoBlob,
+    videoUrl,
+    startRecording,
     stopRecording,
-    setVideoBlob: setVideoBlobInner,
-    setVideoUrl: setVideoUrlInner
+    setVideoBlob,
+    setVideoUrl
   } = useVideoRecorder(previewStream, streamRef);
   
   const {
     showVideoRecorder,
     setShowVideoRecorder,
-    clearVideo: clearVideoInner,
-    restoreVideo: restoreVideoInner
+    clearVideo: clearVideoBase,
+    restoreVideo: restoreVideoBase
   } = useVideoStorage();
   
-  // Initialize media stream
-  const initializeStreamWithSetup = useCallback(async () => {
-    try {
-      setIsInitializationAttempted(true);
-      return await initializeStream();
-    } catch (error: any) {
-      console.error("Error initializing media stream:", error);
-      throw error;
-    }
-  }, [initializeStream]);
-  
-  // Cleanup function
-  const cleanup = useCallback(() => {
-    if (videoUrl) {
-      safeRevokeObjectURL(videoUrl);
-      setVideoUrl(null);
-    }
+  // Wrapper function for clearVideo
+  const clearVideo = () => {
+    console.log("useVideoRecordingHandler: Clearing video");
+    clearVideoBase(videoUrl, setVideoBlob, setVideoUrl);
     
-    stopMediaStream();
-    setVideoBlobInner(null);
-    setVideoUrlInner(null);
-  }, [videoUrl, stopMediaStream, setVideoBlobInner, setVideoUrlInner]);
+    // Clear the videoContent in the form context
+    setVideoContent("");
+  };
   
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      cleanup();
-    };
-  }, [cleanup]);
-  
-  // Force initialize camera - returns Promise<boolean> internally but we adapt the signature as needed
-  const forceInitializeCamera = useCallback(async (): Promise<boolean> => {
-    try {
-      setIsInitializationAttempted(true);
-      
-      // Stop any existing stream first
-      if (isStreamActive()) {
-        stopMediaStream();
+  // Wrapper function for restoreVideo with transcription support
+  const restoreVideo = async (blob: Blob, url: string, transcription: string | null = null) => {
+    console.log("useVideoRecordingHandler: Restoring video", { 
+      hasBlob: !!blob, 
+      hasUrl: !!url, 
+      hasTranscription: !!transcription,
+      blobSize: blob?.size || 0
+    });
+    
+    restoreVideoBase(blob, url, setVideoBlob, setVideoUrl);
+    
+    // If we have a transcription, restore it in the content
+    if (blob) {
+      try {
+        console.log("Restoring video with transcription:", transcription ? transcription.substring(0, 30) + "..." : "none");
+        // Format the content with video data and transcription to update the form
+        const formattedContent = await formatVideoContent(blob, transcription);
+        setVideoContent(formattedContent);
+        setContent(formattedContent);
+      } catch (err) {
+        console.error("Error restoring video content:", err);
       }
-      
-      // Request a new stream with both video and audio
-      const stream = await initializeStream(true);
-      console.log("Force initialize camera successful", !!stream);
-      return !!stream;
-    } catch (error: any) {
-      console.error("Force initialize camera failed:", error);
-      return false;
     }
-  }, [initializeStream, stopMediaStream, isStreamActive]);
+  };
   
-  // Start recording wrapper to handle form state - explicitly returns Promise<boolean>
-  const startRecording = useCallback(async (): Promise<boolean> => {
+  // Force initialize camera - used when switching tabs or when camera needs refresh
+  const forceInitializeCamera = async () => {
     try {
-      await startRecordingInner();
+      console.log("Forcing camera initialization...");
+      await initializeStream(true);
+      console.log("Force camera initialization successful");
       return true;
     } catch (error) {
-      console.error("Error in startRecording wrapper:", error);
-      throw error;
+      console.error("Force camera initialization failed:", error);
+      return false;
     }
-  }, [startRecordingInner]);
-  
-  // Clear video wrapper
-  const clearVideo = useCallback(() => {
-    clearVideoInner(videoUrl, setVideoBlob, setVideoUrl);
-    setVideoContent('');
-  }, [videoUrl, setVideoContent, clearVideoInner]);
-  
-  // Restore video wrapper with improved handling
-  const restoreVideo = useCallback((blob: Blob, url: string) => {
-    console.log("restoreVideo called with blob size:", blob.size, "and url:", url.substring(0, 30) + "...");
-    
-    restoreVideoInner(blob, url, setVideoBlob, setVideoUrl);
-    
-    // Convert blob back to base64 and update video content
-    const reader = new FileReader();
-    reader.readAsDataURL(blob);
-    reader.onloadend = () => {
-      const base64data = reader.result?.toString().split(',')[1] || '';
-      const formattedContent = JSON.stringify({
-        videoData: base64data,
-        timestamp: new Date().toISOString()
-      });
-      console.log("Restoring video content in form state");
-      setVideoContent(formattedContent);
-    };
-  }, [restoreVideoInner, setVideoContent]);
+  };
   
   return {
     isRecording,
@@ -134,14 +92,13 @@ export function useVideoRecordingHandler() {
     showVideoRecorder,
     setShowVideoRecorder,
     previewStream,
-    initializeStream: initializeStreamWithSetup,
+    initializeStream,
     forceInitializeCamera,
     startRecording,
     stopRecording,
     clearVideo,
     restoreVideo,
     stopMediaStream,
-    isStreamActive,
-    isInitializationAttempted
+    isStreamActive
   };
 }

@@ -48,8 +48,8 @@ export function InactivityToRecurring({
         </p>
         
         <RecurringPatternSelector
-          recurringPattern={recurringPattern}
-          setRecurringPattern={setRecurringPattern}
+          pattern={recurringPattern}
+          setPattern={setRecurringPattern}
           forceEnabled={true}
         />
       </div>

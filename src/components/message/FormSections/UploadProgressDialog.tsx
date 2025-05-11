@@ -1,8 +1,6 @@
 
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Progress } from "@/components/ui/progress";
-import { FileAttachment } from "@/types/message";
-import { FileCheck, FileX } from "lucide-react";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FileAttachment } from "@/components/FileUploader";
 
 interface UploadProgressDialogProps {
   showUploadDialog: boolean;
@@ -22,39 +20,31 @@ export function UploadProgressDialog({
   return (
     <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
       <DialogContent className="sm:max-w-md">
-        <div className="space-y-4">
-          <h3 className="text-lg font-medium">Uploading Files</h3>
-          
-          <Progress value={uploadProgress} className="h-2" />
-          
-          <div className="max-h-60 overflow-y-auto space-y-2">
-            {files.map((file) => (
+        <DialogHeader>
+          <DialogTitle>Uploading Files</DialogTitle>
+        </DialogHeader>
+        <div className="py-6">
+          <div className="space-y-4">
+            <div className="flex justify-between text-sm">
+              <span>Progress</span>
+              <span>{uploadProgress}%</span>
+            </div>
+            <div className="w-full bg-secondary rounded-full h-2.5">
               <div 
-                key={file.name} 
-                className="flex items-center justify-between py-1 px-2 border rounded"
-              >
-                <div className="overflow-hidden text-ellipsis whitespace-nowrap max-w-[70%]">
-                  {file.name}
-                </div>
-                <div className="flex-shrink-0">
-                  {uploadProgress >= 100 ? (
-                    <FileCheck className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <div className="w-4 h-4 border-2 border-t-transparent rounded-full animate-spin" />
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-          
-          <div className="text-sm text-center text-muted-foreground">
-            {isLoading && uploadProgress >= 100 ? (
-              "Processing message and files..."
-            ) : (
-              `Uploading ${files.length} file${files.length !== 1 ? "s" : ""}...`
-            )}
+                className="bg-primary h-2.5 rounded-full" 
+                style={{ width: `${uploadProgress}%` }}
+              ></div>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Uploading {files.length} file{files.length > 1 ? 's' : ''}...
+            </p>
           </div>
         </div>
+        <DialogFooter>
+          {uploadProgress === 100 && !isLoading && (
+            <p className="text-sm text-green-500">Upload complete! Saving message...</p>
+          )}
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

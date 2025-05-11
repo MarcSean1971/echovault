@@ -37,17 +37,21 @@ export default function PublicMessageAccess() {
   
   // Request access to the message
   const { 
-    isPinRequired, 
-    isUnlockDelayed, 
-    unlockTime, 
-    isVerified, 
-    message, 
+    message,
     isLoading,
+    error,
+    isPinRequired,
+    isUnlockDelayed,
+    unlockTime,
+    isVerified,
     verifyPin,
-    handleUnlockExpired,
-    fetchMessage,
-    error
-  } = usePublicMessageAccess();
+    handleUnlockExpired
+  } = usePublicMessageAccess({ 
+    messageId, 
+    deliveryId: decodedDeliveryId, 
+    recipientEmail: decodedEmail,
+    isPreviewMode
+  });
   
   // Set up a timing system for smooth UI transitions
   useEffect(() => {

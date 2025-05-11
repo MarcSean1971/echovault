@@ -6,26 +6,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
-import { Message, MessageAttachment } from "@/types/message";
+import { Message } from "@/types/message";
 import { EditMessageForm } from "@/components/message/FormSections/EditMessageForm";
 import { Spinner } from "@/components/ui/spinner";
-import { getConditionByMessageId } from "@/services/messages/conditions/conditionService";
-import { useSecurityConstraints } from "@/hooks/message-access/useSecurityConstraints";
-
-type DatabaseMessage = {
-  id: string;
-  title: string;
-  content: string;
-  message_type: string;
-  user_id: string;
-  created_at: string;
-  updated_at: string;
-  share_location?: boolean;
-  location_name?: string;
-  location_latitude?: number;
-  location_longitude?: number;
-  attachments?: any;
-};
+import { getConditionByMessageId } from "@/services/messages/conditionService";
 
 export default function MessageEdit() {
   const { id } = useParams<{ id: string }>();
@@ -34,7 +18,6 @@ export default function MessageEdit() {
   const [message, setMessage] = useState<Message | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isArmed, setIsArmed] = useState(false);
-  const { convertDatabaseMessageToMessage } = useSecurityConstraints();
 
   useEffect(() => {
     if (!userId || !id) return;
@@ -65,9 +48,7 @@ export default function MessageEdit() {
           
         if (error) throw error;
         
-        // Convert database result to our Message type
-        const convertedMessage = convertDatabaseMessageToMessage(data);
-        setMessage(convertedMessage);
+        setMessage(data as Message);
       } catch (error: any) {
         console.error("Error fetching message:", error);
         toast({
@@ -82,7 +63,7 @@ export default function MessageEdit() {
     };
     
     fetchMessage();
-  }, [userId, id, navigate, convertDatabaseMessageToMessage]);
+  }, [userId, id, navigate]);
 
   if (isLoading) {
     return (

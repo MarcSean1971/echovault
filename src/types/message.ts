@@ -1,137 +1,107 @@
-export type MessageType = "text" | "audio" | "video";
+export type Message = {
+  id: string;
+  user_id: string;
+  title: string;
+  content: string | null;
+  message_type: string;
+  created_at: string;
+  updated_at: string;
+  attachments: Array<{
+    path: string;
+    name: string;
+    size: number;
+    type: string;
+  }> | null;
+  // Location fields
+  location_latitude?: number | null;
+  location_longitude?: number | null;
+  location_name?: string | null;
+  share_location?: boolean;
+  // Message metadata fields
+  expires_at: string | null;
+  sender_name: string | null;
+  // Panic trigger configuration
+  panic_config?: any;
+  panic_trigger_config?: any;
+};
 
-export type TriggerType = "no_check_in" | "panic_button" | "manual_trigger" | "scheduled" | "panic_trigger";
-export type DeliveryOption = "immediate" | "once" | "recurring";
-export type RecurringPatternType = 'daily' | 'weekly' | 'monthly' | 'yearly';
+export type Recipient = {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+};
 
-export interface RecurringPattern {
-  type: RecurringPatternType;
+// Align this with RecurringPatternSelector.tsx RecurringPatternType
+export type TriggerType = 
+  | 'no_check_in' 
+  | 'regular_check_in' 
+  | 'group_confirmation'
+  | 'panic_trigger' 
+  | 'inactivity_to_recurring'
+  | 'inactivity_to_date';
+
+// Make this compatible with NoCheckInDeliveryOptions.tsx
+export type DeliveryOption = 'immediately' | 'scheduled' | 'recurring' | 'once';
+
+// Align with RecurringPatternSelector.RecurringPattern
+export type RecurringPattern = {
+  type: 'daily' | 'weekly' | 'monthly' | 'yearly';
   interval: number;
   day?: number;
   month?: number;
-}
+  startTime?: string;
+  startDate?: string; // Added this field for start date
+};
 
-export interface PanicTriggerConfig {
+export type PanicTriggerConfig = {
   enabled: boolean;
   methods: string[];
   cancel_window_seconds: number;
   bypass_logging: boolean;
   keep_armed: boolean;
-  trigger_keyword?: string;
-}
+  trigger_keyword?: string; // Add trigger keyword for WhatsApp
+};
 
-export interface Recipient {
-  id: string;
-  name: string;
-  email: string;
-  phone?: string;
-  relationship?: string;
-  notes?: string;
-  deliveryId?: string;
-}
+export type MessageDeliveryStatus = 'armed' | 'triggered' | 'delivered' | 'viewed' | 'cancelled' | 'expired';
 
-export interface Message {
+export type MessageCondition = {
   id: string;
-  title: string;
-  content: string;
-  message_type: MessageType;
-  user_id: string;
+  message_id: string;
+  condition_type: TriggerType;
+  hours_threshold: number;
+  minutes_threshold?: number;
+  confirmation_required?: number;
   created_at: string;
   updated_at: string;
-  expires_at?: string;
-  expires_in_hours?: number;
-  is_armed?: boolean;
-  sender_name?: string;
-  share_location?: boolean;
-  location_name?: string;
-  latitude?: number;
-  longitude?: number;
-  location_latitude?: number;
-  location_longitude?: number;
-  attachments?: MessageAttachment[];
-}
-
-export interface MessageAttachment {
-  id: string;
-  message_id: string;
-  file_name: string;
-  file_size: number;
-  file_type: string;
-  url: string;
-  created_at: string;
-  path?: string;
-  name?: string;
-  size?: number;
-  type?: string;
-}
-
-export interface FileAttachment {
-  file: File;
-  id?: string;
-  preview?: string;
-  name: string;
-  size: number;
-  type?: string;
-  lastModified?: number;
-  path?: string;
-  url?: string;
-  isUploaded?: boolean;
-  uploading?: boolean;
-  progress?: number;
-}
-
-export type MessageDeliveryStatus = 'pending' | 'sent' | 'delivered' | 'read' | 'failed' | 'armed' | 'triggered' | 'viewed' | 'cancelled' | 'expired';
-
-export interface MessageCondition {
-  id: string;
-  message_id: string;
-  trigger_type: TriggerType;
-  condition_type?: string;
-  hours_threshold?: number;
-  minutes_threshold?: number;
+  last_checked?: string;
+  next_check?: string;
+  recipients: Recipient[];
+  active: boolean;
+  triggered?: boolean;
+  delivered?: boolean;
   trigger_date?: string;
   recurring_pattern?: RecurringPattern;
-  delivery_option?: DeliveryOption;
-  reminder_hours?: number[];
-  active?: boolean;
-  created_at: string;
-  updated_at: string;
-  last_check_in?: string;
-  next_deadline?: string;
+  panic_trigger_config?: PanicTriggerConfig;
+  panic_config?: PanicTriggerConfig;  // Add this field to match the database structure
   pin_code?: string;
   unlock_delay_hours?: number;
   expiry_hours?: number;
-  panic_trigger_config?: PanicTriggerConfig;
-  panic_config?: PanicTriggerConfig;
-  check_in_code?: string;
-  recipients?: Recipient[];
-  triggered?: boolean;
-  delivered?: boolean;
-  confirmation_required?: number;
-  last_checked?: string;
-}
+  secondary_condition?: {
+    type: TriggerType;
+    hours_threshold?: number;
+    trigger_date?: string;
+    recurring_pattern?: RecurringPattern;
+  };
+  reminder_hours?: number[];
+  check_in_code?: string; // Add the new field for custom check-in code
+};
 
-export interface DeliveredMessage {
-  id: string;
-  message_id: string;
-  recipient_id: string;
-  delivery_id: string;
-  sent_at: string;
-  opened_at?: string;
-  recipient_email: string;
-  recipient_name?: string;
-  status: 'sent' | 'delivered' | 'read' | 'failed';
-}
-
-// Add CheckIn type definition
-export interface CheckIn {
+// Update CheckIn type to include timestamp and device_info
+export type CheckIn = {
   id: string;
   user_id: string;
-  created_at: string; // Required property that was missing
-  latitude?: number;
-  longitude?: number;
-  location_name?: string;
+  timestamp: string;
+  method: string;
   device_info?: string;
-  timestamp?: string;
-  method?: string;
-}
+};

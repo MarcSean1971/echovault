@@ -1,9 +1,7 @@
-
 import { getAuthClient } from "@/lib/supabaseClient";
 import { CheckInResult, CheckInDeadlineResult } from "./types";
 import { updateConditionsLastChecked } from "./dbOperations";
 import { MessageCondition, Recipient, TriggerType } from "@/types/message";
-import { Json } from "@/types/supabase";
 
 export async function performCheckIn(userId: string, method: string): Promise<CheckInResult> {
   const client = await getAuthClient();
@@ -39,28 +37,6 @@ export async function performCheckIn(userId: string, method: string): Promise<Ch
     console.error("Error performing check-in:", error);
     throw new Error(error.message || "Failed to perform check-in");
   }
-}
-
-// Helper function to safely convert Json to Recipient
-function jsonToRecipient(json: Json): Recipient {
-  if (typeof json !== 'object' || json === null) {
-    return {
-      id: '',
-      name: '',
-      email: '',
-    };
-  }
-  
-  const obj = json as Record<string, any>;
-  return {
-    id: obj.id || '',
-    name: obj.name || '',
-    email: obj.email || '',
-    phone: obj.phone,
-    relationship: obj.relationship,
-    notes: obj.notes,
-    deliveryId: obj.deliveryId
-  };
 }
 
 export async function getNextCheckInDeadline(userId: string): Promise<CheckInDeadlineResult> {
@@ -109,24 +85,20 @@ export async function getNextCheckInDeadline(userId: string): Promise<CheckInDea
     const conditions: MessageCondition[] = data ? data.map(item => {
       // Ensure recipients is properly cast to Recipient[]
       let recipientsArray: Recipient[] = [];
-      
       if (Array.isArray(item.recipients)) {
-        // Cast Json[] to Recipient[] with proper handling
-        recipientsArray = (item.recipients as Json[]).map(jsonToRecipient);
+        recipientsArray = item.recipients as Recipient[];
       } else if (item.recipients && typeof item.recipients === 'object') {
-        // Single recipient as object
-        recipientsArray = [jsonToRecipient(item.recipients)];
+        recipientsArray = [item.recipients as unknown as Recipient];
       }
       
       return {
         id: item.id,
         message_id: item.message_id,
-        trigger_type: item.condition_type as TriggerType, // Use condition_type instead of trigger_type
-        condition_type: item.condition_type,
+        condition_type: item.condition_type as TriggerType, // Type casting
         hours_threshold: item.hours_threshold,
         created_at: item.created_at,
         updated_at: item.updated_at,
-        last_check_in: item.last_checked,
+        last_checked: item.last_checked,
         recipients: recipientsArray,
         active: item.active,
         triggered: false,

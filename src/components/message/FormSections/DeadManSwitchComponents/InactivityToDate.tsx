@@ -68,8 +68,8 @@ export function InactivityToDate({
         />
         
         <RecurringPatternSelector
-          recurringPattern={recurringPattern}
-          setRecurringPattern={setRecurringPattern}
+          pattern={recurringPattern}
+          setPattern={setRecurringPattern}
         />
       </div>
     </div>

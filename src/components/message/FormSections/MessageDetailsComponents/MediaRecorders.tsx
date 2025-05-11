@@ -1,5 +1,5 @@
 
-import { VideoContent } from "../../FormSections/content/VideoContent";
+import { VideoContent } from "../content/VideoContent";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useEffect } from "react";
 
@@ -13,7 +13,7 @@ interface MediaRecordersProps {
   isInitializing?: boolean;
   hasPermission?: boolean | null;
   previewStream?: MediaStream | null;
-  startRecording: () => Promise<void>; // Expects Promise<void>
+  startRecording?: () => Promise<void>;
   stopRecording?: () => void;
   clearVideo?: () => void;
 }
@@ -28,10 +28,19 @@ export function MediaRecorders({
   isInitializing = false,
   hasPermission = null,
   previewStream = null,
-  startRecording = async () => {}, // Default implementation returns void
+  startRecording = async () => {},
   stopRecording = () => {},
   clearVideo = () => {}
 }: MediaRecordersProps) {
+  // Handle video transcription
+  const handleTranscribeVideo = async () => {
+    if (videoBlob) {
+      // Pass false to indicate we want transcription (don't skip it)
+      return onVideoContentUpdate(videoBlob, false);
+    }
+    return Promise.resolve({});
+  };
+  
   // Log state changes for debugging
   useEffect(() => {
     console.log("MediaRecorders: Dialog open state =", showVideoRecorder);
@@ -39,7 +48,7 @@ export function MediaRecorders({
   
   return (
     <Dialog open={showVideoRecorder} onOpenChange={setShowVideoRecorder}>
-      <DialogContent className="sm:max-w-md max-w-[95vw] w-full p-4 sm:p-6">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Record Video Message</DialogTitle>
           <DialogDescription>
@@ -56,9 +65,24 @@ export function MediaRecorders({
           onStartRecording={startRecording}
           onStopRecording={stopRecording}
           onClearVideo={clearVideo}
+          onTranscribeVideo={handleTranscribeVideo}
           inDialog={true}
         />
       </DialogContent>
     </Dialog>
   );
 }
+
+// Helper function to convert blob to base64 (can be used if needed)
+const blobToBase64 = (blob: Blob): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      const base64 = result.split(',')[1];
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+};

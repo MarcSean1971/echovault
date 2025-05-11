@@ -6,7 +6,7 @@ import { AIEnhancer } from "@/components/AIEnhancer";
 import { useState, useEffect } from "react";
 
 export function TextContent() {
-  const { textContent, setTextContent, setContent } = useMessageForm();
+  const { textContent, setTextContent, messageType, setContent } = useMessageForm();
   const [displayContent, setDisplayContent] = useState(textContent);
 
   // Update display content when text content changes
@@ -20,7 +20,7 @@ export function TextContent() {
     setTextContent(newContent);
     setDisplayContent(newContent);
     
-    // Always update the main content for text mode
+    // Also update the main content field for compatibility with other components
     setContent(newContent);
   };
 

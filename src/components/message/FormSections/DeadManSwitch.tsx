@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Clock, AlertCircle } from "lucide-react";
 import { SecurityOptions } from "./DeadManSwitchComponents/SecurityOptions";
 import { Separator } from "@/components/ui/separator";
+import { TriggerType, DeliveryOption } from "@/types/message";
 
 export function DeadManSwitch() {
   const { 
@@ -79,6 +80,7 @@ export function DeadManSwitch() {
                 setPanicTriggerConfig={setPanicTriggerConfig}
                 reminderHours={reminderHours}
                 setReminderHours={setReminderHours}
+                setActiveTab={() => {}}
                 checkInCode={checkInCode}
                 setCheckInCode={setCheckInCode}
               />

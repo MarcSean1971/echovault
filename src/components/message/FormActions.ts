@@ -1,4 +1,3 @@
-
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/components/ui/use-toast";
@@ -8,7 +7,7 @@ import { useMessageForm } from "@/components/message/MessageFormContext";
 import { useFormValidation } from "@/hooks/useFormValidation";
 import { simulateUploadProgress } from "@/utils/uploadProgress";
 import { fetchRecipients } from "@/services/messages/recipientService";
-import { TriggerType, FileAttachment } from "@/types/message";
+import { TriggerType } from "@/types/message";
 
 export function useFormActions() {
   const navigate = useNavigate();
@@ -18,6 +17,7 @@ export function useFormActions() {
     title,
     content,
     textContent,
+    videoContent,
     messageType,
     files,
     setIsLoading,
@@ -46,7 +46,8 @@ export function useFormActions() {
   // Check if the form has valid required inputs
   const isFormValid = 
     title.trim() !== "" && 
-    textContent.trim() !== "" &&
+    ((messageType === "text" && textContent.trim() !== "") || 
+     (messageType === "video" && videoContent.trim() !== "")) &&
     selectedRecipients.length > 0;
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -79,8 +80,31 @@ export function useFormActions() {
     }
     
     try {
-      // For text message type, use the textContent
-      const messageContent = textContent;
+      // Determine which content to use based on message type
+      let messageContent;
+      
+      // Special handling for combined content
+      if (messageType === "video" && videoContent) {
+        // Start with video content
+        messageContent = videoContent;
+        
+        // If there's text content, combine it with the video
+        if (textContent && textContent.trim() !== '') {
+          try {
+            // Parse the video content to add text content to it
+            const videoContentObj = JSON.parse(videoContent);
+            videoContentObj.additionalText = textContent;
+            messageContent = JSON.stringify(videoContentObj);
+          } catch (error) {
+            console.error("Error combining text and video content:", error);
+            messageContent = videoContent; // Fall back to just video content
+          }
+        }
+      } else if (messageType === "text") {
+        messageContent = textContent;
+      } else {
+        messageContent = content;
+      }
       
       // Create the basic message with location data if enabled
       const message = await createMessage(

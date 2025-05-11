@@ -1,7 +1,6 @@
 import { getAuthClient } from "@/lib/supabaseClient";
-import { MessageCondition, RecurringPattern, PanicTriggerConfig } from "@/types/message";
+import { MessageCondition, RecurringPattern } from "@/types/message";
 import { CreateConditionOptions } from "./types";
-import { Json } from "@/types/supabase";
 
 // Helper function to map database condition to application condition
 export function mapDbConditionToMessageCondition(condition: any): MessageCondition {
@@ -14,25 +13,10 @@ export function mapDbConditionToMessageCondition(condition: any): MessageConditi
     recurring_pattern: condition.recurring_pattern as RecurringPattern | null,
     // Map panic_config to panic_trigger_config for consistency in the application
     panic_trigger_config: condition.panic_config || undefined,
-    // Make sure trigger_type is set to condition_type if not available
-    trigger_type: condition.trigger_type || condition.condition_type,
     // Map additional fields
     unlock_delay_hours: condition.unlock_delay_hours || 0,
     expiry_hours: condition.expiry_hours || 0
   } as MessageCondition;
-}
-
-// Helper function to safely stringify objects for JSON storage
-function safeJsonStringify(obj: any): Json {
-  if (!obj) return null;
-  
-  try {
-    // For objects with JSON circular references, etc.
-    return JSON.parse(JSON.stringify(obj)) as Json;
-  } catch (e) {
-    console.error("Failed to convert object to JSON:", e);
-    return null;
-  }
 }
 
 export async function createConditionInDb(
@@ -60,33 +44,29 @@ export async function createConditionInDb(
 
   const client = await getAuthClient();
   
-  // Prepare data with proper type casting to avoid insertion errors
-  const insertData = {
-    message_id: messageId,
-    condition_type: conditionType,
-    trigger_type: conditionType, // Ensure both fields are set
-    hours_threshold: hoursThreshold,
-    minutes_threshold: minutesThreshold,
-    trigger_date: triggerDate || null,
-    recurring_pattern: safeJsonStringify(recurringPattern),
-    confirmation_required: confirmationRequired,
-    confirmations_received: 0,
-    unlock_delay_hours: unlockDelayHours || 0,
-    expiry_hours: expiryHours || 0,
-    pin_code: pinCode || null,
-    recipients: safeJsonStringify(recipients),
-    secondary_condition_type: secondaryConditionType || null,
-    secondary_trigger_date: secondaryTriggerDate || null,
-    secondary_recurring_pattern: safeJsonStringify(secondaryRecurringPattern),
-    reminder_hours: reminderHours || null,
-    panic_config: safeJsonStringify(panicTriggerConfig),
-    active: true,
-    check_in_code: checkInCode || null
-  };
-  
   const { data, error } = await client
     .from("message_conditions")
-    .insert(insertData)
+    .insert({
+      message_id: messageId,
+      condition_type: conditionType,
+      hours_threshold: hoursThreshold,
+      minutes_threshold: minutesThreshold,
+      trigger_date: triggerDate || null,
+      recurring_pattern: recurringPattern || null,
+      confirmation_required: confirmationRequired,
+      confirmations_received: 0,
+      unlock_delay_hours: unlockDelayHours || 0,
+      expiry_hours: expiryHours || 0,
+      pin_code: pinCode || null,
+      recipients: recipients,
+      secondary_condition_type: secondaryConditionType || null,
+      secondary_trigger_date: secondaryTriggerDate || null,
+      secondary_recurring_pattern: secondaryRecurringPattern || null,
+      reminder_hours: reminderHours || null,
+      panic_config: panicTriggerConfig || null,
+      active: true,
+      check_in_code: checkInCode || null
+    })
     .select()
     .single();
 
@@ -151,23 +131,16 @@ export async function updateConditionInDb(
   const client = await getAuthClient();
   
   // Filter out properties that don't exist in the database and map field names
-  const { triggered, delivered, panic_trigger_config, recurring_pattern, ...validUpdates } = updates;
+  const { triggered, delivered, panic_trigger_config, ...validUpdates } = updates;
   
-  // Build database updates with proper JSON serialization
-  const dbUpdates: Record<string, any> = {
+  // Map panic_trigger_config to panic_config for database updates
+  const dbUpdates = {
     ...validUpdates,
+    // If panic_trigger_config exists in the updates, map it to panic_config
+    ...(panic_trigger_config !== undefined && { panic_config: panic_trigger_config }),
     // Ensure check_in_code is properly handled (could be null)
     check_in_code: updates.check_in_code
   };
-  
-  // Convert complex objects to JSON
-  if (panic_trigger_config !== undefined) {
-    dbUpdates.panic_config = safeJsonStringify(panic_trigger_config);
-  }
-  
-  if (recurring_pattern !== undefined) {
-    dbUpdates.recurring_pattern = safeJsonStringify(recurring_pattern);
-  }
   
   const { data, error } = await client
     .from("message_conditions")

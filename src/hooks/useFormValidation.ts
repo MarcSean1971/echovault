@@ -4,7 +4,8 @@ import { useMessageForm } from "@/components/message/MessageFormContext";
 export function useFormValidation() {
   const {
     title,
-    textContent,
+    content,
+    messageType,
     conditionType,
     hoursThreshold,
     minutesThreshold,
@@ -16,7 +17,7 @@ export function useFormValidation() {
   const isFormValid = () => {
     // Basic validation
     if (title.trim() === "") return false;
-    if (textContent.trim() === "") return false;
+    if (messageType === "text" && content.trim() === "") return false;
     
     // Trigger validation (always required now)
     // Make sure there's at least some threshold

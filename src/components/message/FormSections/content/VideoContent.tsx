@@ -1,7 +1,10 @@
 
 import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
+import { toast } from "@/components/ui/use-toast";
 import { useMessageForm } from "../../MessageFormContext";
+import { parseVideoContent } from "@/services/messages/mediaService";
+import { useContentUpdater } from "@/hooks/useContentUpdater";
 
 // Import our component modules
 import { VideoPlayer } from "./video/VideoPlayer";
@@ -17,6 +20,7 @@ export function VideoContent({
   onStartRecording,
   onStopRecording,
   onClearVideo,
+  onTranscribeVideo,
   inDialog = false
 }: {
   videoUrl: string | null;
@@ -27,63 +31,121 @@ export function VideoContent({
   onStartRecording: () => Promise<void>;
   onStopRecording: () => void;
   onClearVideo: () => void;
+  onTranscribeVideo: () => Promise<void>;
   inDialog?: boolean;
 }) {
-  const { messageType } = useMessageForm();
+  const { content, messageType } = useMessageForm();
+  const { isTranscribingVideo, getTranscriptionFromContent } = useContentUpdater();
   const [permissionError, setPermissionError] = useState<string | null>(null);
+  const [showVideoPreview, setShowVideoPreview] = useState(!!videoUrl);
+  const [transcription, setTranscription] = useState<string | null>(null);
   
+  // Reset showVideoPreview state whenever videoUrl changes or messageType changes
   useEffect(() => {
-    console.log("VideoContent: Rendering with state:", { 
-      hasVideoUrl: !!videoUrl,
-      videoUrl: videoUrl ? videoUrl.substring(0, 30) + "..." : null,
+    console.log("VideoContent: videoUrl changed:", { 
+      videoUrl: videoUrl ? "present" : "null", 
       messageType,
-      isRecording
+      previewStream: previewStream ? "active" : "null"
     });
-  }, [videoUrl, messageType, isRecording]);
+    
+    // If we have a video URL, we should always show the video preview
+    if (videoUrl) {
+      console.log("VideoContent: Setting showVideoPreview to true because videoUrl exists");
+      setShowVideoPreview(true);
+    } else {
+      // When videoUrl becomes null, reset showVideoPreview for rendering empty state
+      console.log("VideoContent: No videoUrl, checking if previewStream exists");
+      if (!previewStream) {
+        setShowVideoPreview(false);
+      }
+    }
+  }, [videoUrl, messageType, previewStream]);
   
-  // Handle recording errors
-  const handleStartRecording = async (): Promise<void> => {
-    setPermissionError(null);
+  // Extract transcription from content
+  useEffect(() => {
+    if (content) {
+      const extractedTranscription = getTranscriptionFromContent(content);
+      console.log("VideoContent: Extracted transcription from content:", 
+                  extractedTranscription ? extractedTranscription.substring(0, 30) + "..." : "none");
+      setTranscription(extractedTranscription);
+    }
+  }, [content, getTranscriptionFromContent]);
+  
+  // Log for debugging
+  useEffect(() => {
+    console.log("VideoContent: Rendering state:", { 
+      inDialog, 
+      videoUrl: videoUrl ? "present" : "null",
+      previewStream: previewStream ? "active" : "null",
+      isRecording,
+      transcription: transcription ? "present" : "null",
+      showVideoPreview,
+      messageType,
+      content: content ? "present" : "none"
+    });
+  }, [inDialog, videoUrl, previewStream, isRecording, transcription, showVideoPreview, messageType, content]);
+  
+  // Handle transcription
+  const handleTranscribe = async () => {
     try {
-      await onStartRecording();
-    } catch (error: any) {
-      console.error("Error starting recording:", error);
-      setPermissionError(error.message || "Unable to access camera");
+      await onTranscribeVideo();
+      toast({
+        title: "Transcription completed",
+        description: "Video has been transcribed successfully"
+      });
+    } catch (error) {
+      toast({
+        title: "Transcription failed",
+        description: "Unable to transcribe the video. Please try again.",
+        variant: "destructive"
+      });
     }
   };
   
-  // Decide what to render based on current state with priority on showing existing videos
-  const renderContent = () => {
-    // First priority: Always show existing video if available
-    if (videoUrl) {
+  // Handle recording with better error handling
+  const handleStartRecording = async () => {
+    setPermissionError(null);
+    try {
+      console.log("Starting recording...");
+      await onStartRecording();
+      console.log("Recording started successfully");
+    } catch (error: any) {
+      console.error("Error starting recording:", error);
+      setPermissionError(error.message || "Unable to access camera or microphone");
+    }
+  };
+  
+  // Determine what to render based on current state
+  const renderVideoContent = () => {
+    if (videoUrl && showVideoPreview) {
       return (
         <VideoPlayer
           videoUrl={videoUrl}
+          transcription={transcription}
+          onTranscribe={handleTranscribe}
+          isTranscribing={isTranscribingVideo}
           onClearVideo={onClearVideo}
-          inDialog={inDialog}
         />
       );
     }
     
-    // Second priority: Show camera preview when recording or stream is available
-    if (isRecording || previewStream) {
+    if (!videoUrl && previewStream) {
       return (
         <CameraPreview
           previewStream={previewStream}
           isRecording={isRecording}
-          isInitializing={!!isInitializing}
+          isInitializing={isInitializing || false}
           onStartRecording={handleStartRecording}
           onStopRecording={onStopRecording}
-          inDialog={inDialog}
         />
       );
     }
     
-    // Default to empty state when no video or camera is active
+    // Default to empty state
     return (
       <EmptyVideoState
         handleStartRecording={handleStartRecording}
-        isInitializing={!!isInitializing}
+        isInitializing={isInitializing || false}
         permissionError={permissionError}
         hasPermission={hasPermission}
         inDialog={inDialog}
@@ -92,9 +154,9 @@ export function VideoContent({
   };
   
   return (
-    <div className="space-y-4" onClick={(e) => e.stopPropagation()}>
+    <div className="space-y-4">
       {!inDialog && <Label htmlFor="videoContent">Video Message</Label>}
-      {renderContent()}
+      {renderVideoContent()}
     </div>
   );
 }
