@@ -22,19 +22,28 @@ export function VideoPlayerControls({
 }: VideoPlayerControlsProps) {
   return (
     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity flex justify-between items-center">
-      <Button 
-        variant="ghost" 
-        size="icon"
-        type="button"
-        onClick={togglePlayback}
-        className={`text-white hover:bg-white/20 ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.subtle}`}
-      >
-        {isPlaying ? (
-          <Pause className="h-5 w-5" />
-        ) : (
-          <Play className="h-5 w-5" />
-        )}
-      </Button>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size="icon"
+              type="button"
+              onClick={togglePlayback}
+              className={`text-white hover:bg-white/20 ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.subtle}`}
+            >
+              {isPlaying ? (
+                <Pause className="h-5 w-5" />
+              ) : (
+                <Play className="h-5 w-5" />
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{isPlaying ? 'Pause video' : 'Play video'}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
       
       <div className="flex items-center gap-2">
         <TooltipProvider>

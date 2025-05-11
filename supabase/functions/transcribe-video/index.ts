@@ -32,13 +32,13 @@ serve(async (req) => {
     }
     
     // Create a blob with the correct MIME type
-    // Important: For Whisper API, we need to use audio/* MIME type, not video/webm
-    // Even though the OpenAI docs say webm is supported, it's referring to audio/webm format
+    // IMPORTANT: For OpenAI Whisper API, we must use audio/* MIME type
+    // Even though the input is video, we'll label it as audio for the API
     const blob = new Blob([bytes], { type: 'audio/mp4' });
     
     // Create FormData for the OpenAI API
     const formData = new FormData();
-    formData.append('file', blob, 'audio.mp4'); // Use audio extension and type
+    formData.append('file', blob, 'audio.mp4'); // Use audio extension to help the API identify it correctly
     formData.append('model', 'whisper-1');
     formData.append('language', 'en');
     
@@ -63,6 +63,13 @@ serve(async (req) => {
         const errorJson = JSON.parse(errorData);
         if (errorJson.error && errorJson.error.message) {
           errorMessage = errorJson.error.message;
+          
+          // Provide more helpful context based on common issues
+          if (errorMessage.includes('Invalid file format')) {
+            errorMessage = "The audio format could not be processed. Please try recording with clearer audio or using a different device.";
+          } else if (errorMessage.includes('too large')) {
+            errorMessage = "The recording is too large for transcription. Please make a shorter recording.";
+          }
         }
       } catch (e) {
         // If parsing fails, use the original error message
