@@ -1,17 +1,12 @@
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Input } from "@/components/ui/input";
+
 import { useState, useEffect } from "react";
-import { RecurringPattern } from "@/types/message";
-import { DatePicker } from "./DatePicker";
-import { format } from "date-fns";
+import { EnableRecurringToggle } from "./recurring-pattern/EnableRecurringToggle";
+import { RecurringPatternContent } from "./recurring-pattern/RecurringPatternContent";
+import { RecurringPattern } from "./recurring-pattern/RecurringPatternType";
 
-// Export this for backward compatibility
-export type RecurringPatternType = 'daily' | 'weekly' | 'monthly' | 'yearly';
-
-// Re-export RecurringPattern to maintain compatibility
-export type { RecurringPattern };
+// Re-export RecurringPattern and RecurringPatternType to maintain compatibility
+export { type RecurringPattern } from "./recurring-pattern/RecurringPatternType";
+export type { RecurringPatternType } from "./recurring-pattern/RecurringPatternType";
 
 interface RecurringPatternSelectorProps {
   pattern: RecurringPattern | null;
@@ -25,9 +20,6 @@ export function RecurringPatternSelector({
   forceEnabled = false
 }: RecurringPatternSelectorProps) {
   const [isRecurring, setIsRecurring] = useState(!!pattern || forceEnabled);
-  const [startDate, setStartDate] = useState<Date | null>(
-    pattern?.startDate ? new Date(pattern.startDate) : null
-  );
   
   // If forceEnabled changes, update isRecurring
   useEffect(() => {
@@ -39,10 +31,9 @@ export function RecurringPatternSelector({
     }
   }, [forceEnabled, isRecurring, pattern, setPattern]);
   
-  const handleRecurringChange = (value: string) => {
+  const handleRecurringChange = (isEnabled: boolean) => {
     if (forceEnabled) return; // Can't disable if forced
     
-    const isEnabled = value === "yes";
     setIsRecurring(isEnabled);
     
     if (isEnabled && !pattern) {
@@ -51,210 +42,20 @@ export function RecurringPatternSelector({
       setPattern(null);
     }
   };
-  
-  const handleTypeChange = (type: RecurringPatternType) => {
-    if (pattern) {
-      setPattern({ ...pattern, type });
-    } else {
-      setPattern({ type, interval: 1 });
-    }
-  };
-  
-  const handleIntervalChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const interval = parseInt(e.target.value) || 1;
-    if (pattern) {
-      setPattern({ ...pattern, interval: Math.max(1, interval) });
-    }
-  };
-  
-  const handleDayChange = (day: number) => {
-    if (pattern) {
-      setPattern({ ...pattern, day });
-    }
-  };
-  
-  const handleMonthChange = (month: number) => {
-    if (pattern) {
-      setPattern({ ...pattern, month });
-    }
-  };
-  
-  const handleDateChange = (date: Date | null) => {
-    setStartDate(date);
-    if (pattern) {
-      // If date is selected, preserve any existing time in startTime
-      // Otherwise, just update the startDate
-      setPattern({ 
-        ...pattern, 
-        startDate: date ? format(date, 'yyyy-MM-dd') : undefined 
-      });
-    }
-  };
-  
+
   return (
     <div className="space-y-4">
-      {!forceEnabled && (
-        <div>
-          <Label className="mb-2 block">Make this recurring?</Label>
-          <RadioGroup 
-            value={isRecurring ? "yes" : "no"} 
-            onValueChange={handleRecurringChange}
-            className="flex space-x-4"
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="yes" id="recurring-yes" />
-              <Label htmlFor="recurring-yes">Yes</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="no" id="recurring-no" />
-              <Label htmlFor="recurring-no">No</Label>
-            </div>
-          </RadioGroup>
-        </div>
-      )}
+      <EnableRecurringToggle 
+        isRecurring={isRecurring}
+        onToggle={handleRecurringChange}
+        forceEnabled={forceEnabled}
+      />
       
-      {isRecurring && (
-        <div className="space-y-4 pt-2">
-          <div>
-            <Label htmlFor="recurring-type" className="mb-2 block">Repeat</Label>
-            <Select 
-              value={pattern?.type || 'daily'}
-              onValueChange={(value) => handleTypeChange(value as RecurringPatternType)}
-            >
-              <SelectTrigger id="recurring-type">
-                <SelectValue placeholder="Select frequency" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="daily">Daily</SelectItem>
-                <SelectItem value="weekly">Weekly</SelectItem>
-                <SelectItem value="monthly">Monthly</SelectItem>
-                <SelectItem value="yearly">Yearly</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div>
-            <Label htmlFor="recurring-interval" className="mb-2 block">
-              Every
-              {pattern?.type === 'daily' ? ' X days' : ''}
-              {pattern?.type === 'weekly' ? ' X weeks' : ''}
-              {pattern?.type === 'monthly' ? ' X months' : ''}
-              {pattern?.type === 'yearly' ? ' X years' : ''}
-            </Label>
-            <Input
-              id="recurring-interval"
-              type="number"
-              min={1}
-              value={pattern?.interval || 1}
-              onChange={handleIntervalChange}
-            />
-          </div>
-          
-          {pattern?.type === 'weekly' && (
-            <div>
-              <Label className="mb-2 block">On day</Label>
-              <Select 
-                value={pattern.day?.toString() || "0"}
-                onValueChange={(value) => handleDayChange(Number(value))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select day" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="0">Sunday</SelectItem>
-                  <SelectItem value="1">Monday</SelectItem>
-                  <SelectItem value="2">Tuesday</SelectItem>
-                  <SelectItem value="3">Wednesday</SelectItem>
-                  <SelectItem value="4">Thursday</SelectItem>
-                  <SelectItem value="5">Friday</SelectItem>
-                  <SelectItem value="6">Saturday</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-          
-          {pattern?.type === 'monthly' && (
-            <div>
-              <Label className="mb-2 block">On day of month</Label>
-              <Select
-                value={pattern.day?.toString() || "1"}
-                onValueChange={(value) => handleDayChange(Number(value))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select day" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Array.from({length: 31}, (_, i) => (
-                    <SelectItem key={i} value={(i + 1).toString()}>
-                      {i + 1}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-          
-          {pattern?.type === 'yearly' && (
-            <>
-              <div>
-                <Label className="mb-2 block">Month</Label>
-                <Select
-                  value={pattern.month?.toString() || "0"}
-                  onValueChange={(value) => handleMonthChange(Number(value))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select month" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="0">January</SelectItem>
-                    <SelectItem value="1">February</SelectItem>
-                    <SelectItem value="2">March</SelectItem>
-                    <SelectItem value="3">April</SelectItem>
-                    <SelectItem value="4">May</SelectItem>
-                    <SelectItem value="5">June</SelectItem>
-                    <SelectItem value="6">July</SelectItem>
-                    <SelectItem value="7">August</SelectItem>
-                    <SelectItem value="8">September</SelectItem>
-                    <SelectItem value="9">October</SelectItem>
-                    <SelectItem value="10">November</SelectItem>
-                    <SelectItem value="11">December</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <Label className="mb-2 block">Day</Label>
-                <Select
-                  value={pattern.day?.toString() || "1"}
-                  onValueChange={(value) => handleDayChange(Number(value))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select day" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from({length: 31}, (_, i) => (
-                      <SelectItem key={i} value={(i + 1).toString()}>
-                        {i + 1}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </>
-          )}
-          
-          <div>
-            <Label className="mb-2 block">Earliest Possible Delivery (Optional)</Label>
-            <p className="text-sm text-muted-foreground mb-3">
-              If specified, recurring messages will only begin on or after this date, even if triggered earlier.
-            </p>
-            <DatePicker
-              selectedDate={startDate}
-              setSelectedDate={handleDateChange}
-              label="Earliest Delivery Date & Time"
-            />
-          </div>
-        </div>
+      {isRecurring && pattern && (
+        <RecurringPatternContent 
+          pattern={pattern} 
+          setPattern={(newPattern) => setPattern(newPattern)} 
+        />
       )}
     </div>
   );

@@ -1,3 +1,7 @@
+
+// Importing the type to re-export it
+import { RecurringPattern as RecurringPatternType } from "@/components/message/FormSections/DeadManSwitchComponents/recurring-pattern/RecurringPatternType";
+
 export type Message = {
   id: string;
   user_id: string;
@@ -44,15 +48,8 @@ export type TriggerType =
 // Make this compatible with NoCheckInDeliveryOptions.tsx
 export type DeliveryOption = 'immediately' | 'scheduled' | 'recurring' | 'once';
 
-// Align with RecurringPatternSelector.RecurringPattern
-export type RecurringPattern = {
-  type: 'daily' | 'weekly' | 'monthly' | 'yearly';
-  interval: number;
-  day?: number;
-  month?: number;
-  startTime?: string;
-  startDate?: string; // Added this field for start date
-};
+// Re-export RecurringPattern to maintain compatibility
+export type RecurringPattern = RecurringPatternType;
 
 export type PanicTriggerConfig = {
   enabled: boolean;
