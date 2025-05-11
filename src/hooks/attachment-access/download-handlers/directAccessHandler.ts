@@ -25,7 +25,7 @@ export function useDirectAccessHandler({ props, utilities }: DownloadHandlerProp
   // Get direct public URL (for direct access option)
   const directUrl = fileAccessManager.getDirectUrl();
 
-  const tryDirectAccess = async () => {
+  const tryDirectAccess = async (): Promise<{ success: boolean; url: string | null; method: AccessMethod | null }> => {
     setIsLoading(true);
     
     try {

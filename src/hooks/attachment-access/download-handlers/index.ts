@@ -20,11 +20,8 @@ export function useDownloadHandlers(
   // Use the individual handler hooks
   const { downloadFile } = useFileDownloadHandler(handlerProps);
   const { openFile } = useFileOpenHandler(handlerProps);
-  const { tryDirectAccess } = useDirectAccessHandler(handlerProps);
+  const { tryDirectAccess, directUrl } = useDirectAccessHandler(handlerProps);
   const { retryAccess } = useRetryAccessHandler(handlerProps);
-  
-  // We'll use the directUrl from the directAccessHandler
-  const { directUrl } = useDirectAccessHandler(handlerProps);
   
   return {
     directUrl,
