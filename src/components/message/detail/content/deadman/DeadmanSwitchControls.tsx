@@ -25,6 +25,26 @@ export function DeadmanSwitchControls({
     return null;
   }
 
+  // Helper function to convert decimal hours to hours and minutes
+  const decimalToHoursMinutes = (decimalHours: number): { hours: number, minutes: number } => {
+    const hours = Math.floor(decimalHours);
+    const minutes = Math.round((decimalHours - hours) * 60);
+    return { hours, minutes };
+  };
+
+  // Format the decimal hours for display
+  const formatReminderTime = (decimalHours: number): string => {
+    const { hours, minutes } = decimalToHoursMinutes(decimalHours);
+    
+    if (hours === 0) {
+      return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`;
+    } else if (minutes === 0) {
+      return `${hours} ${hours === 1 ? 'hour' : 'hours'}`;
+    } else {
+      return `${hours} ${hours === 1 ? 'hour' : 'hours'} and ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`;
+    }
+  };
+
   const handleTestReminder = async () => {
     try {
       setIsSendingReminder(true);
@@ -104,9 +124,9 @@ export function DeadmanSwitchControls({
         <div className="mt-2">
           <p className="text-xs font-medium mb-1">Reminders scheduled at:</p>
           <div className="flex flex-wrap gap-1">
-            {reminderHours.sort((a, b) => b - a).map((hour) => (
-              <Badge key={hour} variant="secondary" className="text-xs">
-                {hour} {hour === 1 ? 'hour' : 'hours'} before deadline
+            {reminderHours.sort((a, b) => b - a).map((decimalHours) => (
+              <Badge key={decimalHours} variant="secondary" className="text-xs">
+                {formatReminderTime(decimalHours)} before deadline
               </Badge>
             ))}
           </div>
