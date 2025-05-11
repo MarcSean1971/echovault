@@ -8,6 +8,20 @@ interface MessageDeliverySettingsProps {
   showInTabs?: boolean;
 }
 
+// Utility function to format minutes into human readable time
+const formatMinutesToReadable = (totalMinutes: number): string => {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  
+  if (hours === 0) {
+    return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`;
+  } else if (minutes === 0) {
+    return `${hours} ${hours === 1 ? 'hour' : 'hours'}`;
+  } else {
+    return `${hours} ${hours === 1 ? 'hour' : 'hours'} and ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`;
+  }
+};
+
 export function MessageDeliverySettings({
   condition,
   renderConditionType,
@@ -46,7 +60,9 @@ export function MessageDeliverySettings({
           <div className="flex justify-between">
             <span className="font-medium">Reminders:</span>
             <span className="text-right">
-              {condition.reminder_hours.map((hours: number) => `${hours}h`).join(', ')} before deadline
+              {condition.reminder_hours.map((minutes: number) => 
+                formatMinutesToReadable(minutes)
+              ).join(', ')} before deadline
             </span>
           </div>
         )}

@@ -31,16 +31,16 @@ export function DeadmanSwitchControls({
     return { hours, minutes };
   };
 
-  // Format the minutes for display - the input is already in minutes
-  const formatReminderTime = (minutes: number): string => {
-    const { hours, minutes: mins } = minutesToHoursAndMinutes(minutes);
+  // Format reminder time from minutes to human readable format
+  const formatReminderTime = (totalMinutes: number): string => {
+    const { hours, minutes } = minutesToHoursAndMinutes(totalMinutes);
     
     if (hours === 0) {
-      return `${mins} ${mins === 1 ? 'minute' : 'minutes'}`;
-    } else if (mins === 0) {
+      return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`;
+    } else if (minutes === 0) {
       return `${hours} ${hours === 1 ? 'hour' : 'hours'}`;
     } else {
-      return `${hours} ${hours === 1 ? 'hour' : 'hours'} and ${mins} ${mins === 1 ? 'minute' : 'minutes'}`;
+      return `${hours} ${hours === 1 ? 'hour' : 'hours'} and ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`;
     }
   };
 
