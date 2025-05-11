@@ -10,7 +10,7 @@ export function useVideoRecorder(previewStream: MediaStream | null, streamRef: R
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const videoChunksRef = useRef<Blob[]>([]);
-  const { setVideoContent, setContent } = useMessageForm();
+  const { setVideoContent, setContent, textContent } = useMessageForm();
 
   // Function to start recording
   const startRecording = async () => {
@@ -50,10 +50,17 @@ export function useVideoRecorder(previewStream: MediaStream | null, streamRef: R
         // Update form context with new video content
         try {
           console.log("Updating form context with new video content");
+          console.log("Current text content before updating:", textContent ? textContent.substring(0, 30) + "..." : "none");
+          
           const formattedContent = await formatVideoContent(videoBlob, null);
           setVideoContent(formattedContent);
+          
+          // We set the content to the video content but don't clear text content
+          // This allows the EditMessageForm to combine them properly
           setContent(formattedContent);
+          
           console.log("Form context updated with new video content");
+          console.log("Text content preserved:", textContent ? textContent.substring(0, 30) + "..." : "none");
         } catch (error) {
           console.error("Error updating form context with video content:", error);
         }

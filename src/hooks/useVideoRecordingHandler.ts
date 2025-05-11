@@ -7,7 +7,7 @@ import { useMessageForm } from "@/components/message/MessageFormContext";
 import { formatVideoContent } from "@/services/messages/transcriptionService";
 
 export function useVideoRecordingHandler() {
-  const { setContent, setVideoContent, setTextContent } = useMessageForm();
+  const { setContent, setVideoContent, setTextContent, textContent } = useMessageForm();
   // Use our custom hooks
   const {
     previewStream,
@@ -49,6 +49,9 @@ export function useVideoRecordingHandler() {
     // Don't clear the entire content, as this might contain text content
     // We'll just update it without the video data
     console.log("Updating form content after clearing video");
+    
+    // Preserve the current text content
+    console.log("Current text content preserved:", textContent ? textContent.substring(0, 30) + "..." : "none");
   };
   
   // Wrapper function for restoreVideo with transcription support
@@ -57,12 +60,13 @@ export function useVideoRecordingHandler() {
       hasBlob: !!blob, 
       hasUrl: !!url, 
       hasTranscription: !!transcription,
-      blobSize: blob?.size || 0
+      blobSize: blob?.size || 0,
+      currentTextContent: textContent ? textContent.substring(0, 30) + "..." : "none"
     });
     
     restoreVideoBase(blob, url, setVideoBlob, setVideoUrl);
     
-    // If we have a transcription, restore it in the content
+    // If we have a blob, restore it in the content
     if (blob) {
       try {
         console.log("Restoring video with transcription:", transcription ? transcription.substring(0, 30) + "..." : "none");
@@ -70,6 +74,9 @@ export function useVideoRecordingHandler() {
         const formattedContent = await formatVideoContent(blob, transcription);
         setVideoContent(formattedContent);
         setContent(formattedContent);
+        
+        // Preserve the text content when restoring video
+        console.log("Preserving text content during video restoration:", textContent ? textContent.substring(0, 30) + "..." : "none");
       } catch (err) {
         console.error("Error restoring video content:", err);
       }

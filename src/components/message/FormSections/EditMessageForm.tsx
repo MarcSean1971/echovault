@@ -211,6 +211,16 @@ function MessageEditForm({ message, onCancel }: EditMessageFormComponentProps) {
         ];
       }
       
+      // Log the current state of content before saving
+      console.log("Message edit - content state before save:", {
+        messageType,
+        hasTextContent: !!textContent && textContent.trim() !== '',
+        hasVideoContent: !!videoContent && videoContent.trim() !== '',
+        textContentLength: textContent?.length || 0,
+        videoContentLength: videoContent?.length || 0,
+        content: content ? content.substring(0, 30) + "..." : "none"
+      });
+      
       // Determine which content to use based on message type
       // For combined content support, we'll use a special approach
       let contentToSave = content;
@@ -222,17 +232,22 @@ function MessageEditForm({ message, onCancel }: EditMessageFormComponentProps) {
         // If we also have text content, add it to the video content
         if (textContent && textContent.trim() !== '') {
           try {
+            console.log("Combining text and video content");
             // Parse the video content to add text content to it
             const videoContentObj = JSON.parse(videoContent);
             videoContentObj.additionalText = textContent;
             contentToSave = JSON.stringify(videoContentObj);
+            console.log("Combined content created with both text and video");
           } catch (error) {
             console.error("Error combining text and video content:", error);
           }
         }
       } else if (messageType === "text") {
         contentToSave = textContent;
+        console.log("Using text content for saving");
       }
+      
+      console.log("Final content to save:", contentToSave ? contentToSave.substring(0, 30) + "..." : "none");
 
       // Update message in database
       const { error } = await supabase
