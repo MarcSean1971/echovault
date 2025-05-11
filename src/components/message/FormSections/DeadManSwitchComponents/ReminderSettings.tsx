@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,6 +19,7 @@ export function ReminderSettings({
   const [newHour, setNewHour] = useState<string>("");
   const [newMinute, setNewMinute] = useState<string>("");
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [maxMinutes, setMaxMinutes] = useState<number>(59);
 
   // Helper function to convert between display format and storage format
   const decimalToHoursMinutes = (decimalHours: number): { hours: number, minutes: number } => {
@@ -41,6 +41,76 @@ export function ReminderSettings({
       return `${hours} ${hours === 1 ? 'hour' : 'hours'}`;
     } else {
       return `${hours} ${hours === 1 ? 'hour' : 'hours'} and ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`;
+    }
+  };
+
+  // Update maxMinutes when newHour or maxHours changes
+  useEffect(() => {
+    if (maxHours) {
+      const hourValue = parseInt(newHour) || 0;
+      
+      if (hourValue === Math.floor(maxHours)) {
+        // If we're at the max hour, restrict minutes
+        const maxMinutesValue = Math.floor((maxHours - Math.floor(maxHours)) * 60);
+        setMaxMinutes(maxMinutesValue);
+      } else {
+        // Otherwise, full range of minutes
+        setMaxMinutes(59);
+      }
+    }
+  }, [newHour, maxHours]);
+
+  // Validate the current input combination
+  const validateCurrentInput = (hour: string, minute: string): boolean => {
+    if (!maxHours) return true;
+    
+    const hourValue = parseInt(hour) || 0;
+    const minuteValue = parseInt(minute) || 0;
+    
+    const decimalValue = hoursMinutesToDecimal(hourValue, minuteValue);
+    return decimalValue < maxHours;
+  };
+
+  // Handle hour input change
+  const handleHourChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setNewHour(value);
+    
+    // If the new hour is valid but would make the current minute invalid,
+    // adjust the minute value
+    if (maxHours && parseInt(value) === Math.floor(maxHours)) {
+      const maxMinutesValue = Math.floor((maxHours - Math.floor(maxHours)) * 60);
+      if (parseInt(newMinute) > maxMinutesValue) {
+        setNewMinute(maxMinutesValue.toString());
+      }
+    }
+    
+    // Clear validation error if the combination is now valid
+    if (validateCurrentInput(value, newMinute)) {
+      setValidationError(null);
+    }
+  };
+
+  // Handle minute input change
+  const handleMinuteChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    
+    // Validate the new minute value
+    if (maxHours) {
+      const hourValue = parseInt(newHour) || 0;
+      const minuteValue = parseInt(value) || 0;
+      
+      if (hourValue === Math.floor(maxHours) && minuteValue > maxMinutes) {
+        setValidationError(`Minutes must be less than ${maxMinutes + 1} when hours is ${hourValue}`);
+        return;
+      }
+    }
+    
+    setNewMinute(value);
+    
+    // Clear validation error if the combination is now valid
+    if (validateCurrentInput(newHour, value)) {
+      setValidationError(null);
     }
   };
 
@@ -139,7 +209,7 @@ export function ReminderSettings({
               max={maxHours ? Math.floor(maxHours) : undefined}
               placeholder="0"
               value={newHour}
-              onChange={(e) => setNewHour(e.target.value)}
+              onChange={handleHourChange}
               className="w-20"
             />
           </div>
@@ -150,10 +220,10 @@ export function ReminderSettings({
               id="reminder-minutes"
               type="number"
               min="0"
-              max="59"
+              max={maxMinutes}
               placeholder="0"
               value={newMinute}
-              onChange={(e) => setNewMinute(e.target.value)}
+              onChange={handleMinuteChange}
               className="w-20"
             />
           </div>
