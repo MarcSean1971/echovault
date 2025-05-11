@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { AlertCircle, MapPin } from "lucide-react";
+import { AlertCircle, MapPin, X } from "lucide-react";
 import { HOVER_TRANSITION, BUTTON_HOVER_EFFECTS } from "@/utils/hoverEffects";
 
 interface PanicButtonProps {
@@ -26,26 +26,28 @@ export function PanicButton({
   countDown,
   isConfirming
 }: PanicButtonProps) {
+  const inCancelWindow = panicMode && countDown > 0;
+  
   return (
     <Button 
       onClick={onClick}
       disabled={isDisabled}
       className={`bg-red-600 text-white ${buttonPaddingClass} ${buttonSizeClass} hover:bg-red-700 
         ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.destructive}
-        ${isConfirming ? "animate-pulse" : ""}`}
+        ${inCancelWindow ? "animate-pulse" : ""}`}
       size={isMobile ? "sm" : "lg"}
       style={{ backgroundColor: "#dc2626" }}
     >
       <span className="flex items-center gap-1 font-medium">
-        {panicMode ? (
+        {panicMode && countDown > 0 ? (
+          <>
+            <X className={`${iconSizeClass} animate-pulse`} />
+            {isMobile ? `CANCEL (${countDown})` : `CLICK TO CANCEL (${countDown})`}
+          </>
+        ) : panicMode ? (
           <>
             <AlertCircle className={iconSizeClass} />
-            {countDown > 0 ? `SENDING... (${countDown})` : "SENDING..."}
-          </>
-        ) : isConfirming ? (
-          <>
-            <AlertCircle className={`${iconSizeClass} animate-pulse`} />
-            {isMobile ? "CONFIRM" : "CONFIRM EMERGENCY"}
+            {isMobile ? "SENDING..." : "MESSAGES SENDING..."}
           </>
         ) : (
           <>
