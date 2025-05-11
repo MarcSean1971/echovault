@@ -1,7 +1,7 @@
 
 import { DatePicker } from "./DatePicker";
 import { RecurringPatternSelector } from "./RecurringPatternSelector";
-import { RecurringPattern } from "./recurring-pattern/RecurringPatternType";
+import { RecurringPattern } from "@/types/message";
 
 interface ScheduledDateSectionProps {
   triggerDate: Date | null;

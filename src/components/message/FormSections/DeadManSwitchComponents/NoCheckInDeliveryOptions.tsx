@@ -1,10 +1,10 @@
+
 import { RadioGroup } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Clock, Repeat } from "lucide-react";
-import { DeliveryOption } from "@/types/message";
+import { DeliveryOption, RecurringPattern } from "@/types/message";
 import { RadioCardOption } from "./RadioCardOption";
 import { RecurringPatternSelector } from "./RecurringPatternSelector";
-import { RecurringPattern } from "./recurring-pattern/RecurringPatternType";
 import { Separator } from "@/components/ui/separator";
 import { DatePicker } from "./DatePicker";
 

@@ -1,8 +1,9 @@
+
 import { TimeThresholdSelector } from "./TimeThresholdSelector";
 import { DatePicker } from "./DatePicker";
 import { RecurringPatternSelector } from "./RecurringPatternSelector";
 import { ReminderSettings } from "./ReminderSettings";
-import { RecurringPattern } from "./recurring-pattern/RecurringPatternType";
+import { RecurringPattern } from "@/types/message";
 import { Separator } from "@/components/ui/separator";
 
 interface InactivityToDateProps {
