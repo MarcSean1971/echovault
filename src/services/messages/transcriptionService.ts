@@ -33,6 +33,7 @@ export const transcribeVideoContent = async (videoBlob: Blob): Promise<string> =
     // Convert video blob to base64
     const base64Video = await blobToBase64(videoBlob);
     console.log("Video converted to base64, size:", base64Video.length);
+    console.log("Video blob type:", videoBlob.type);
     
     // Call the edge function
     const { data, error } = await supabase.functions.invoke("transcribe-video", {
