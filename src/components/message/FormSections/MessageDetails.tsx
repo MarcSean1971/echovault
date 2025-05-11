@@ -1,3 +1,4 @@
+
 import { Label } from "@/components/ui/label";
 import { useMessageForm } from "../MessageFormContext";
 import { FileUploader } from "@/components/FileUploader";
@@ -94,15 +95,6 @@ export function MessageDetails({ message }: MessageDetailsProps) {
       {/* Title field */}
       <TitleInput />
 
-      {/* File attachments - moved above the location section */}
-      <div className="space-y-2">
-        <Label>File Attachments</Label>
-        <FileUploader 
-          files={files} 
-          onChange={setFiles} 
-        />
-      </div>
-
       {/* Message type selector as tabs */}
       <div>
         <Label className="mb-2 block">Message Type</Label>
@@ -165,7 +157,16 @@ export function MessageDetails({ message }: MessageDetailsProps) {
         </Tabs>
       </div>
 
-      {/* Location section - moved below file attachments */}
+      {/* File attachments section */}
+      <div className="space-y-2">
+        <Label>File Attachments</Label>
+        <FileUploader 
+          files={files} 
+          onChange={setFiles} 
+        />
+      </div>
+
+      {/* Location section */}
       <LocationSection />
 
       {/* Media recorder dialogs - keeping this as a backup option */}
