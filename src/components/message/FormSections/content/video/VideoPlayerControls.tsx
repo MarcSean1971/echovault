@@ -25,6 +25,7 @@ export function VideoPlayerControls({
           onClick={togglePlayback} 
           variant="secondary" 
           size="icon"
+          type="button" // Explicitly set type to button to prevent form submission
           className="rounded-full hover:bg-primary/90 hover:text-primary-foreground transition-colors duration-200"
         >
           {isPlaying ? (
@@ -38,6 +39,7 @@ export function VideoPlayerControls({
           onClick={handleTranscribe}
           variant="secondary"
           size="sm"
+          type="button" // Explicitly set type to button to prevent form submission
           disabled={isTranscribing}
           className="hover:bg-primary/90 hover:text-primary-foreground transition-colors duration-200"
         >
@@ -49,6 +51,7 @@ export function VideoPlayerControls({
           onClick={onClearVideo}
           variant="ghost"
           size="icon"
+          type="button" // Explicitly set type to button to prevent form submission
           className="hover:bg-destructive/90 hover:text-destructive-foreground transition-colors duration-200"
         >
           <Trash2 className="h-4 w-4" />
