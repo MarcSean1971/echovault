@@ -1,7 +1,7 @@
 
 import { toast } from "@/components/ui/use-toast";
 import { FileAccessManager } from "@/services/messages/fileAccess";
-import { AccessMethod } from "@/components/message/detail/attachment/types";
+import { AccessMode } from "@/components/message/detail/attachment/types";
 import { DownloadHandlerProps } from "./types";
 
 /**
@@ -9,90 +9,84 @@ import { DownloadHandlerProps } from "./types";
  */
 export function useFileOpenHandler({ props, utilities }: DownloadHandlerProps) {
   const {
-    filePath
+    filePath,
+    fileName,
+    fileType
   } = props;
   
   const {
     updateMethodStatus,
     setLoading,
     setHasError,
-    setDownloadMethod
+    setAccessUrl,
+    setDownloadActive
   } = utilities;
   
   // Create file access manager
   const fileAccessManager = new FileAccessManager(filePath, props.deliveryId, props.recipientEmail);
   
-  // Get direct public URL (for direct access option)
-  const directUrl = fileAccessManager.getDirectUrl();
-
-  const openFile = async (method: AccessMethod) => {
-    setLoading(true);
-    
+  // Open file in new tab
+  const openFile = async (method = props.preferredMethod || 'secure') => {
     try {
-      const { url, method: resultMethod } = await fileAccessManager.getAccessUrl(method);
+      setLoading(true);
+      console.log(`[FileOpenHandler] Opening file ${fileName} using ${method} method`);
       
-      if (url && resultMethod) {
-        // For opening in a new tab
-        window.open(url, '_blank');
-        updateMethodStatus(resultMethod, true);
-        setHasError(false);
-        return true;
-      } else {
-        updateMethodStatus(method, false);
-      }
-      
-      // Try alternatives if current method fails
-      const alternativeMethods: AccessMethod[] = ['secure', 'signed', 'direct']
-        .filter(m => m !== method) as AccessMethod[];
-      
-      for (const alternativeMethod of alternativeMethods) {
-        try {
-          const { url: alternativeUrl, method: altMethod } = await fileAccessManager.getAccessUrl(alternativeMethod);
-          
-          if (alternativeUrl && altMethod) {
-            window.open(alternativeUrl, '_blank');
-            setDownloadMethod(alternativeMethod);
-            setHasError(false);
-            updateMethodStatus(altMethod, true);
-            
-            toast({
-              title: "Using alternative method",
-              description: `Switched to ${alternativeMethod === 'secure' ? 'Edge Function' : alternativeMethod === 'signed' ? 'Signed URL' : 'Direct URL'} for viewing`,
-            });
-            return true;
-          } else {
-            updateMethodStatus(alternativeMethod, false);
-          }
-        } catch (altError) {
-          console.error(`Error with alternative method ${alternativeMethod}:`, altError);
-          updateMethodStatus(alternativeMethod, false);
+      if (method === 'secure' && props.deliveryId && props.recipientEmail) {
+        const { url, method: resultMethod } = await fileAccessManager.getAccessUrl(method, 'view');
+        
+        if (url && resultMethod) {
+          console.log(`[FileOpenHandler] Opening URL: ${url}`);
+          await FileAccessManager.openFile(url, fileName, fileType);
+          updateMethodStatus(resultMethod, true);
+          setHasError(false);
+          setAccessUrl(url);
+          return true;
         }
       }
       
-      // If all methods fail, show error
+      if (method === 'signed') {
+        const { url, method: resultMethod } = await fileAccessManager.getAccessUrl('signed', 'view');
+        if (url && resultMethod) {
+          await FileAccessManager.openFile(url, fileName, fileType);
+          updateMethodStatus(resultMethod, true);
+          setHasError(false);
+          setAccessUrl(url);
+          return true;
+        }
+      }
+      
+      const { url, method: resultMethod } = await fileAccessManager.getAccessUrl('direct', 'view');
+      if (url && resultMethod) {
+        await FileAccessManager.openFile(url, fileName, fileType);
+        updateMethodStatus(resultMethod, true);
+        setHasError(false);
+        setAccessUrl(url);
+        return true;
+      }
+      
       setHasError(true);
       toast({
-        title: "Access Error",
-        description: "Could not access the file using any method. Please try again or contact support.",
+        title: "Cannot Open File",
+        description: "Unable to generate a valid URL to open this file.",
         variant: "destructive"
       });
       return false;
     } catch (error) {
-      console.error("Error opening attachment:", error);
+      console.error("Error opening file:", error);
       setHasError(true);
       toast({
         title: "Error",
-        description: "An error occurred while trying to access the attachment",
+        description: "An error occurred while trying to open the file",
         variant: "destructive"
       });
       return false;
     } finally {
       setLoading(false);
+      setDownloadActive(false);
     }
   };
 
   return {
-    directUrl,
     openFile
   };
 }

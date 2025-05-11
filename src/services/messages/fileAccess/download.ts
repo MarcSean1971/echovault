@@ -18,6 +18,7 @@ export class FileDownloader {
   
   /**
    * Create an anchor element for download or viewing
+   * This returns a Promise<HTMLAnchorElement> to handle the async operations needed
    */
   public static async createAnchorElement(url: string, options: DownloadOptions): Promise<HTMLAnchorElement> {
     const { fileName, fileType, forDownload } = options;

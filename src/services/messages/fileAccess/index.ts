@@ -38,8 +38,9 @@ export class FileAccessManager {
   
   /**
    * Create an anchor element for download or viewing
+   * Note: This is now a wrapper around FileDownloader.createAnchorElement that handles the Promise
    */
-  public static createAnchorElement(url: string, fileName: string, fileType: string, forDownload: boolean): HTMLAnchorElement {
+  public static async createAnchorElement(url: string, fileName: string, fileType: string, forDownload: boolean): Promise<HTMLAnchorElement> {
     return FileDownloader.createAnchorElement(url, { fileName, fileType, forDownload });
   }
   
