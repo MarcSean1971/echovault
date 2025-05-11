@@ -11,7 +11,7 @@ import { AttachmentAccessResult, AttachmentAccessProps } from "./types";
 export function useAttachmentAccess(
   props: AttachmentAccessProps
 ): AttachmentAccessResult {
-  // Create state values and utilities
+  // Create state values and utilities using useAttachmentState
   const {
     isLoading,
     hasError,

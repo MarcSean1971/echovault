@@ -1,5 +1,6 @@
+
 import { useState } from "react";
-import { AttachmentAccessState, AttachmentAccessProps } from "./types";
+import { AttachmentAccessState } from "./types";
 import { AccessMethod } from "@/components/message/detail/attachment/types";
 
 /**
@@ -43,7 +44,8 @@ export function useAttachmentState() {
     });
   };
 
-  const setLoading = (isLoading: boolean) => {
+  // Fixed naming to setIsLoading to match the types
+  const setIsLoading = (isLoading: boolean) => {
     setState(prev => ({ ...prev, isLoading }));
   };
 
@@ -75,27 +77,36 @@ export function useAttachmentState() {
     }));
   };
 
-  const toggleDownloadMethod = () => {
-    // Cycle through the methods: direct -> secure -> signed -> direct
-    // Modified to prioritize direct access first
-    const methods: AccessMethod[] = ['direct', 'secure', 'signed'];
-    const currentIndex = methods.indexOf(state.downloadMethod);
-    const nextMethod = methods[(currentIndex + 1) % methods.length];
-    
-    setDownloadMethod(nextMethod);
+  const setLastSuccessMethod = (method: AccessMethod | null) => {
+    setState(prev => ({ ...prev, lastSuccessMethod: method }));
   };
 
   return {
+    // Return state properties directly instead of the whole state object
+    isLoading: state.isLoading,
+    hasError: state.hasError,
+    retryCount: state.retryCount,
+    showDebug: state.showDebug,
+    accessUrl: state.accessUrl,
+    downloadMethod: state.downloadMethod,
+    lastSuccessMethod: state.lastSuccessMethod,
+    downloadActive: state.downloadActive,
+    attemptedMethods: state.attemptedMethods,
+    currentMethodStatus: state.currentMethodStatus,
+    
+    // Return the state and setState for advanced usage
     state,
     setState,
+    
+    // Return the utility functions
     updateMethodStatus,
-    setLoading,
+    setIsLoading,
     setHasError,
     setDownloadActive,
     incrementRetryCount,
     toggleDebug,
     setAccessUrl,
     setDownloadMethod,
-    toggleDownloadMethod
+    setLastSuccessMethod
   };
 }

@@ -10,6 +10,19 @@ export interface AttachmentAccessProps {
   recipientEmail?: string;
 }
 
+export interface AttachmentAccessState {
+  isLoading: boolean;
+  hasError: boolean;
+  retryCount: number;
+  showDebug: boolean;
+  accessUrl: string | null;
+  downloadMethod: AccessMethod;
+  lastSuccessMethod: AccessMethod | null;
+  downloadActive: boolean;
+  attemptedMethods: {[key in AccessMethod]?: boolean};
+  currentMethodStatus: 'idle' | 'success' | 'error';
+}
+
 export interface AttachmentAccessUtilities {
   setIsLoading: (loading: boolean) => void;
   setHasError: (hasError: boolean) => void;

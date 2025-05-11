@@ -1,4 +1,3 @@
-
 import { toast } from "@/components/ui/use-toast";
 import { FileAccessManager } from "@/services/messages/fileAccess";
 import { AccessMode } from "@/components/message/detail/attachment/types";
@@ -17,7 +16,7 @@ export function useFileOpenHandler({ props, utilities }: DownloadHandlerProps) {
   
   const {
     updateMethodStatus,
-    setLoading,
+    setIsLoading,
     setHasError,
     setAccessUrl,
     setDownloadActive
@@ -29,7 +28,7 @@ export function useFileOpenHandler({ props, utilities }: DownloadHandlerProps) {
   // Open file in new tab
   const openFile = async (method = 'secure') => {
     try {
-      setLoading(true);
+      setIsLoading(true);
       console.log(`[FileOpenHandler] Opening file ${fileName} using ${method} method`);
       
       // Check if we're authenticated and no delivery ID is provided
@@ -127,7 +126,7 @@ export function useFileOpenHandler({ props, utilities }: DownloadHandlerProps) {
       });
       return false;
     } finally {
-      setLoading(false);
+      setIsLoading(false);
       setDownloadActive(false);
     }
   };

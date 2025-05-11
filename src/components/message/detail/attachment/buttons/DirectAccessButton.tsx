@@ -3,6 +3,7 @@ import React from "react";
 import { Link } from "lucide-react";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { AccessButton } from "./AccessButton";
+import { AccessMethod } from "@/components/message/detail/attachment/types";
 
 interface DirectAccessButtonProps { 
   isLoading: boolean; 
