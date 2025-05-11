@@ -5,7 +5,6 @@ import { Calendar as CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import {
   Popover,
@@ -16,13 +15,13 @@ import {
 interface DatePickerProps {
   selectedDate: Date | null | undefined;
   setSelectedDate: (date: Date | null) => void;
-  label?: string;
+  label?: string; // Keep the prop for backward compatibility
 }
 
 export function DatePicker({ 
   selectedDate, 
   setSelectedDate, 
-  label = "Date"
+  label = "Date" // Default value kept for compatibility
 }: DatePickerProps) {
   const [time, setTime] = useState("12:00");
   
@@ -63,7 +62,6 @@ export function DatePicker({
   
   return (
     <div className="space-y-2">
-      {label && <Label>{label}</Label>}
       <div className="grid grid-cols-3 gap-2">
         <Popover>
           <PopoverTrigger asChild className="col-span-2">
