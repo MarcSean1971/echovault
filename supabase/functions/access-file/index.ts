@@ -23,6 +23,45 @@ serve(async (req: Request) => {
     const pathParts = url.pathname.split('/').filter(Boolean);
     
     console.log(`[AccessFile] Request path: ${url.pathname}`);
+
+    // Check for POST method first - allows for body parameters
+    if (req.method === 'POST') {
+      // Handle the POST request
+      try {
+        const body = await req.json();
+        const { filePath, delivery, recipient, mode, download } = body;
+        
+        if (!filePath || !delivery || !recipient) {
+          return new Response(
+            JSON.stringify({ error: "Missing required parameters in request body" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Extract auth token from header
+        const authHeader = req.headers.get('Authorization');
+        if (!authHeader) {
+          return new Response(
+            JSON.stringify({ error: "Missing authorization header" }),
+            { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Return URL for client to use
+        return new Response(
+          JSON.stringify({ 
+            url: `https://onwthrpgcnfydxzzmyot.supabase.co/functions/v1/access-file/file/${encodeURIComponent(filePath)}?delivery=${encodeURIComponent(delivery)}&recipient=${encodeURIComponent(recipient)}&mode=${mode || 'view'}&download-file=${!!download}` 
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      } catch (e) {
+        console.error(`[AccessFile] Error parsing request body: ${e.message}`);
+        return new Response(
+          JSON.stringify({ error: "Invalid request body" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
     
     // Get file path from the URL
     if (pathParts.length < 3 || pathParts[0] !== 'access-file' || pathParts[1] !== 'file') {
@@ -45,8 +84,14 @@ serve(async (req: Request) => {
     const recipientEmail = url.searchParams.get('recipient');
     const downloadMode = url.searchParams.has('download-file') || 
                          url.searchParams.get('mode') === 'download';
+
+    // Get auth token either from header or URL parameter (for edge cases)
+    let authToken = req.headers.get('Authorization')?.replace('Bearer ', '');
+    if (!authToken) {
+      authToken = url.searchParams.get('auth_token');
+    }
     
-    console.log(`[AccessFile] File: ${filePath}, Delivery: ${deliveryId}, Download: ${downloadMode}`);
+    console.log(`[AccessFile] File: ${filePath}, Delivery: ${deliveryId}, Download: ${downloadMode}, Auth: ${authToken ? 'Present' : 'Missing'}`);
     
     // Validate required parameters
     if (!deliveryId || !recipientEmail) {
@@ -67,7 +112,18 @@ serve(async (req: Request) => {
       );
     }
     
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    // Create Supabase client - use service role key for file access
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false
+      },
+      global: {
+        headers: authToken ? { 
+          Authorization: `Bearer ${authToken}` 
+        } : {}
+      }
+    });
     
     // FIXED: Replace the join with two separate queries
     // First, get the delivered_message record

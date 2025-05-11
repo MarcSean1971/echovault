@@ -53,7 +53,7 @@ export function useFileDownloadHandler({ props, utilities }: DownloadHandlerProp
           
           console.log(`Actual download URL: ${urlObj.toString()}`);
           
-          FileAccessManager.executeDownload(urlObj.toString(), fileName, fileType, 'secure');
+          await FileAccessManager.executeDownload(urlObj.toString(), fileName, fileType, 'secure');
           updateMethodStatus('secure', true);
           setHasError(false);
           return true;
@@ -66,14 +66,14 @@ export function useFileDownloadHandler({ props, utilities }: DownloadHandlerProp
       if (method === 'signed') {
         const { url, method: resultMethod } = await fileAccessManager.getAccessUrl('signed', 'download');
         if (url && resultMethod) {
-          FileAccessManager.executeDownload(url, fileName, fileType, resultMethod);
+          await FileAccessManager.executeDownload(url, fileName, fileType, resultMethod);
           updateMethodStatus(resultMethod, true);
           setHasError(false);
           return true;
         }
         updateMethodStatus('signed', false);
       } else if (method === 'direct' && directUrl) {
-        FileAccessManager.executeDownload(directUrl, fileName, fileType, 'direct');
+        await FileAccessManager.executeDownload(directUrl, fileName, fileType, 'direct');
         updateMethodStatus('direct', true);
         setHasError(false);
         return true;
@@ -85,13 +85,11 @@ export function useFileDownloadHandler({ props, utilities }: DownloadHandlerProp
         method === 'signed' ? 'direct' : 'signed';
       
       try {
-        // FIX: Remove the impossible condition check for fallbackMethod being 'secure'
-        // and handle fallback methods directly based on their actual values
         if (fallbackMethod === 'signed') {
           const { url } = await fileAccessManager.getAccessUrl('signed', 'download');
           if (url) {
             console.log(`Using fallback signed method`);
-            FileAccessManager.executeDownload(url, fileName, fileType, 'signed');
+            await FileAccessManager.executeDownload(url, fileName, fileType, 'signed');
             setDownloadMethod('signed');
             updateMethodStatus('signed', true);
             setHasError(false);
@@ -104,7 +102,7 @@ export function useFileDownloadHandler({ props, utilities }: DownloadHandlerProp
           }
         } else if (fallbackMethod === 'direct' && directUrl) {
           console.log(`Using fallback direct method`);
-          FileAccessManager.executeDownload(directUrl, fileName, fileType, 'direct');
+          await FileAccessManager.executeDownload(directUrl, fileName, fileType, 'direct');
           setDownloadMethod('direct');
           updateMethodStatus('direct', true);
           setHasError(false);

@@ -2,6 +2,7 @@
 import { toast } from "@/components/ui/use-toast";
 import { AccessMethod } from "@/components/message/detail/attachment/types";
 import { DownloadOptions } from "./types";
+import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Handles file download execution and browser compatibility
@@ -18,7 +19,7 @@ export class FileDownloader {
   /**
    * Create an anchor element for download or viewing
    */
-  public static createAnchorElement(url: string, options: DownloadOptions): HTMLAnchorElement {
+  public static async createAnchorElement(url: string, options: DownloadOptions): Promise<HTMLAnchorElement> {
     const { fileName, fileType, forDownload } = options;
     const a = document.createElement('a');
     
@@ -37,6 +38,16 @@ export class FileDownloader {
       if (forDownload) {
         parsedUrl.searchParams.append('download-file', 'true');
         parsedUrl.searchParams.append('mode', 'download');
+      }
+      
+      // Get the current session to extract the token
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      
+      // Add auth token as a URL parameter if not already included in the URL
+      // and if we're accessing the edge function
+      if (token && url.includes('/functions/v1/') && !parsedUrl.searchParams.has('auth_token')) {
+        parsedUrl.searchParams.append('auth_token', token);
       }
       
       finalUrl = parsedUrl.toString();
@@ -73,13 +84,13 @@ export class FileDownloader {
   /**
    * Execute download with appropriate notification
    */
-  public static executeDownload(url: string, fileName: string, fileType: string, method: AccessMethod): void {
+  public static async executeDownload(url: string, fileName: string, fileType: string, method: AccessMethod): Promise<void> {
     console.log(`[FileDownloader] Starting download for ${fileName} using ${method} method`);
     console.log(`[FileDownloader] Download URL: ${url}`);
     
     // Create link with download attribute
     const downloadOptions = { fileName, fileType, forDownload: true };
-    const a = FileDownloader.createAnchorElement(url, downloadOptions);
+    const a = await FileDownloader.createAnchorElement(url, downloadOptions);
     
     // Try multiple download strategies for browser compatibility
     try {
@@ -130,9 +141,9 @@ export class FileDownloader {
   /**
    * Open file in a new tab
    */
-  public static openFile(url: string, fileName: string, fileType: string): void {
+  public static async openFile(url: string, fileName: string, fileType: string): Promise<void> {
     const viewOptions = { fileName, fileType, forDownload: false };
-    const a = FileDownloader.createAnchorElement(url, viewOptions);
+    const a = await FileDownloader.createAnchorElement(url, viewOptions);
     
     a.target = "_blank";
     document.body.appendChild(a);

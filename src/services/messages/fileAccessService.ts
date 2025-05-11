@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 // Define valid bucket names for consistency
@@ -15,6 +14,32 @@ export const getPublicFileUrl = async (
   mode: 'view' | 'download' = 'view'
 ): Promise<string | null> => {
   try {
+    // Get the current session to extract the token for authorization
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData.session?.access_token;
+
+    // If using supabase.functions.invoke:
+    if (token) {
+      // Use Supabase SDK's built-in function invocation which handles authentication
+      const { data, error } = await supabase.functions.invoke('access-file', {
+        body: {
+          filePath: filePath,
+          delivery: deliveryId,
+          recipient: recipientEmail,
+          mode: mode,
+          download: mode === 'download'
+        }
+      });
+
+      if (error) {
+        console.error("[FileAccess] Error invoking access-file function:", error);
+        // Fall back to direct URL method
+      } else if (data?.url) {
+        return data.url;
+      }
+    }
+
+    // Fallback to the direct URL method with explicit token
     // Use Supabase project URL for proper Edge Function URL generation
     const supabaseUrl = "https://onwthrpgcnfydxzzmyot.supabase.co";
     
@@ -34,6 +59,11 @@ export const getPublicFileUrl = async (
     
     // Add timestamp to prevent caching
     url.searchParams.append('t', Date.now().toString());
+
+    // Include the auth token if available
+    if (token) {
+      url.searchParams.append('auth_token', token);
+    }
     
     console.log(`[FileAccess] Generated file access URL: ${url.toString()}`);
     return url.toString();
