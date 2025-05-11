@@ -1,7 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { corsHeaders } from "./cors-headers.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { supabaseClient } from "./supabase-client.ts";
 
 serve(async (req: Request): Promise<Response> => {
   console.log("[AccessMessage] Request received:", req.url);
@@ -47,26 +47,28 @@ serve(async (req: Request): Promise<Response> => {
   }
   
   // Initialize Supabase client with service role key for admin access
-  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-  const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-  
-  if (!supabaseUrl || !supabaseServiceRoleKey) {
-    console.error('[AccessMessage] Missing required environment variables');
-    return new Response(
-      JSON.stringify({ error: "Server configuration error" }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      }
-    );
-  }
-  
-  const supabase = createClient(
-    supabaseUrl,
-    supabaseServiceRoleKey,
-  );
+  const supabase = supabaseClient();
   
   try {
+    // Validate the message ID format
+    if (messageId) {
+      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidPattern.test(messageId)) {
+        console.error(`[AccessMessage] Invalid message ID format: ${messageId}`);
+        return new Response(
+          JSON.stringify({ 
+            error: "Invalid message ID format", 
+            details: `Message ID ${messageId} is not a valid UUID`,
+            message_id: messageId 
+          }),
+          { 
+            status: 400, 
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          }
+        );
+      }
+    }
+    
     // Special diagnostic bypass mode
     if (bypassSecurity) {
       console.log(`[AccessMessage] BYPASS SECURITY MODE activated for message: ${messageId}`);
@@ -91,7 +93,11 @@ serve(async (req: Request): Promise<Response> => {
       if (messageError) {
         console.error(`[AccessMessage] Error fetching message in bypass mode: ${messageError.message}`);
         return new Response(
-          JSON.stringify({ error: `Error fetching message: ${messageError.message}` }),
+          JSON.stringify({ 
+            error: `Error fetching message: ${messageError.message}`,
+            message_id: messageId,
+            query_details: "SELECT * FROM messages WHERE id = '" + messageId + "'"
+          }),
           { 
             status: 500, 
             headers: { ...corsHeaders, "Content-Type": "application/json" }
@@ -101,8 +107,34 @@ serve(async (req: Request): Promise<Response> => {
         
       if (!message) {
         console.error(`[AccessMessage] Message not found in bypass mode: ${messageId}`);
+        
+        // Try to get any messages to see if the database is working
+        try {
+          const { data: anyMessages } = await supabase
+            .from("messages")
+            .select("id")
+            .limit(3);
+            
+          const availableIds = anyMessages?.map(m => m.id) || [];
+          
+          return new Response(
+            JSON.stringify({ 
+              error: "Message not found", 
+              message_id: messageId,
+              available_ids: availableIds,
+              help: "These message IDs exist in the database. Try one of them."
+            }),
+            { 
+              status: 404, 
+              headers: { ...corsHeaders, "Content-Type": "application/json" }
+            }
+          );
+        } catch (anyError) {
+          console.error("[AccessMessage] Error checking for any messages:", anyError);
+        }
+        
         return new Response(
-          JSON.stringify({ error: "Message not found" }),
+          JSON.stringify({ error: "Message not found", message_id: messageId }),
           { 
             status: 404, 
             headers: { ...corsHeaders, "Content-Type": "application/json" }
@@ -178,6 +210,53 @@ serve(async (req: Request): Promise<Response> => {
         console.log(`[AccessMessage] Found similar delivery records: ${JSON.stringify(similarDeliveries)}`);
       }
       
+      // Try looking up by just message ID as a fallback
+      const { data: messageOnlyDelivery } = await supabase
+        .from('delivered_messages')
+        .select('*')
+        .eq('message_id', messageId)
+        .limit(1);
+        
+      if (messageOnlyDelivery && messageOnlyDelivery.length > 0) {
+        console.log(`[AccessMessage] Found delivery by message ID: ${JSON.stringify(messageOnlyDelivery[0])}`);
+        return new Response(
+          JSON.stringify({ 
+            error: "Invalid delivery ID", 
+            details: "Found message but delivery ID doesn't match",
+            correct_delivery_id: messageOnlyDelivery[0].delivery_id
+          }),
+          { 
+            status: 403, 
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          }
+        );
+      }
+      
+      // Check if the message exists at all
+      const { data: messageCheck, error: messageCheckError } = await supabase
+        .from('messages')
+        .select('id')
+        .eq('id', messageId)
+        .maybeSingle();
+        
+      if (messageCheckError) {
+        console.error(`[AccessMessage] Error checking message existence: ${messageCheckError.message}`);
+      } else if (!messageCheck) {
+        console.log(`[AccessMessage] Message ${messageId} does not exist`);
+        return new Response(
+          JSON.stringify({ 
+            error: "Message not found", 
+            details: "The message ID does not exist in the database"
+          }),
+          { 
+            status: 404, 
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          }
+        );
+      } else {
+        console.log(`[AccessMessage] Message exists but no delivery record found`);
+      }
+      
       return new Response(
         JSON.stringify({ 
           error: "Invalid or expired access link. Delivery record not found.",
@@ -203,13 +282,26 @@ serve(async (req: Request): Promise<Response> => {
       
     if (recipientError) {
       console.error(`[AccessMessage] Recipient lookup error: ${recipientError.message}`);
-      return new Response(
-        JSON.stringify({ error: `Invalid recipient: ${recipientError.message}` }),
-        { 
-          status: 403, 
-          headers: { ...corsHeaders, "Content-Type": "application/json" }
-        }
-      );
+      // Try fallback lookup by email
+      const { data: recipientByEmail, error: recipientByEmailError } = await supabase
+        .from('recipients')
+        .select('id, email')
+        .eq('email', decodeURIComponent(recipientEmail))
+        .maybeSingle();
+        
+      if (!recipientByEmailError && recipientByEmail) {
+        console.log(`[AccessMessage] Found recipient by email: ${JSON.stringify(recipientByEmail)}`);
+        // Use this recipient instead
+        recipientData = recipientByEmail;
+      } else {
+        return new Response(
+          JSON.stringify({ error: `Invalid recipient: ${recipientError.message}` }),
+          { 
+            status: 403, 
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          }
+        );
+      }
     }
     
     if (!recipientData) {
@@ -285,7 +377,10 @@ serve(async (req: Request): Promise<Response> => {
     if (messageError) {
       console.error(`[AccessMessage] Error fetching message: ${messageError.message}`);
       return new Response(
-        JSON.stringify({ error: `Error fetching message: ${messageError.message}` }),
+        JSON.stringify({ 
+          error: `Error fetching message: ${messageError.message}`,
+          query: `SELECT * FROM messages WHERE id = '${messageId}'` 
+        }),
         { 
           status: 500, 
           headers: { ...corsHeaders, "Content-Type": "application/json" }
@@ -295,8 +390,19 @@ serve(async (req: Request): Promise<Response> => {
       
     if (!messageData) {
       console.error(`[AccessMessage] Message not found: ${messageId}`);
+      
+      // Try to find any messages as a diagnostic step
+      const { data: anyMessages } = await supabase
+        .from('messages')
+        .select('id')
+        .limit(5);
+        
       return new Response(
-        JSON.stringify({ error: "Message not found" }),
+        JSON.stringify({ 
+          error: "Message not found", 
+          details: `No message found with ID: ${messageId}`,
+          sample_ids: anyMessages?.map(m => m.id) || [] 
+        }),
         { 
           status: 404, 
           headers: { ...corsHeaders, "Content-Type": "application/json" }

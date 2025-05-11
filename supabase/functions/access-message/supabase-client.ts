@@ -5,5 +5,19 @@ export const supabaseClient = () => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
   const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
   
-  return createClient(supabaseUrl, supabaseServiceKey);
+  if (!supabaseUrl || !supabaseServiceKey) {
+    throw new Error("Missing required environment variables");
+  }
+  
+  return createClient(supabaseUrl, supabaseServiceKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false
+    },
+    global: {
+      headers: {
+        Authorization: `Bearer ${supabaseServiceKey}`
+      }
+    }
+  });
 };

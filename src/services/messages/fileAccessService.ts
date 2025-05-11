@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 // Define valid bucket names for consistency
@@ -76,7 +75,6 @@ export const getPublicFileUrl = async (
     // Add the API key for anonymous access - THIS IS THE KEY FIX
     // This key is public anyway since it's used in the frontend
     // We get it from the client to ensure it's always available
-    const { data: { session } } = await supabase.auth.getSession();
     const anonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ud3RocnBnY25meWR4enpteW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYxMDQzOTUsImV4cCI6MjA2MTY4MDM5NX0.v4tYEDukTlMERZ6GHqvnoDbyH-g9KQd8s3-UlIOPkDs";
     url.searchParams.append('apikey', anonKey);
     
