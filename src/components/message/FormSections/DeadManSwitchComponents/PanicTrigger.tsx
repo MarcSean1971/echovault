@@ -1,3 +1,4 @@
+
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { PanicTriggerConfig } from "@/types/message";
@@ -123,16 +124,6 @@ export function PanicTrigger({ config, setConfig }: PanicTriggerProps) {
           </p>
         </div>
       </div>
-      
-      {/* Debug info */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="mt-4 p-2 bg-gray-100 rounded text-xs">
-          <details>
-            <summary>Debug: Current Panic Config</summary>
-            <pre>{JSON.stringify(config, null, 2)}</pre>
-          </details>
-        </div>
-      )}
     </div>
   );
 }
