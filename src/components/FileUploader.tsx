@@ -4,8 +4,6 @@ import { Upload, X, File as FileIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { toast } from "@/components/ui/use-toast";
-import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 export interface FileAttachment {
   file: File | null;
@@ -171,7 +169,6 @@ export function FileUploader({
                   {attachment.uploading && typeof attachment.progress === "number" && (
                     <Progress value={attachment.progress} className="w-20 h-2" />
                   )}
-                  
                   <Button
                     type="button"
                     variant="ghost"
