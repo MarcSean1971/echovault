@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 // Define valid bucket names for consistency
@@ -22,6 +23,10 @@ export const getPublicFileUrl = async (
     console.log(`[FileAccess] Delivery context - ID: ${deliveryId}, Recipient: ${recipientEmail?.substring(0, 3)}...`);
     console.log(`[FileAccess] File path: ${filePath}`);
 
+    // Normalize file path - remove 'file/' prefix if it exists
+    const normalizedPath = filePath.startsWith('file/') ? filePath.substring(5) : filePath;
+    console.log(`[FileAccess] Normalized file path: ${normalizedPath}`);
+
     // Use Supabase SDK's built-in function invocation which handles authentication
     // This is the preferred method when a token is available
     if (token) {
@@ -29,7 +34,7 @@ export const getPublicFileUrl = async (
       try {
         const { data, error } = await supabase.functions.invoke('access-file', {
           body: {
-            filePath: filePath,
+            filePath: normalizedPath, // Send normalized path
             delivery: deliveryId,
             recipient: recipientEmail,
             mode: mode,
@@ -56,7 +61,8 @@ export const getPublicFileUrl = async (
     const supabaseUrl = "https://onwthrpgcnfydxzzmyot.supabase.co";
     
     // Build the URL with properly encoded parameters
-    const functionUrl = `${supabaseUrl}/functions/v1/access-file/file/${encodeURIComponent(filePath)}`;
+    // IMPORTANT: Don't add "file/" prefix - send the normalized path directly
+    const functionUrl = `${supabaseUrl}/functions/v1/access-file/${encodeURIComponent(normalizedPath)}`;
     const url = new URL(functionUrl);
     
     // Add required parameters
@@ -72,7 +78,7 @@ export const getPublicFileUrl = async (
     // Add timestamp to prevent caching
     url.searchParams.append('t', Date.now().toString());
 
-    // Add the API key for anonymous access - THIS IS THE KEY FIX
+    // Add the API key for anonymous access
     // This key is public anyway since it's used in the frontend
     // We get it from the client to ensure it's always available
     const anonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ud3RocnBnY25meWR4enpteW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYxMDQzOTUsImV4cCI6MjA2MTY4MDM5NX0.v4tYEDukTlMERZ6GHqvnoDbyH-g9KQd8s3-UlIOPkDs";

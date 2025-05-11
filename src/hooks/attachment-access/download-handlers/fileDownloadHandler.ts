@@ -5,6 +5,15 @@ import { AccessMethod } from "@/components/message/detail/attachment/types";
 import { DownloadHandlerProps } from "./types";
 import { supabase } from "@/integrations/supabase/client";
 
+// Helper function to normalize file paths
+function normalizeFilePath(path: string): string {
+  // Remove 'file/' prefix if present
+  if (path.startsWith('file/')) {
+    return path.substring(5);
+  }
+  return path;
+}
+
 /**
  * Handles file download operations
  */
@@ -17,15 +26,19 @@ export function useFileDownloadHandler({ props, utilities }: DownloadHandlerProp
   
   const {
     updateMethodStatus,
-    setIsLoading, // Updated from setLoading to setIsLoading
+    setIsLoading,
     setHasError,
     setDownloadActive,
     setDownloadMethod,
     setAccessUrl
   } = utilities;
   
-  // Create file access manager
-  const fileAccessManager = new FileAccessManager(filePath, props.deliveryId, props.recipientEmail);
+  // Normalize file path before creating the access manager
+  const normalizedPath = normalizeFilePath(filePath);
+  console.log(`[FileDownloadHandler] Original path: ${filePath}, normalized: ${normalizedPath}`);
+  
+  // Create file access manager with normalized path
+  const fileAccessManager = new FileAccessManager(normalizedPath, props.deliveryId, props.recipientEmail);
   
   // Get direct public URL (for direct access option)
   const directUrl = fileAccessManager.getDirectUrl();
@@ -36,6 +49,7 @@ export function useFileDownloadHandler({ props, utilities }: DownloadHandlerProp
     
     try {
       console.log("Starting file download with method:", method);
+      console.log(`[FileDownloadHandler] Using normalized path: ${normalizedPath}`);
       
       // Check if we're authenticated and no delivery ID is provided
       // This means we're viewing in authenticated context
@@ -150,11 +164,11 @@ export function useFileDownloadHandler({ props, utilities }: DownloadHandlerProp
         console.error(`Fallback method ${fallbackMethod} also failed:`, fallbackError);
       }
       
-      // If all methods fail, show error
+      // If all methods fail, provide a more helpful error message
       setHasError(true);
       toast({
         title: "Download Error",
-        description: "Could not access the file. Please try a different download method.",
+        description: "Could not access the file. The file path format may be incorrect. Please try a different download method.",
         variant: "destructive"
       });
       return false;
@@ -163,7 +177,7 @@ export function useFileDownloadHandler({ props, utilities }: DownloadHandlerProp
       setHasError(true);
       toast({
         title: "Error",
-        description: "An error occurred while trying to download the attachment",
+        description: "An error occurred while trying to download the attachment. Check the file path format.",
         variant: "destructive"
       });
       return false;

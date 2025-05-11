@@ -5,6 +5,15 @@ import { corsHeaders } from "./cors-headers.ts";
 
 console.log("[AccessFile] Starting simplified file access function with improved validation");
 
+// Helper function to normalize file paths
+function normalizeFilePath(path: string): string {
+  // Remove 'file/' prefix if present
+  if (path.startsWith('file/')) {
+    return path.substring(5);
+  }
+  return path;
+}
+
 serve(async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -55,6 +64,10 @@ serve(async (req: Request): Promise<Response> => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+    
+    // Normalize file path by removing 'file/' prefix if present
+    const normalizedFilePath = normalizeFilePath(filePath);
+    console.log(`[AccessFile] Normalized file path: ${normalizedFilePath} (original: ${filePath})`);
     
     // Check for authentication token
     const authHeader = req.headers.get('Authorization');
@@ -258,8 +271,8 @@ serve(async (req: Request): Promise<Response> => {
           // Try a direct bucket lookup as last resort - since we know the file path
           if (debugMode) {
             try {
-              const bucketName = filePath.indexOf('/') > -1 ? filePath.split('/')[0] : 'message-attachments';
-              const filePart = filePath.indexOf('/') > -1 ? filePath.substring(filePath.indexOf('/') + 1) : filePath;
+              const bucketName = normalizedFilePath.indexOf('/') > -1 ? normalizedFilePath.split('/')[0] : 'message-attachments';
+              const filePart = normalizedFilePath.indexOf('/') > -1 ? normalizedFilePath.substring(normalizedFilePath.indexOf('/') + 1) : normalizedFilePath;
               
               console.log(`[AccessFile] DEBUG MODE: Attempting direct bucket access to ${bucketName}/${filePart}`);
               
@@ -274,7 +287,7 @@ serve(async (req: Request): Promise<Response> => {
                   JSON.stringify({ 
                     error: "File not found in storage", 
                     details: fileError.message,
-                    path: filePath,
+                    path: normalizedFilePath,
                     bucket: bucketName,
                     file: filePart
                   }),
@@ -314,12 +327,30 @@ serve(async (req: Request): Promise<Response> => {
         
         // Verify the file exists in the attachments array
         const attachments = messageData.attachments || [];
-        const attachment = attachments.find(
-          (att: any) => att.path === filePath || att.path.endsWith(filePath)
+        
+        // Enhanced attachment matching logic
+        // Try multiple variations of the path to find a match
+        const normalizedPath = normalizeFilePath(filePath);
+        const fileName = normalizedPath.split('/').pop() || '';
+
+        console.log(`[AccessFile] Looking for attachment with path: ${normalizedPath} or filename: ${fileName}`);
+        console.log(`[AccessFile] Available attachments:`, attachments.map((att: any) => att.path));
+
+        // Find attachment with exact path match or similar path match (accounting for prefix differences)
+        let attachment = attachments.find(
+          (att: any) => 
+            // Exact match on normalized path
+            att.path === normalizedPath || 
+            // Match if we strip 'file/' from both sides
+            normalizeFilePath(att.path) === normalizedPath ||
+            // Match by filename if paths are different
+            (fileName && att.path.endsWith(fileName)) ||
+            // Match if the paths only differ by the bucket name prefix
+            (normalizedPath.includes('/') && att.path.endsWith(normalizedPath.substring(normalizedPath.indexOf('/') + 1)))
         );
         
         if (!attachment) {
-          console.error(`[AccessFile] File not found in message attachments: ${filePath}`);
+          console.error(`[AccessFile] File not found in message attachments: ${normalizedPath}`);
           
           // List available attachments for debugging
           const availablePaths = attachments.map((att: any) => att.path);
@@ -329,26 +360,29 @@ serve(async (req: Request): Promise<Response> => {
             JSON.stringify({ 
               error: "File not found in message", 
               details: `The file ${filePath} was not found in the message's attachments`,
+              normalized_path: normalizedPath,
               available_files: availablePaths
             }),
             { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
         
-        console.log(`[AccessFile] Found attachment: ${attachment.name}`);
+        console.log(`[AccessFile] Found attachment: ${attachment.name} with path: ${attachment.path}`);
         
         // Process the bucket and file path
         let bucketName = 'message-attachments';
-        let filePathInBucket = filePath;
+        let filePathInBucket = normalizedPath;
         
         // Check if the path includes a bucket prefix
-        if (filePath.includes('/')) {
-          const pathParts = filePath.split('/');
+        if (normalizedPath.includes('/')) {
+          const pathParts = normalizedPath.split('/');
           if (pathParts[0] === 'message-attachments' || pathParts[0] === 'message_attachments') {
             bucketName = pathParts[0];
             filePathInBucket = pathParts.slice(1).join('/');
           }
         }
+        
+        console.log(`[AccessFile] Using bucket: ${bucketName}, path in bucket: ${filePathInBucket}`);
         
         // Try to download the file from storage
         const { data: fileData, error: fileError } = await supabase.storage
@@ -362,7 +396,8 @@ serve(async (req: Request): Promise<Response> => {
           const filePathVariations = [
             filePathInBucket,
             filePathInBucket.split('/').pop() || filePathInBucket, // Just the filename
-            filePath  // The original path
+            attachment.path, // The path from the attachment object
+            normalizedPath  // The normalized original path
           ];
           
           // Try each variation
@@ -398,7 +433,8 @@ serve(async (req: Request): Promise<Response> => {
               error: "File not accessible", 
               details: fileError ? fileError.message : "File not found in storage",
               bucket: bucketName,
-              path: filePathInBucket
+              path: filePathInBucket,
+              tried_paths: filePathVariations
             }),
             { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
