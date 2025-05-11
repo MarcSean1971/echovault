@@ -5,10 +5,10 @@ import {
   getMessageRecipients, 
   getPhoneRecipient, 
   getMessageDetails, 
-  getSenderInfo, 
-  formatLocationInfo, 
-  handleWhatsAppError 
-} from './utils/whatsAppUtils';
+  getSenderInfo,
+  handleWhatsAppError
+} from "../utils/recipientUtils";
+import { formatLocationInfo } from "../utils/formatUtils";
 
 /**
  * Send a test WhatsApp template message

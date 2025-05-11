@@ -147,23 +147,6 @@ export async function getSenderInfo() {
 }
 
 /**
- * Format location information for WhatsApp messages
- * @param message Message object containing location data
- * @returns Formatted location info and map URL
- */
-export function formatLocationInfo(message: any) {
-  let locationInfo = "Test location";
-  let mapUrl = "https://maps.example.com";
-  
-  if (message?.share_location && message?.location_latitude && message?.location_longitude) {
-    locationInfo = message.location_name || `${message.location_latitude}, ${message.location_longitude}`;
-    mapUrl = `https://maps.google.com/?q=${message.location_latitude},${message.location_longitude}`;
-  }
-  
-  return { locationInfo, mapUrl };
-}
-
-/**
  * Display error toast and log error
  * @param error Error object or message
  * @param operation Description of operation that failed

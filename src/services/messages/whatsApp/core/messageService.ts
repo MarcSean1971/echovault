@@ -1,6 +1,6 @@
 
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import {
   getMessageRecipients,
   getPhoneRecipient,
@@ -8,7 +8,7 @@ import {
   getSenderInfo,
   handleWhatsAppError,
   showWhatsAppSuccess
-} from "./utils/whatsAppUtils";
+} from "../utils/recipientUtils";
 
 /**
  * Send a test WhatsApp message
