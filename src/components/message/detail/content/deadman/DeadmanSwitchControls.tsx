@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Bell, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { triggerManualReminder } from "@/services/messages/whatsApp/whatsAppReminderService";
+import { triggerManualReminder } from "@/services/messages/whatsApp";
 import { toast } from "@/components/ui/use-toast";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
