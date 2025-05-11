@@ -45,7 +45,8 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
     isConfirming, 
     countDown, 
     triggerInProgress,
-    handlePanicButtonClick 
+    handlePanicButtonClick,
+    inCancelWindow
   } = usePanicButton(userId, panicMessage);
   
   // Force refresh conditions when component mounts and when lastRefresh changes
@@ -92,7 +93,7 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
       {panicMessage && (
         <PanicButton
           onClick={handlePanicButtonClick}
-          isDisabled={isChecking || panicMode || triggerInProgress}
+          isDisabled={isChecking || (panicMode && !inCancelWindow) || (triggerInProgress && !inCancelWindow)}
           isMobile={isMobile}
           buttonPaddingClass={buttonPaddingClass}
           buttonSizeClass={buttonSizeClass}
