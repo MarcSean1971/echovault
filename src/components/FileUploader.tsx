@@ -1,9 +1,9 @@
-
 import { useState } from "react";
 import { Upload, X, File as FileIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import { FormAttachmentsList } from "@/components/message/FormSections/attachments/FormAttachmentsList";
 
 export interface FileAttachment {
   file: File | null;
@@ -24,6 +24,7 @@ interface FileUploaderProps {
   maxFiles?: number;
   maxSize?: number; // in MB
   disabled?: boolean;
+  showPreview?: boolean;
 }
 
 export function FileUploader({
@@ -32,6 +33,7 @@ export function FileUploader({
   maxFiles = 10,
   maxSize = 10, // 10MB default
   disabled = false,
+  showPreview = true,
 }: FileUploaderProps) {
   const [isDragging, setIsDragging] = useState(false);
 
@@ -108,11 +110,11 @@ export function FileUploader({
         {files.length === 0 ? (
           <div className="space-y-4">
             <div className="flex justify-center">
-              <Upload className="h-10 w-10 text-muted-foreground" />
+              <Upload className="h-10 w-10 text-muted-foreground hover:text-primary transition-colors duration-200" />
             </div>
             <p>
               Drag and drop your files here, or{" "}
-              <label className="text-primary cursor-pointer hover:underline">
+              <label className="text-primary cursor-pointer hover:underline transition-colors duration-200">
                 browse
                 <Input
                   type="file"
@@ -129,7 +131,7 @@ export function FileUploader({
           </div>
         ) : (
           <div className="text-center">
-            <label className="text-primary cursor-pointer hover:underline">
+            <label className="text-primary cursor-pointer hover:underline transition-colors duration-200">
               Add more files
               <Input
                 type="file"
@@ -153,10 +155,10 @@ export function FileUploader({
             {files.map((attachment, index) => (
               <div
                 key={index}
-                className="flex items-center justify-between p-3 border rounded-md bg-background"
+                className="flex items-center justify-between p-3 border rounded-md bg-background hover:border-blue-200 transition-all duration-200"
               >
                 <div className="flex items-center space-x-3 overflow-hidden">
-                  <FileIcon className="h-6 w-6 flex-shrink-0" />
+                  <FileIcon className="h-6 w-6 flex-shrink-0 hover:text-blue-600 transition-colors duration-200" />
                   <div className="min-w-0">
                     <p className="font-medium truncate">{attachment.name}</p>
                     <p className="text-xs text-muted-foreground">
@@ -175,7 +177,7 @@ export function FileUploader({
                     size="sm"
                     onClick={() => removeFile(index)}
                     disabled={disabled || attachment.uploading}
-                    className="text-destructive hover:text-destructive"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10 transition-colors duration-200"
                   >
                     <X className="h-4 w-4" />
                   </Button>
@@ -183,6 +185,9 @@ export function FileUploader({
               </div>
             ))}
           </div>
+          
+          {/* Add the preview section for files with paths */}
+          {showPreview && <FormAttachmentsList attachments={files} />}
         </div>
       )}
     </div>

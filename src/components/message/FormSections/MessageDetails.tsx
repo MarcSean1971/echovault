@@ -1,4 +1,3 @@
-
 import { Label } from "@/components/ui/label";
 import { useMessageForm } from "../MessageFormContext";
 import { FileUploader } from "@/components/FileUploader";
@@ -157,12 +156,13 @@ export function MessageDetails({ message }: MessageDetailsProps) {
         </Tabs>
       </div>
 
-      {/* File attachments section */}
+      {/* File attachments section - updated to show preview */}
       <div className="space-y-2">
         <Label>File Attachments</Label>
         <FileUploader 
           files={files} 
-          onChange={setFiles} 
+          onChange={setFiles}
+          showPreview={true}
         />
       </div>
 
