@@ -40,6 +40,8 @@ export function useDirectAccessHandler({ props, utilities }: DownloadHandlerProp
         if (url && method === 'secure') {
           console.log('[DirectAccess] Secure access successful');
           updateMethodStatus(method, true);
+          setAccessUrl(url);
+          setDownloadMethod(method);
           setIsLoading(false);
           return { success: true, url, method };
         }
@@ -56,6 +58,8 @@ export function useDirectAccessHandler({ props, utilities }: DownloadHandlerProp
         if (url && method === 'signed') {
           console.log('[DirectAccess] Signed URL access successful');
           updateMethodStatus(method, true);
+          setAccessUrl(url);
+          setDownloadMethod(method);
           setIsLoading(false);
           return { success: true, url, method };
         }
@@ -87,8 +91,16 @@ export function useDirectAccessHandler({ props, utilities }: DownloadHandlerProp
           description: "Using direct file access as fallback. Some features may be limited.",
           variant: "destructive"
         });
+        setAccessUrl(directUrl);
+        setDownloadMethod('direct');
         return { success: true, url: directUrl, method: 'direct' as AccessMethod };
       }
+      
+      toast({
+        title: "Access error",
+        description: "Could not access the file. Please try again or contact support.",
+        variant: "destructive"
+      });
       
       return { success: false, url: null, method: null };
     }

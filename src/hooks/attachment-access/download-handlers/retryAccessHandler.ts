@@ -43,7 +43,7 @@ export function useRetryAccessHandler({ props, utilities }: DownloadHandlerProps
         
         try {
           console.log(`[RetryAccess] Attempting access using ${methodToTry} method`);
-          console.log(`[RetryAccess] Delivery context - ID: ${props.deliveryId}, Recipient: ${props.recipientEmail?.substring(0, 3)}...`);
+          console.log(`[RetryAccess] Delivery context - ID: ${props.deliveryId || 'none'}, Recipient: ${props.recipientEmail ? props.recipientEmail?.substring(0, 3) + '...' : 'none'}`);
           
           const { url, method } = await fileAccessManager.getAccessUrl(methodToTry);
           
@@ -68,6 +68,36 @@ export function useRetryAccessHandler({ props, utilities }: DownloadHandlerProps
           lastError = methodError;
           console.error(`[RetryAccess] Error trying ${methodToTry} method:`, methodError);
           updateMethodStatus(methodToTry, false);
+        }
+      }
+      
+      // If all conventional methods failed, try some desperate measures
+      if (!succeeded) {
+        // Try with just the filename (strip path)
+        try {
+          const fileName = filePath.split('/').pop();
+          if (fileName && fileName !== filePath) {
+            console.log(`[RetryAccess] Trying with just filename: ${fileName}`);
+            
+            const fileManager = new FileAccessManager(fileName, props.deliveryId, props.recipientEmail);
+            const { url, method } = await fileManager.getAccessUrl('signed');
+            
+            if (url && method) {
+              setHasError(false);
+              setAccessUrl(url);
+              setDownloadMethod(method);
+              
+              toast({
+                title: "Retry successful",
+                description: `Access restored using simplified path`,
+              });
+              
+              updateMethodStatus(method, true);
+              succeeded = true;
+            }
+          }
+        } catch (filenameError) {
+          console.error('[RetryAccess] Filename-only attempt failed:', filenameError);
         }
       }
       
@@ -103,6 +133,13 @@ export function useRetryAccessHandler({ props, utilities }: DownloadHandlerProps
     } catch (error) {
       console.error("[RetryAccess] Error retrying file access:", error);
       setHasError(true);
+      
+      toast({
+        title: "Retry error",
+        description: "An unexpected error occurred while trying to access the file.",
+        variant: "destructive"
+      });
+      
       return false;
     } finally {
       setIsLoading(false);

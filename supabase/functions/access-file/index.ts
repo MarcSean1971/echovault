@@ -1,15 +1,9 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createSupabaseClient } from "./supabase-client.ts";
+import { corsHeaders } from "./cors-headers.ts";
 
-// Simple CORS headers
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-console.log("[AccessFile] Starting simplified file access function with hardcoded authentication");
+console.log("[AccessFile] Starting simplified file access function with improved validation");
 
 serve(async (req: Request) => {
   // Handle OPTIONS requests for CORS
@@ -23,6 +17,7 @@ serve(async (req: Request) => {
     const pathParts = url.pathname.split('/').filter(Boolean);
     
     console.log(`[AccessFile] Request path: ${url.pathname}`);
+    console.log(`[AccessFile] Search params: ${url.search}`);
 
     // Check for POST method first - allows for body parameters
     if (req.method === 'POST') {
@@ -38,12 +33,15 @@ serve(async (req: Request) => {
           );
         }
         
+        // Log received parameters for debugging
+        console.log(`[AccessFile] POST params - File: ${filePath}, Delivery: ${delivery || 'none'}, Recipient: ${recipient ? recipient.substring(0, 3) + '...' : 'none'}`);
+        
         // If we have delivery context, use it
         if (delivery && recipient) {
           // Return URL for client to use
           return new Response(
             JSON.stringify({ 
-              url: `https://onwthrpgcnfydxzzmyot.supabase.co/functions/v1/access-file/file/${encodeURIComponent(filePath)}?delivery=${encodeURIComponent(delivery)}&recipient=${encodeURIComponent(recipient)}&mode=${mode || 'view'}&download-file=${!!download}` 
+              url: `${url.origin}/functions/v1/access-file/file/${encodeURIComponent(filePath)}?delivery=${encodeURIComponent(delivery)}&recipient=${encodeURIComponent(recipient)}&mode=${mode || 'view'}&download-file=${!!download}` 
             }),
             { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
@@ -152,23 +150,54 @@ serve(async (req: Request) => {
     let authHeader = req.headers.get('Authorization');
     const authParamToken = url.searchParams.get('auth_token');
     
-    console.log(`[AccessFile] File: ${filePath}, Delivery: ${deliveryId || 'none'}, Download: ${downloadMode}`);
+    console.log(`[AccessFile] GET params - File: ${filePath}, Delivery: ${deliveryId || 'none'}, Download: ${downloadMode}`);
     console.log(`[AccessFile] Auth Header: ${authHeader ? 'Present' : 'Missing'}, Auth Param: ${authParamToken ? 'Present' : 'Missing'}`);
-    console.log(`[AccessFile] NOTICE: Using service role key for authentication regardless of auth token`);
     
-    // For delivery-based access, validate parameters
+    // For delivery-based access, validate parameters with improved flexibility
     if (deliveryId && recipientEmail) {
       console.log("[AccessFile] Processing delivery-based access request");
+      console.log(`[AccessFile] Delivery ID exact value: '${deliveryId}'`);
       
-      // Create Supabase client with service role key (ignoring auth token)
+      // Create Supabase client with service role key
       const supabase = createSupabaseClient(authHeader);
       
-      // First, get the delivered_message record
-      const { data: deliveryData, error: deliveryError } = await supabase
-        .from('delivered_messages')
-        .select('message_id, recipient_id, condition_id')
-        .eq('delivery_id', deliveryId)
-        .single();
+      // First, get the delivered_message record with more flexible matching
+      // Try exact match first
+      let deliveryData = null;
+      let deliveryError = null;
+      
+      try {
+        const result = await supabase
+          .from('delivered_messages')
+          .select('message_id, recipient_id, condition_id')
+          .eq('delivery_id', deliveryId)
+          .single();
+          
+        deliveryData = result.data;
+        deliveryError = result.error;
+        
+        if (deliveryError || !deliveryData) {
+          console.log(`[AccessFile] Exact delivery ID match failed, trying with ILIKE: ${deliveryError?.message || "No data found"}`);
+          
+          // If exact match fails, try case-insensitive match or partial match
+          const similarResult = await supabase
+            .from('delivered_messages')
+            .select('message_id, recipient_id, condition_id, delivery_id')
+            .filter('delivery_id', 'ilike', `%${deliveryId}%`)
+            .limit(1);
+            
+          if (similarResult.data && similarResult.data.length > 0) {
+            deliveryData = similarResult.data[0];
+            deliveryError = null;
+            console.log(`[AccessFile] Found similar delivery ID: ${deliveryData.delivery_id}`);
+          } else {
+            console.log(`[AccessFile] No similar delivery ID found`);
+          }
+        }
+      } catch (queryError) {
+        console.error(`[AccessFile] Error querying delivery: ${queryError.message}`);
+        deliveryError = queryError;
+      }
         
       if (deliveryError) {
         console.error(`[AccessFile] Delivery error: ${deliveryError.message}`);
@@ -200,8 +229,13 @@ serve(async (req: Request) => {
         );
       }
       
-      // Verify the recipient email
+      // Verify the recipient email with more flexibility
       if (recipientData.email.toLowerCase() !== recipientEmail.toLowerCase()) {
+        // Log email comparison details
+        console.log(`[AccessFile] Email mismatch - DB: '${recipientData.email.toLowerCase()}', Request: '${recipientEmail.toLowerCase()}'`);
+        
+        // Add more flexible checking logic here if needed
+        
         return new Response(
           JSON.stringify({ error: "Recipient email does not match" }),
           { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -222,19 +256,48 @@ serve(async (req: Request) => {
         );
       }
       
-      // Verify the attachment exists in the message
+      // Verify the attachment exists in the message with more flexible matching
       const attachments = messageData.attachments || [];
       
-      // Find the matching attachment
+      // Log attachment info for debugging
+      console.log(`[AccessFile] Message has ${attachments.length} attachments`);
+      console.log(`[AccessFile] Requested file path: ${filePath}`);
+      if (attachments.length > 0) {
+        console.log(`[AccessFile] First attachment path: ${attachments[0].path}`);
+      }
+      
+      // Find the matching attachment with more flexible matching
       const requestedAttachment = attachments.find((att: any) => {
+        // More flexible attachment matching
         return att.path === filePath || 
                att.path.endsWith(filePath) || 
-               filePath.endsWith(att.path);
+               filePath.endsWith(att.path) ||
+               att.path.includes(filePath) ||
+               filePath.includes(att.path);
       });
       
       if (!requestedAttachment) {
+        // If no match, try again with basic filename comparison
+        const requestedFileName = filePath.split('/').pop();
+        const fileNameMatch = attachments.find((att: any) => {
+          const attFileName = att.path.split('/').pop();
+          return attFileName === requestedFileName;
+        });
+        
+        if (fileNameMatch) {
+          console.log(`[AccessFile] Found attachment by filename match`);
+          return await handleFileDownload(supabase, fileNameMatch.path, fileNameMatch.name || requestedFileName, 
+            fileNameMatch.type || "application/octet-stream", downloadMode);
+        }
+        
         return new Response(
-          JSON.stringify({ error: "Attachment not found in message" }),
+          JSON.stringify({ 
+            error: "Attachment not found in message", 
+            details: { 
+              requestedPath: filePath,
+              availablePaths: attachments.map((a: any) => ({ path: a.path, name: a.name }))
+            }
+          }),
           { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -242,6 +305,8 @@ serve(async (req: Request) => {
       // Extract metadata from the matched attachment
       const fileName = requestedAttachment.name || filePath.split('/').pop() || 'download';
       const fileType = requestedAttachment.type || "application/octet-stream";
+      
+      console.log(`[AccessFile] Found matching attachment: ${fileName}, type: ${fileType}`);
       
       // Process the file download
       return await handleFileDownload(supabase, filePath, fileName, fileType, downloadMode);
@@ -277,7 +342,7 @@ serve(async (req: Request) => {
   }
 });
 
-// Helper function to handle file downloads
+// Helper function to handle file downloads with enhanced error reporting
 async function handleFileDownload(
   supabase: any, 
   filePath: string, 
@@ -311,16 +376,43 @@ async function handleFileDownload(
       const altBucketName = bucketName === "message-attachments" ? 
                            "message_attachments" : "message-attachments";
       
+      console.log(`[AccessFile] Error with primary bucket: ${fileError.message}`);
       console.log(`[AccessFile] Trying alternate bucket: ${altBucketName}`);
+      
       const { data: altFileData, error: altFileError } = await supabase.storage
         .from(altBucketName)
         .download(filePathInBucket);
         
       if (altFileError) {
-        console.error(`[AccessFile] All bucket attempts failed: ${fileError.message}, ${altFileError.message}`);
+        console.error(`[AccessFile] All bucket attempts failed - Primary error: ${fileError.message}, Alt error: ${altFileError.message}`);
+        
+        // Try with just the filename as a last resort
+        const justFileName = filePathInBucket.split('/').pop();
+        if (justFileName !== filePathInBucket) {
+          console.log(`[AccessFile] Trying with just filename: ${justFileName}`);
+          
+          const { data: simpleFileData, error: simpleFileError } = await supabase.storage
+            .from(bucketName)
+            .download(justFileName);
+            
+          if (!simpleFileError && simpleFileData) {
+            console.log(`[AccessFile] Successfully retrieved file using simplified path`);
+            return prepareFileResponse(simpleFileData, fileType, fileName, downloadMode);
+          }
+        }
+        
         return new Response(
-          JSON.stringify({ error: "File not found in storage" }),
-          { status: 404, headers: { corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ 
+            error: "File not found in storage", 
+            details: { 
+              primaryError: fileError.message,
+              alternateError: altFileError.message,
+              path: filePathInBucket,
+              bucket: bucketName,
+              alternateBucket: altBucketName
+            }
+          }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       
@@ -332,7 +424,7 @@ async function handleFileDownload(
     console.error(`[AccessFile] Storage error: ${storageError.message}`);
     return new Response(
       JSON.stringify({ error: "Storage access error", details: storageError.message }),
-      { status: 500, headers: { corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 }

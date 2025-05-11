@@ -82,8 +82,10 @@ export class FileUrlGenerator {
         );
         
         if (url) {
+          console.log(`[FileAccess] Successfully generated signed URL`);
           return { url, method: 'signed' };
         }
+        console.log(`[FileAccess] Failed to generate signed URL, falling back...`);
       }
       
       // Secure/edge function method - only available with delivery context
@@ -97,6 +99,7 @@ export class FileUrlGenerator {
           );
           
           if (url) {
+            console.log(`[FileAccess] Successfully generated secure URL via edge function`);
             return { url, method: 'secure' };
           }
         } catch (secureError) {
@@ -111,11 +114,12 @@ export class FileUrlGenerator {
         try {
           const signedUrl = await getAuthenticatedFileUrl(
             this.filePath, 
-            false, 
+            true, // include fallback
             accessMode === 'download'
           );
           
           if (signedUrl) {
+            console.log(`[FileAccess] Generated signed URL as fallback`);
             return { url: signedUrl, method: 'signed' };
           }
         } catch (signedError) {
@@ -127,6 +131,7 @@ export class FileUrlGenerator {
       console.log("[FileAccess] Trying direct URL as final fallback");
       const directUrl = this.getDirectUrl();
       if (directUrl) {
+        console.log(`[FileAccess] Generated direct URL as final fallback`);
         return { url: directUrl, method: 'direct' };
       }
       

@@ -21,6 +21,7 @@ export const getPublicFileUrl = async (
     
     console.log(`[FileAccess] Getting public file URL, auth token ${token ? 'present' : 'missing'}`);
     console.log(`[FileAccess] Delivery context - ID: ${deliveryId}, Recipient: ${recipientEmail?.substring(0, 3)}...`);
+    console.log(`[FileAccess] File path: ${filePath}`);
 
     // Use Supabase SDK's built-in function invocation which handles authentication
     // This is the preferred method when a token is available
@@ -77,7 +78,9 @@ export const getPublicFileUrl = async (
       url.searchParams.append('auth_token', token);
     }
     
-    console.log(`[FileAccess] Generated file access URL: ${url.toString()}`);
+    // Log the generated URL for debugging (mask full URL to prevent sensitive data exposure)
+    const maskedUrl = url.toString().replace(recipientEmail, recipientEmail?.substring(0, 3) + '...');
+    console.log(`[FileAccess] Generated file access URL (masked): ${maskedUrl}`);
     return url.toString();
   } catch (error) {
     console.error("[FileAccess] Error generating public file URL:", error);
@@ -117,7 +120,7 @@ export const getAuthenticatedFileUrl = async (
     if (error) {
       console.warn(`[FileAccess] Error getting signed URL: ${error.message}`);
       
-      // Try with alternative bucket if needed
+      // Try with alternative bucket if needed or requested
       if (includeFallback) {
         const altBucketName = bucketName === DEFAULT_ATTACHMENT_BUCKET ? 
                             LEGACY_ATTACHMENT_BUCKET : DEFAULT_ATTACHMENT_BUCKET;
@@ -128,10 +131,26 @@ export const getAuthenticatedFileUrl = async (
           .createSignedUrl(filePathInBucket, 60, { download: forDownload });
           
         if (altData?.signedUrl) {
+          console.log(`[FileAccess] Successfully generated signed URL from alternate bucket`);
           return altData.signedUrl;
         }
         
+        // Try with just the filename as a fallback
+        const fileName = filePathInBucket.split('/').pop();
+        if (fileName && fileName !== filePathInBucket) {
+          console.log(`[FileAccess] Trying with just filename: ${fileName}`);
+          const { data: fileNameData } = await supabase.storage
+            .from(bucketName)
+            .createSignedUrl(fileName, 60, { download: forDownload });
+            
+          if (fileNameData?.signedUrl) {
+            console.log(`[FileAccess] Successfully generated signed URL using just filename`);
+            return fileNameData.signedUrl;
+          }
+        }
+        
         // Try direct URL as final fallback
+        console.log(`[FileAccess] Trying direct URL as final authenticated fallback`);
         return getDirectPublicUrl(filePath);
       }
       
@@ -176,6 +195,17 @@ export const getDirectPublicUrl = (filePath: string): string | null => {
                           LEGACY_ATTACHMENT_BUCKET : DEFAULT_ATTACHMENT_BUCKET;
       
       const { data: altData } = supabase.storage.from(altBucketName).getPublicUrl(filePathInBucket);
+      
+      if (!altData?.publicUrl) {
+        // Try with just the filename as a last resort
+        const fileName = filePathInBucket.split('/').pop();
+        if (fileName && fileName !== filePathInBucket) {
+          console.log(`[FileAccess] Trying with just filename: ${fileName}`);
+          const { data: fileNameData } = supabase.storage.from(bucketName).getPublicUrl(fileName);
+          return fileNameData?.publicUrl || null;
+        }
+      }
+      
       return altData?.publicUrl || null;
     }
     
