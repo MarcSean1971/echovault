@@ -38,15 +38,9 @@ serve(async (req: Request) => {
           );
         }
 
-        // Extract auth token from header
+        // Extract auth token from header - optional for public access with delivery ID
         const authHeader = req.headers.get('Authorization');
-        if (!authHeader) {
-          return new Response(
-            JSON.stringify({ error: "Missing authorization header" }),
-            { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-
+        
         // Return URL for client to use
         return new Response(
           JSON.stringify({ 
@@ -113,6 +107,7 @@ serve(async (req: Request) => {
     }
     
     // Create Supabase client - use service role key for file access
+    // No need for authentication token for public access when using security parameters
     const supabase = createClient(supabaseUrl, supabaseKey, {
       auth: {
         persistSession: false,
@@ -125,7 +120,6 @@ serve(async (req: Request) => {
       }
     });
     
-    // FIXED: Replace the join with two separate queries
     // First, get the delivered_message record
     const { data: deliveryData, error: deliveryError } = await supabase
       .from('delivered_messages')
