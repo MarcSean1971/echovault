@@ -94,6 +94,15 @@ export function MessageDetails({ message }: MessageDetailsProps) {
       {/* Title field */}
       <TitleInput />
 
+      {/* File attachments - moved above the location section */}
+      <div className="space-y-2">
+        <Label>File Attachments</Label>
+        <FileUploader 
+          files={files} 
+          onChange={setFiles} 
+        />
+      </div>
+
       {/* Message type selector as tabs */}
       <div>
         <Label className="mb-2 block">Message Type</Label>
@@ -156,17 +165,8 @@ export function MessageDetails({ message }: MessageDetailsProps) {
         </Tabs>
       </div>
 
-      {/* Location section */}
+      {/* Location section - moved below file attachments */}
       <LocationSection />
-
-      {/* File attachments */}
-      <div className="space-y-2">
-        <Label>File Attachments</Label>
-        <FileUploader 
-          files={files} 
-          onChange={setFiles} 
-        />
-      </div>
 
       {/* Media recorder dialogs - keeping this as a backup option */}
       <MediaRecorders 
