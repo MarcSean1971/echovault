@@ -32,3 +32,27 @@ export const startCountdown = (
     getTimeLeft: () => secondsLeft
   };
 };
+
+/**
+ * Create a simple countdown timer that updates state
+ */
+export const createCountdownTimer = (
+  seconds: number, 
+  setCountDown: (seconds: number) => void,
+  onComplete: () => void
+): { timerId: NodeJS.Timeout } => {
+  let remainingSeconds = seconds;
+  setCountDown(remainingSeconds);
+  
+  const timerId = setInterval(() => {
+    remainingSeconds -= 1;
+    setCountDown(remainingSeconds);
+    
+    if (remainingSeconds <= 0) {
+      clearInterval(timerId);
+      onComplete();
+    }
+  }, 1000);
+  
+  return { timerId };
+};

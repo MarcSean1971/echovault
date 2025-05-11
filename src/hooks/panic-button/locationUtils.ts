@@ -9,7 +9,7 @@
 export const checkLocationPermission = async (): Promise<string> => {
   if (navigator.permissions && navigator.permissions.query) {
     try {
-      const result = await navigator.permissions.query({ name: 'geolocation' });
+      const result = await navigator.permissions.query({ name: 'geolocation' as PermissionName });
       
       // Listen for permission changes
       result.onchange = () => {

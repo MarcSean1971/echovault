@@ -2,8 +2,21 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
 import { MessageCondition } from "@/types/message";
-import { triggerPanicMessage, hasActivePanicMessages } from "@/services/messages/conditions/panicTriggerService";
+import { hasActivePanicMessages } from "@/services/messages/conditions/panicTriggerService";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { 
+  checkLocationPermission, 
+  requestLocationPermission 
+} from "./panic-button/locationUtils";
+import { 
+  getKeepArmedValue 
+} from "./panic-button/messageConfigUtils";
+import { 
+  triggerPanicMessageWithCallbacks 
+} from "./panic-button/triggerUtils";
+import { 
+  createCountdownTimer 
+} from "./panic-button/countdownUtils";
 
 export function usePanicButtonLogic(
   userId: string | undefined,
@@ -39,72 +52,13 @@ export function usePanicButtonLogic(
 
   // Check if location permissions are available
   useEffect(() => {
-    if (navigator.permissions && navigator.permissions.query) {
-      navigator.permissions.query({ name: 'geolocation' })
-        .then((result) => {
-          setLocationPermission(result.state);
-          
-          // Listen for permission changes
-          result.onchange = () => {
-            setLocationPermission(result.state);
-          };
-        })
-        .catch(err => {
-          console.error("Error checking location permissions:", err);
-          setLocationPermission("denied");
-        });
-    } else if (navigator.geolocation) {
-      setLocationPermission("unknown");
-    } else {
-      setLocationPermission("unavailable");
-    }
+    const initializeLocationPermission = async () => {
+      const permission = await checkLocationPermission();
+      setLocationPermission(permission);
+    };
+
+    initializeLocationPermission();
   }, []);
-
-  // Request location permission
-  const requestLocationPermission = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        () => {
-          setLocationPermission("granted");
-          handlePanicTrigger();
-        },
-        (error) => {
-          console.error("Location permission denied:", error);
-          setLocationPermission("denied");
-          toast({
-            title: "Location Access Denied",
-            description: "Your current location won't be included in the emergency message. Consider enabling location access for better assistance.",
-            variant: "destructive"
-          });
-          // Continue with panic trigger even without location
-          handlePanicTrigger();
-        }
-      );
-    } else {
-      toast({
-        title: "Location Not Available",
-        description: "Your device doesn't support location services. The emergency message will be sent without your location.",
-        variant: "destructive"
-      });
-      // Continue with panic trigger even without location
-      handlePanicTrigger();
-    }
-  };
-
-  // Get keep_armed value from config
-  const getKeepArmedValue = () => {
-    // First check panic_trigger_config
-    if (panicMessage?.panic_trigger_config) {
-      return panicMessage.panic_trigger_config.keep_armed;
-    }
-    
-    // Fall back to panic_config if panic_trigger_config is not available
-    if (panicMessage?.panic_config) {
-      return panicMessage.panic_config.keep_armed;
-    }
-    
-    return true; // Default value for safety
-  };
 
   // Handle panic trigger
   const handlePanicTrigger = async () => {
@@ -122,75 +76,45 @@ export function usePanicButtonLogic(
       setPanicMode(true);
       
       try {
-        console.log(`Triggering panic message: ${panicMessage.message_id}`);
-        
-        // Log config to help with debugging
-        if (panicMessage.panic_trigger_config) {
-          console.log("Using panic_trigger_config:", panicMessage.panic_trigger_config);
-        }
-        if (panicMessage.panic_config) {
-          console.log("Found panic_config as well:", panicMessage.panic_config);
-        }
-        
-        // Try triggering the panic message
-        const result = await triggerPanicMessage(userId, panicMessage.message_id);
-        
-        console.log("Panic trigger result:", result);
-        
-        if (result.success) {
-          toast({
-            title: "EMERGENCY ALERT TRIGGERED",
-            description: "Your emergency messages with your current location are being sent immediately.",
-            variant: "destructive"
-          });
-          
-          // Start countdown for visual feedback
-          let secondsLeft = 3;
-          setCountDown(secondsLeft);
-          
-          // Dispatch event with panic message ID
-          window.dispatchEvent(new CustomEvent('conditions-updated', { 
-            detail: { 
-              updatedAt: new Date().toISOString(),
-              triggerValue: Date.now(),
-              panicTrigger: true,
-              panicMessageId: panicMessage.message_id
-            }
-          }));
-          
-          const timer = setInterval(() => {
-            secondsLeft -= 1;
-            setCountDown(secondsLeft);
-            
-            if (secondsLeft <= 0) {
-              clearInterval(timer);
+        await triggerPanicMessageWithCallbacks(
+          userId, 
+          panicMessage.message_id, 
+          {
+            onSuccess: (result) => {
+              // Start countdown for visual feedback
+              const { timerId } = createCountdownTimer(
+                3, 
+                setCountDown,
+                () => {
+                  setPanicMode(false);
+                  setIsConfirming(false);
+                  setTriggerInProgress(false);
+                  
+                  // If the message is still armed (keepArmed=true), refresh to show it's still active
+                  // Otherwise navigate to messages
+                  if (result.keepArmed) {
+                    console.log("Message stays armed (keepArmed=true). Refreshing page.");
+                    toast({
+                      title: "Emergency message still armed",
+                      description: "Your emergency message remains active and can be triggered again if needed."
+                    });
+                    window.location.reload(); // Refresh to update the UI state
+                  } else {
+                    console.log("Message is now disarmed (keepArmed=false). Navigating to messages.");
+                    navigate('/messages'); // Redirect to messages page
+                  }
+                }
+              );
+            },
+            onError: (error) => {
               setPanicMode(false);
               setIsConfirming(false);
               setTriggerInProgress(false);
-              
-              // If the message is still armed (keepArmed=true), we should refresh to show it's still active
-              // Otherwise navigate to messages
-              if (result.keepArmed) {
-                console.log("Message stays armed (keepArmed=true). Refreshing page.");
-                toast({
-                  title: "Emergency message still armed",
-                  description: "Your emergency message remains active and can be triggered again if needed."
-                });
-                window.location.reload(); // Refresh to update the UI state
-              } else {
-                console.log("Message is now disarmed (keepArmed=false). Navigating to messages.");
-                navigate('/messages'); // Redirect to messages page
-              }
             }
-          }, 1000);
-        }
+          }
+        );
       } catch (error: any) {
         console.error("Error triggering panic message:", error);
-        toast({
-          title: "Error",
-          description: error.message || "Failed to trigger panic message. Please try again.",
-          variant: "destructive"
-        });
         setPanicMode(false);
         setIsConfirming(false);
         setTriggerInProgress(false);
@@ -214,7 +138,22 @@ export function usePanicButtonLogic(
       if (locationPermission === "granted") {
         handlePanicTrigger();
       } else if (locationPermission === "prompt" || locationPermission === "unknown") {
-        requestLocationPermission();
+        requestLocationPermission(
+          () => {
+            setLocationPermission("granted");
+            handlePanicTrigger();
+          },
+          () => {
+            setLocationPermission("denied");
+            toast({
+              title: "Location Access Denied",
+              description: "Your current location won't be included in the emergency message. Consider enabling location access for better assistance.",
+              variant: "destructive"
+            });
+            // Continue with panic trigger even without location
+            handlePanicTrigger();
+          }
+        );
       } else {
         // Location permission denied but still allow triggering
         handlePanicTrigger();
@@ -244,7 +183,7 @@ export function usePanicButtonLogic(
     countDown,
     hasPanicMessages,
     locationPermission,
-    getKeepArmedValue,
+    getKeepArmedValue: () => getKeepArmedValue(null, [], panicMessage),
     handlePanicButtonClick,
     handleCreatePanicMessage
   };
