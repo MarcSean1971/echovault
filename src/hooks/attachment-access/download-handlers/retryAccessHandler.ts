@@ -14,7 +14,7 @@ export function useRetryAccessHandler({ props, utilities }: DownloadHandlerProps
   
   const {
     updateMethodStatus,
-    setIsLoading, // Changed from setLoading to setIsLoading
+    setIsLoading,
     setHasError,
     incrementRetryCount,
     setAccessUrl,
@@ -36,11 +36,15 @@ export function useRetryAccessHandler({ props, utilities }: DownloadHandlerProps
       const methodsToTry: AccessMethod[] = ['secure', 'signed', 'direct'];
       
       let succeeded = false;
+      let lastError = null;
       
       for (const methodToTry of methodsToTry) {
         if (succeeded) break;
         
         try {
+          console.log(`[RetryAccess] Attempting access using ${methodToTry} method`);
+          console.log(`[RetryAccess] Delivery context - ID: ${props.deliveryId}, Recipient: ${props.recipientEmail?.substring(0, 3)}...`);
+          
           const { url, method } = await fileAccessManager.getAccessUrl(methodToTry);
           
           if (url && method) {
@@ -55,26 +59,49 @@ export function useRetryAccessHandler({ props, utilities }: DownloadHandlerProps
             
             updateMethodStatus(method, true);
             succeeded = true;
+            console.log(`[RetryAccess] Successfully accessed file using ${method} method, URL: ${url.substring(0, 30)}...`);
             break;
+          } else {
+            console.warn(`[RetryAccess] ${methodToTry} method returned empty URL or method`);
           }
         } catch (methodError) {
-          console.error(`Error trying ${methodToTry} method:`, methodError);
+          lastError = methodError;
+          console.error(`[RetryAccess] Error trying ${methodToTry} method:`, methodError);
           updateMethodStatus(methodToTry, false);
         }
       }
       
       if (!succeeded) {
         setHasError(true);
+        
+        // Try to get direct URL as final fallback
+        const fallbackUrl = fileAccessManager.getDirectUrl();
+        if (fallbackUrl) {
+          console.log('[RetryAccess] Using direct URL as final fallback');
+          setAccessUrl(fallbackUrl);
+          setDownloadMethod('direct');
+          updateMethodStatus('direct', true);
+          
+          toast({
+            title: "Limited access restored",
+            description: "Using direct file access as fallback. Some features may be limited.",
+            variant: "warning"
+          });
+          
+          // Still return true since we have a fallback URL
+          return true;
+        }
+        
         toast({
           title: "Retry failed",
-          description: "Unable to access the file using any method. Please try again later.",
+          description: lastError ? `Error: ${lastError.message || 'Unknown error'}` : "Unable to access the file using any method. Please try again later.",
           variant: "destructive"
         });
       }
       
       return succeeded;
     } catch (error) {
-      console.error("Error retrying file access:", error);
+      console.error("[RetryAccess] Error retrying file access:", error);
       setHasError(true);
       return false;
     } finally {

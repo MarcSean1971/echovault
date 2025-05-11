@@ -1,115 +1,95 @@
 
-import { toast } from "@/components/ui/use-toast";
-import { AccessMethod } from "@/components/message/detail/attachment/types";
-import { DownloadHandlerProps } from "./types";
 import { FileAccessManager } from "@/services/messages/fileAccess";
-import { supabase } from "@/integrations/supabase/client";
+import { DownloadHandlerProps } from "./types";
+import { toast } from "@/components/ui/use-toast";
 
 /**
- * Handler for direct file access (when secure methods fail)
+ * Handles direct URL access to files
  */
 export function useDirectAccessHandler({ props, utilities }: DownloadHandlerProps) {
   const {
-    filePath,
+    filePath
   } = props;
   
   const {
-    updateMethodStatus,
-    setHasError,
-    incrementRetryCount,
-    setAccessUrl,
     setIsLoading,
+    setAccessUrl,
+    setDownloadMethod,
+    updateMethodStatus
   } = utilities;
   
   // Create file access manager
   const fileAccessManager = new FileAccessManager(filePath, props.deliveryId, props.recipientEmail);
   
-  // Get direct URL for immediate access
+  // Get direct public URL (for direct access option)
   const directUrl = fileAccessManager.getDirectUrl();
-  
-  // Try to use direct access as fallback
+
   const tryDirectAccess = async () => {
+    setIsLoading(true);
+    
     try {
-      setIsLoading(true);
-      incrementRetryCount();
+      console.log(`[DirectAccess] Attempting direct access for file: ${filePath}`);
+      console.log(`[DirectAccess] Delivery context - ID: ${props.deliveryId || 'none'}, Recipient: ${props.recipientEmail ? props.recipientEmail.substring(0, 3) + '...' : 'none'}`);
       
-      console.log(`[DirectAccessHandler] Attempting direct access for ${filePath}`);
-      console.log(`[DirectAccessHandler] Delivery ID: ${props.deliveryId || 'Not provided'}`);
-      console.log(`[DirectAccessHandler] Recipient: ${props.recipientEmail || 'Not provided'}`);
-      
-      // Check if we're authenticated and no delivery ID is provided
-      // This means we're viewing in authenticated context
-      if (!props.deliveryId) {
-        // Get current user session
-        const { data: sessionData } = await supabase.auth.getSession();
-        const isAuthenticated = !!sessionData.session?.access_token;
+      // Try secure method first
+      try {
+        console.log('[DirectAccess] Trying secure edge function method first');
+        const { url, method } = await fileAccessManager.getAccessUrl('secure');
         
-        if (isAuthenticated) {
-          console.log("[DirectAccessHandler] Using authenticated access with signed URL");
-          // Use signed URL method for authenticated user
-          const { url, method: resultMethod } = await fileAccessManager.getAccessUrl('signed');
-          
-          if (url) {
-            console.log("[DirectAccessHandler] Successfully obtained signed URL in authenticated context");
-            updateMethodStatus('signed', true);
-            setHasError(false);
-            setAccessUrl(url);
-            return { success: true, url, method: 'signed' as AccessMethod };
-          } else {
-            console.warn("[DirectAccessHandler] Failed to get signed URL in authenticated context");
-          }
-        } else {
-          console.log("[DirectAccessHandler] Not authenticated and no delivery context");
+        if (url && method === 'secure') {
+          console.log('[DirectAccess] Secure access successful');
+          updateMethodStatus(method, true);
+          setIsLoading(false);
+          return { success: true, url, method };
         }
+      } catch (secureError) {
+        console.warn('[DirectAccess] Secure access failed:', secureError);
+        updateMethodStatus('secure', false);
       }
       
-      // Try direct access method if signed URL fails or in public context
+      // Try signed URL next
+      try {
+        console.log('[DirectAccess] Trying signed URL method');
+        const { url, method } = await fileAccessManager.getAccessUrl('signed');
+        
+        if (url && method === 'signed') {
+          console.log('[DirectAccess] Signed URL access successful');
+          updateMethodStatus(method, true);
+          setIsLoading(false);
+          return { success: true, url, method };
+        }
+      } catch (signedError) {
+        console.warn('[DirectAccess] Signed URL access failed:', signedError);
+        updateMethodStatus('signed', false);
+      }
+      
+      // Fall back to direct URL
+      console.log('[DirectAccess] Falling back to direct URL');
       if (directUrl) {
-        console.log("[DirectAccessHandler] Using direct public URL access");
         updateMethodStatus('direct', true);
-        setHasError(false);
         setAccessUrl(directUrl);
-        
-        // Show success toast
-        toast({
-          title: "Direct access successful",
-          description: "Switched to direct URL access method",
-        });
-        
-        return { success: true, url: directUrl, method: 'direct' as AccessMethod };
+        setDownloadMethod('direct');
+        setIsLoading(false);
+        return { success: true, url: directUrl, method: 'direct' };
       }
       
-      // If no direct URL is available, try one more time with secure method
-      if (props.deliveryId && props.recipientEmail) {
-        console.log("[DirectAccessHandler] Trying secure method as last resort");
-        const { url, method: resultMethod } = await fileAccessManager.getAccessUrl('secure');
-        
-        if (url && resultMethod) {
-          updateMethodStatus(resultMethod, true);
-          setHasError(false);
-          setAccessUrl(url);
-          return { success: true, url, method: resultMethod };
-        }
-      }
-      
-      setHasError(true);
-      toast({
-        title: "Access error",
-        description: "Could not access file via any method",
-        variant: "destructive"
-      });
-      return { success: false, url: null, method: null };
+      throw new Error("All access methods failed");
     } catch (error) {
-      console.error("Error using direct access:", error);
-      setHasError(true);
-      toast({
-        title: "Access error",
-        description: "An error occurred while trying to access the file directly",
-        variant: "destructive"
-      });
-      return { success: false, url: null, method: null };
-    } finally {
+      console.error("[DirectAccess] Error in direct access:", error);
       setIsLoading(false);
+      
+      // Try to provide a fallback with just the direct URL
+      if (directUrl) {
+        console.log("[DirectAccess] Using direct URL as final fallback");
+        toast({
+          title: "Limited access available",
+          description: "Using direct file access as fallback. Some features may be limited.",
+          variant: "warning"
+        });
+        return { success: true, url: directUrl, method: 'direct' };
+      }
+      
+      return { success: false, url: null, method: null };
     }
   };
 

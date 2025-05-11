@@ -49,7 +49,8 @@ export class FileUrlGenerator {
    */
   public async getAccessUrl(method: AccessMethod = 'signed', accessMode: AccessMode = 'view'): Promise<AccessMethodData> {
     try {
-      console.log(`Getting file access URL for: ${this.filePath} using method: ${method}, mode: ${accessMode}`);
+      console.log(`[FileAccess] Getting file access URL for: ${this.filePath} using method: ${method}, mode: ${accessMode}`);
+      console.log(`[FileAccess] Delivery context - ID: ${this.deliveryId || 'none'}, Recipient: ${this.recipientEmail ? this.recipientEmail.substring(0, 3) + '...' : 'none'}`);
       
       if (!this.filePath) {
         throw new Error("File path is missing");
@@ -87,40 +88,60 @@ export class FileUrlGenerator {
       
       // Secure/edge function method - only available with delivery context
       if ((method === 'secure' || !isAuthContext) && isDeliveryContext) {
-        const url = await getPublicFileUrl(
-          this.filePath, 
-          this.deliveryId!, 
-          this.recipientEmail!, 
-          accessMode
-        );
-        
-        if (url) {
-          return { url, method: 'secure' };
+        try {
+          const url = await getPublicFileUrl(
+            this.filePath, 
+            this.deliveryId!, 
+            this.recipientEmail!, 
+            accessMode
+          );
+          
+          if (url) {
+            return { url, method: 'secure' };
+          }
+        } catch (secureError) {
+          console.error("[FileAccess] Error with secure method:", secureError);
+          // Continue to fallback methods
         }
       }
       
       // Try fallback methods if requested method fails
       if (method !== 'signed') {
-        const signedUrl = await getAuthenticatedFileUrl(
-          this.filePath, 
-          false, 
-          accessMode === 'download'
-        );
-        
-        if (signedUrl) {
-          return { url: signedUrl, method: 'signed' };
+        console.log("[FileAccess] Trying signed URL as fallback");
+        try {
+          const signedUrl = await getAuthenticatedFileUrl(
+            this.filePath, 
+            false, 
+            accessMode === 'download'
+          );
+          
+          if (signedUrl) {
+            return { url: signedUrl, method: 'signed' };
+          }
+        } catch (signedError) {
+          console.error("[FileAccess] Signed URL fallback failed:", signedError);
         }
       }
       
       // Last resort - direct URL
+      console.log("[FileAccess] Trying direct URL as final fallback");
       const directUrl = this.getDirectUrl();
       if (directUrl) {
         return { url: directUrl, method: 'direct' };
       }
       
+      console.error("[FileAccess] All URL generation methods failed");
       return { url: null, method: null };
     } catch (error) {
-      console.error("Error generating URL:", error);
+      console.error("[FileAccess] Error generating URL:", error);
+      
+      // Final fallback to direct URL even after exceptions
+      const directUrl = this.getDirectUrl();
+      if (directUrl) {
+        console.log("[FileAccess] Using direct URL after exception");
+        return { url: directUrl, method: 'direct' };
+      }
+      
       return { url: null, method: null };
     }
   }

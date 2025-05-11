@@ -20,6 +20,7 @@ export const getPublicFileUrl = async (
     const token = sessionData.session?.access_token;
     
     console.log(`[FileAccess] Getting public file URL, auth token ${token ? 'present' : 'missing'}`);
+    console.log(`[FileAccess] Delivery context - ID: ${deliveryId}, Recipient: ${recipientEmail?.substring(0, 3)}...`);
 
     // Use Supabase SDK's built-in function invocation which handles authentication
     // This is the preferred method when a token is available
@@ -41,6 +42,7 @@ export const getPublicFileUrl = async (
           return data.url;
         } else if (error) {
           console.warn("[FileAccess] Error invoking access-file function:", error);
+          console.log("[FileAccess] Error response:", JSON.stringify(error));
           // Continue to fallback method
         }
       } catch (invokeError) {
