@@ -24,6 +24,12 @@ export function generateAccessUrl(messageId: string, recipientEmail: string, del
     url.searchParams.append("delivery", deliveryId);
     url.searchParams.append("recipient", recipientEmail);
     
+    // Add additional parameter for authentication (for edge functions)
+    const anon_key = Deno.env.get("SUPABASE_ANON_KEY");
+    if (anon_key) {
+      url.searchParams.append("apikey", anon_key);
+    }
+    
     const accessUrl = url.toString();
     
     // Debug logging
@@ -50,28 +56,38 @@ export function generateFileAccessUrl(filePath: string, recipientEmail: string, 
   const domainWithProtocol = appDomain.startsWith('http://') || appDomain.startsWith('https://') 
     ? appDomain 
     : `https://${appDomain}`;
+  
+  // Get Supabase URL for direct edge function access
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
     
   try {
-    // FIXED: Always use the deliveryId in the path, not messageId
-    // This ensures we're consistent with what the edge function expects
-    const baseUrl = `${domainWithProtocol}/access/message/${encodeURIComponent(deliveryId)}`;
+    // For file access, we'll use the edge function directly to ensure authentication works
+    // This ensures the service role key is used for authentication
+    const baseUrl = `${supabaseUrl}/functions/v1/access-file/file/${encodeURIComponent(filePath)}`;
     
     // Add query parameters with proper encoding
     const url = new URL(baseUrl);
     url.searchParams.append("delivery", deliveryId);
     url.searchParams.append("recipient", recipientEmail);
-    url.searchParams.append("attachment", encodeURIComponent(filePath));
+    
+    // Add anon key for authentication
+    const anon_key = Deno.env.get("SUPABASE_ANON_KEY");
+    if (anon_key) {
+      url.searchParams.append("apikey", anon_key);
+    }
     
     const fileAccessUrl = url.toString();
     
-    console.log(`Generated file access URL: ${fileAccessUrl}`);
+    console.log(`Generated direct edge function file access URL: ${fileAccessUrl}`);
     
     return fileAccessUrl;
   } catch (error) {
     console.error(`Error generating file access URL: ${error}`);
     
-    // Fallback with direct string concatenation
-    return `${domainWithProtocol}/access/message/${encodeURIComponent(deliveryId)}?delivery=${encodeURIComponent(deliveryId)}&recipient=${encodeURIComponent(recipientEmail)}&attachment=${encodeURIComponent(filePath)}`;
+    // Fallback to web app URL (less reliable but might work in some cases)
+    const webAppUrl = `${domainWithProtocol}/access/message/${encodeURIComponent(deliveryId)}?delivery=${encodeURIComponent(deliveryId)}&recipient=${encodeURIComponent(recipientEmail)}&attachment=${encodeURIComponent(filePath)}`;
+    console.log(`Generated fallback web app URL: ${webAppUrl}`);
+    return webAppUrl;
   }
 }
 

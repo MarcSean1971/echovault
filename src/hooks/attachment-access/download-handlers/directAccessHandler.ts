@@ -68,9 +68,28 @@ export function useDirectAccessHandler({ props, utilities }: DownloadHandlerProp
         updateMethodStatus('secure', false);
       }
       
-      // Fall back to direct URL
-      console.log('[DirectAccess] Falling back to direct URL');
+      // Fallback to direct URL with API key
+      console.log('[DirectAccess] Trying direct URL with API key');
+      try {
+        // Get the current session to extract the token for authorization (if available)
+        const { data: sessionData } = await fileAccessManager.getAccessUrl('direct');
+        
+        if (sessionData.url) {
+          console.log('[DirectAccess] Direct URL with API key successful');
+          updateMethodStatus('direct', true);
+          setAccessUrl(sessionData.url);
+          setDownloadMethod('direct');
+          setIsLoading(false);
+          return { success: true, url: sessionData.url, method: 'direct' as AccessMethod };
+        }
+      } catch (directError) {
+        console.warn('[DirectAccess] Direct URL with API key failed:', directError);
+        updateMethodStatus('direct', false);
+      }
+      
+      // Last resort - use plain direct URL
       if (directUrl) {
+        console.log('[DirectAccess] Falling back to plain direct URL');
         updateMethodStatus('direct', true);
         setAccessUrl(directUrl);
         setDownloadMethod('direct');

@@ -27,7 +27,8 @@ export function createSupabaseClient(authHeader?: string | null) {
       global: {
         // Always include the Authorization header with the service role key
         headers: {
-          Authorization: `Bearer ${supabaseKey}`
+          Authorization: `Bearer ${supabaseKey}`,
+          apikey: supabaseKey
         },
         // Add more reliable fetch options with increased timeout
         fetch: (url, options) => {
@@ -41,7 +42,8 @@ export function createSupabaseClient(authHeader?: string | null) {
               ...options?.headers,
               "Pragma": "no-cache",
               "Cache-Control": "no-cache, no-store, must-revalidate",
-              "Authorization": `Bearer ${supabaseKey}` // Ensure auth header is always set
+              "Authorization": `Bearer ${supabaseKey}`, // Ensure auth header is always set
+              "apikey": supabaseKey
             }
           }).finally(() => clearTimeout(timeoutId));
         }

@@ -15,13 +15,17 @@ export const DirectAccessButton: React.FC<DirectAccessButtonProps> = ({
   isLoading, 
   tryDirectAccess 
 }) => {
+  const [accessAttempted, setAccessAttempted] = React.useState(false);
+
   const handleClick = async () => {
     try {
+      setAccessAttempted(true);
       const result = await tryDirectAccess();
       if (result.success && result.url) {
         console.log("Direct access successful, URL:", result.url);
         // Open the URL in a new tab for direct access
         window.open(result.url, '_blank');
+        setAccessAttempted(false);
       } else {
         console.error("Direct access failed, result:", result);
         toast({
@@ -29,6 +33,11 @@ export const DirectAccessButton: React.FC<DirectAccessButtonProps> = ({
           description: "Falling back to alternative access method. Please try the download button.",
           variant: "destructive"
         });
+        
+        // Reset the access attempted state after a delay
+        setTimeout(() => {
+          setAccessAttempted(false);
+        }, 3000);
       }
     } catch (error) {
       console.error("Error in direct access:", error);
@@ -37,6 +46,11 @@ export const DirectAccessButton: React.FC<DirectAccessButtonProps> = ({
         description: "There was a problem accessing this file. Please try again or use download button.",
         variant: "destructive"
       });
+      
+      // Reset the access attempted state after a delay
+      setTimeout(() => {
+        setAccessAttempted(false);
+      }, 3000);
     }
   };
 
@@ -45,9 +59,9 @@ export const DirectAccessButton: React.FC<DirectAccessButtonProps> = ({
       variant="outline"
       isLoading={isLoading}
       onClick={handleClick}
-      icon={<Link className={`h-4 w-4 ${HOVER_TRANSITION} transform hover:scale-105`} />}
+      icon={<Link className={`h-4 w-4 ${HOVER_TRANSITION} transform hover:scale-105 ${accessAttempted ? 'text-red-500' : ''}`} />}
       tooltipText="Use direct URL"
-      className="bg-amber-100 hover:bg-amber-200 transition-all duration-200"
+      className={`${accessAttempted ? 'bg-red-50 hover:bg-red-100' : 'bg-amber-100 hover:bg-amber-200'} transition-all duration-200`}
     />
   );
 };
