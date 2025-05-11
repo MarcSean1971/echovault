@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -59,6 +59,13 @@ export function LocationSection() {
     );
   };
 
+  // Automatically capture location when shareLocation is toggled on
+  useEffect(() => {
+    if (shareLocation && !locationLatitude && !locationLongitude) {
+      captureLocation();
+    }
+  }, [shareLocation, locationLatitude, locationLongitude]);
+
   // Function to clear location data
   const clearLocation = () => {
     setLocationLatitude(null);
@@ -85,7 +92,9 @@ export function LocationSection() {
       {shareLocation && (
         <div className="space-y-4 pl-7">
           <p className="text-sm text-muted-foreground">
-            Recipients will see your current location when viewing this message.
+            {isCapturingLocation 
+              ? "Capturing your current location..." 
+              : "Recipients will see your current location when viewing this message."}
           </p>
           
           {locationLatitude && locationLongitude ? (
@@ -107,14 +116,12 @@ export function LocationSection() {
               </Button>
             </div>
           ) : (
-            <Button
-              type="button"
-              onClick={captureLocation}
-              disabled={isCapturingLocation}
-              className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
-            >
-              {isCapturingLocation ? 'Capturing...' : 'Capture Current Location'}
-            </Button>
+            isCapturingLocation && (
+              <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
+                <span>Capturing location...</span>
+              </div>
+            )
           )}
         </div>
       )}
