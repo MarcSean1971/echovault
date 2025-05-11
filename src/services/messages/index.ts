@@ -11,13 +11,11 @@ export * from './mediaService';
 
 // Explicitly re-export from transcriptionService to resolve ambiguity
 import { 
-  transcribeVideoContent, 
   formatVideoContent, 
   blobToBase64
 } from './transcriptionService';
 
 export {
-  transcribeVideoContent,
   formatVideoContent,
   blobToBase64
   // parseVideoContent is deliberately not re-exported from here to avoid conflict
