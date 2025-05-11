@@ -7,6 +7,7 @@ export const BUTTON_HOVER_EFFECTS = {
   default: "hover:scale-105 hover:shadow-md",
   outline: "hover:bg-accent hover:text-accent-foreground hover:scale-105",
   ghost: "hover:bg-accent/50 hover:text-accent-foreground",
+  subtle: "hover:bg-white/30 hover:text-white", // Added the missing subtle variant
   destructive: "hover:bg-destructive/90 hover:scale-105",
   link: "hover:underline"
 };
