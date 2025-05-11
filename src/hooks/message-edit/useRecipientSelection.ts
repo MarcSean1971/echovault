@@ -7,19 +7,15 @@ import { useMessageForm } from "@/components/message/MessageFormContext";
 export function useRecipientSelection() {
   const { selectedRecipients, setSelectedRecipients } = useMessageForm();
   const [recipients, setRecipients] = useState<Recipient[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
   // Load recipients
   useEffect(() => {
     const loadRecipients = async () => {
-      setIsLoading(true);
       try {
         const allRecipients = await fetchRecipients();
         setRecipients(allRecipients);
       } catch (error) {
         console.error("Error loading recipients:", error);
-      } finally {
-        setIsLoading(false);
       }
     };
     
@@ -38,7 +34,6 @@ export function useRecipientSelection() {
   return {
     recipients,
     selectedRecipients,
-    handleToggleRecipient,
-    isLoading
+    handleToggleRecipient
   };
 }
