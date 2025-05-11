@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
-import { toast } from "@/components/ui/use-toast";
-import { triggerPanicMessage } from "@/services/messages/conditions/panicTriggerService";
-import { MessageCondition } from "@/types/message";
 import { useNavigate } from "react-router-dom";
-import { HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { toast } from "@/components/ui/use-toast";
+import { MessageCondition } from "@/types/message";
+import { checkLocationPermission, requestLocationPermission } from "./panic-button/locationUtils";
+import { getCancelWindowSeconds, getKeepArmedValue } from "./panic-button/messageConfigUtils";
+import { triggerPanicMessageWithCallbacks } from "./panic-button/triggerUtils";
+import { startCountdown } from "./panic-button/countdownUtils";
 
 /**
  * Hook to handle panic button functionality
@@ -27,7 +29,12 @@ export function usePanicButton(
 
   // Check location permissions
   useEffect(() => {
-    checkLocationPermission();
+    const checkPermission = async () => {
+      const permission = await checkLocationPermission();
+      setLocationPermission(permission);
+    };
+    
+    checkPermission();
   }, []);
 
   // Cleanup timers on unmount
@@ -41,109 +48,6 @@ export function usePanicButton(
       }
     };
   }, [cancelWindowTimer, countdownInterval]);
-
-  // Check location permissions
-  const checkLocationPermission = async () => {
-    if (navigator.permissions && navigator.permissions.query) {
-      try {
-        const result = await navigator.permissions.query({ name: 'geolocation' });
-        setLocationPermission(result.state);
-        
-        // Listen for permission changes
-        result.onchange = () => {
-          setLocationPermission(result.state);
-        };
-        return result.state;
-      } catch (err) {
-        console.error("Error checking location permissions:", err);
-        setLocationPermission("denied");
-        return "denied";
-      }
-    }
-    return locationPermission;
-  };
-
-  // Request location permission
-  const requestLocationPermission = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        () => {
-          setLocationPermission("granted");
-          
-          // If we have multiple messages, show selector instead of immediately triggering
-          if (panicMessages.length > 1) {
-            setIsSelectorOpen(true);
-          } else {
-            startCancellationCountdown();
-          }
-        },
-        (error) => {
-          console.error("Location permission denied:", error);
-          setLocationPermission("denied");
-          toast({
-            title: "Location Access Denied",
-            description: "Your current location won't be included in the emergency message. Consider enabling location access for better assistance.",
-            variant: "destructive"
-          });
-          
-          // Continue with panic trigger even without location
-          // If we have multiple messages, show selector instead of immediately triggering
-          if (panicMessages.length > 1) {
-            setIsSelectorOpen(true);
-          } else {
-            startCancellationCountdown();
-          }
-        }
-      );
-    } else {
-      toast({
-        title: "Location Not Available",
-        description: "Your device doesn't support location services. The emergency message will be sent without your location.",
-        variant: "destructive"
-      });
-      
-      // Continue with panic trigger even without location
-      // If we have multiple messages, show selector instead of immediately triggering
-      if (panicMessages.length > 1) {
-        setIsSelectorOpen(true);
-      } else {
-        startCancellationCountdown();
-      }
-    }
-  };
-
-  // Get message config from the selected message or default message
-  const getMessageConfig = () => {
-    const message = selectedMessageId 
-      ? panicMessages.find(m => m.message_id === selectedMessageId) 
-      : panicMessage;
-    
-    if (!message) return null;
-    
-    // First check panic_trigger_config
-    if (message.panic_trigger_config) {
-      return message.panic_trigger_config;
-    }
-    
-    // Fall back to panic_config if panic_trigger_config is not available
-    if (message.panic_config) {
-      return message.panic_config;
-    }
-    
-    return null;
-  };
-
-  // Get keep_armed value from config
-  const getKeepArmedValue = () => {
-    const config = getMessageConfig();
-    return config?.keep_armed ?? true; // Default true for safety
-  };
-
-  // Get cancel window seconds from config
-  const getCancelWindowSeconds = () => {
-    const config = getMessageConfig();
-    return config?.cancel_window_seconds ?? 5; // Default 5 seconds for cancellation window
-  };
 
   // Start the cancellation countdown
   const startCancellationCountdown = () => {
@@ -167,24 +71,8 @@ export function usePanicButton(
     setTriggerInProgress(true);
     
     // Get cancellation window duration
-    const cancelWindowSecs = getCancelWindowSeconds();
+    const cancelWindowSecs = getCancelWindowSeconds(selectedMessageId, panicMessages, panicMessage);
     console.log(`Cancel window seconds: ${cancelWindowSecs}`);
-    
-    // Start countdown for visual feedback
-    let secondsLeft = cancelWindowSecs;
-    setCountDown(secondsLeft);
-    
-    // Create interval for countdown display
-    const interval = setInterval(() => {
-      secondsLeft -= 1;
-      setCountDown(secondsLeft);
-      
-      if (secondsLeft <= 0) {
-        clearInterval(interval);
-      }
-    }, 1000);
-    
-    setCountdownInterval(interval);
     
     // Show toast with cancellation option
     toast({
@@ -193,72 +81,64 @@ export function usePanicButton(
       variant: "destructive",
     });
     
-    // Create timeout for actual message sending after the cancel window
-    const timer = setTimeout(async () => {
-      try {
-        // Actually send the message after the cancel window expires
-        console.log(`Triggering panic message: ${messageToUse.message_id}`);
-        const result = await triggerPanicMessage(userId, messageToUse.message_id);
+    // Setup countdown
+    const countdown = startCountdown(
+      cancelWindowSecs,
+      (secondsLeft) => {
+        setCountDown(secondsLeft);
+      },
+      async () => {
+        // This executes when countdown reaches zero
+        if (!userId || !messageToUse) return;
         
-        if (result.success) {
-          toast({
-            title: "EMERGENCY ALERT TRIGGERED",
-            description: "Your emergency message with your current location and attachments has been sent.",
-            variant: "destructive"
-          });
-          
-          // Dispatch event with panic message ID
-          window.dispatchEvent(new CustomEvent('conditions-updated', { 
-            detail: { 
-              updatedAt: new Date().toISOString(),
-              triggerValue: Date.now(),
-              panicTrigger: true,
-              panicMessageId: messageToUse.message_id
-            }
-          }));
-          
-          // Reset UI state after a short delay
-          setTimeout(() => {
-            setInCancelWindow(false);
-            setPanicMode(false);
-            setIsConfirming(false);
-            setTriggerInProgress(false);
-            setSelectedMessageId(null);
-            
-            // Handle keep armed status
-            if (result.keepArmed) {
-              toast({
-                title: "Emergency message still armed",
-                description: "Your emergency message remains active and can be triggered again if needed."
-              });
-              // Dispatch an event to refresh conditions
-              window.dispatchEvent(new CustomEvent('conditions-updated', { 
-                detail: { 
-                  updatedAt: new Date().toISOString(),
-                  triggerValue: Date.now()
+        triggerPanicMessageWithCallbacks(
+          userId,
+          messageToUse.message_id,
+          {
+            onSuccess: (result) => {
+              // Reset UI state after a short delay
+              setTimeout(() => {
+                setInCancelWindow(false);
+                setPanicMode(false);
+                setIsConfirming(false);
+                setTriggerInProgress(false);
+                setSelectedMessageId(null);
+                
+                // Handle keep armed status
+                if (result.keepArmed) {
+                  toast({
+                    title: "Emergency message still armed",
+                    description: "Your emergency message remains active and can be triggered again if needed."
+                  });
+                  // Dispatch an event to refresh conditions
+                  window.dispatchEvent(new CustomEvent('conditions-updated', { 
+                    detail: { 
+                      updatedAt: new Date().toISOString(),
+                      triggerValue: Date.now()
+                    }
+                  }));
+                } else {
+                  navigate('/messages'); // Redirect to messages page
                 }
-              }));
-            } else {
-              navigate('/messages'); // Redirect to messages page
+              }, 3000);
+            },
+            onError: (error) => {
+              setInCancelWindow(false);
+              setPanicMode(false);
+              setIsConfirming(false);
+              setTriggerInProgress(false);
             }
-          }, 3000);
-        }
-      } catch (error: any) {
-        console.error("Error triggering panic message:", error);
-        toast({
-          title: "Error",
-          description: error.message || "Failed to trigger panic message. Please try again.",
-          variant: "destructive"
-        });
-        setInCancelWindow(false);
-        setPanicMode(false);
-        setIsConfirming(false);
-        setTriggerInProgress(false);
+          }
+        );
       }
-      
-      // Clear the timer reference
+    );
+    
+    // Store the timer reference to be able to cancel it
+    const timer = setTimeout(() => {
+      // This is just a safety cleanup, the actual trigger happens in countdown onComplete
+      countdown.stop();
       setCancelWindowTimer(null);
-    }, cancelWindowSecs * 1000);
+    }, (cancelWindowSecs + 1) * 1000);
     
     // Store the timer reference
     setCancelWindowTimer(timer as unknown as NodeJS.Timeout);
@@ -318,7 +198,36 @@ export function usePanicButton(
         startCancellationCountdown();
       }
     } else if (locationPermission === "prompt" || locationPermission === "unknown") {
-      requestLocationPermission();
+      requestLocationPermission(
+        // On granted
+        () => {
+          setLocationPermission("granted");
+          
+          // If we have multiple messages, show selector instead of immediately triggering
+          if (panicMessages.length > 1) {
+            setIsSelectorOpen(true);
+          } else {
+            startCancellationCountdown();
+          }
+        },
+        // On denied
+        () => {
+          setLocationPermission("denied");
+          toast({
+            title: "Location Access Denied",
+            description: "Your current location won't be included in the emergency message. Consider enabling location access for better assistance.",
+            variant: "destructive"
+          });
+          
+          // Continue with panic trigger even without location
+          // If we have multiple messages, show selector instead of immediately triggering
+          if (panicMessages.length > 1) {
+            setIsSelectorOpen(true);
+          } else {
+            startCancellationCountdown();
+          }
+        }
+      );
     } else {
       // Location permission denied but still allow triggering
       // If we have multiple messages, show selector instead of immediately triggering
@@ -341,11 +250,15 @@ export function usePanicButton(
     triggerInProgress,
     countDown,
     locationPermission,
-    checkLocationPermission,
+    checkLocationPermission: async () => {
+      const permission = await checkLocationPermission();
+      setLocationPermission(permission);
+      return permission;
+    },
     handlePanicButtonClick,
     handlePanicMessageSelect,
     handleCreatePanicMessage,
-    getKeepArmedValue,
+    getKeepArmedValue: () => getKeepArmedValue(selectedMessageId, panicMessages, panicMessage),
     isSelectorOpen,
     setIsSelectorOpen,
     selectedMessageId,
