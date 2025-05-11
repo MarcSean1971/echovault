@@ -85,14 +85,7 @@ export function PanicTrigger({ config, setConfig }: PanicTriggerProps) {
           </div>
         )}
         
-        <div className="flex items-center justify-between">
-          <Label htmlFor="bypass-logging">Enhanced privacy (bypass logging)</Label>
-          <Switch
-            id="bypass-logging"
-            checked={config.bypass_logging}
-            onCheckedChange={(checked) => setConfig({...config, bypass_logging: checked})}
-          />
-        </div>
+        {/* Removed the Enhanced privacy (bypass logging) option here */}
         
         <div className="flex items-center justify-between">
           <Label htmlFor="keep-armed" className="font-medium text-orange-600">Keep message armed after triggering</Label>
