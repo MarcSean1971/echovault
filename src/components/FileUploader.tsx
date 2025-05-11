@@ -39,6 +39,15 @@ export function FileUploader({
 }: FileUploaderProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [viewingFile, setViewingFile] = useState<string | null>(null);
+  const [currentFile, setCurrentFile] = useState<FileAttachment | null>(null);
+
+  // Setup file access hook at component level
+  const { openFile } = useAttachmentAccess({
+    filePath: currentFile?.path || '',
+    fileName: currentFile?.name || '',
+    fileType: currentFile?.type || '',
+    fileSize: currentFile?.size || 0
+  });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -104,16 +113,12 @@ export function FileUploader({
     // Only handle files that have been uploaded (have a path)
     if (!file.path) return;
     
+    // Set the current file and mark it as viewing
+    setCurrentFile(file);
     setViewingFile(file.path);
     
     try {
-      const { openFile } = useAttachmentAccess({
-        filePath: file.path,
-        fileName: file.name,
-        fileType: file.type || '',
-        fileSize: file.size
-      });
-      
+      // Use the pre-initialized openFile function from the hook
       const result = await openFile();
       
       if (!result) {
@@ -132,6 +137,7 @@ export function FileUploader({
       });
     } finally {
       setViewingFile(null);
+      setCurrentFile(null);
     }
   };
 
