@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createSupabaseClient } from "./supabase-client.ts";
 import { corsHeaders } from "./cors-headers.ts";
@@ -225,12 +224,47 @@ serve(async (req: Request) => {
         
       if (recipientError || !recipientData) {
         console.error(`[AccessFile] Recipient error: ${recipientError?.message || "Recipient not found"}`);
+        console.error(`[AccessFile] Recipient ID being queried: ${deliveryData.recipient_id}`);
+        
+        // Try a more direct lookup approach as fallback
+        try {
+          console.log("[AccessFile] Attempting fallback recipient lookup by email");
+          
+          const { data: directRecipientData, error: directRecipientError } = await supabase
+            .from('recipients')
+            .select('id, email')
+            .eq('email', recipientEmail.toLowerCase())
+            .maybeSingle();
+            
+          if (!directRecipientError && directRecipientData) {
+            console.log("[AccessFile] Found recipient through direct email lookup", directRecipientData);
+            // Use this recipient data instead
+            return new Response(
+              JSON.stringify({ success: true, recipientData: directRecipientData }),
+              { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          } else {
+            console.error("[AccessFile] Fallback lookup also failed:", directRecipientError);
+          }
+        } catch (fallbackError) {
+          console.error("[AccessFile] Error in fallback recipient lookup:", fallbackError);
+        }
+        
+        // Return detailed error for debugging
         return new Response(
-          JSON.stringify({ error: "Invalid recipient" }),
+          JSON.stringify({ 
+            error: "Invalid recipient", 
+            details: recipientError ? recipientError.message : "Recipient not found",
+            recipient_id: deliveryData.recipient_id,
+            delivery_id: deliveryId
+          }),
           { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
       
+      // Log found recipient data
+      console.log(`[AccessFile] Found recipient with email: ${recipientData.email}`);
+
       // Verify the recipient email with case-insensitive comparison
       if (recipientData.email.toLowerCase() !== recipientEmail.toLowerCase()) {
         // Log email comparison details

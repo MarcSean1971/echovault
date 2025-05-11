@@ -35,92 +35,63 @@ export function useDirectAccessHandler({ props, utilities }: DownloadHandlerProp
       // Try signed URL first as it's more reliable
       try {
         console.log('[DirectAccess] Trying signed URL method first (now preferred)');
-        const { url, method } = await fileAccessManager.getAccessUrl('signed');
+        const result = await fileAccessManager.getAccessUrl('signed');
         
-        if (url && method === 'signed') {
+        if (result.url && result.method === 'signed') {
           console.log('[DirectAccess] Signed URL access successful');
-          updateMethodStatus(method, true);
-          setAccessUrl(url);
-          setDownloadMethod(method);
+          updateMethodStatus(result.method, true);
+          setAccessUrl(result.url);
+          setDownloadMethod(result.method);
           setIsLoading(false);
-          return { success: true, url, method };
+          return { success: true, url: result.url, method: result.method };
         }
       } catch (signedError) {
         console.warn('[DirectAccess] Signed URL access failed:', signedError);
-        updateMethodStatus('signed', false);
       }
       
-      // Try secure method next
+      // Then try secure edge function method
       try {
-        console.log('[DirectAccess] Trying secure edge function method');
-        const { url, method } = await fileAccessManager.getAccessUrl('secure');
+        console.log('[DirectAccess] Trying secure method via edge function');
+        const result = await fileAccessManager.getAccessUrl('secure');
         
-        if (url && method === 'secure') {
-          console.log('[DirectAccess] Secure access successful');
-          updateMethodStatus(method, true);
-          setAccessUrl(url);
-          setDownloadMethod(method);
+        if (result.url && result.method === 'secure') {
+          console.log('[DirectAccess] Secure URL access successful');
+          updateMethodStatus(result.method, true);
+          setAccessUrl(result.url);
+          setDownloadMethod(result.method);
           setIsLoading(false);
-          return { success: true, url, method };
+          return { success: true, url: result.url, method: result.method };
         }
       } catch (secureError) {
-        console.warn('[DirectAccess] Secure access failed:', secureError);
-        updateMethodStatus('secure', false);
+        console.warn('[DirectAccess] Secure URL access failed:', secureError);
       }
       
-      // Fallback to direct URL with API key
-      console.log('[DirectAccess] Trying direct URL with API key');
-      try {
-        // Get the current session to extract the token for authorization (if available)
-        const { data: sessionData } = await fileAccessManager.getAccessUrl('direct');
-        
-        if (sessionData.url) {
-          console.log('[DirectAccess] Direct URL with API key successful');
-          updateMethodStatus('direct', true);
-          setAccessUrl(sessionData.url);
-          setDownloadMethod('direct');
-          setIsLoading(false);
-          return { success: true, url: sessionData.url, method: 'direct' as AccessMethod };
-        }
-      } catch (directError) {
-        console.warn('[DirectAccess] Direct URL with API key failed:', directError);
-        updateMethodStatus('direct', false);
-      }
-      
-      // Last resort - use plain direct URL
+      // Finally try direct method as last resort
       if (directUrl) {
-        console.log('[DirectAccess] Falling back to plain direct URL');
+        console.log('[DirectAccess] Falling back to direct URL method');
         updateMethodStatus('direct', true);
         setAccessUrl(directUrl);
         setDownloadMethod('direct');
         setIsLoading(false);
-        return { success: true, url: directUrl, method: 'direct' as AccessMethod };
+        return { success: true, url: directUrl, method: 'direct' };
       }
       
-      throw new Error("All access methods failed");
-    } catch (error) {
-      console.error("[DirectAccess] Error in direct access:", error);
+      console.error('[DirectAccess] All access methods failed');
+      updateMethodStatus('signed', false);
+      updateMethodStatus('secure', false);
+      updateMethodStatus('direct', false);
       setIsLoading(false);
       
-      // Try to provide a fallback with just the direct URL
-      if (directUrl) {
-        console.log("[DirectAccess] Using direct URL as final fallback");
-        toast({
-          title: "Limited access available",
-          description: "Using direct file access as fallback. Some features may be limited.",
-          variant: "destructive"
-        });
-        setAccessUrl(directUrl);
-        setDownloadMethod('direct');
-        return { success: true, url: directUrl, method: 'direct' as AccessMethod };
-      }
-      
       toast({
-        title: "Access error",
-        description: "Could not access the file. Please try again or contact support.",
+        title: "File access failed",
+        description: "Could not access file with any available method. Please try again later.",
         variant: "destructive"
       });
       
+      return { success: false, url: null, method: null };
+    } catch (error) {
+      console.error('[DirectAccess] Error in tryDirectAccess:', error);
+      setIsLoading(false);
       return { success: false, url: null, method: null };
     }
   };
