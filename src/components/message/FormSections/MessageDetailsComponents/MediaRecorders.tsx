@@ -6,7 +6,7 @@ import { useEffect } from "react";
 interface MediaRecordersProps {
   showVideoRecorder: boolean;
   setShowVideoRecorder: (show: boolean) => void;
-  onVideoContentUpdate: (videoBlob: Blob, skipTranscriptionOrBase64: boolean | string) => Promise<any>;
+  onVideoContentUpdate: (videoBlob: Blob) => Promise<any>;
   videoUrl: string | null;
   videoBlob: Blob | null;
   isRecording?: boolean;
@@ -32,15 +32,6 @@ export function MediaRecorders({
   stopRecording = () => {},
   clearVideo = () => {}
 }: MediaRecordersProps) {
-  // Handle video transcription
-  const handleTranscribeVideo = async () => {
-    if (videoBlob) {
-      // Pass false to indicate we want transcription (don't skip it)
-      return onVideoContentUpdate(videoBlob, false);
-    }
-    return Promise.resolve({});
-  };
-  
   // Log state changes for debugging
   useEffect(() => {
     console.log("MediaRecorders: Dialog open state =", showVideoRecorder);
@@ -65,7 +56,6 @@ export function MediaRecorders({
           onStartRecording={startRecording}
           onStopRecording={stopRecording}
           onClearVideo={clearVideo}
-          onTranscribeVideo={handleTranscribeVideo}
           inDialog={true}
         />
       </DialogContent>

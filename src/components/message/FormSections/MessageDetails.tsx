@@ -1,4 +1,3 @@
-
 import { Label } from "@/components/ui/label";
 import { useMessageForm } from "../MessageFormContext";
 import { FileUploader } from "@/components/FileUploader";
@@ -34,7 +33,7 @@ export function MessageDetails({ message }: MessageDetailsProps) {
     forceInitializeCamera, handleInitializedVideo, initializedFromMessage
   } = useMessageTypeManager();
   
-  const { handleVideoContentUpdate, isTranscribingVideo } = useContentUpdater();
+  const { handleVideoContentUpdate } = useContentUpdater();
 
   // Initialize message data when editing an existing message
   const { videoUrl: initialVideoUrl, videoBlob: initialVideoBlob, videoTranscription, hasInitialized } = useMessageInitializer(message);
@@ -44,11 +43,10 @@ export function MessageDetails({ message }: MessageDetailsProps) {
     if (hasInitialized && initialVideoBlob && initialVideoUrl && !initializedFromMessage) {
       console.log("MessageDetails: Connecting initialized video to message type manager");
       console.log("Initial video blob size:", initialVideoBlob.size);
-      console.log("Initial video transcription:", videoTranscription ? "present" : "none");
       
-      handleInitializedVideo(initialVideoBlob, initialVideoUrl, videoTranscription);
+      handleInitializedVideo(initialVideoBlob, initialVideoUrl, null);
     }
-  }, [hasInitialized, initialVideoBlob, initialVideoUrl, videoTranscription, handleInitializedVideo, initializedFromMessage]);
+  }, [hasInitialized, initialVideoBlob, initialVideoUrl, handleInitializedVideo, initializedFromMessage]);
 
   // Initialize the camera when switching to video mode
   useEffect(() => {
@@ -152,12 +150,6 @@ export function MessageDetails({ message }: MessageDetailsProps) {
               onClearVideo={() => {
                 clearVideo();
                 setShowInlineRecording(false);
-              }}
-              onTranscribeVideo={async (): Promise<void> => {
-                if (videoBlob) {
-                  // Pass false to indicate we want transcription (don't skip it)
-                  await handleVideoContentUpdate(videoBlob, false);
-                }
               }}
             />
           </TabsContent>

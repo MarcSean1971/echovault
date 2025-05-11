@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Message } from "@/types/message";
 import { parseVideoContent } from "@/services/messages/mediaService";
@@ -27,6 +26,7 @@ export function VideoMessageContent({ message }: { message: Message }) {
           setVideoUrl(url);
         }
         
+        // Keep transcription support for backward compatibility with existing messages
         setTranscription(extractedTranscription);
         
         // Still extract additional text for internal state tracking
@@ -70,6 +70,7 @@ export function VideoMessageContent({ message }: { message: Message }) {
         />
       </div>
       
+      {/* Keep transcription support for backward compatibility with existing messages */}
       {transcription && (
         <div className="mt-4 space-y-2">
           <h3 className="text-sm font-medium">Video Transcription</h3>
@@ -78,8 +79,6 @@ export function VideoMessageContent({ message }: { message: Message }) {
           </Card>
         </div>
       )}
-      
-      {/* Removed the additional text section as it's now handled in MessageContent.tsx */}
     </div>
   );
 }

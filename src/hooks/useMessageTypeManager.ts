@@ -1,4 +1,3 @@
-
 import { useMessageTypeHandler } from "./useMessageTypeHandler";
 import { useMessageForm } from "@/components/message/MessageFormContext";
 import { useVideoRecordingHandler } from "./useVideoRecordingHandler";
@@ -65,7 +64,7 @@ export function useMessageTypeManager() {
     }
   }, [messageType, videoUrl, cachedVideoUrl, hasCachedVideo, previewStream, prevMessageType, isStreamActive, initializedFromMessage, textContent, videoContent]);
 
-  // Extract transcription from the current content
+  // Extract transcription from the current content (for backward compatibility)
   const getCurrentTranscription = () => {
     if (!videoContent) return null;
     return parseMessageTranscription(videoContent);
@@ -83,23 +82,21 @@ export function useMessageTypeManager() {
     // If we're already in video mode, restore the video directly
     if (messageType === "video") {
       console.log("Already in video mode, restoring video immediately");
-      restoreVideo(blob, url, transcription);
+      restoreVideo(blob, url, null); // Pass null for transcription as we're removing that functionality
     } else {
       // Otherwise, cache it for later when user switches to video mode
       console.log("Not in video mode, caching video for later");
-      cacheVideo(blob, url, transcription);
+      cacheVideo(blob, url, null); // Pass null for transcription as we're removing that functionality
     }
   };
   
   // Wrapper functions for message type handling
   const onTextTypeClick = () => {
     console.log("Switching to text mode");
-    // Save the current video state and transcription before switching to text
-    const currentTranscription = getCurrentTranscription();
     
     if (videoBlob && videoUrl) {
       console.log("Caching video before switching to text mode");
-      cacheVideo(videoBlob, videoUrl, currentTranscription);
+      cacheVideo(videoBlob, videoUrl, null); // Pass null for transcription as we're removing that functionality
     }
     
     handleTextTypeClick();
@@ -127,7 +124,7 @@ export function useMessageTypeManager() {
     if (cachedVideoBlob && cachedVideoUrl) {
       console.log("Restoring cached video after switching to video mode");
       console.log("Cached transcription:", cachedTranscription);
-      await restoreVideo(cachedVideoBlob, cachedVideoUrl, cachedTranscription);
+      await restoreVideo(cachedVideoBlob, cachedVideoUrl, null); // Pass null for transcription
       return;
     }
     

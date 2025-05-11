@@ -2,15 +2,12 @@
 import { useState } from "react";
 import { useMessageForm } from "@/components/message/MessageFormContext";
 import { parseMessageTranscription } from "@/services/messages/mediaService";
-import { transcribeVideoContent, formatVideoContent } from "@/services/messages/transcriptionService";
-import { toast } from "@/components/ui/use-toast";
+import { formatVideoContent } from "@/services/messages/transcriptionService";
 
 export function useContentUpdater() {
   const { setContent, setVideoContent, setTextContent, content, textContent } = useMessageForm();
-  const [isTranscribingVideo, setIsTranscribingVideo] = useState(false);
-  const [transcriptionError, setTranscriptionError] = useState<string | null>(null);
 
-  // Extract transcription from content
+  // Extract transcription from content (kept for backward compatibility with existing content)
   const getTranscriptionFromContent = (content: string | null): string | null => {
     if (!content) return null;
     
@@ -62,47 +59,12 @@ export function useContentUpdater() {
     }
   };
 
-  // Handle video content update with optional transcription
-  const handleVideoContentUpdate = async (videoBlob: Blob, skipTranscriptionOrBase64: boolean | string = false): Promise<any> => {
+  // Handle video content update (without transcription)
+  const handleVideoContentUpdate = async (videoBlob: Blob): Promise<any> => {
     try {
-      setIsTranscribingVideo(true);
-      setTranscriptionError(null);
-      
-      // Determine if the second parameter is a base64 string or a boolean flag
-      const isBase64String = typeof skipTranscriptionOrBase64 === 'string';
-      const skipTranscription = isBase64String ? false : skipTranscriptionOrBase64;
-      
-      let transcription = null;
-      
-      if (!skipTranscription) {
-        // Generate transcription using OpenAI via edge function
-        try {
-          console.log("Starting transcription process for video blob size:", videoBlob.size);
-          console.log("Video blob type:", videoBlob.type);
-          transcription = await transcribeVideoContent(videoBlob);
-          console.log("Transcription generated:", transcription ? transcription.substring(0, 50) + "..." : "none");
-          
-          // Show success notification
-          toast({
-            title: "Video transcribed",
-            description: "Transcription has been generated successfully"
-          });
-        } catch (error: any) {
-          console.error("Error generating transcription:", error);
-          setTranscriptionError(error.message || "Failed to transcribe video");
-          
-          // Show error notification
-          toast({
-            title: "Transcription failed",
-            description: error.message || "An error occurred during transcription",
-            variant: "destructive"
-          });
-        }
-      }
-      
-      // Format the video content with transcription
-      console.log("Formatting video content with transcription", !!transcription);
-      const formattedContent = await formatVideoContent(videoBlob, transcription);
+      // Format the video content without transcription
+      console.log("Formatting video content without transcription");
+      const formattedContent = await formatVideoContent(videoBlob, null);
       
       // Update form state with new content
       setVideoContent(formattedContent);
@@ -111,20 +73,16 @@ export function useContentUpdater() {
       // Preserve text content
       console.log("Preserving text content:", textContent ? textContent.substring(0, 30) + "..." : "none");
       
-      return { success: true, transcription };
+      return { success: true };
     } catch (error) {
       console.error("Error updating video content:", error);
       return { success: false, error };
-    } finally {
-      setIsTranscribingVideo(false);
     }
   };
   
   return {
     handleVideoContentUpdate,
     getTranscriptionFromContent,
-    hasVideoData,
-    isTranscribingVideo,
-    transcriptionError
+    hasVideoData
   };
 }
