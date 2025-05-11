@@ -1,11 +1,9 @@
 
 import { useState } from "react";
-import { Upload, X, File as FileIcon, Eye } from "lucide-react";
+import { Upload, X, File as FileIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { useAttachmentAccess } from "@/hooks/useAttachmentAccess";
-import { Spinner } from "@/components/ui/spinner";
 import { toast } from "@/components/ui/use-toast";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
@@ -38,16 +36,6 @@ export function FileUploader({
   disabled = false,
 }: FileUploaderProps) {
   const [isDragging, setIsDragging] = useState(false);
-  const [viewingFile, setViewingFile] = useState<string | null>(null);
-  const [currentFile, setCurrentFile] = useState<FileAttachment | null>(null);
-
-  // Setup file access hook at component level
-  const { openFile } = useAttachmentAccess({
-    filePath: currentFile?.path || '',
-    fileName: currentFile?.name || '',
-    fileType: currentFile?.type || '',
-    fileSize: currentFile?.size || 0
-  });
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -107,38 +95,6 @@ export function FileUploader({
     if (bytes < 1024) return bytes + " B";
     else if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + " KB";
     else return (bytes / (1024 * 1024)).toFixed(2) + " MB";
-  };
-
-  const handleViewFile = async (file: FileAttachment, index: number) => {
-    // Only handle files that have been uploaded (have a path)
-    if (!file.path) return;
-    
-    // Set the current file and mark it as viewing
-    setCurrentFile(file);
-    setViewingFile(file.path);
-    
-    try {
-      // Use the pre-initialized openFile function from the hook
-      const result = await openFile();
-      
-      if (!result) {
-        toast({
-          title: "Error",
-          description: "Unable to open the file for preview",
-          variant: "destructive"
-        });
-      }
-    } catch (error) {
-      console.error("Error viewing file:", error);
-      toast({
-        title: "Error",
-        description: "Failed to preview the file",
-        variant: "destructive"
-      });
-    } finally {
-      setViewingFile(null);
-      setCurrentFile(null);
-    }
   };
 
   return (
@@ -214,24 +170,6 @@ export function FileUploader({
                 <div className="flex items-center space-x-2">
                   {attachment.uploading && typeof attachment.progress === "number" && (
                     <Progress value={attachment.progress} className="w-20 h-2" />
-                  )}
-                  
-                  {/* View button - only show for uploaded files */}
-                  {(attachment.path || attachment.isUploaded) && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleViewFile(attachment, index)}
-                      disabled={disabled || attachment.uploading || viewingFile === attachment.path}
-                      className={`text-blue-500 hover:text-blue-700 ${HOVER_TRANSITION}`}
-                    >
-                      {viewingFile === attachment.path ? (
-                        <Spinner size="sm" className="text-blue-500" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </Button>
                   )}
                   
                   <Button
