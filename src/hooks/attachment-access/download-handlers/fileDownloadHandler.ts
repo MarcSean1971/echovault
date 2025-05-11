@@ -3,6 +3,7 @@ import { toast } from "@/components/ui/use-toast";
 import { FileAccessManager } from "@/services/messages/fileAccess";
 import { AccessMethod } from "@/components/message/detail/attachment/types";
 import { DownloadHandlerProps } from "./types";
+import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Handles file download operations
@@ -36,6 +37,38 @@ export function useFileDownloadHandler({ props, utilities }: DownloadHandlerProp
     try {
       console.log("Starting file download with method:", method);
       
+      // Check if we're authenticated and no delivery ID is provided
+      // This means we're viewing in authenticated context
+      if (!props.deliveryId) {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const isAuthenticated = !!sessionData.session?.access_token;
+        
+        if (isAuthenticated) {
+          console.log("[FileDownloadHandler] Using authenticated access instead of delivery-based access");
+          
+          // Use signed URL method for authenticated user
+          const { url, method: resultMethod } = await fileAccessManager.getAccessUrl('signed', 'download');
+          
+          if (url) {
+            console.log(`[FileDownloadHandler] Got authenticated URL: ${url}`);
+            await FileAccessManager.executeDownload(url, fileName, fileType, 'signed');
+            updateMethodStatus('signed', true);
+            setHasError(false);
+            return true;
+          }
+          
+          // Try direct URL as fallback for authenticated user
+          if (directUrl) {
+            console.log("[FileDownloadHandler] Using direct URL fallback for authenticated user");
+            await FileAccessManager.executeDownload(directUrl, fileName, fileType, 'direct');
+            updateMethodStatus('direct', true);
+            setHasError(false);
+            return true;
+          }
+        }
+      }
+      
+      // Original code for delivery-based access
       // For secure downloads using Edge Function
       if (method === 'secure' && props.deliveryId && props.recipientEmail) {
         console.log("Using edge function with explicit download mode");

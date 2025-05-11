@@ -1,59 +1,78 @@
 
 import { toast } from "@/components/ui/use-toast";
-import { FileAccessManager } from "@/services/messages/fileAccess";
+import { AccessMethod } from "@/components/message/detail/attachment/types";
 import { DownloadHandlerProps } from "./types";
+import { FileAccessManager } from "@/services/messages/fileAccess";
+import { supabase } from "@/integrations/supabase/client";
 
 /**
- * Handles direct access to files
+ * Handler for direct file access (when secure methods fail)
  */
 export function useDirectAccessHandler({ props, utilities }: DownloadHandlerProps) {
   const {
     filePath,
-    fileName
   } = props;
   
   const {
     updateMethodStatus,
-    setDownloadMethod
+    setHasError,
+    incrementRetryCount,
+    setAccessUrl
   } = utilities;
   
   // Create file access manager
   const fileAccessManager = new FileAccessManager(filePath, props.deliveryId, props.recipientEmail);
   
-  // Get direct public URL (for direct access option)
+  // Get direct URL for immediate access
   const directUrl = fileAccessManager.getDirectUrl();
-
-  const tryDirectAccess = () => {
-    if (!directUrl) {
-      console.error(`[DirectAccess] No direct URL available for ${fileName || 'file'}`);
-      updateMethodStatus('direct', false);
-      toast({
-        title: "Direct URL Error",
-        description: "Could not generate a direct URL for this file. The storage bucket may not be public.",
-        variant: "destructive"
-      });
-      return false;
-    }
-    
+  
+  // Try to use direct access as fallback
+  const tryDirectAccess = async () => {
     try {
-      console.log(`[DirectAccess] Opening direct URL: ${directUrl}`);
-      window.open(directUrl, '_blank');
-      setDownloadMethod('direct');
-      updateMethodStatus('direct', true);
+      incrementRetryCount();
+      console.log(`[DirectAccessHandler] Attempting direct access as fallback for ${filePath}`);
+      
+      // Check if we're authenticated and no delivery ID is provided
+      // This means we're viewing in authenticated context
+      if (!props.deliveryId) {
+        // Get current user session
+        const { data: sessionData } = await supabase.auth.getSession();
+        const isAuthenticated = !!sessionData.session?.access_token;
+        
+        if (isAuthenticated) {
+          console.log("[DirectAccessHandler] Using authenticated access with signed URL");
+          // Use signed URL method for authenticated user
+          const { url, method: resultMethod } = await fileAccessManager.getAccessUrl('signed');
+          
+          if (url) {
+            updateMethodStatus('signed', true);
+            setHasError(false);
+            setAccessUrl(url);
+            return { success: true, url, method: 'signed' as AccessMethod };
+          }
+        }
+      }
+      
+      // Try direct access method
+      if (directUrl) {
+        console.log("[DirectAccessHandler] Using direct public URL access");
+        updateMethodStatus('direct', true);
+        setHasError(false);
+        setAccessUrl(directUrl);
+        return { success: true, url: directUrl, method: 'direct' as AccessMethod };
+      }
+      
+      setHasError(true);
       toast({
-        title: "Direct URL Test",
-        description: "Opening file with direct URL access"
-      });
-      return true;
-    } catch (error) {
-      console.error("[DirectAccess] Error opening direct URL:", error);
-      updateMethodStatus('direct', false);
-      toast({
-        title: "Direct Access Failed",
-        description: "Could not open the file using direct URL access",
+        title: "Access error",
+        description: "Could not access file via direct method",
         variant: "destructive"
       });
-      return false;
+      return { success: false, url: null, method: null };
+    } catch (error) {
+      console.error("Error using direct access:", error);
+      setHasError(true);
+      return { success: false, url: null, method: null };
     }
   };
 

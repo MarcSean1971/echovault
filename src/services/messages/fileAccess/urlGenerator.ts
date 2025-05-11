@@ -2,6 +2,7 @@
 import { getPublicFileUrl, getAuthenticatedFileUrl, getDirectPublicUrl } from "../fileAccessService";
 import { AccessMethod, AccessMode } from "@/components/message/detail/attachment/types";
 import { AccessMethodData } from "./types";
+import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Generates URLs for accessing files using different methods
@@ -31,6 +32,19 @@ export class FileUrlGenerator {
   }
   
   /**
+   * Check if user is currently authenticated
+   */
+  private async isAuthenticated(): Promise<boolean> {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      return !!sessionData.session?.access_token;
+    } catch (error) {
+      console.error("[FileAccess] Error checking authentication:", error);
+      return false;
+    }
+  }
+  
+  /**
    * Get file URL using specified method
    */
   public async getAccessUrl(method: AccessMethod = 'signed', accessMode: AccessMode = 'view'): Promise<AccessMethodData> {
@@ -40,6 +54,14 @@ export class FileUrlGenerator {
       if (!this.filePath) {
         throw new Error("File path is missing");
       }
+      
+      // Check if we're authenticated but don't have a delivery ID
+      // This means we're accessing in the main app context
+      const isUserAuthenticated = await this.isAuthenticated();
+      const isDeliveryContext = !!(this.deliveryId && this.recipientEmail);
+      const isAuthContext = isUserAuthenticated && !isDeliveryContext;
+      
+      console.log(`[FileAccess] Auth context: ${isAuthContext}, Delivery context: ${isDeliveryContext}`);
 
       // Direct URL method
       if (method === 'direct') {
@@ -50,8 +72,8 @@ export class FileUrlGenerator {
         throw new Error("Could not generate direct URL");
       }
       
-      // Signed URL method
-      if (method === 'signed') {
+      // Signed URL method - preferred for authenticated users
+      if (method === 'signed' || isAuthContext) {
         const url = await getAuthenticatedFileUrl(
           this.filePath, 
           false, 
@@ -63,12 +85,12 @@ export class FileUrlGenerator {
         }
       }
       
-      // Secure/edge function method
-      if (method === 'secure' && this.deliveryId && this.recipientEmail) {
+      // Secure/edge function method - only available with delivery context
+      if ((method === 'secure' || !isAuthContext) && isDeliveryContext) {
         const url = await getPublicFileUrl(
           this.filePath, 
-          this.deliveryId, 
-          this.recipientEmail, 
+          this.deliveryId!, 
+          this.recipientEmail!, 
           accessMode
         );
         

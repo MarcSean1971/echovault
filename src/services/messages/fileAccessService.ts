@@ -105,17 +105,22 @@ export const getAuthenticatedFileUrl = async (
       }
     }
     
+    console.log(`[FileAccess] Getting authenticated URL for ${bucketName}/${filePathInBucket}`);
+    
     // Get signed URL from Supabase storage
     const { data, error } = await supabase.storage
       .from(bucketName)
       .createSignedUrl(filePathInBucket, 60, { download: forDownload });
     
     if (error) {
+      console.warn(`[FileAccess] Error getting signed URL: ${error.message}`);
+      
       // Try with alternative bucket if needed
       if (includeFallback) {
         const altBucketName = bucketName === DEFAULT_ATTACHMENT_BUCKET ? 
                             LEGACY_ATTACHMENT_BUCKET : DEFAULT_ATTACHMENT_BUCKET;
         
+        console.log(`[FileAccess] Trying alternate bucket: ${altBucketName}`);
         const { data: altData } = await supabase.storage
           .from(altBucketName)
           .createSignedUrl(filePathInBucket, 60, { download: forDownload });
@@ -131,6 +136,7 @@ export const getAuthenticatedFileUrl = async (
       return null;
     }
     
+    console.log(`[FileAccess] Generated signed URL successfully`);
     return data?.signedUrl || null;
   } catch (error) {
     console.error("[FileAccess] Error generating authenticated file URL:", error);
@@ -156,10 +162,13 @@ export const getDirectPublicUrl = (filePath: string): string | null => {
       }
     }
     
+    console.log(`[FileAccess] Getting direct URL for ${bucketName}/${filePathInBucket}`);
+    
     // Get public URL from primary bucket
     const { data } = supabase.storage.from(bucketName).getPublicUrl(filePathInBucket);
     
     if (!data?.publicUrl) {
+      console.log(`[FileAccess] No public URL found, trying alternate bucket`);
       // Try with alternative bucket
       const altBucketName = bucketName === DEFAULT_ATTACHMENT_BUCKET ? 
                           LEGACY_ATTACHMENT_BUCKET : DEFAULT_ATTACHMENT_BUCKET;
@@ -168,6 +177,7 @@ export const getDirectPublicUrl = (filePath: string): string | null => {
       return altData?.publicUrl || null;
     }
     
+    console.log(`[FileAccess] Generated direct URL successfully`);
     return data.publicUrl;
   } catch (error) {
     console.error("[FileAccess] Error generating direct public URL:", error);

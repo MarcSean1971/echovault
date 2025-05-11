@@ -3,6 +3,7 @@ import { toast } from "@/components/ui/use-toast";
 import { FileAccessManager } from "@/services/messages/fileAccess";
 import { AccessMode } from "@/components/message/detail/attachment/types";
 import { DownloadHandlerProps } from "./types";
+import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Handles file opening operations
@@ -31,6 +32,41 @@ export function useFileOpenHandler({ props, utilities }: DownloadHandlerProps) {
       setLoading(true);
       console.log(`[FileOpenHandler] Opening file ${fileName} using ${method} method`);
       
+      // Check if we're authenticated and no delivery ID is provided
+      if (!props.deliveryId) {
+        // Get current user session
+        const { data: sessionData } = await supabase.auth.getSession();
+        const isAuthenticated = !!sessionData.session?.access_token;
+        
+        if (isAuthenticated) {
+          console.log("[FileOpenHandler] Using authenticated access instead of delivery-based access");
+          
+          // Use signed URL method for authenticated user
+          const { url, method: resultMethod } = await fileAccessManager.getAccessUrl('signed', 'view');
+          
+          if (url) {
+            console.log(`[FileOpenHandler] Opening URL with auth: ${url}`);
+            await FileAccessManager.openFile(url, fileName, fileType);
+            updateMethodStatus('signed', true);
+            setHasError(false);
+            setAccessUrl(url);
+            return true;
+          }
+          
+          // Try direct URL as fallback
+          const directUrl = fileAccessManager.getDirectUrl();
+          if (directUrl) {
+            console.log("[FileOpenHandler] Using direct URL fallback for authenticated user");
+            await FileAccessManager.openFile(directUrl, fileName, fileType);
+            updateMethodStatus('direct', true);
+            setHasError(false);
+            setAccessUrl(directUrl);
+            return true;
+          }
+        }
+      }
+      
+      // Original code for delivery-based access
       // For secure access with delivery ID and recipient (works for public access)
       if (method === 'secure' && props.deliveryId && props.recipientEmail) {
         console.log(`[FileOpenHandler] Attempting secure access with delivery: ${props.deliveryId.substring(0, 8)}...`);
