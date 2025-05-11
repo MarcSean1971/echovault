@@ -27,7 +27,9 @@ export function useMessageFormLoader(message: Message) {
     setShareLocation,
     setLocationName,
     setLocationLatitude,
-    setLocationLongitude
+    setLocationLongitude,
+    setTextContent,
+    setVideoContent
   } = useMessageForm();
 
   useEffect(() => {
@@ -38,8 +40,16 @@ export function useMessageFormLoader(message: Message) {
       setTitle(message.title);
       setContent(message.content || '');
       
+      // Handle message type specific content
+      if (message.message_type === 'text') {
+        setTextContent(message.content || '');
+      } else if (message.message_type === 'video') {
+        setVideoContent(message.content || '');
+      }
+      
       // Load attachments data
       if (message.attachments && message.attachments.length > 0) {
+        console.log("MessageFormLoader: Loading attachments", message.attachments);
         const attachments: FileAttachment[] = message.attachments.map(att => ({
           file: null, // No file object for existing attachments
           name: att.name,

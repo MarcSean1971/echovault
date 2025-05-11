@@ -1,9 +1,11 @@
+
 import React, { useEffect } from "react";
 import { useMessageForm } from "../MessageFormContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MessageFormSection } from "./MessageFormSection";
 import { MessageDetails } from "./MessageDetails";
 import { Message } from "@/types/message";
+import { useRecipientSelection } from "@/hooks/message-edit/useRecipientSelection";
 
 interface EditMessageContentProps {
   message: Message;
@@ -17,6 +19,7 @@ export function EditMessageContent({
   handleToggleRecipient,
 }: EditMessageContentProps) {
   const { messageType, setMessageType } = useMessageForm();
+  const { recipients } = useRecipientSelection();
 
   // This ensures our file previews are properly marked as uploaded
   useEffect(() => {
@@ -49,7 +52,7 @@ export function EditMessageContent({
             description="Select who will receive this message"
           >
             <div className="grid gap-4 md:grid-cols-2">
-              {message.recipients?.map((recipient) => (
+              {recipients.map((recipient) => (
                 <div
                   key={recipient.id}
                   className={`border rounded-lg p-4 cursor-pointer transition-all ${
