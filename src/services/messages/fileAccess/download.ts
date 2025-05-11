@@ -45,24 +45,42 @@ export class FileDownloader {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
       
-      // Add auth token as a URL parameter if not already included in the URL
-      // and if we're accessing the edge function
-      if (token && url.includes('/functions/v1/') && !parsedUrl.searchParams.has('auth_token')) {
+      // Add auth token as a URL parameter if it's available and not already included
+      // This is critical for ensuring the edge function receives authentication
+      if (token && !parsedUrl.searchParams.has('auth_token')) {
+        console.log("[FileDownloader] Adding auth token to request");
         parsedUrl.searchParams.append('auth_token', token);
+      } else if (!token) {
+        console.log("[FileDownloader] No auth token available - using public access");
       }
       
       finalUrl = parsedUrl.toString();
     } catch (error) {
+      console.error("[FileDownloader] Error parsing URL:", error);
       // If URL parsing fails, fall back to simple string concat
       if (url.includes('?')) {
         finalUrl = `${url}&t=${timestamp}`;
         if (forDownload) {
           finalUrl += '&download-file=true&mode=download';
         }
+        
+        // Try to add the auth token
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
+        if (token) {
+          finalUrl += `&auth_token=${token}`;
+        }
       } else {
         finalUrl = `${url}?t=${timestamp}`;
         if (forDownload) {
           finalUrl += '&download-file=true&mode=download';
+        }
+        
+        // Try to add the auth token
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
+        if (token) {
+          finalUrl += `&auth_token=${token}`;
         }
       }
     }

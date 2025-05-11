@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 // Define valid bucket names for consistency
@@ -14,32 +15,41 @@ export const getPublicFileUrl = async (
   mode: 'view' | 'download' = 'view'
 ): Promise<string | null> => {
   try {
-    // Get the current session to extract the token for authorization
+    // Get the current session to extract the token for authorization (if available)
     const { data: sessionData } = await supabase.auth.getSession();
     const token = sessionData.session?.access_token;
+    
+    console.log(`[FileAccess] Getting public file URL, auth token ${token ? 'present' : 'missing'}`);
 
-    // If using supabase.functions.invoke:
+    // Use Supabase SDK's built-in function invocation which handles authentication
+    // This is the preferred method when a token is available
     if (token) {
-      // Use Supabase SDK's built-in function invocation which handles authentication
-      const { data, error } = await supabase.functions.invoke('access-file', {
-        body: {
-          filePath: filePath,
-          delivery: deliveryId,
-          recipient: recipientEmail,
-          mode: mode,
-          download: mode === 'download'
-        }
-      });
+      console.log("[FileAccess] Using supabase.functions.invoke with auth");
+      try {
+        const { data, error } = await supabase.functions.invoke('access-file', {
+          body: {
+            filePath: filePath,
+            delivery: deliveryId,
+            recipient: recipientEmail,
+            mode: mode,
+            download: mode === 'download'
+          }
+        });
 
-      if (error) {
-        console.error("[FileAccess] Error invoking access-file function:", error);
-        // Fall back to direct URL method
-      } else if (data?.url) {
-        return data.url;
+        if (!error && data?.url) {
+          console.log("[FileAccess] Successfully generated URL via function invoke");
+          return data.url;
+        } else if (error) {
+          console.warn("[FileAccess] Error invoking access-file function:", error);
+          // Continue to fallback method
+        }
+      } catch (invokeError) {
+        console.warn("[FileAccess] Exception invoking function:", invokeError);
+        // Continue to fallback method
       }
     }
 
-    // Fallback to the direct URL method with explicit token
+    // Fallback to the direct URL method
     // Use Supabase project URL for proper Edge Function URL generation
     const supabaseUrl = "https://onwthrpgcnfydxzzmyot.supabase.co";
     

@@ -37,9 +37,6 @@ serve(async (req: Request) => {
             { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
-
-        // Extract auth token from header - optional for public access with delivery ID
-        const authHeader = req.headers.get('Authorization');
         
         // Return URL for client to use
         return new Response(
@@ -79,13 +76,12 @@ serve(async (req: Request) => {
     const downloadMode = url.searchParams.has('download-file') || 
                          url.searchParams.get('mode') === 'download';
 
-    // Get auth token either from header or URL parameter (for edge cases)
-    let authToken = req.headers.get('Authorization')?.replace('Bearer ', '');
-    if (!authToken) {
-      authToken = url.searchParams.get('auth_token');
-    }
+    // Get auth token from header, URL parameter, or fallback to service role
+    let authToken = req.headers.get('Authorization');
+    const authParamToken = url.searchParams.get('auth_token');
     
-    console.log(`[AccessFile] File: ${filePath}, Delivery: ${deliveryId}, Download: ${downloadMode}, Auth: ${authToken ? 'Present' : 'Missing'}`);
+    console.log(`[AccessFile] File: ${filePath}, Delivery: ${deliveryId}, Download: ${downloadMode}`);
+    console.log(`[AccessFile] Auth Header: ${authToken ? 'Present' : 'Missing'}, Auth Param: ${authParamToken ? 'Present' : 'Missing'}`);
     
     // Validate required parameters
     if (!deliveryId || !recipientEmail) {
@@ -106,8 +102,8 @@ serve(async (req: Request) => {
       );
     }
     
-    // Create Supabase client - use service role key for file access
-    // No need for authentication token for public access when using security parameters
+    // Create Supabase client - forward the authorization header if present
+    // This is critical to fix the "Missing authorization header" error
     const supabase = createClient(supabaseUrl, supabaseKey, {
       auth: {
         persistSession: false,
@@ -115,8 +111,10 @@ serve(async (req: Request) => {
       },
       global: {
         headers: authToken ? { 
-          Authorization: `Bearer ${authToken}` 
-        } : {}
+          Authorization: authToken 
+        } : (authParamToken ? {
+          Authorization: `Bearer ${authParamToken}`
+        } : {})
       }
     });
     

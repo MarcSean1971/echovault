@@ -4,7 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 /**
  * Create a Supabase client with admin privileges with enhanced retry logic
  */
-export function createSupabaseClient() {
+export function createSupabaseClient(authHeader?: string | null) {
   const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
   
@@ -13,7 +13,7 @@ export function createSupabaseClient() {
     throw new Error("Missing environment variables for Supabase client");
   }
   
-  console.log("[AccessFile] Creating Supabase admin client");
+  console.log(`[AccessFile] Creating Supabase client with auth header: ${authHeader ? 'Present' : 'Missing'}`);
   
   try {
     // Create client with enhanced connection options for better reliability
@@ -23,6 +23,10 @@ export function createSupabaseClient() {
         autoRefreshToken: false
       },
       global: {
+        // Forward the authorization header if present
+        headers: authHeader ? {
+          Authorization: authHeader
+        } : {},
         // Add more reliable fetch options with increased timeout
         fetch: (url, options) => {
           const controller = new AbortController();

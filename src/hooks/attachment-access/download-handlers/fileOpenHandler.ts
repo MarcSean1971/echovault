@@ -31,7 +31,9 @@ export function useFileOpenHandler({ props, utilities }: DownloadHandlerProps) {
       setLoading(true);
       console.log(`[FileOpenHandler] Opening file ${fileName} using ${method} method`);
       
+      // For secure access with delivery ID and recipient (works for public access)
       if (method === 'secure' && props.deliveryId && props.recipientEmail) {
+        console.log(`[FileOpenHandler] Attempting secure access with delivery: ${props.deliveryId.substring(0, 8)}...`);
         const { url, method: resultMethod } = await fileAccessManager.getAccessUrl(method, 'view');
         
         if (url && resultMethod) {
@@ -41,10 +43,14 @@ export function useFileOpenHandler({ props, utilities }: DownloadHandlerProps) {
           setHasError(false);
           setAccessUrl(url);
           return true;
+        } else {
+          console.warn("[FileOpenHandler] Failed to get secure URL, trying signed URL");
         }
       }
       
-      if (method === 'signed') {
+      // Try signed URL method
+      if (method === 'signed' || method === 'secure') {
+        console.log("[FileOpenHandler] Attempting signed URL access");
         const { url, method: resultMethod } = await fileAccessManager.getAccessUrl('signed', 'view');
         if (url && resultMethod) {
           await FileAccessManager.openFile(url, fileName, fileType);
@@ -52,9 +58,13 @@ export function useFileOpenHandler({ props, utilities }: DownloadHandlerProps) {
           setHasError(false);
           setAccessUrl(url);
           return true;
+        } else {
+          console.warn("[FileOpenHandler] Failed to get signed URL, trying direct URL");
         }
       }
       
+      // Last resort - direct URL
+      console.log("[FileOpenHandler] Attempting direct URL access");
       const { url, method: resultMethod } = await fileAccessManager.getAccessUrl('direct', 'view');
       if (url && resultMethod) {
         await FileAccessManager.openFile(url, fileName, fileType);
