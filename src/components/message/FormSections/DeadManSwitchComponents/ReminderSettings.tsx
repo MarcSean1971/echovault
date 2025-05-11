@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Plus, X } from "lucide-react";
+import { AlertTriangle, Plus, X } from "lucide-react";
 
 interface ReminderSettingsProps {
   reminderHours: number[];
@@ -19,6 +19,7 @@ export function ReminderSettings({
 }: ReminderSettingsProps) {
   const [newHour, setNewHour] = useState<string>("");
   const [newMinute, setNewMinute] = useState<string>("");
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   // Helper function to convert between display format and storage format
   const decimalToHoursMinutes = (decimalHours: number): { hours: number, minutes: number } => {
@@ -31,18 +32,37 @@ export function ReminderSettings({
     return hours + (minutes / 60);
   };
 
+  // Format the threshold for display in error messages and labels
+  const formatThreshold = (decimalHours: number): string => {
+    const { hours, minutes } = decimalToHoursMinutes(decimalHours);
+    if (hours === 0) {
+      return `${minutes} minutes`;
+    } else if (minutes === 0) {
+      return `${hours} ${hours === 1 ? 'hour' : 'hours'}`;
+    } else {
+      return `${hours} ${hours === 1 ? 'hour' : 'hours'} and ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`;
+    }
+  };
+
   const handleAddReminder = () => {
     const hourValue = parseInt(newHour) || 0;
     const minuteValue = parseInt(newMinute) || 0;
     
+    // Clear any previous validation errors
+    setValidationError(null);
+    
     // Validate that we have at least some time value
-    if (hourValue === 0 && minuteValue === 0) return;
+    if (hourValue === 0 && minuteValue === 0) {
+      setValidationError("Please enter a reminder time");
+      return;
+    }
     
     // Convert to decimal hours for storage
     const decimalHours = hoursMinutesToDecimal(hourValue, minuteValue);
     
     // If maxHours is provided, ensure the combined value is less than it
     if (maxHours && decimalHours >= maxHours) {
+      setValidationError(`Reminder time must be less than the check-in threshold (${formatThreshold(maxHours)})`);
       return;
     }
     
@@ -51,6 +71,8 @@ export function ReminderSettings({
       setReminderHours([...reminderHours, decimalHours].sort((a, b) => a - b));
       setNewHour("");
       setNewMinute("");
+    } else {
+      setValidationError("This reminder time already exists");
     }
   };
   
@@ -77,7 +99,7 @@ export function ReminderSettings({
         <Label htmlFor="reminder-hours">Reminder notifications</Label>
         <p className="text-sm text-muted-foreground mt-1">
           Send reminders before the message is delivered
-          {maxHours && ` (max ${maxHours} hours)`}
+          {maxHours && ` (must be less than ${formatThreshold(maxHours)})`}
         </p>
       </div>
 
@@ -106,46 +128,54 @@ export function ReminderSettings({
         </div>
       )}
       
-      <div className="flex gap-2 items-end">
-        <div>
-          <Label htmlFor="reminder-hours" className="text-xs">Hours</Label>
-          <Input
-            id="reminder-hours"
-            type="number"
-            min="0"
-            max={maxHours}
-            placeholder="0"
-            value={newHour}
-            onChange={(e) => setNewHour(e.target.value)}
-            className="w-20"
-          />
+      <div className="flex flex-col gap-2">
+        <div className="flex gap-2 items-end">
+          <div>
+            <Label htmlFor="reminder-hours" className="text-xs">Hours</Label>
+            <Input
+              id="reminder-hours"
+              type="number"
+              min="0"
+              max={maxHours ? Math.floor(maxHours) : undefined}
+              placeholder="0"
+              value={newHour}
+              onChange={(e) => setNewHour(e.target.value)}
+              className="w-20"
+            />
+          </div>
+          
+          <div>
+            <Label htmlFor="reminder-minutes" className="text-xs">Minutes</Label>
+            <Input
+              id="reminder-minutes"
+              type="number"
+              min="0"
+              max="59"
+              placeholder="0"
+              value={newMinute}
+              onChange={(e) => setNewMinute(e.target.value)}
+              className="w-20"
+            />
+          </div>
+          
+          <Button 
+            type="button" 
+            variant="outline" 
+            size="icon"
+            onClick={handleAddReminder}
+            disabled={(parseInt(newHour) === 0 && parseInt(newMinute) === 0)}
+            className="hover:bg-muted/80 transition-colors duration-200"
+          >
+            <Plus className="h-4 w-4" />
+          </Button>
         </div>
         
-        <div>
-          <Label htmlFor="reminder-minutes" className="text-xs">Minutes</Label>
-          <Input
-            id="reminder-minutes"
-            type="number"
-            min="0"
-            max="59"
-            placeholder="0"
-            value={newMinute}
-            onChange={(e) => setNewMinute(e.target.value)}
-            className="w-20"
-          />
-        </div>
-        
-        <Button 
-          type="button" 
-          variant="outline" 
-          size="icon"
-          onClick={handleAddReminder}
-          disabled={(parseInt(newHour) === 0 && parseInt(newMinute) === 0) || 
-            (maxHours ? parseInt(newHour) >= maxHours && parseInt(newMinute) > 0 : false)}
-          className="hover:bg-muted/80 transition-colors duration-200"
-        >
-          <Plus className="h-4 w-4" />
-        </Button>
+        {validationError && (
+          <div className="flex items-center text-destructive text-sm">
+            <AlertTriangle className="h-4 w-4 mr-1 flex-shrink-0" />
+            <span>{validationError}</span>
+          </div>
+        )}
       </div>
     </div>
   );

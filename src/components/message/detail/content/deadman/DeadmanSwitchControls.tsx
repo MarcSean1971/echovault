@@ -5,7 +5,6 @@ import { Bell, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { triggerManualReminder } from "@/services/messages/whatsApp";
 import { toast } from "@/components/ui/use-toast";
-import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface DeadmanSwitchControlsProps {
   messageId: string;
@@ -105,7 +104,7 @@ export function DeadmanSwitchControls({
           size="sm"
           disabled={!isArmed || isSendingReminder}
           onClick={handleTestReminder}
-          className={`flex items-center ${HOVER_TRANSITION}`}
+          className="flex items-center hover:bg-muted/80 transition-colors duration-200"
         >
           <Bell className="h-3 w-3 mr-1" />
           {isSendingReminder ? "Sending..." : "Test Reminder"}

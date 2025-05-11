@@ -77,6 +77,11 @@ export function DeliveryMethodContent({
     return /^[A-Za-z0-9]+$/.test(code) || code === "";
   };
   
+  // Calculate the total threshold in decimal hours
+  const calculateTotalThreshold = (): number => {
+    return hoursThreshold + (minutesThreshold / 60);
+  };
+  
   // Render the custom check-in code input
   const renderCustomCheckInCode = () => {
     // Only show for check-in related condition types
@@ -114,6 +119,9 @@ export function DeliveryMethodContent({
   const renderConditionOptions = () => {
     switch (conditionType) {
       case 'no_check_in':
+        // Calculate the total threshold in decimal hours for no_check_in
+        const totalThresholdHours = calculateTotalThreshold();
+        
         return (
           <div className="space-y-6">
             <CustomTimeInput
@@ -123,10 +131,11 @@ export function DeliveryMethodContent({
               setMinutes={setMinutesThreshold}
               label="Time without check-in before message is sent"
             />
-            {/* Moved ReminderSettings to be immediately after the CustomTimeInput */}
+            {/* Pass the total threshold to ReminderSettings */}
             <ReminderSettings
               reminderHours={reminderHours}
               setReminderHours={setReminderHours}
+              maxHours={totalThresholdHours}
             />
             {/* Add custom check-in code input - moved to be after ReminderSettings */}
             {renderCustomCheckInCode()}
