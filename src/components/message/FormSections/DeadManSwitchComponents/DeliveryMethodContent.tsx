@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { CustomTimeInput } from "./CustomTimeInput";
 import { ConditionTypeSelector } from "./ConditionTypeSelector";
@@ -124,6 +123,11 @@ export function DeliveryMethodContent({
               setMinutes={setMinutesThreshold}
               label="Time without check-in before message is sent"
             />
+            {/* Moved ReminderSettings to be immediately after the CustomTimeInput */}
+            <ReminderSettings
+              reminderHours={reminderHours}
+              setReminderHours={setReminderHours}
+            />
             <NoCheckInDeliveryOptions
               deliveryOption={deliveryOption}
               setDeliveryOption={setDeliveryOption}
@@ -131,11 +135,6 @@ export function DeliveryMethodContent({
               setRecurringPattern={setRecurringPattern}
               triggerDate={triggerDate}
               setTriggerDate={setTriggerDate}
-            />
-            {/* Only show reminder settings for non-panic trigger types */}
-            <ReminderSettings
-              reminderHours={reminderHours}
-              setReminderHours={setReminderHours}
             />
             {/* Add custom check-in code input */}
             {renderCustomCheckInCode()}
