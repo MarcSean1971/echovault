@@ -4,8 +4,8 @@ import { RecurringPatternSelector } from "./RecurringPatternSelector";
 import { RecurringPattern } from "@/types/message";
 
 interface ScheduledDateSectionProps {
-  triggerDate: Date | undefined;
-  setTriggerDate: (date: Date | undefined) => void;
+  triggerDate: Date | null;
+  setTriggerDate: (date: Date | null) => void;
   recurringPattern: RecurringPattern | null;
   setRecurringPattern: (pattern: RecurringPattern | null) => void;
 }

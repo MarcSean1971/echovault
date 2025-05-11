@@ -6,6 +6,7 @@ import { DeliveryOption, RecurringPattern } from "@/types/message";
 import { RadioCardOption } from "./RadioCardOption";
 import { RecurringPatternSelector } from "./RecurringPatternSelector";
 import { Separator } from "@/components/ui/separator";
+import { DatePicker } from "./DatePicker";
 
 interface NoCheckInDeliveryOptionsProps {
   deliveryOption: DeliveryOption;
@@ -53,6 +54,22 @@ export function NoCheckInDeliveryOptions({
           />
         </RadioGroup>
       </div>
+
+      {deliveryOption === "once" && (
+        <div className="mt-6 border-t pt-4">
+          <div className="space-y-2">
+            <Label className="font-medium mb-2 block">Not Before (Optional)</Label>
+            <p className="text-sm text-muted-foreground mb-3">
+              If specified, the message will not be sent before this date and time, even if triggered.
+            </p>
+            <DatePicker 
+              selectedDate={triggerDate} 
+              setSelectedDate={setTriggerDate}
+              label="Not Before Date & Time" 
+            />
+          </div>
+        </div>
+      )}
 
       {deliveryOption === "recurring" && (
         <div className="mt-6 border-t pt-4">

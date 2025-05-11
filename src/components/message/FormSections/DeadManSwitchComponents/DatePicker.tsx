@@ -33,7 +33,7 @@ export function DatePicker({
       const minutes = selectedDate.getMinutes().toString().padStart(2, '0');
       setTime(`${hours}:${minutes}`);
     }
-  }, []);
+  }, [selectedDate]);
   
   const handleDateChange = (date: Date | undefined) => {
     if (!date) {
@@ -70,7 +70,7 @@ export function DatePicker({
             <Button
               variant={"outline"}
               className={cn(
-                "justify-start text-left font-normal",
+                "justify-start text-left font-normal hover:bg-muted/80 transition-colors",
                 !selectedDate && "text-muted-foreground"
               )}
             >
@@ -93,7 +93,7 @@ export function DatePicker({
           type="time" 
           value={time}
           onChange={handleTimeChange}
-          className="col-span-1"
+          className="col-span-1 hover:border-primary/50 focus:border-primary transition-colors"
         />
       </div>
     </div>
