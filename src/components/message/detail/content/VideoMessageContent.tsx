@@ -6,7 +6,6 @@ import { Card } from "@/components/ui/card";
 export function VideoMessageContent({ message }: { message: Message }) {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [transcription, setTranscription] = useState<string | null>(null);
-  const [additionalText, setAdditionalText] = useState<string | null>(null);
   
   useEffect(() => {
     if (message.content) {
@@ -29,17 +28,7 @@ export function VideoMessageContent({ message }: { message: Message }) {
         // Extract transcription for backward compatibility
         setTranscription(extractedTranscription);
         
-        // Check for additional text content that might be stored with the video
-        try {
-          const contentObj = JSON.parse(message.content);
-          if (contentObj.additionalText) {
-            console.log("Found additional text in video message:", 
-                        contentObj.additionalText.substring(0, 50) + "...");
-            setAdditionalText(contentObj.additionalText);
-          }
-        } catch (e) {
-          console.error("Error parsing additional text:", e);
-        }
+        // We're no longer extracting additionalText as it's handled by the parent component
       } catch (e) {
         console.error("Error parsing video content:", e);
       }
@@ -71,18 +60,8 @@ export function VideoMessageContent({ message }: { message: Message }) {
         />
       </div>
       
-      {/* Display additional text content if available */}
-      {additionalText && (
-        <div className="mt-4 space-y-2">
-          <h3 className="text-sm font-medium">Text Message</h3>
-          <Card className="p-3 bg-muted/50">
-            <p className="whitespace-pre-wrap">{additionalText}</p>
-          </Card>
-        </div>
-      )}
-      
       {/* Keep transcription display for backward compatibility */}
-      {transcription && !additionalText && (
+      {transcription && (
         <div className="mt-4 space-y-2">
           <h3 className="text-sm font-medium">Video Transcription</h3>
           <Card className="p-3 bg-muted/40">
