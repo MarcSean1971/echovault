@@ -2,6 +2,7 @@
 import { FileAccessManager } from "@/services/messages/fileAccess";
 import { DownloadHandlerProps } from "./types";
 import { toast } from "@/components/ui/use-toast";
+import { AccessMethod } from "@/components/message/detail/attachment/types";
 
 /**
  * Handles direct URL access to files
@@ -70,7 +71,7 @@ export function useDirectAccessHandler({ props, utilities }: DownloadHandlerProp
         setAccessUrl(directUrl);
         setDownloadMethod('direct');
         setIsLoading(false);
-        return { success: true, url: directUrl, method: 'direct' };
+        return { success: true, url: directUrl, method: 'direct' as AccessMethod };
       }
       
       throw new Error("All access methods failed");
@@ -84,9 +85,9 @@ export function useDirectAccessHandler({ props, utilities }: DownloadHandlerProp
         toast({
           title: "Limited access available",
           description: "Using direct file access as fallback. Some features may be limited.",
-          variant: "warning"
+          variant: "destructive"
         });
-        return { success: true, url: directUrl, method: 'direct' };
+        return { success: true, url: directUrl, method: 'direct' as AccessMethod };
       }
       
       return { success: false, url: null, method: null };

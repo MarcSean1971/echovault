@@ -85,7 +85,7 @@ export function useRetryAccessHandler({ props, utilities }: DownloadHandlerProps
           toast({
             title: "Limited access restored",
             description: "Using direct file access as fallback. Some features may be limited.",
-            variant: "warning"
+            variant: "destructive"
           });
           
           // Still return true since we have a fallback URL
