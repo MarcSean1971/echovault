@@ -26,7 +26,7 @@ export function useFileOpenHandler({ props, utilities }: DownloadHandlerProps) {
   const fileAccessManager = new FileAccessManager(filePath, props.deliveryId, props.recipientEmail);
   
   // Open file in new tab
-  const openFile = async (method = props.preferredMethod || 'secure') => {
+  const openFile = async (method = 'secure') => {
     try {
       setLoading(true);
       console.log(`[FileOpenHandler] Opening file ${fileName} using ${method} method`);

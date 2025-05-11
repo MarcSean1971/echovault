@@ -32,8 +32,15 @@ export class FileAccessManager {
   /**
    * Execute download with appropriate notification
    */
-  public static executeDownload(url: string, fileName: string, fileType: string, method: AccessMethod): void {
-    FileDownloader.executeDownload(url, fileName, fileType, method);
+  public static async executeDownload(url: string, fileName: string, fileType: string, method: AccessMethod): Promise<void> {
+    await FileDownloader.executeDownload(url, fileName, fileType, method);
+  }
+  
+  /**
+   * Open file in a new tab
+   */
+  public static async openFile(url: string, fileName: string, fileType: string): Promise<void> {
+    await FileDownloader.openFile(url, fileName, fileType);
   }
   
   /**

@@ -21,7 +21,7 @@ export const OpenButton: React.FC<OpenButtonProps> = ({
       isLoading={isLoading}
       onClick={onClick}
       disabled={hasError}
-      icon={<ExternalLink className={`h-4 w-4 text-green-600 transform hover:scale-105 ${HOVER_TRANSITION}`} />}
+      icon={<ExternalLink className={`h-4 w-4 text-green-600 ${HOVER_TRANSITION} transform hover:scale-105`} />}
       tooltipText="Open file"
       className="hover:bg-green-50 hover:border-green-200"
     />
