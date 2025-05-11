@@ -85,7 +85,7 @@ export function LocationSection() {
       
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          <MapPin className="h-5 w-5 text-muted-foreground" />
+          <MapPin className={`h-5 w-5 text-muted-foreground ${HOVER_TRANSITION}`} />
           <Label htmlFor="share-location" className="font-medium">Share Location</Label>
         </div>
         <Switch 

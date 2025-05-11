@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
@@ -57,7 +56,15 @@ export function useEditMessageForm(message: Message, onCancel: () => void) {
     reminderHours,
     setReminderHours,
     checkInCode,
-    setCheckInCode
+    setCheckInCode,
+    shareLocation,
+    setShareLocation,
+    locationName,
+    setLocationName,
+    locationLatitude,
+    setLocationLatitude,
+    locationLongitude,
+    setLocationLongitude
   } = useMessageForm();
   
   const navigate = useNavigate();
@@ -162,6 +169,12 @@ export function useEditMessageForm(message: Message, onCancel: () => void) {
     setContent(message.content || "");
     setMessageType(message.message_type);
     
+    // Load location data from the message
+    setShareLocation(message.share_location || false);
+    setLocationLatitude(message.location_latitude || null);
+    setLocationLongitude(message.location_longitude || null);
+    setLocationName(message.location_name || null);
+    
     // If there are attachments, set them
     if (message.attachments && Array.isArray(message.attachments)) {
       setFiles(message.attachments.map(att => ({
@@ -178,7 +191,7 @@ export function useEditMessageForm(message: Message, onCancel: () => void) {
   }, [message, setTitle, setContent, setMessageType, setFiles, setConditionType, setHoursThreshold, 
       setMinutesThreshold, setSelectedRecipients, setRecipients, setRecurringPattern, setTriggerDate, 
       setPanicTriggerConfig, setPinCode, setUnlockDelay, setExpiryHours, setDeliveryOption, 
-      setReminderHours, setCheckInCode]);
+      setReminderHours, setCheckInCode, setShareLocation, setLocationLatitude, setLocationLongitude, setLocationName]);
 
   // Toggle function for recipients
   const handleToggleRecipient = (recipientId: string) => {

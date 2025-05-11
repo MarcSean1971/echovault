@@ -2,6 +2,7 @@
 import { MapDisplay } from "@/components/location/MapDisplay";
 import { Card } from "@/components/ui/card";
 import { MapPin } from "lucide-react";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface LocationDisplayProps {
   latitude: number;
@@ -13,7 +14,7 @@ export function LocationDisplay({ latitude, longitude, locationName }: LocationD
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <MapPin className="h-5 w-5 text-blue-500" />
+        <MapPin className={`h-5 w-5 text-blue-500 ${HOVER_TRANSITION}`} />
         <h3 className="text-lg font-medium">Location</h3>
       </div>
       

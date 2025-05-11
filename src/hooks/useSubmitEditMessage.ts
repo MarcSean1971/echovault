@@ -1,4 +1,3 @@
-
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -33,7 +32,11 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
     unlockDelay,
     expiryHours,
     reminderHours,
-    checkInCode
+    checkInCode,
+    shareLocation,
+    locationName,
+    locationLatitude,
+    locationLongitude
   } = useMessageForm();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -125,7 +128,11 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
           content: contentToSave,
           message_type: finalMessageType,
           attachments: attachmentsToSave.length > 0 ? attachmentsToSave : null,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
+          location_latitude: locationLatitude,
+          location_longitude: locationLongitude,
+          location_name: locationName,
+          share_location: shareLocation
         })
         .eq('id', message.id);
         
