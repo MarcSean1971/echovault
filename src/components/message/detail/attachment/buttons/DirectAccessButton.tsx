@@ -21,11 +21,14 @@ export const DirectAccessButton: React.FC<DirectAccessButtonProps> = ({
     try {
       setAccessAttempted(true);
       const result = await tryDirectAccess();
+      
       if (result.success && result.url) {
         console.log("Direct access successful, URL:", result.url);
         // Open the URL in a new tab for direct access
         window.open(result.url, '_blank');
-        setAccessAttempted(false);
+        setTimeout(() => {
+          setAccessAttempted(false);
+        }, 3000);
       } else {
         console.error("Direct access failed, result:", result);
         toast({

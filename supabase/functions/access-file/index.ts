@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createSupabaseClient } from "./supabase-client.ts";
 import { corsHeaders } from "./cors-headers.ts";
@@ -216,11 +217,23 @@ serve(async (req: Request) => {
       }
       
       // Second, get the recipient record using recipient_id
-      const { data: recipientData, error: recipientError } = await supabase
-        .from('recipients')
-        .select('email')
-        .eq('id', deliveryData.recipient_id)
-        .single();
+      let recipientData = null;
+      let recipientError = null;
+      let usedRecipientId = null;
+
+      try {
+        const result = await supabase
+          .from('recipients')
+          .select('email')
+          .eq('id', deliveryData.recipient_id)
+          .single();
+          
+        recipientData = result.data;
+        recipientError = result.error;
+        usedRecipientId = deliveryData.recipient_id;
+      } catch (err) {
+        recipientError = err;
+      }
         
       if (recipientError || !recipientData) {
         console.error(`[AccessFile] Recipient error: ${recipientError?.message || "Recipient not found"}`);
@@ -239,27 +252,40 @@ serve(async (req: Request) => {
           if (!directRecipientError && directRecipientData) {
             console.log("[AccessFile] Found recipient through direct email lookup", directRecipientData);
             // Use this recipient data instead
-            return new Response(
-              JSON.stringify({ success: true, recipientData: directRecipientData }),
-              { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-            );
+            recipientData = directRecipientData;
+            recipientError = null;
+            usedRecipientId = directRecipientData.id;
+            
+            // Continue with file processing instead of returning early
+            console.log("[AccessFile] Continuing with file processing using found recipient");
           } else {
             console.error("[AccessFile] Fallback lookup also failed:", directRecipientError);
+            
+            // Return detailed error for debugging since we couldn't find the recipient at all
+            return new Response(
+              JSON.stringify({ 
+                error: "Invalid recipient", 
+                details: "Recipient not found by ID or email",
+                recipient_id: deliveryData.recipient_id,
+                delivery_id: deliveryId
+              }),
+              { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
           }
         } catch (fallbackError) {
           console.error("[AccessFile] Error in fallback recipient lookup:", fallbackError);
+          
+          // Return detailed error for debugging
+          return new Response(
+            JSON.stringify({ 
+              error: "Invalid recipient", 
+              details: recipientError ? recipientError.message : "Recipient not found",
+              recipient_id: deliveryData.recipient_id,
+              delivery_id: deliveryId
+            }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
         }
-        
-        // Return detailed error for debugging
-        return new Response(
-          JSON.stringify({ 
-            error: "Invalid recipient", 
-            details: recipientError ? recipientError.message : "Recipient not found",
-            recipient_id: deliveryData.recipient_id,
-            delivery_id: deliveryId
-          }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
       }
       
       // Log found recipient data
@@ -277,10 +303,11 @@ serve(async (req: Request) => {
       }
       
       // Get the message to verify the attachment exists
+      const messageId = deliveryData.message_id;
       const { data: messageData, error: messageError } = await supabase
         .from('messages')
         .select('attachments')
-        .eq('id', deliveryData.message_id)
+        .eq('id', messageId)
         .single();
         
       if (messageError || !messageData) {
