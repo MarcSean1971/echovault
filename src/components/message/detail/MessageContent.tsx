@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { MessageAttachments } from "./MessageAttachments";
 import { parseMessageTranscription, parseVideoContent } from "@/services/messages/mediaService";
 import { VideoMessageContent } from "./content/VideoMessageContent";
+import { LocationDisplay } from "./content/LocationDisplay";
 
 export interface MessageContentProps {
   message: Message;
@@ -103,6 +104,11 @@ export function MessageContent({
   const isPanicTrigger = message.message_type === "panic_trigger";
   const hasPanicConfig = message.panic_config || message.panic_trigger_config;
 
+  // Check if message has location data
+  const hasLocationData = message.share_location && 
+                         message.location_latitude && 
+                         message.location_longitude;
+
   return (
     <div className="space-y-6">
       {/* Message content */}
@@ -110,9 +116,22 @@ export function MessageContent({
         {renderMessageContent()}
       </div>
       
+      {/* Location display section */}
+      {hasLocationData && (
+        <div className="mt-6">
+          <Separator className="my-4" />
+          <LocationDisplay 
+            latitude={message.location_latitude} 
+            longitude={message.location_longitude}
+            locationName={message.location_name}
+          />
+        </div>
+      )}
+      
       {/* Attachments section */}
       {message.attachments && message.attachments.length > 0 && (
         <div>
+          <Separator className="my-4" />
           <h3 className="text-lg font-medium mb-3">Attachments</h3>
           <MessageAttachments 
             message={message}
