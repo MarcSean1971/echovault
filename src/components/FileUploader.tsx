@@ -1,9 +1,13 @@
+
 import { useState } from "react";
-import { Upload, X, File as FileIcon } from "lucide-react";
+import { Upload, X, File as FileIcon, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { FormAttachmentsList } from "@/components/message/FormSections/attachments/FormAttachmentsList";
+import { useAttachmentAccess } from "@/hooks/useAttachmentAccess";
+import { Spinner } from "@/components/ui/spinner";
+import { toast } from "@/components/ui/use-toast";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 export interface FileAttachment {
   file: File | null;
@@ -152,42 +156,94 @@ export function FileUploader({
         <div className="space-y-2">
           <p className="font-medium">Files to upload:</p>
           <div className="space-y-2 max-h-60 overflow-y-auto">
-            {files.map((attachment, index) => (
-              <div
-                key={index}
-                className="flex items-center justify-between p-3 border rounded-md bg-background hover:border-blue-200 transition-all duration-200"
-              >
-                <div className="flex items-center space-x-3 overflow-hidden">
-                  <FileIcon className="h-6 w-6 flex-shrink-0 hover:text-blue-600 transition-colors duration-200" />
-                  <div className="min-w-0">
-                    <p className="font-medium truncate">{attachment.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatFileSize(attachment.size)}
-                    </p>
+            {files.map((attachment, index) => {
+              const canPreview = attachment.path || attachment.isUploaded;
+              
+              // Only initialize the attachment access hook if the file can be previewed
+              const filePreview = canPreview ? useAttachmentAccess({
+                filePath: attachment.path,
+                fileName: attachment.name,
+                fileType: attachment.type,
+                fileSize: attachment.size,
+              }) : null;
+              
+              const handleViewFile = async () => {
+                if (!canPreview) {
+                  toast({
+                    title: "Cannot preview file",
+                    description: "This file hasn't been uploaded yet",
+                    variant: "destructive"
+                  });
+                  return;
+                }
+                
+                try {
+                  if (filePreview) {
+                    await filePreview.openFile();
+                  }
+                } catch (error) {
+                  console.error("Error opening file:", error);
+                  toast({
+                    title: "Error",
+                    description: "Failed to open the file",
+                    variant: "destructive"
+                  });
+                }
+              };
+              
+              return (
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-3 border rounded-md bg-background hover:border-blue-200 transition-all duration-200"
+                >
+                  <div className="flex items-center space-x-3 overflow-hidden">
+                    <FileIcon className="h-6 w-6 flex-shrink-0 hover:text-blue-600 transition-colors duration-200" />
+                    <div className="min-w-0">
+                      <p className="font-medium truncate">{attachment.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatFileSize(attachment.size)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    {attachment.uploading && typeof attachment.progress === "number" && (
+                      <Progress value={attachment.progress} className="w-20 h-2" />
+                    )}
+                    
+                    {/* Preview button - only shown for files with path or isUploaded */}
+                    {canPreview && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleViewFile}
+                        disabled={disabled || attachment.uploading || (filePreview && filePreview.isLoading)}
+                        className={`text-primary hover:text-primary hover:bg-primary/10 ${HOVER_TRANSITION}`}
+                      >
+                        {filePreview && filePreview.isLoading ? (
+                          <Spinner className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </Button>
+                    )}
+                    
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeFile(index)}
+                      disabled={disabled || attachment.uploading}
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10 transition-colors duration-200"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
-
-                <div className="flex items-center space-x-2">
-                  {attachment.uploading && typeof attachment.progress === "number" && (
-                    <Progress value={attachment.progress} className="w-20 h-2" />
-                  )}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeFile(index)}
-                    disabled={disabled || attachment.uploading}
-                    className="text-destructive hover:text-destructive hover:bg-destructive/10 transition-colors duration-200"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
-          
-          {/* Add the preview section for files with paths */}
-          {showPreview && <FormAttachmentsList attachments={files} />}
         </div>
       )}
     </div>
