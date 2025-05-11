@@ -28,3 +28,10 @@ verify_jwt = true
 
 [functions.access-file]
 verify_jwt = false
+
+[functions.access-message]
+verify_jwt = false
+
+[functions.whatsapp-webhook]
+verify_jwt = false
+
