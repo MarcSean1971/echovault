@@ -23,21 +23,21 @@ export function ConditionTypeSelector({
         className="space-y-4"
       >
         <RadioOptionWithTooltip 
-          value="no_check_in"
-          id="no-check-in"
-          label="Send if I don't check in"
-          description="Classic dead man's switch - requires regular check-ins to prevent delivery"
-          icon={AlertCircle}
-          tooltipText="Message will be sent if you don't check in before the deadline."
-        />
-        
-        <RadioOptionWithTooltip 
           value="panic_trigger"
           id="panic-trigger"
           label="Manual panic button"
           description="For emergency situations - sends message immediately when triggered"
           icon={Bell}
           tooltipText="Creates a button you can press in an emergency to instantly deliver this message."
+        />
+        
+        <RadioOptionWithTooltip 
+          value="no_check_in"
+          id="no-check-in"
+          label="Send if I don't check in"
+          description="Classic dead man's switch - requires regular check-ins to prevent delivery"
+          icon={AlertCircle}
+          tooltipText="Message will be sent if you don't check in before the deadline."
         />
       </RadioGroup>
     </div>
