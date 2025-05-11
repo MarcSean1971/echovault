@@ -31,7 +31,8 @@ export function PanicButtonCard({ userId, panicMessage, panicMessages, isCheckin
     handleCreatePanicMessage,
     getKeepArmedValue,
     isSelectorOpen,
-    setIsSelectorOpen
+    setIsSelectorOpen,
+    inCancelWindow
   } = usePanicButton(userId, panicMessage, panicMessages);
   
   // State for checking if user has any panic messages (even if not loaded in this component)
@@ -99,7 +100,8 @@ export function PanicButtonCard({ userId, panicMessage, panicMessages, isCheckin
             isConfirming={isConfirming}
             countDown={countDown}
             onClick={handlePanicButtonClick}
-            disabled={isChecking || panicMode || isLoading || triggerInProgress}
+            disabled={isChecking || (panicMode && !inCancelWindow) || isLoading || (triggerInProgress && !inCancelWindow)}
+            inCancelWindow={inCancelWindow}
           />
         ) : (
           <CreateMessageButton 
@@ -115,6 +117,7 @@ export function PanicButtonCard({ userId, panicMessage, panicMessages, isCheckin
           hasPanicMessages={hasPanicMessages}
           isLoading={isLoading}
           keepArmed={!!panicMessage && getKeepArmedValue()}
+          inCancelWindow={inCancelWindow}
         />
         
         {/* Message selection dialog */}

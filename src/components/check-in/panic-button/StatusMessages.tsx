@@ -31,6 +31,7 @@ interface StatusMessagesProps {
   hasPanicMessages: boolean;
   isLoading: boolean;
   keepArmed: boolean;
+  inCancelWindow?: boolean;
 }
 
 export function StatusMessages({
@@ -39,12 +40,17 @@ export function StatusMessages({
   hasPanicMessage,
   hasPanicMessages,
   isLoading,
-  keepArmed
+  keepArmed,
+  inCancelWindow = false
 }: StatusMessagesProps) {
   return (
     <>
-      <StatusMessage show={isConfirming} variant="error">
+      <StatusMessage show={isConfirming && !inCancelWindow} variant="error">
         Click again to confirm emergency trigger
+      </StatusMessage>
+
+      <StatusMessage show={inCancelWindow} variant="error">
+        Click the button again to cancel the emergency trigger
       </StatusMessage>
 
       <StatusMessage show={locationPermission === "denied"} variant="warning">

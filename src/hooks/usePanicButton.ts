@@ -21,11 +21,22 @@ export function usePanicButton(
   const [locationPermission, setLocationPermission] = useState<string>("unknown");
   const [isSelectorOpen, setIsSelectorOpen] = useState(false);
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
+  const [inCancelWindow, setInCancelWindow] = useState(false);
+  const [cancelWindowTimer, setCancelWindowTimer] = useState<NodeJS.Timeout | null>(null);
 
   // Check location permissions
   useEffect(() => {
     checkLocationPermission();
   }, []);
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (cancelWindowTimer) {
+        clearTimeout(cancelWindowTimer);
+      }
+    };
+  }, [cancelWindowTimer]);
 
   // Check location permissions
   const checkLocationPermission = async () => {
@@ -97,29 +108,68 @@ export function usePanicButton(
     }
   };
 
-  // Get keep_armed value from config
-  const getKeepArmedValue = () => {
+  // Get message config from the selected message or default message
+  const getMessageConfig = () => {
     const message = selectedMessageId 
       ? panicMessages.find(m => m.message_id === selectedMessageId) 
       : panicMessage;
     
-    if (!message) return true;
+    if (!message) return null;
     
     // First check panic_trigger_config
     if (message.panic_trigger_config) {
-      return message.panic_trigger_config.keep_armed;
+      return message.panic_trigger_config;
     }
     
     // Fall back to panic_config if panic_trigger_config is not available
     if (message.panic_config) {
-      return message.panic_config.keep_armed;
+      return message.panic_config;
     }
     
-    return true; // Default value for safety
+    return null;
   };
 
-  // Handle panic trigger - now with message selection
+  // Get keep_armed value from config
+  const getKeepArmedValue = () => {
+    const config = getMessageConfig();
+    return config?.keep_armed ?? true; // Default true for safety
+  };
+
+  // Get cancel window seconds from config
+  const getCancelWindowSeconds = () => {
+    const config = getMessageConfig();
+    return config?.cancel_window_seconds ?? 0; // Default 0 means no cancel window
+  };
+
+  // Cancel the panic trigger during the cancellation window
+  const cancelPanicTrigger = () => {
+    if (inCancelWindow && cancelWindowTimer) {
+      // Clear the timeout that would send the message
+      clearTimeout(cancelWindowTimer);
+      setCancelWindowTimer(null);
+      
+      // Reset the UI state
+      setInCancelWindow(false);
+      setPanicMode(false);
+      setIsConfirming(false);
+      setTriggerInProgress(false);
+      setCountDown(0);
+      
+      toast({
+        title: "Emergency Alert Cancelled",
+        description: "The emergency message has been cancelled successfully.",
+      });
+    }
+  };
+
+  // Handle panic trigger - now with message selection and cancellation window
   const handlePanicTrigger = async () => {
+    // If we're already in the cancellation window, cancel the trigger
+    if (inCancelWindow) {
+      cancelPanicTrigger();
+      return;
+    }
+
     if (!userId) {
       toast({
         title: "Error",
@@ -147,86 +197,187 @@ export function usePanicButton(
       setTriggerInProgress(true);
       setPanicMode(true);
       
-      try {
-        console.log(`Triggering panic message: ${messageToUse.message_id}`);
+      // Get the cancel window seconds from the config
+      const cancelWindowSecs = getCancelWindowSeconds();
+      console.log(`Cancel window seconds: ${cancelWindowSecs}`);
+      
+      // If there's a cancellation window, show it
+      if (cancelWindowSecs > 0) {
+        setInCancelWindow(true);
         
-        // Log config to help with debugging
-        if (messageToUse.panic_trigger_config) {
-          console.log("Using panic_trigger_config:", messageToUse.panic_trigger_config);
-        }
-        if (messageToUse.panic_config) {
-          console.log("Found panic_config as well:", messageToUse.panic_config);
-        }
+        // Show toast with cancellation option
+        toast({
+          title: "EMERGENCY ALERT PENDING",
+          description: `Your emergency message will be sent in ${cancelWindowSecs} seconds. Click the button again to cancel.`,
+          variant: "destructive",
+        });
         
-        // Try triggering the panic message
-        const result = await triggerPanicMessage(userId, messageToUse.message_id);
+        // Start countdown for visual feedback
+        let secondsLeft = cancelWindowSecs;
+        setCountDown(secondsLeft);
         
-        console.log("Panic trigger result:", result);
-        
-        if (result.success) {
-          toast({
-            title: "EMERGENCY ALERT TRIGGERED",
-            description: "Your emergency message with your current location and attachments is being sent immediately.",
-            variant: "destructive"
-          });
-          
-          // Start countdown for visual feedback
-          let secondsLeft = 3;
+        // Create interval for countdown display
+        const countdownInterval = setInterval(() => {
+          secondsLeft -= 1;
           setCountDown(secondsLeft);
           
-          // Dispatch event with panic message ID
-          window.dispatchEvent(new CustomEvent('conditions-updated', { 
-            detail: { 
-              updatedAt: new Date().toISOString(),
-              triggerValue: Date.now(),
-              panicTrigger: true,
-              panicMessageId: messageToUse.message_id
+          if (secondsLeft <= 0) {
+            clearInterval(countdownInterval);
+          }
+        }, 1000);
+        
+        // Create timeout for actual message sending after the cancel window
+        const timer = setTimeout(async () => {
+          try {
+            // Actually send the message after the cancel window expires
+            console.log(`Triggering panic message: ${messageToUse.message_id}`);
+            const result = await triggerPanicMessage(userId, messageToUse.message_id);
+            
+            if (result.success) {
+              toast({
+                title: "EMERGENCY ALERT TRIGGERED",
+                description: "Your emergency message with your current location and attachments has been sent.",
+                variant: "destructive"
+              });
+              
+              // Dispatch event with panic message ID
+              window.dispatchEvent(new CustomEvent('conditions-updated', { 
+                detail: { 
+                  updatedAt: new Date().toISOString(),
+                  triggerValue: Date.now(),
+                  panicTrigger: true,
+                  panicMessageId: messageToUse.message_id
+                }
+              }));
+              
+              // Reset UI state after a short delay
+              setTimeout(() => {
+                setInCancelWindow(false);
+                setPanicMode(false);
+                setIsConfirming(false);
+                setTriggerInProgress(false);
+                setSelectedMessageId(null);
+                
+                // Handle keep armed status
+                if (result.keepArmed) {
+                  toast({
+                    title: "Emergency message still armed",
+                    description: "Your emergency message remains active and can be triggered again if needed."
+                  });
+                  // Dispatch an event to refresh conditions
+                  window.dispatchEvent(new CustomEvent('conditions-updated', { 
+                    detail: { 
+                      updatedAt: new Date().toISOString(),
+                      triggerValue: Date.now()
+                    }
+                  }));
+                } else {
+                  navigate('/messages'); // Redirect to messages page
+                }
+              }, 3000);
             }
-          }));
+          } catch (error: any) {
+            console.error("Error triggering panic message:", error);
+            toast({
+              title: "Error",
+              description: error.message || "Failed to trigger panic message. Please try again.",
+              variant: "destructive"
+            });
+            setInCancelWindow(false);
+            setPanicMode(false);
+            setIsConfirming(false);
+            setTriggerInProgress(false);
+          }
           
-          const timer = setInterval(() => {
-            secondsLeft -= 1;
+          // Clear the timer reference
+          setCancelWindowTimer(null);
+        }, cancelWindowSecs * 1000);
+        
+        // Store the timer reference
+        setCancelWindowTimer(timer as unknown as NodeJS.Timeout);
+      } else {
+        // No cancel window - send message immediately
+        try {
+          console.log(`Triggering panic message immediately: ${messageToUse.message_id}`);
+          
+          // Log config to help with debugging
+          if (messageToUse.panic_trigger_config) {
+            console.log("Using panic_trigger_config:", messageToUse.panic_trigger_config);
+          }
+          if (messageToUse.panic_config) {
+            console.log("Found panic_config as well:", messageToUse.panic_config);
+          }
+          
+          // Try triggering the panic message
+          const result = await triggerPanicMessage(userId, messageToUse.message_id);
+          
+          console.log("Panic trigger result:", result);
+          
+          if (result.success) {
+            toast({
+              title: "EMERGENCY ALERT TRIGGERED",
+              description: "Your emergency message with your current location and attachments is being sent immediately.",
+              variant: "destructive"
+            });
+            
+            // Start countdown for visual feedback
+            let secondsLeft = 3;
             setCountDown(secondsLeft);
             
-            if (secondsLeft <= 0) {
-              clearInterval(timer);
-              setPanicMode(false);
-              setIsConfirming(false);
-              setTriggerInProgress(false);
-              setSelectedMessageId(null);
-              
-              // If the message is still armed (keepArmed=true), refresh to show it's still active
-              // Otherwise navigate to messages
-              if (result.keepArmed) {
-                console.log("Message stays armed (keepArmed=true). Refreshing UI state.");
-                toast({
-                  title: "Emergency message still armed",
-                  description: "Your emergency message remains active and can be triggered again if needed."
-                });
-                // Dispatch an event to refresh conditions instead of reloading the page
-                window.dispatchEvent(new CustomEvent('conditions-updated', { 
-                  detail: { 
-                    updatedAt: new Date().toISOString(),
-                    triggerValue: Date.now()
-                  }
-                }));
-              } else {
-                console.log("Message is now disarmed (keepArmed=false). Navigating to messages.");
-                navigate('/messages'); // Redirect to messages page
+            // Dispatch event with panic message ID
+            window.dispatchEvent(new CustomEvent('conditions-updated', { 
+              detail: { 
+                updatedAt: new Date().toISOString(),
+                triggerValue: Date.now(),
+                panicTrigger: true,
+                panicMessageId: messageToUse.message_id
               }
-            }
-          }, 1000);
+            }));
+            
+            const timer = setInterval(() => {
+              secondsLeft -= 1;
+              setCountDown(secondsLeft);
+              
+              if (secondsLeft <= 0) {
+                clearInterval(timer);
+                setPanicMode(false);
+                setIsConfirming(false);
+                setTriggerInProgress(false);
+                setSelectedMessageId(null);
+                
+                // If the message is still armed (keepArmed=true), refresh to show it's still active
+                // Otherwise navigate to messages
+                if (result.keepArmed) {
+                  console.log("Message stays armed (keepArmed=true). Refreshing UI state.");
+                  toast({
+                    title: "Emergency message still armed",
+                    description: "Your emergency message remains active and can be triggered again if needed."
+                  });
+                  // Dispatch an event to refresh conditions instead of reloading the page
+                  window.dispatchEvent(new CustomEvent('conditions-updated', { 
+                    detail: { 
+                      updatedAt: new Date().toISOString(),
+                      triggerValue: Date.now()
+                    }
+                  }));
+                } else {
+                  console.log("Message is now disarmed (keepArmed=false). Navigating to messages.");
+                  navigate('/messages'); // Redirect to messages page
+                }
+              }
+            }, 1000);
+          }
+        } catch (error: any) {
+          console.error("Error triggering panic message:", error);
+          toast({
+            title: "Error",
+            description: error.message || "Failed to trigger panic message. Please try again.",
+            variant: "destructive"
+          });
+          setPanicMode(false);
+          setIsConfirming(false);
+          setTriggerInProgress(false);
         }
-      } catch (error: any) {
-        console.error("Error triggering panic message:", error);
-        toast({
-          title: "Error",
-          description: error.message || "Failed to trigger panic message. Please try again.",
-          variant: "destructive"
-        });
-        setPanicMode(false);
-        setIsConfirming(false);
-        setTriggerInProgress(false);
       }
     } else {
       setIsConfirming(true);
@@ -252,6 +403,12 @@ export function usePanicButton(
 
   // Handle panic button click with location permission check
   const handlePanicButtonClick = () => {
+    // If we're in the cancel window, allow cancellation
+    if (inCancelWindow) {
+      cancelPanicTrigger();
+      return;
+    }
+    
     if (isConfirming) {
       // If already confirming, check/request location permission
       if (locationPermission === "granted") {
@@ -304,6 +461,7 @@ export function usePanicButton(
     isSelectorOpen,
     setIsSelectorOpen,
     selectedMessageId,
-    setSelectedMessageId
+    setSelectedMessageId,
+    inCancelWindow
   };
 }
