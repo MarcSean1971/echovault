@@ -96,7 +96,7 @@ export function DeadmanSwitchControls({
     <div className="mt-4 p-4 bg-slate-50 rounded-lg border">
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-sm font-medium flex items-center">
-          <Clock className="h-4 w-4 mr-2" />
+          <Clock className="h-4 w-4 mr-2 hover:text-blue-500 transition-colors duration-200" />
           Reminder Settings
         </h3>
         <Button 
@@ -106,7 +106,7 @@ export function DeadmanSwitchControls({
           onClick={handleTestReminder}
           className="flex items-center hover:bg-muted/80 transition-colors duration-200"
         >
-          <Bell className="h-3 w-3 mr-1" />
+          <Bell className="h-3 w-3 mr-1 hover:text-blue-500 transition-colors duration-200" />
           {isSendingReminder ? "Sending..." : "Test Reminder"}
         </Button>
       </div>
@@ -124,7 +124,11 @@ export function DeadmanSwitchControls({
           <p className="text-xs font-medium mb-1">Reminders scheduled at:</p>
           <div className="flex flex-wrap gap-1">
             {reminderHours.sort((a, b) => b - a).map((minutes) => (
-              <Badge key={minutes} variant="secondary" className="text-xs">
+              <Badge 
+                key={minutes} 
+                variant="secondary" 
+                className="text-xs hover:bg-slate-200 transition-colors duration-200"
+              >
                 {formatReminderTime(minutes)} before deadline
               </Badge>
             ))}

@@ -144,10 +144,13 @@ export function SecurityOptions({
     >
       <CollapsibleTrigger className="flex items-center justify-between w-full">
         <div className="flex items-center">
-          <Lock className="h-4 w-4 mr-2" />
+          <Lock className="h-4 w-4 mr-2 hover:text-blue-500 transition-colors duration-200" />
           <span className="font-medium">Security Options</span>
         </div>
-        {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        {open ? 
+          <ChevronUp className="h-4 w-4 hover:text-blue-500 transition-colors duration-200" /> : 
+          <ChevronDown className="h-4 w-4 hover:text-blue-500 transition-colors duration-200" />
+        }
       </CollapsibleTrigger>
       
       <CollapsibleContent className="space-y-4 mt-4">
