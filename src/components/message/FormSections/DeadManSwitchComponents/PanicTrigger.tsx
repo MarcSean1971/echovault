@@ -1,4 +1,3 @@
-
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { PanicTriggerConfig } from "@/types/message";
@@ -88,7 +87,7 @@ export function PanicTrigger({ config, setConfig }: PanicTriggerProps) {
         {/* Removed the Enhanced privacy (bypass logging) option here */}
         
         <div className="flex items-center justify-between">
-          <Label htmlFor="keep-armed" className="font-medium text-orange-600">Keep message armed after triggering</Label>
+          <Label htmlFor="keep-armed" className="font-medium">Keep message armed after triggering</Label>
           <Switch
             id="keep-armed"
             checked={config.keep_armed ?? true}
