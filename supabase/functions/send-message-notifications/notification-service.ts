@@ -4,7 +4,7 @@ import {
   updateConditionStatus,
   getPanicConfig,
   recordMessageDelivery
-} from "./db-service.ts";
+} from "./db/index.ts";
 import { Message, Condition } from "./types.ts";
 import { notifyRecipient } from "./services/recipient-notification-service.ts";
 import { generateAccessUrl } from "./utils/url-generator.ts";

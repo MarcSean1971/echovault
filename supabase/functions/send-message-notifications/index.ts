@@ -1,6 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { getMessagesToNotify } from "./db-service.ts";
+import { getMessagesToNotify } from "./db/index.ts";
 import { sendMessageNotification } from "./notification-service.ts";
 import { MessageNotificationRequest } from "./types.ts";
 import { supabaseClient } from "./supabase-client.ts";
