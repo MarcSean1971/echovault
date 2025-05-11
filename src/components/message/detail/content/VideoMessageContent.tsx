@@ -26,14 +26,15 @@ export function VideoMessageContent({ message }: { message: Message }) {
           setVideoUrl(url);
         }
         
-        // Keep transcription support for backward compatibility with existing messages
+        // Extract transcription for backward compatibility
         setTranscription(extractedTranscription);
         
-        // Still extract additional text for internal state tracking
-        // but we won't render it here since it's handled in MessageContent.tsx
+        // Check for additional text content that might be stored with the video
         try {
           const contentObj = JSON.parse(message.content);
           if (contentObj.additionalText) {
+            console.log("Found additional text in video message:", 
+                        contentObj.additionalText.substring(0, 50) + "...");
             setAdditionalText(contentObj.additionalText);
           }
         } catch (e) {
@@ -70,8 +71,18 @@ export function VideoMessageContent({ message }: { message: Message }) {
         />
       </div>
       
-      {/* Keep transcription support for backward compatibility with existing messages */}
-      {transcription && (
+      {/* Display additional text content if available */}
+      {additionalText && (
+        <div className="mt-4 space-y-2">
+          <h3 className="text-sm font-medium">Text Message</h3>
+          <Card className="p-3 bg-muted/50">
+            <p className="whitespace-pre-wrap">{additionalText}</p>
+          </Card>
+        </div>
+      )}
+      
+      {/* Keep transcription display for backward compatibility */}
+      {transcription && !additionalText && (
         <div className="mt-4 space-y-2">
           <h3 className="text-sm font-medium">Video Transcription</h3>
           <Card className="p-3 bg-muted/40">

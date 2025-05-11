@@ -60,9 +60,14 @@ export function useMessageInitializer(message?: Message) {
           if (contentObj.additionalText) {
             console.log("Message contains additional text with video:", contentObj.additionalText);
             setTextContent(contentObj.additionalText);
+          } else {
+            // If no additional text is found, initialize with empty string
+            // so the text field isn't undefined when switching tabs
+            setTextContent("");
           }
         } catch (e) {
           console.error("Error parsing additional text from video content:", e);
+          setTextContent("");
         }
       }
     } catch (e) {

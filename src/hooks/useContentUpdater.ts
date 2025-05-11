@@ -1,11 +1,17 @@
-
 import { useState } from "react";
 import { useMessageForm } from "@/components/message/MessageFormContext";
 import { parseMessageTranscription } from "@/services/messages/mediaService";
 import { formatVideoContent } from "@/services/messages/transcriptionService";
 
 export function useContentUpdater() {
-  const { setContent, setVideoContent, setTextContent, content, textContent } = useMessageForm();
+  const { 
+    setContent, 
+    setVideoContent, 
+    setTextContent, 
+    content, 
+    textContent, 
+    messageType 
+  } = useMessageForm();
 
   // Extract transcription from content (kept for backward compatibility with existing content)
   const getTranscriptionFromContent = (content: string | null): string | null => {
@@ -66,12 +72,33 @@ export function useContentUpdater() {
       console.log("Formatting video content without transcription");
       const formattedContent = await formatVideoContent(videoBlob, null);
       
-      // Update form state with new content
+      // Update video content
       setVideoContent(formattedContent);
-      setContent(formattedContent);
       
-      // Preserve text content
-      console.log("Preserving text content:", textContent ? textContent.substring(0, 30) + "..." : "none");
+      // When in video mode, also update the main content
+      // When in text mode, we keep text as the main content and store video separately
+      if (messageType === "video") {
+        // If we have text content, include it in the video content
+        if (textContent && textContent.trim() !== '') {
+          console.log("Including text content with video:", 
+                    textContent.substring(0, 30) + "...");
+          try {
+            const videoContentObj = JSON.parse(formattedContent);
+            videoContentObj.additionalText = textContent;
+            const combinedContent = JSON.stringify(videoContentObj);
+            setContent(combinedContent);
+            // Update video content with the combined version
+            setVideoContent(combinedContent);
+          } catch (error) {
+            console.error("Error combining text with video:", error);
+            // Fallback to just the video content
+            setContent(formattedContent);
+          }
+        } else {
+          // No text content to include
+          setContent(formattedContent);
+        }
+      }
       
       return { success: true };
     } catch (error) {

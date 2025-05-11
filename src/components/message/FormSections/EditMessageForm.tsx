@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { useMessageForm } from "../MessageFormContext";
@@ -38,7 +39,9 @@ function MessageEditForm({ message, onCancel }: EditMessageFormComponentProps) {
     messageType,
     setMessageType,
     textContent,
+    setTextContent,
     videoContent,
+    setVideoContent,
     showUploadDialog, 
     setShowUploadDialog, 
     uploadProgress,
@@ -221,33 +224,52 @@ function MessageEditForm({ message, onCancel }: EditMessageFormComponentProps) {
         content: content ? content.substring(0, 30) + "..." : "none"
       });
       
-      // Determine which content to use based on message type
-      // For combined content support, we'll use a special approach
-      let contentToSave = content;
+      // IMPROVED CONTENT HANDLING: Always check for both text and video content
+      let contentToSave = null;
+      let finalMessageType = messageType;
       
-      // If we have video content, we'll use that as the primary content
-      if (messageType === "video" && videoContent) {
-        contentToSave = videoContent;
-        
-        // If we also have text content, add it to the video content
-        if (textContent && textContent.trim() !== '') {
-          try {
-            console.log("Combining text and video content");
-            // Parse the video content to add text content to it
-            const videoContentObj = JSON.parse(videoContent);
-            videoContentObj.additionalText = textContent;
-            contentToSave = JSON.stringify(videoContentObj);
-            console.log("Combined content created with both text and video");
-          } catch (error) {
-            console.error("Error combining text and video content:", error);
-          }
+      // Check if we have valid video content
+      const hasValidVideo = videoContent && 
+        (videoContent.includes('videoData') || 
+          (videoContent.startsWith('{') && videoContent.endsWith('}')));
+      
+      // Check if we have valid text content
+      const hasValidText = textContent && textContent.trim() !== '';
+      
+      if (hasValidVideo && hasValidText) {
+        // We have both video and text content - combine them
+        console.log("Saving both video and text content together");
+        try {
+          // Parse the video content to add text content to it
+          const videoContentObj = JSON.parse(videoContent);
+          videoContentObj.additionalText = textContent;
+          contentToSave = JSON.stringify(videoContentObj);
+          // When we have both, use video as the primary type for correct rendering
+          finalMessageType = "video";
+          console.log("Combined content created with both text and video");
+        } catch (error) {
+          console.error("Error combining text and video content:", error);
+          // Fallback to using the selected tab's content
+          contentToSave = messageType === "video" ? videoContent : textContent;
         }
-      } else if (messageType === "text") {
+      } else if (hasValidVideo) {
+        // Only video content available
+        console.log("Saving video content only");
+        contentToSave = videoContent;
+        finalMessageType = "video";
+      } else if (hasValidText) {
+        // Only text content available
+        console.log("Saving text content only");
         contentToSave = textContent;
-        console.log("Using text content for saving");
+        finalMessageType = "text";
+      } else {
+        // No valid content - this should not normally happen
+        console.log("No valid content found to save");
+        contentToSave = content; // Use whatever was there before
       }
       
       console.log("Final content to save:", contentToSave ? contentToSave.substring(0, 30) + "..." : "none");
+      console.log("Final message type:", finalMessageType);
 
       // Update message in database
       const { error } = await supabase
@@ -255,7 +277,7 @@ function MessageEditForm({ message, onCancel }: EditMessageFormComponentProps) {
         .update({
           title,
           content: contentToSave,
-          message_type: messageType,
+          message_type: finalMessageType,
           attachments: attachmentsToSave.length > 0 ? attachmentsToSave : null,
           updated_at: new Date().toISOString()
         })

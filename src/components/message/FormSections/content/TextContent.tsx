@@ -6,12 +6,12 @@ import { AIEnhancer } from "@/components/AIEnhancer";
 import { useState, useEffect } from "react";
 
 export function TextContent() {
-  const { textContent, setTextContent, messageType, setContent } = useMessageForm();
-  const [displayContent, setDisplayContent] = useState(textContent);
+  const { textContent, setTextContent, messageType, setContent, videoContent } = useMessageForm();
+  const [displayContent, setDisplayContent] = useState(textContent || "");
 
   // Update display content when text content changes
   useEffect(() => {
-    setDisplayContent(textContent);
+    setDisplayContent(textContent || "");
   }, [textContent]);
 
   // Handle content changes for text
@@ -21,7 +21,12 @@ export function TextContent() {
     setDisplayContent(newContent);
     
     // Also update the main content field for compatibility with other components
-    setContent(newContent);
+    // Don't overwrite video content when editing text
+    if (messageType === "text") {
+      setContent(newContent);
+    }
+    // When in video tab, we'll handle the combined content in handleVideoContentUpdate
+    // and in the submit handler, so we don't need to update content here
   };
 
   return (
@@ -37,7 +42,10 @@ export function TextContent() {
       <div className="flex justify-end mt-2">
         <AIEnhancer content={displayContent} onChange={(enhancedContent) => {
           setTextContent(enhancedContent);
-          setContent(enhancedContent);
+          // Only update main content if we're in text mode
+          if (messageType === "text") {
+            setContent(enhancedContent);
+          }
           setDisplayContent(enhancedContent);
         }} />
       </div>
