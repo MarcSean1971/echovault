@@ -2,10 +2,20 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
 import { MessageCondition } from "@/types/message";
-import { checkLocationPermission, requestLocationPermission } from "./panic-button/locationUtils";
-import { getCancelWindowSeconds, getKeepArmedValue } from "./panic-button/messageConfigUtils";
-import { triggerPanicMessageWithCallbacks } from "./panic-button/triggerUtils";
-import { startCountdown } from "./panic-button/countdownUtils";
+import { 
+  checkLocationPermission, 
+  requestLocationPermission 
+} from "./panic-button/locationUtils";
+import { 
+  getCancelWindowSeconds, 
+  getKeepArmedValue 
+} from "./panic-button/messageConfigUtils";
+import { 
+  triggerPanicMessageWithCallbacks 
+} from "./panic-button/triggerUtils";
+import { 
+  startCountdown 
+} from "./panic-button/countdownUtils";
 
 /**
  * Hook to handle panic button functionality
@@ -24,8 +34,9 @@ export function usePanicButton(
   const [isSelectorOpen, setIsSelectorOpen] = useState(false);
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
   const [inCancelWindow, setInCancelWindow] = useState(false);
-  const [cancelWindowTimer, setCancelWindowTimer] = useState<NodeJS.Timeout | null>(null);
-  const [countdownInterval, setCountdownInterval] = useState<NodeJS.Timer | null>(null);
+  
+  // Instead of directly storing timers, we use a ref to store the cancel function
+  const [cancelCountdown, setCancelCountdown] = useState<(() => void) | null>(null);
 
   // Check location permissions
   useEffect(() => {
@@ -40,14 +51,11 @@ export function usePanicButton(
   // Cleanup timers on unmount
   useEffect(() => {
     return () => {
-      if (cancelWindowTimer) {
-        clearTimeout(cancelWindowTimer);
-      }
-      if (countdownInterval) {
-        clearInterval(countdownInterval);
+      if (cancelCountdown) {
+        cancelCountdown();
       }
     };
-  }, [cancelWindowTimer, countdownInterval]);
+  }, [cancelCountdown]);
 
   // Start the cancellation countdown
   const startCancellationCountdown = () => {
@@ -81,8 +89,8 @@ export function usePanicButton(
       variant: "destructive",
     });
     
-    // Setup countdown
-    const countdown = startCountdown(
+    // Use our utility to setup countdown
+    const countdownControls = startCountdown(
       cancelWindowSecs,
       (secondsLeft) => {
         setCountDown(secondsLeft);
@@ -133,29 +141,16 @@ export function usePanicButton(
       }
     );
     
-    // Store the timer reference to be able to cancel it
-    const timer = setTimeout(() => {
-      // This is just a safety cleanup, the actual trigger happens in countdown onComplete
-      countdown.stop();
-      setCancelWindowTimer(null);
-    }, (cancelWindowSecs + 1) * 1000);
-    
-    // Store the timer reference
-    setCancelWindowTimer(timer as unknown as NodeJS.Timeout);
+    // Store the cancel function
+    setCancelCountdown(() => countdownControls.stop);
   };
 
   // Cancel the panic trigger during the cancellation window
   const cancelPanicTrigger = () => {
-    if (inCancelWindow && cancelWindowTimer) {
-      // Clear the timeout that would send the message
-      clearTimeout(cancelWindowTimer);
-      setCancelWindowTimer(null);
-      
-      // Clear the countdown interval
-      if (countdownInterval) {
-        clearInterval(countdownInterval);
-        setCountdownInterval(null);
-      }
+    if (inCancelWindow && cancelCountdown) {
+      // Stop the countdown
+      cancelCountdown();
+      setCancelCountdown(null);
       
       // Reset the UI state
       setInCancelWindow(false);
