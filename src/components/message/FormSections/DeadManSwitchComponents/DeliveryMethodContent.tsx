@@ -1,17 +1,13 @@
-import { Button } from "@/components/ui/button";
-import { CustomTimeInput } from "./CustomTimeInput";
-import { ConditionTypeSelector } from "./ConditionTypeSelector";
-import { TimeThresholdSelector } from "./TimeThresholdSelector";
-import { ReminderSettings } from "./ReminderSettings";
-import { NoCheckInDeliveryOptions } from "./NoCheckInDeliveryOptions";
-import { GroupConfirmation } from "./GroupConfirmation";
-import { InactivityToDate } from "./InactivityToDate";
-import { InactivityToRecurring } from "./InactivityToRecurring";
-import { PanicTrigger } from "./PanicTrigger";
+
 import { TriggerType, DeliveryOption, RecurringPattern, PanicTriggerConfig } from "@/types/message";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { AlertTriangle } from "lucide-react";
+import { ConditionTypeSelector } from "./ConditionTypeSelector";
+import { CheckInCodeInput } from "./CheckInCodeInput";
+import { NoCheckInCondition } from "./conditions/NoCheckInCondition";
+import { RegularCheckInCondition } from "./conditions/RegularCheckInCondition";
+import { GroupConfirmationCondition } from "./conditions/GroupConfirmationCondition";
+import { PanicTriggerCondition } from "./conditions/PanicTriggerCondition";
+import { InactivityToRecurringCondition } from "./conditions/InactivityToRecurringCondition";
+import { InactivityToDateCondition } from "./conditions/InactivityToDateCondition";
 
 interface DeliveryMethodContentProps {
   conditionType: TriggerType;
@@ -71,109 +67,53 @@ export function DeliveryMethodContent({
     setPanicTriggerConfig(config);
     console.log("Updated panic trigger config:", config);
   };
-  
-  // Custom check-in code validation
-  const isValidCheckInCode = (code: string) => {
-    return /^[A-Za-z0-9]+$/.test(code) || code === "";
-  };
-  
-  // Calculate the total threshold in decimal hours
-  const calculateTotalThreshold = (): number => {
-    return hoursThreshold + (minutesThreshold / 60);
-  };
-  
+
   // Render the custom check-in code input
   const renderCustomCheckInCode = () => {
     // Only show for check-in related condition types
     if (conditionType !== 'no_check_in' && conditionType !== 'regular_check_in') return null;
     
-    return (
-      <div className="space-y-2">
-        <Label htmlFor="check-in-code">Custom WhatsApp Check-In Code</Label>
-        <Input
-          id="check-in-code"
-          placeholder="CHECKIN" 
-          value={checkInCode}
-          onChange={(e) => {
-            const value = e.target.value.trim();
-            if (isValidCheckInCode(value)) {
-              setCheckInCode(value);
-            }
-          }}
-          className="max-w-xs"
-        />
-        <p className="text-sm text-muted-foreground">
-          Set a custom code for WhatsApp check-ins. Default codes "CHECKIN" and "CODE" will still work.
-        </p>
-        {checkInCode && !isValidCheckInCode(checkInCode) && (
-          <div className="flex items-center text-amber-600 text-sm">
-            <AlertTriangle className="h-4 w-4 mr-1" />
-            <span>Code can only contain letters and numbers without spaces.</span>
-          </div>
-        )}
-      </div>
-    );
+    return <CheckInCodeInput checkInCode={checkInCode} setCheckInCode={setCheckInCode} />;
   };
   
   // Render different options based on selected condition type
   const renderConditionOptions = () => {
     switch (conditionType) {
       case 'no_check_in':
-        // Calculate the total threshold in decimal hours for no_check_in
-        const totalThresholdHours = calculateTotalThreshold();
-        
         return (
-          <div className="space-y-6">
-            <CustomTimeInput
-              hours={hoursThreshold}
-              setHours={setHoursThreshold}
-              minutes={minutesThreshold}
-              setMinutes={setMinutesThreshold}
-              label="Time without check-in before message is sent"
-            />
-            {/* Pass the total threshold to ReminderSettings */}
-            <ReminderSettings
-              reminderHours={reminderHours}
-              setReminderHours={setReminderHours}
-              maxHours={totalThresholdHours}
-            />
-            {/* Add custom check-in code input - moved to be after ReminderSettings */}
-            {renderCustomCheckInCode()}
-            <NoCheckInDeliveryOptions
-              deliveryOption={deliveryOption}
-              setDeliveryOption={setDeliveryOption}
-              recurringPattern={recurringPattern}
-              setRecurringPattern={setRecurringPattern}
-              triggerDate={triggerDate}
-              setTriggerDate={setTriggerDate}
-            />
-          </div>
+          <NoCheckInCondition
+            hoursThreshold={hoursThreshold}
+            setHoursThreshold={setHoursThreshold}
+            minutesThreshold={minutesThreshold}
+            setMinutesThreshold={setMinutesThreshold}
+            deliveryOption={deliveryOption}
+            setDeliveryOption={setDeliveryOption}
+            recurringPattern={recurringPattern}
+            setRecurringPattern={setRecurringPattern}
+            triggerDate={triggerDate}
+            setTriggerDate={setTriggerDate}
+            reminderHours={reminderHours}
+            setReminderHours={setReminderHours}
+            renderCustomCheckInCode={renderCustomCheckInCode}
+          />
         );
         
       case 'regular_check_in':
         return (
-          <div className="space-y-6">
-            <TimeThresholdSelector
-              conditionType={conditionType}
-              hoursThreshold={hoursThreshold}
-              setHoursThreshold={setHoursThreshold}
-            />
-            {/* Add custom check-in code input */}
-            {renderCustomCheckInCode()}
-          </div>
-        );
-        
-      case 'group_confirmation':
-        return (
-          <GroupConfirmation
-            confirmationsRequired={3}
-            setConfirmationsRequired={() => {}}
+          <RegularCheckInCondition
+            conditionType={conditionType}
+            hoursThreshold={hoursThreshold}
+            setHoursThreshold={setHoursThreshold}
+            renderCustomCheckInCode={renderCustomCheckInCode}
           />
         );
         
+      case 'group_confirmation':
+        return <GroupConfirmationCondition />;
+        
       case 'panic_trigger':
         return (
-          <PanicTrigger
+          <PanicTriggerCondition
             config={panicTriggerConfig || defaultPanicConfig}
             setConfig={handlePanicConfigUpdate}
           />
@@ -181,7 +121,7 @@ export function DeliveryMethodContent({
         
       case 'inactivity_to_recurring':
         return (
-          <InactivityToRecurring
+          <InactivityToRecurringCondition
             hoursThreshold={hoursThreshold}
             setHoursThreshold={setHoursThreshold}
             recurringPattern={recurringPattern}
@@ -193,7 +133,7 @@ export function DeliveryMethodContent({
         
       case 'inactivity_to_date':
         return (
-          <InactivityToDate
+          <InactivityToDateCondition
             hoursThreshold={hoursThreshold}
             setHoursThreshold={setHoursThreshold}
             minutesThreshold={minutesThreshold}
