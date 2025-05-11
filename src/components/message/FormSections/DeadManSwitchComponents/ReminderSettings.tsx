@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -210,7 +211,7 @@ export function ReminderSettings({
               placeholder="0"
               value={newHour}
               onChange={handleHourChange}
-              className="w-20"
+              className="w-20 hover:border-primary/50 focus:border-primary transition-colors"
             />
           </div>
           
@@ -224,7 +225,7 @@ export function ReminderSettings({
               placeholder="0"
               value={newMinute}
               onChange={handleMinuteChange}
-              className="w-20"
+              className="w-20 hover:border-primary/50 focus:border-primary transition-colors"
             />
           </div>
           

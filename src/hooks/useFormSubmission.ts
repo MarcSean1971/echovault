@@ -98,6 +98,16 @@ export function useFormSubmission() {
             return;
           }
           
+          // Convert decimal reminder hours to integers by converting to minutes
+          const reminderMinutes = reminderHours.map(hour => {
+            if (Number.isInteger(hour)) {
+              return hour * 60;
+            }
+            return Math.round(hour * 60);
+          });
+          
+          console.log("Converting reminder hours to minutes:", reminderHours, "->", reminderMinutes);
+          
           // Create the message condition with all options
           await createMessageCondition(
             message.id,
@@ -116,8 +126,8 @@ export function useFormSubmission() {
               unlockDelayHours: unlockDelay,
               expiryHours,
               
-              // Reminders
-              reminderHours,
+              // Reminders - now using minutes instead of decimal hours
+              reminderHours: reminderMinutes,
               
               // Panic trigger settings
               panicTriggerConfig,
