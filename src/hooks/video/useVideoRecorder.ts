@@ -1,6 +1,8 @@
 
 import { useState, useRef } from "react";
 import { toast } from "@/components/ui/use-toast";
+import { useMessageForm } from "@/components/message/MessageFormContext";
+import { formatVideoContent } from "@/services/messages/transcriptionService";
 
 export function useVideoRecorder(previewStream: MediaStream | null, streamRef: React.RefObject<MediaStream | null>) {
   const [isRecording, setIsRecording] = useState(false);
@@ -8,6 +10,7 @@ export function useVideoRecorder(previewStream: MediaStream | null, streamRef: R
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const videoChunksRef = useRef<Blob[]>([]);
+  const { setVideoContent, setContent } = useMessageForm();
 
   // Function to start recording
   const startRecording = async () => {
@@ -33,7 +36,7 @@ export function useVideoRecorder(previewStream: MediaStream | null, streamRef: R
         }
       };
       
-      mediaRecorder.onstop = () => {
+      mediaRecorder.onstop = async () => {
         console.log("Media recorder stopped, processing video...");
         const videoBlob = new Blob(videoChunksRef.current, { type: 'video/webm' });
         console.log("Created video blob:", videoBlob.size, "bytes");
@@ -43,6 +46,17 @@ export function useVideoRecorder(previewStream: MediaStream | null, streamRef: R
         console.log("Created video URL:", videoUrl);
         setVideoUrl(videoUrl);
         setIsRecording(false);
+        
+        // Update form context with new video content
+        try {
+          console.log("Updating form context with new video content");
+          const formattedContent = await formatVideoContent(videoBlob, null);
+          setVideoContent(formattedContent);
+          setContent(formattedContent);
+          console.log("Form context updated with new video content");
+        } catch (error) {
+          console.error("Error updating form context with video content:", error);
+        }
       };
       
       // Start the recorder

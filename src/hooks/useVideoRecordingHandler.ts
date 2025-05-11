@@ -7,7 +7,7 @@ import { useMessageForm } from "@/components/message/MessageFormContext";
 import { formatVideoContent } from "@/services/messages/transcriptionService";
 
 export function useVideoRecordingHandler() {
-  const { setContent, setVideoContent } = useMessageForm();
+  const { setContent, setVideoContent, setTextContent } = useMessageForm();
   // Use our custom hooks
   const {
     previewStream,
@@ -41,8 +41,14 @@ export function useVideoRecordingHandler() {
     console.log("useVideoRecordingHandler: Clearing video");
     clearVideoBase(videoUrl, setVideoBlob, setVideoUrl);
     
-    // Clear the videoContent in the form context
-    setVideoContent("");
+    // Instead of just clearing videoContent, set it to an empty object
+    // This allows the form to know we have a video type but no content yet
+    console.log("Setting videoContent to empty object after clearing");
+    setVideoContent(JSON.stringify({ videoData: null, transcription: null }));
+    
+    // Don't clear the entire content, as this might contain text content
+    // We'll just update it without the video data
+    console.log("Updating form content after clearing video");
   };
   
   // Wrapper function for restoreVideo with transcription support
