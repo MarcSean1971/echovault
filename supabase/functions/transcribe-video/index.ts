@@ -31,13 +31,14 @@ serve(async (req) => {
       bytes[i] = binaryString.charCodeAt(i);
     }
     
-    // Create a blob with the correct MIME type for Whisper API
-    // Whisper API supports: flac, m4a, mp3, mp4, mpeg, mpga, oga, ogg, wav, webm
-    const blob = new Blob([bytes], { type: 'video/webm' });
+    // Create a blob with the correct MIME type
+    // Important: For Whisper API, we need to use audio/* MIME type, not video/webm
+    // Even though the OpenAI docs say webm is supported, it's referring to audio/webm format
+    const blob = new Blob([bytes], { type: 'audio/mp4' });
     
     // Create FormData for the OpenAI API
     const formData = new FormData();
-    formData.append('file', blob, 'video.webm'); // Use .webm extension to match the MIME type
+    formData.append('file', blob, 'audio.mp4'); // Use audio extension and type
     formData.append('model', 'whisper-1');
     formData.append('language', 'en');
     
@@ -55,7 +56,19 @@ serve(async (req) => {
     if (!response.ok) {
       const errorData = await response.text();
       console.error("OpenAI API error:", errorData);
-      throw new Error(`OpenAI API returned an error: ${response.status} ${response.statusText}`);
+      
+      // Extract the specific error message if possible
+      let errorMessage = `OpenAI API returned an error: ${response.status} ${response.statusText}`;
+      try {
+        const errorJson = JSON.parse(errorData);
+        if (errorJson.error && errorJson.error.message) {
+          errorMessage = errorJson.error.message;
+        }
+      } catch (e) {
+        // If parsing fails, use the original error message
+      }
+      
+      throw new Error(errorMessage);
     }
     
     const data = await response.json();

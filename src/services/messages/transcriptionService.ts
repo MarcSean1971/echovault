@@ -26,8 +26,8 @@ export const transcribeVideoContent = async (videoBlob: Blob): Promise<string> =
     // Show a toast to indicate transcription has started
     const loadingToast = toast({
       title: "Processing video",
-      description: "Transcribing your video, this may take a moment...",
-      duration: 10000, // Show for 10 seconds at least
+      description: "Extracting audio and transcribing, this may take a moment...",
+      duration: 20000, // Show for longer since processing takes time
     });
     
     // Convert video blob to base64
@@ -54,14 +54,33 @@ export const transcribeVideoContent = async (videoBlob: Blob): Promise<string> =
     }
     
     console.log("Transcription successful:", data.transcription);
+    toast({
+      title: "Transcription complete",
+      description: "Video transcription completed successfully",
+      duration: 3000,
+    });
+    
     return data.transcription;
   } catch (error: any) {
     console.error("Error transcribing video:", error);
+    
+    // Provide more helpful error messages based on common issues
+    let errorMessage = error.message || "Failed to transcribe video content";
+    
+    // Check for specific error patterns
+    if (errorMessage.includes("Invalid file format")) {
+      errorMessage = "Invalid audio format. Please ensure your recording has clear audio.";
+    } else if (errorMessage.includes("too large")) {
+      errorMessage = "Video is too large for transcription. Please record a shorter video.";
+    }
+    
     toast({
       title: "Transcription failed",
-      description: error.message || "Failed to transcribe video content",
-      variant: "destructive"
+      description: errorMessage,
+      variant: "destructive",
+      duration: 5000,
     });
+    
     throw error;
   }
 };
