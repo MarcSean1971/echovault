@@ -6,6 +6,7 @@ import { getMessageIcon } from "@/utils/messageFormatUtils";
 import { Message } from "@/types/message";
 import { Shield } from "lucide-react";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { useMessageDeliveryStatus } from "@/hooks/useMessageDeliveryStatus";
 
 interface MessageCardHeaderProps {
   message: Message;
@@ -15,6 +16,9 @@ interface MessageCardHeaderProps {
 }
 
 export function MessageCardHeader({ message, isArmed, formatDate, isPanicTrigger = false }: MessageCardHeaderProps) {
+  // Get delivery status
+  const { isDelivered } = useMessageDeliveryStatus(message.id);
+  
   return (
     <div className="flex justify-between items-start">
       <div className="flex items-start gap-2">
@@ -34,11 +38,20 @@ export function MessageCardHeader({ message, isArmed, formatDate, isPanicTrigger
         </div>
       </div>
       
-      {isArmed && (
-        <StatusBadge status="armed" size="sm" className="animate-pulse">
-          Armed
-        </StatusBadge>
-      )}
+      {/* Show status badges */}
+      <div className="flex gap-2">
+        {isDelivered && (
+          <StatusBadge status="success" size="sm">
+            Sent
+          </StatusBadge>
+        )}
+        
+        {isArmed && (
+          <StatusBadge status="armed" size="sm" className="animate-pulse">
+            Armed
+          </StatusBadge>
+        )}
+      </div>
     </div>
   );
 }

@@ -3,10 +3,11 @@ import { useState, useEffect } from "react";
 import { Message, MessageCondition } from "@/types/message";
 import { MessageTimer } from "../MessageTimer";
 import { MessageTypeIcon } from "../detail/MessageTypeIcon";
-import { MapPin, AlertCircle, Calendar, MessageSquare, Video } from "lucide-react";
+import { MapPin, AlertCircle, Calendar, MessageSquare, Video, Clock } from "lucide-react";
 import { HOVER_TRANSITION, ICON_HOVER_EFFECTS } from "@/utils/hoverEffects";
 import { parseVideoContent } from "@/services/messages/mediaService";
 import { useMessageAdditionalText } from "@/hooks/useMessageAdditionalText";
+import { useMessageLastCheckIn } from "@/hooks/useMessageLastCheckIn";
 
 interface MessageCardContentProps {
   message: Message;
@@ -17,6 +18,7 @@ interface MessageCardContentProps {
   refreshTrigger: number;
   isPanicSending?: boolean;
   panicCountDown?: number;
+  isDelivered?: boolean;
 }
 
 export function MessageCardContent({
@@ -27,7 +29,8 @@ export function MessageCardContent({
   transcription,
   refreshTrigger,
   isPanicSending = false,
-  panicCountDown = 0
+  panicCountDown = 0,
+  isDelivered = false
 }: MessageCardContentProps) {
   // Display location if available and enabled
   const hasLocation = message.share_location && 
@@ -45,6 +48,9 @@ export function MessageCardContent({
   
   // Get additional text for video messages
   const { additionalText } = useMessageAdditionalText(message);
+  
+  // Get last check-in time formatting
+  const { formattedCheckIn, isDeadmansSwitch: isDMS } = useMessageLastCheckIn(condition);
   
   // Detect video content
   useEffect(() => {
@@ -108,6 +114,14 @@ export function MessageCardContent({
           </span>
         </div>
       </div>
+      
+      {/* Show last check-in time for deadman's switch messages */}
+      {isDMS && formattedCheckIn && (
+        <div className="text-xs flex items-center mt-1 text-muted-foreground">
+          <Clock className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+          <span>Last check-in: {formattedCheckIn}</span>
+        </div>
+      )}
       
       {/* Show metadata badges in a flex row */}
       <div className="flex flex-wrap gap-2 mt-3">

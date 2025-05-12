@@ -10,6 +10,7 @@ import { useMessageTranscription } from "@/hooks/useMessageTranscription";
 import { usePanicSendingState } from "@/hooks/usePanicSendingState";
 import { useMessageCardActions } from "@/hooks/useMessageCardActions";
 import { useConditionRefresh } from "@/hooks/useConditionRefresh";
+import { useMessageDeliveryStatus } from "@/hooks/useMessageDeliveryStatus";
 
 interface MessageCardProps {
   message: Message;
@@ -31,6 +32,9 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
   
   // Get transcription if available
   const { transcription } = useMessageTranscription(message);
+  
+  // Get message delivery status
+  const { isDelivered } = useMessageDeliveryStatus(message.id);
   
   // Get message actions
   const { isLoading, handleArmMessage, handleDisarmMessage } = useMessageCardActions();
@@ -55,23 +59,33 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
     setRefreshCounter(prev => prev + 1);
   };
 
-  console.log(`[MessageCard ${message.id}] Rendering with refreshCounter: ${refreshCounter}, deadline: ${deadline?.toISOString() || 'null'}, isArmed: ${isArmed}`);
-
   // Check if this is a panic trigger message
   const isPanicTrigger = condition?.condition_type === 'panic_trigger';
+
+  // Determine card color based on status
+  const getCardClasses = () => {
+    if (isPanicSending) {
+      return 'border-red-500 shadow-red-100 border-2 animate-pulse bg-gradient-to-br from-red-50 to-white';
+    } else if (isDelivered) {
+      return 'border-blue-300 bg-gradient-to-br from-blue-50 to-white';
+    } else if (isArmed) {
+      return 'border-destructive/50 bg-gradient-to-br from-red-50 to-white';
+    } else {
+      return 'border-green-300 bg-gradient-to-br from-green-50 to-white';
+    }
+  };
 
   return (
     <Card 
       key={message.id} 
-      className={`overflow-hidden group transition-all duration-300 hover:shadow-md ${
-        isPanicSending 
-          ? 'border-red-500 shadow-red-100 border-2 animate-pulse bg-gradient-to-br from-red-50 to-white' 
-          : isArmed 
-            ? 'border-destructive/50 bg-gradient-to-br from-red-50 to-white' 
-            : 'border-green-300 bg-gradient-to-br from-green-50 to-white'
-      }`}
+      className={`overflow-hidden group transition-all duration-300 hover:shadow-md ${getCardClasses()}`}
     >
-      <CardHeader className={`pb-3 ${isPanicSending ? 'bg-red-50/50' : isArmed ? 'bg-red-50/20' : 'bg-green-50/20'}`}>
+      <CardHeader className={`pb-3 ${
+        isPanicSending ? 'bg-red-50/50' : 
+        isDelivered ? 'bg-blue-50/20' :
+        isArmed ? 'bg-red-50/20' : 
+        'bg-green-50/20'
+      }`}>
         <MessageCardHeader 
           message={message} 
           isArmed={isArmed} 
@@ -89,6 +103,7 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
           refreshTrigger={refreshCounter}
           isPanicSending={isPanicSending}
           panicCountDown={panicCountDown}
+          isDelivered={isDelivered}
         />
       </CardContent>
       <CardFooter className="flex justify-between border-t pt-4 bg-gradient-to-t from-muted/20 to-transparent">
