@@ -84,13 +84,14 @@ export function MessageDetailContent({
           recipientEmail={recipientEmail}
         />
         
-        {/* Status and Delivery Settings */}
+        {/* Status and Delivery Settings - Now with deadline prop */}
         <StatusDeliverySection
           condition={condition}
           isArmed={isArmed}
           formatDate={formatDate}
           renderConditionType={renderConditionType}
           message={message}
+          deadline={deadline}
         />
         
         {/* Recipients Section */}

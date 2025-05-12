@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { MessageDeliverySettings } from "../MessageDeliverySettings";
+import { DesktopTimerAlert } from "../DesktopTimerAlert";
 
 interface StatusDeliverySectionProps {
   condition: any | null;
@@ -11,6 +12,7 @@ interface StatusDeliverySectionProps {
   formatDate: (dateString: string) => string;
   renderConditionType: () => string;
   message: any;
+  deadline?: Date | null;
 }
 
 export function StatusDeliverySection({
@@ -18,7 +20,8 @@ export function StatusDeliverySection({
   isArmed,
   formatDate,
   renderConditionType,
-  message
+  message,
+  deadline
 }: StatusDeliverySectionProps) {
   return (
     <Card className="overflow-hidden">
@@ -29,6 +32,13 @@ export function StatusDeliverySection({
             {isArmed ? "Armed" : "Disarmed"}
           </StatusBadge>
         </div>
+        
+        {/* Countdown Timer - only displayed when message is armed with deadline */}
+        {isArmed && deadline && (
+          <div className="mb-2">
+            <DesktopTimerAlert deadline={deadline} isArmed={isArmed} />
+          </div>
+        )}
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
