@@ -12,8 +12,12 @@ export function TextMessageContent({ message, content }: TextMessageContentProps
   const displayContent = content || message.content;
   
   return (
-    <div className="whitespace-pre-wrap prose dark:prose-invert max-w-none text-sm md:text-base">
-      {displayContent || <span className="text-muted-foreground italic">No content</span>}
-    </div>
+    displayContent ? (
+      <div className="whitespace-pre-wrap prose dark:prose-invert max-w-none text-sm md:text-base">
+        {displayContent}
+      </div>
+    ) : (
+      <span className="text-muted-foreground italic">No content</span>
+    )
   );
 }
