@@ -1,7 +1,8 @@
 
-import type { RecurringPattern, RecurringPatternType } from "@/types/message";
+import type { RecurringPattern } from "@/types/message";
 
-export type { RecurringPattern, RecurringPatternType };
+// Define RecurringPatternType since it's not exported from @/types/message
+export type RecurringPatternType = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
 export interface RecurringPatternProps {
   pattern: RecurringPattern | null;
