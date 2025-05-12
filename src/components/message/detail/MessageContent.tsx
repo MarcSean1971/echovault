@@ -116,19 +116,7 @@ export function MessageContent({
         {renderMessageContent()}
       </div>
       
-      {/* Location display section */}
-      {hasLocationData && (
-        <div className="mt-6">
-          <Separator className="my-4" />
-          <LocationDisplay 
-            latitude={message.location_latitude} 
-            longitude={message.location_longitude}
-            locationName={message.location_name}
-          />
-        </div>
-      )}
-      
-      {/* Attachments section */}
+      {/* Attachments section - MOVED ABOVE location display */}
       {message.attachments && message.attachments.length > 0 && (
         <div>
           <Separator className="my-4" />
@@ -137,6 +125,18 @@ export function MessageContent({
             message={message}
             deliveryId={deliveryId}
             recipientEmail={recipientEmail}
+          />
+        </div>
+      )}
+      
+      {/* Location display section - NOW BELOW attachments */}
+      {hasLocationData && (
+        <div className="mt-6">
+          <Separator className="my-4" />
+          <LocationDisplay 
+            latitude={message.location_latitude} 
+            longitude={message.location_longitude}
+            locationName={message.location_name}
           />
         </div>
       )}
