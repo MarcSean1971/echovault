@@ -24,8 +24,8 @@ interface DeliveryMethodContentProps {
   setTriggerDate: (date: Date | null) => void;
   panicTriggerConfig: PanicTriggerConfig | undefined;
   setPanicTriggerConfig: (config: PanicTriggerConfig) => void;
-  reminderHours: number[];
-  setReminderHours: (hours: number[]) => void;
+  reminderMinutes: number[]; // Renamed from reminderHours to reminderMinutes
+  setReminderMinutes: (minutes: number[]) => void; // Updated parameter name
   setActiveTab: (tab: string) => void;
   checkInCode: string;
   setCheckInCode: (code: string) => void;
@@ -46,8 +46,8 @@ export function DeliveryMethodContent({
   setTriggerDate,
   panicTriggerConfig,
   setPanicTriggerConfig,
-  reminderHours,
-  setReminderHours,
+  reminderMinutes, // Renamed from reminderHours
+  setReminderMinutes, // Renamed from setReminderHours
   setActiveTab,
   checkInCode,
   setCheckInCode
@@ -92,8 +92,8 @@ export function DeliveryMethodContent({
             setRecurringPattern={setRecurringPattern}
             triggerDate={triggerDate}
             setTriggerDate={setTriggerDate}
-            reminderHours={reminderHours}
-            setReminderHours={setReminderHours}
+            reminderMinutes={reminderMinutes}
+            setReminderMinutes={setReminderMinutes}
             renderCustomCheckInCode={renderCustomCheckInCode}
           />
         );
@@ -128,8 +128,8 @@ export function DeliveryMethodContent({
             setMinutesThreshold={setMinutesThreshold}
             recurringPattern={recurringPattern}
             setRecurringPattern={setRecurringPattern}
-            reminderHours={reminderHours}
-            setReminderHours={setReminderHours}
+            reminderMinutes={reminderMinutes}
+            setReminderMinutes={setReminderMinutes}
           />
         );
         
@@ -144,8 +144,8 @@ export function DeliveryMethodContent({
             setTriggerDate={setTriggerDate}
             recurringPattern={recurringPattern}
             setRecurringPattern={setRecurringPattern}
-            reminderHours={reminderHours}
-            setReminderHours={setReminderHours}
+            reminderMinutes={reminderMinutes}
+            setReminderMinutes={setReminderMinutes}
           />
         );
         

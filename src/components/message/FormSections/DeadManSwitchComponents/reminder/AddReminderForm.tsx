@@ -9,38 +9,39 @@ import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 interface AddReminderFormProps {
   onAddReminder: (minutes: number) => void;
   existingReminders: number[];
-  maxHours?: number;
+  maxMinutes?: number;
 }
 
 export function AddReminderForm({ 
   onAddReminder, 
   existingReminders, 
-  maxHours 
+  maxMinutes 
 }: AddReminderFormProps) {
   const [newHour, setNewHour] = useState<string>("");
   const [newMinute, setNewMinute] = useState<string>("");
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [maxMinutes, setMaxMinutes] = useState<number>(59);
+  const [maxMinutesValue, setMaxMinutesValue] = useState<number>(59);
 
   // Update maxMinutes when newHour or maxHours changes
   useEffect(() => {
-    if (maxHours) {
+    if (maxMinutes) {
       const hourValue = parseInt(newHour) || 0;
+      const hourInMinutes = hourValue * 60;
       
-      if (hourValue === Math.floor(maxHours)) {
-        // If we're at the max hour, restrict minutes
-        const maxMinutesValue = Math.floor((maxHours - Math.floor(maxHours)) * 60);
-        setMaxMinutes(maxMinutesValue);
+      if (hourInMinutes + 59 > maxMinutes) {
+        // If adding 59 minutes would exceed maxMinutes, restrict max minutes value
+        const remainingMinutes = Math.max(0, maxMinutes - hourInMinutes);
+        setMaxMinutesValue(remainingMinutes);
       } else {
         // Otherwise, full range of minutes
-        setMaxMinutes(59);
+        setMaxMinutesValue(59);
       }
     }
-  }, [newHour, maxHours]);
+  }, [newHour, maxMinutes]);
 
   // Validate the current input combination
   const validateCurrentInput = (hour: string, minute: string): boolean => {
-    if (!maxHours) return true;
+    if (!maxMinutes) return true;
     
     const hourValue = parseInt(hour) || 0;
     const minuteValue = parseInt(minute) || 0;
@@ -48,8 +49,8 @@ export function AddReminderForm({
     // Convert to total minutes for comparison
     const totalMinutes = hoursMinutesToMinutes(hourValue, minuteValue);
     
-    // Compare to maxHours converted to minutes
-    return totalMinutes < (maxHours * 60);
+    // Compare to maxMinutes
+    return totalMinutes < maxMinutes;
   };
 
   // Handle hour input change
@@ -59,10 +60,13 @@ export function AddReminderForm({
     
     // If the new hour is valid but would make the current minute invalid,
     // adjust the minute value
-    if (maxHours && parseInt(value) === Math.floor(maxHours)) {
-      const maxMinutesValue = Math.floor((maxHours - Math.floor(maxHours)) * 60);
-      if (parseInt(newMinute) > maxMinutesValue) {
-        setNewMinute(maxMinutesValue.toString());
+    if (maxMinutes) {
+      const hourValue = parseInt(value) || 0;
+      const hourInMinutes = hourValue * 60;
+      
+      if (hourInMinutes + parseInt(newMinute || "0") > maxMinutes) {
+        const remainingMinutes = Math.max(0, maxMinutes - hourInMinutes);
+        setNewMinute(Math.min(parseInt(newMinute || "0"), remainingMinutes).toString());
       }
     }
     
@@ -77,12 +81,13 @@ export function AddReminderForm({
     const value = e.target.value;
     
     // Validate the new minute value
-    if (maxHours) {
+    if (maxMinutes) {
       const hourValue = parseInt(newHour) || 0;
       const minuteValue = parseInt(value) || 0;
+      const totalMinutes = hourValue * 60 + minuteValue;
       
-      if (hourValue === Math.floor(maxHours) && minuteValue > maxMinutes) {
-        setValidationError(`Minutes must be less than ${maxMinutes + 1} when hours is ${hourValue}`);
+      if (totalMinutes > maxMinutes) {
+        setValidationError(`Total time must be less than ${Math.floor(maxMinutes / 60)} hours and ${maxMinutes % 60} minutes`);
         return;
       }
     }
@@ -111,9 +116,9 @@ export function AddReminderForm({
     // Convert to minutes for storage
     const totalMinutes = hoursMinutesToMinutes(hourValue, minuteValue);
     
-    // If maxHours is provided, ensure the combined value is less than it
-    if (maxHours && totalMinutes >= (maxHours * 60)) {
-      setValidationError(`Reminder time must be less than the check-in threshold (${Math.floor(maxHours * 60)} minutes)`);
+    // If maxMinutes is provided, ensure the combined value is less than it
+    if (maxMinutes && totalMinutes >= maxMinutes) {
+      setValidationError(`Reminder time must be less than the check-in threshold (${Math.floor(maxMinutes / 60)} hours and ${maxMinutes % 60} minutes)`);
       return;
     }
     
@@ -136,7 +141,7 @@ export function AddReminderForm({
             id="reminder-hours"
             type="number"
             min="0"
-            max={maxHours ? Math.floor(maxHours) : undefined}
+            max={maxMinutes ? Math.floor(maxMinutes / 60) : undefined}
             placeholder="0"
             value={newHour}
             onChange={handleHourChange}
@@ -150,7 +155,7 @@ export function AddReminderForm({
             id="reminder-minutes"
             type="number"
             min="0"
-            max={maxMinutes}
+            max={maxMinutesValue}
             placeholder="0"
             value={newMinute}
             onChange={handleMinuteChange}

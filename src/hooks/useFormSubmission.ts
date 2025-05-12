@@ -1,3 +1,4 @@
+
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/components/ui/use-toast";
@@ -37,7 +38,7 @@ export function useFormSubmission() {
     unlockDelay,
     expiryHours,
     deliveryOption,
-    reminderHours,
+    reminderMinutes, // Renamed from reminderHours to reminderMinutes
     checkInCode
   } = useMessageForm();
 
@@ -97,8 +98,8 @@ export function useFormSubmission() {
             return;
           }
           
-          // The reminderHours array already contains minute values - no conversion needed
-          console.log("Using reminder minutes:", reminderHours);
+          // Values are already in minutes, no conversion needed
+          console.log("Using reminder minutes:", reminderMinutes);
           
           // Create the message condition with all options
           await createMessageCondition(
@@ -118,8 +119,8 @@ export function useFormSubmission() {
               unlockDelayHours: unlockDelay,
               expiryHours,
               
-              // Reminders - now using minutes instead of decimal hours
-              reminderHours,
+              // Reminders - values already in minutes
+              reminderHours: reminderMinutes,
               
               // Panic trigger settings
               panicTriggerConfig,

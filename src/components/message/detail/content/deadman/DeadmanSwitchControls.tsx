@@ -8,19 +8,19 @@ import { toast } from "@/components/ui/use-toast";
 
 interface DeadmanSwitchControlsProps {
   messageId: string;
-  reminderHours?: number[]; // NOTE: Despite the name, these values are actually in minutes
+  reminderMinutes?: number[]; // Renamed from reminderHours to reminderMinutes for clarity
   isArmed: boolean;
 }
 
 export function DeadmanSwitchControls({ 
   messageId, 
-  reminderHours = [],
+  reminderMinutes = [], // Variable renamed for clarity
   isArmed
 }: DeadmanSwitchControlsProps) {
   const [isSendingReminder, setIsSendingReminder] = useState(false);
   
-  // Only show reminders section if there are reminder hours configured
-  if (reminderHours.length === 0) {
+  // Only show reminders section if there are reminder minutes configured
+  if (reminderMinutes.length === 0) {
     return null;
   }
 
@@ -119,11 +119,11 @@ export function DeadmanSwitchControls({
         )}
       </div>
       
-      {reminderHours.length > 0 && (
+      {reminderMinutes.length > 0 && (
         <div className="mt-2">
           <p className="text-xs font-medium mb-1">Reminders scheduled at:</p>
           <div className="flex flex-wrap gap-1">
-            {reminderHours.sort((a, b) => b - a).map((minutes) => (
+            {reminderMinutes.sort((a, b) => b - a).map((minutes) => (
               <Badge 
                 key={minutes} 
                 variant="secondary" 

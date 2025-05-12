@@ -15,8 +15,8 @@ interface NoCheckInConditionProps {
   setRecurringPattern: (pattern: RecurringPattern | null) => void;
   triggerDate: Date | null;
   setTriggerDate: (date: Date | null) => void;
-  reminderHours: number[];
-  setReminderHours: (hours: number[]) => void;
+  reminderMinutes: number[];
+  setReminderMinutes: (minutes: number[]) => void;
   renderCustomCheckInCode: () => React.ReactNode;
 }
 
@@ -31,18 +31,18 @@ export function NoCheckInCondition({
   setRecurringPattern,
   triggerDate,
   setTriggerDate,
-  reminderHours,
-  setReminderHours,
+  reminderMinutes,
+  setReminderMinutes,
   renderCustomCheckInCode
 }: NoCheckInConditionProps) {
-  // Calculate the total threshold in decimal hours for no_check_in
-  const calculateTotalThreshold = (): number => {
-    return hoursThreshold + (minutesThreshold / 60);
+  // Calculate the total threshold in minutes for no_check_in
+  const calculateTotalMinutes = (): number => {
+    return (hoursThreshold * 60) + minutesThreshold;
   };
   
-  // Calculate the maximum hours for reminders based on the threshold
+  // Calculate the maximum minutes for reminders based on the threshold
   // This ensures reminders are only set within the check-in window
-  const maxReminderHours = hoursThreshold + (minutesThreshold / 60);
+  const maxReminderMinutes = calculateTotalMinutes();
   
   return (
     <div className="space-y-6">
@@ -56,9 +56,9 @@ export function NoCheckInCondition({
       
       {/* Reminder Settings */}
       <ReminderSettings
-        reminderHours={reminderHours}
-        setReminderHours={setReminderHours}
-        maxHours={maxReminderHours}
+        reminderMinutes={reminderMinutes}
+        setReminderMinutes={setReminderMinutes}
+        maxMinutes={maxReminderMinutes}
       />
       
       {/* Custom check-in code input */}

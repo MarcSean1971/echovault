@@ -1,3 +1,4 @@
+
 import { useEffect } from "react";
 import { Message, MessageCondition, TriggerType } from "@/types/message";
 import { fetchMessageConditions } from "@/services/messages/conditionService";
@@ -22,7 +23,7 @@ export function useMessageFormLoader(message: Message) {
     setUnlockDelay,
     setExpiryHours,
     setDeliveryOption,
-    setReminderHours,
+    setReminderMinutes, // Renamed from setReminderHours to setReminderMinutes
     setCheckInCode,
     setShareLocation,
     setLocationLatitude,
@@ -119,11 +120,10 @@ export function useMessageFormLoader(message: Message) {
             setDeliveryOption("once");
           }
           
-          // Set reminder hours - these are stored as minutes in the database
+          // Set reminder minutes - values are already stored as minutes in the database
           if (messageCondition.reminder_hours && messageCondition.reminder_hours.length > 0) {
-            // reminder_hours already contains minute values, so no conversion needed
             console.log("Setting reminder minutes from condition:", messageCondition.reminder_hours);
-            setReminderHours(messageCondition.reminder_hours);
+            setReminderMinutes(messageCondition.reminder_hours);
           }
           
           // Set custom check-in code
@@ -157,7 +157,7 @@ export function useMessageFormLoader(message: Message) {
     setUnlockDelay,
     setExpiryHours,
     setDeliveryOption,
-    setReminderHours,
+    setReminderMinutes, // Updated prop name
     setCheckInCode,
     setShareLocation,
     setLocationLatitude,

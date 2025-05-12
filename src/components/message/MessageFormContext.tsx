@@ -44,8 +44,8 @@ interface MessageFormContextType {
   setUnlockDelay: (hours: number) => void;
   expiryHours: number;
   setExpiryHours: (hours: number) => void;
-  reminderHours: number[];
-  setReminderHours: (hours: number[]) => void;
+  reminderMinutes: number[]; // Renamed from reminderHours to reminderMinutes
+  setReminderMinutes: (minutes: number[]) => void; // Updated parameter name
   checkInCode: string;
   setCheckInCode: (code: string) => void;
   // Location-related fields
@@ -89,8 +89,8 @@ export const MessageFormProvider = ({ children }: { children: React.ReactNode })
   const [unlockDelay, setUnlockDelay] = useState(0);
   const [expiryHours, setExpiryHours] = useState(0);
   
-  // Reminders
-  const [reminderHours, setReminderHours] = useState<number[]>([24]); // Default 24 hour reminder
+  // Reminders - now properly named as minutes
+  const [reminderMinutes, setReminderMinutes] = useState<number[]>([24 * 60]); // Default 24 hour reminder (converted to 1440 minutes)
   
   // Custom check-in code
   const [checkInCode, setCheckInCode] = useState("");
@@ -142,8 +142,8 @@ export const MessageFormProvider = ({ children }: { children: React.ReactNode })
     setUnlockDelay,
     expiryHours,
     setExpiryHours,
-    reminderHours,
-    setReminderHours,
+    reminderMinutes,
+    setReminderMinutes,
     checkInCode,
     setCheckInCode,
     // Add location-related values to the context

@@ -30,8 +30,8 @@ export function DeadManSwitch() {
     setExpiryHours,
     deliveryOption,
     setDeliveryOption,
-    reminderHours,
-    setReminderHours,
+    reminderMinutes,
+    setReminderMinutes,
     checkInCode,
     setCheckInCode
   } = useMessageForm();
@@ -78,8 +78,8 @@ export function DeadManSwitch() {
                 setTriggerDate={setTriggerDate}
                 panicTriggerConfig={panicTriggerConfig}
                 setPanicTriggerConfig={setPanicTriggerConfig}
-                reminderHours={reminderHours}
-                setReminderHours={setReminderHours}
+                reminderMinutes={reminderMinutes}
+                setReminderMinutes={setReminderMinutes}
                 setActiveTab={() => {}}
                 checkInCode={checkInCode}
                 setCheckInCode={setCheckInCode}

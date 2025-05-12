@@ -1,3 +1,4 @@
+
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,7 +32,7 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
     pinCode,
     unlockDelay,
     expiryHours,
-    reminderHours,
+    reminderMinutes, // Renamed from reminderHours to reminderMinutes
     checkInCode,
     shareLocation,
     locationName,
@@ -153,20 +154,10 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
         throw new Error("Please select at least one recipient.");
       }
       
-      // Convert decimal reminder hours to integers by multiplying by 60 (to minutes)
-      // This fixes the "Invalid input syntax for type integer" error
-      const reminderMinutes = reminderHours.map(hour => {
-        // If hour is already an integer, just multiply by 60
-        // Otherwise, convert the fractional hours to minutes
-        if (Number.isInteger(hour)) {
-          return hour * 60;
-        }
-        
-        // For fractional values, convert to minutes and round
-        return Math.round(hour * 60);
-      });
+      // Values are already in minutes (not hours), so no conversion needed
+      const reminderMinutesArray = reminderMinutes;
       
-      console.log("Converting reminder hours to minutes:", reminderHours, "->", reminderMinutes);
+      console.log("Using reminder minutes:", reminderMinutesArray);
       
       // Handle trigger conditions
       if (existingCondition) {
@@ -180,7 +171,7 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
           pin_code: pinCode || null,
           trigger_date: triggerDate ? triggerDate.toISOString() : null,
           panic_trigger_config: panicTriggerConfig,
-          reminder_hours: reminderMinutes, // Use minutes instead of decimal hours
+          reminder_hours: reminderMinutesArray, // Values already in minutes
           unlock_delay_hours: unlockDelay,
           expiry_hours: expiryHours,
           recipients: selectedRecipientObjects,
@@ -202,7 +193,7 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
             unlockDelayHours: unlockDelay,
             expiryHours,
             panicTriggerConfig,
-            reminderHours: reminderMinutes, // Use minutes instead of decimal hours
+            reminderHours: reminderMinutesArray, // Values already in minutes
             checkInCode: checkInCode || undefined
           }
         );

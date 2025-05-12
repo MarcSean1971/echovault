@@ -6,43 +6,43 @@ import { AddReminderForm } from "./reminder/AddReminderForm";
 import { formatThreshold } from "./reminder/TimeConversionUtils";
 
 interface ReminderSettingsProps {
-  reminderHours: number[]; // Note: This is actually minutes despite the name
-  setReminderHours: (hours: number[]) => void;
-  maxHours?: number;
+  reminderMinutes: number[]; // Changed from reminderHours to reminderMinutes for clarity
+  setReminderMinutes: (minutes: number[]) => void; // Updated parameter name
+  maxMinutes?: number; // Changed from maxHours to maxMinutes
 }
 
 export function ReminderSettings({
-  reminderHours,
-  setReminderHours,
-  maxHours
+  reminderMinutes,
+  setReminderMinutes,
+  maxMinutes
 }: ReminderSettingsProps) {
   const handleAddReminder = (minutes: number) => {
-    setReminderHours([...reminderHours, minutes].sort((a, b) => a - b));
+    setReminderMinutes([...reminderMinutes, minutes].sort((a, b) => a - b));
   };
   
   const handleRemoveReminder = (minutes: number) => {
-    setReminderHours(reminderHours.filter(h => h !== minutes));
+    setReminderMinutes(reminderMinutes.filter(m => m !== minutes));
   };
 
   return (
     <div className="space-y-4">
       <div>
-        <Label htmlFor="reminder-hours">Reminder notifications</Label>
+        <Label htmlFor="reminder-minutes">Reminder notifications</Label>
         <p className="text-sm text-muted-foreground mt-1">
           Send reminders before the message is delivered
-          {maxHours && ` (must be less than ${formatThreshold(maxHours * 60)})`}
+          {maxMinutes && ` (must be less than ${formatThreshold(maxMinutes)})`}
         </p>
       </div>
 
       <ReminderBadges
-        reminderMinutes={reminderHours}
+        reminderMinutes={reminderMinutes}
         onRemoveReminder={handleRemoveReminder}
       />
       
       <AddReminderForm
         onAddReminder={handleAddReminder}
-        existingReminders={reminderHours}
-        maxHours={maxHours}
+        existingReminders={reminderMinutes}
+        maxMinutes={maxMinutes}
       />
     </div>
   );
