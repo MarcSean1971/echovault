@@ -47,21 +47,15 @@ export function MessageDeliverySettings({
               </span>
             </div>
             
-            {/* Show reminder settings directly after check-in period */}
+            {/* Show reminder settings in same format as other settings */}
             {condition.reminder_hours && condition.reminder_hours.length > 0 && (
-              <div className="flex flex-col">
+              <div className="flex justify-between">
                 <span className="font-medium">Reminder settings:</span>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {condition.reminder_hours.sort((a: number, b: number) => b - a).map((minutes: number) => (
-                    <Badge 
-                      key={minutes} 
-                      variant="secondary" 
-                      className={`text-xs hover:bg-slate-200 ${HOVER_TRANSITION}`}
-                    >
-                      {formatReminderTime(minutes)} before deadline
-                    </Badge>
-                  ))}
-                </div>
+                <span className="text-right">
+                  {condition.reminder_hours.sort((a: number, b: number) => b - a)
+                    .map((minutes: number) => formatReminderTime(minutes))
+                    .join(', ')}
+                </span>
               </div>
             )}
           </>
@@ -89,7 +83,7 @@ export function MessageDeliverySettings({
         )}
       </div>
       
-      {/* Security settings section - Now showing PIN code here */}
+      {/* Security settings section - Now showing PIN code in consistent format */}
       {(condition.expiry_hours > 0 || condition.unlock_delay_hours > 0 || condition.pin_code) && (
         <>
           <Separator className="my-4" />
@@ -100,16 +94,11 @@ export function MessageDeliverySettings({
             </div>
             
             {condition.pin_code && (
-              <div className="text-sm">
-                <p className="font-medium">PIN Code</p>
-                <div className="flex items-center gap-1.5 mt-1">
-                  <code className="bg-muted px-2 py-0.5 rounded text-xs font-mono">
-                    {condition.pin_code}
-                  </code>
-                  <span className="text-xs text-muted-foreground">
-                    Recipients will need this PIN to access the message
-                  </span>
-                </div>
+              <div className="flex justify-between text-sm">
+                <span className="font-medium">PIN Code:</span>
+                <span className="text-right">
+                  {condition.pin_code}
+                </span>
               </div>
             )}
             
