@@ -55,22 +55,22 @@ export function NoCheckInDeliveryOptions({
         </RadioGroup>
       </div>
 
-      {deliveryOption === "once" && (
-        <div className="mt-6 border-t pt-4">
-          <div className="space-y-2">
-            <Label className="font-medium mb-2 block">Earliest Possible Delivery (Optional)</Label>
-            <p className="text-sm text-muted-foreground mb-3">
-              If specified, the message will only be delivered on or after this date, even if triggered earlier.
-            </p>
-            <DatePicker 
-              selectedDate={triggerDate} 
-              setSelectedDate={setTriggerDate}
-              label="Earliest Delivery Date & Time" 
-            />
-          </div>
+      {/* Earliest Possible Delivery section now appears first for both options */}
+      <div className="mt-6 border-t pt-4">
+        <div className="space-y-2">
+          <Label className="font-medium mb-2 block">Earliest Possible Delivery (Optional)</Label>
+          <p className="text-sm text-muted-foreground mb-3">
+            If specified, the message will only be delivered on or after this date, even if triggered earlier.
+          </p>
+          <DatePicker 
+            selectedDate={triggerDate} 
+            setSelectedDate={setTriggerDate}
+            label="Earliest Delivery Date & Time" 
+          />
         </div>
-      )}
+      </div>
 
+      {/* Regular Schedule Options now appears second when recurring is selected */}
       {deliveryOption === "recurring" && (
         <div className="mt-6 border-t pt-4">
           <Label className="font-medium mb-3 block">Regular Schedule Options</Label>

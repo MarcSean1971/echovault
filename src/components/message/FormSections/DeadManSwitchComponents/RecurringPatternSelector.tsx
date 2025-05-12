@@ -1,3 +1,4 @@
+
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -115,6 +116,19 @@ export function RecurringPatternSelector({
       
       {isRecurring && (
         <div className="space-y-4 pt-2">
+          {/* Earliest Possible Delivery now appears first within the recurring pattern selector */}
+          <div>
+            <Label className="mb-2 block">Earliest Possible Delivery (Optional)</Label>
+            <p className="text-sm text-muted-foreground mb-3">
+              If specified, recurring messages will only begin on or after this date, even if triggered earlier.
+            </p>
+            <DatePicker
+              selectedDate={startDate}
+              setSelectedDate={handleDateChange}
+              label="Earliest Delivery Date & Time"
+            />
+          </div>
+
           <div>
             <Label htmlFor="recurring-type" className="mb-2 block">Repeat</Label>
             <Select 
@@ -242,18 +256,6 @@ export function RecurringPatternSelector({
               </div>
             </>
           )}
-          
-          <div>
-            <Label className="mb-2 block">Earliest Possible Delivery (Optional)</Label>
-            <p className="text-sm text-muted-foreground mb-3">
-              If specified, recurring messages will only begin on or after this date, even if triggered earlier.
-            </p>
-            <DatePicker
-              selectedDate={startDate}
-              setSelectedDate={handleDateChange}
-              label="Earliest Delivery Date & Time"
-            />
-          </div>
         </div>
       )}
     </div>
