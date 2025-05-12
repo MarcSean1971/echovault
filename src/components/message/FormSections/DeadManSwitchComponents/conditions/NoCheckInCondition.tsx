@@ -2,6 +2,7 @@
 import { CustomTimeInput } from "../CustomTimeInput";
 import { NoCheckInDeliveryOptions } from "../NoCheckInDeliveryOptions";
 import { DeliveryOption, RecurringPattern } from "@/types/message";
+import { ReminderSettings } from "../ReminderSettings";
 
 interface NoCheckInConditionProps {
   hoursThreshold: number;
@@ -39,6 +40,10 @@ export function NoCheckInCondition({
     return hoursThreshold + (minutesThreshold / 60);
   };
   
+  // Calculate the maximum hours for reminders based on the threshold
+  // This ensures reminders are only set within the check-in window
+  const maxReminderHours = hoursThreshold + (minutesThreshold / 60);
+  
   return (
     <div className="space-y-6">
       <CustomTimeInput
@@ -47,6 +52,13 @@ export function NoCheckInCondition({
         minutes={minutesThreshold}
         setMinutes={setMinutesThreshold}
         label="Time without check-in before message is sent"
+      />
+      
+      {/* Reminder Settings */}
+      <ReminderSettings
+        reminderHours={reminderHours}
+        setReminderHours={setReminderHours}
+        maxHours={maxReminderHours}
       />
       
       {/* Custom check-in code input */}
