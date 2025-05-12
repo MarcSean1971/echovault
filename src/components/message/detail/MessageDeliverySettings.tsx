@@ -38,13 +38,33 @@ export function MessageDeliverySettings({
         </div>
         
         {condition.condition_type === 'no_check_in' && (
-          <div className="flex justify-between">
-            <span className="font-medium">Check-in period:</span>
-            <span className="text-right">
-              {condition.hours_threshold} hours
-              {condition.minutes_threshold ? ` ${condition.minutes_threshold} minutes` : ''}
-            </span>
-          </div>
+          <>
+            <div className="flex justify-between">
+              <span className="font-medium">Check-in period:</span>
+              <span className="text-right">
+                {condition.hours_threshold} hours
+                {condition.minutes_threshold ? ` ${condition.minutes_threshold} minutes` : ''}
+              </span>
+            </div>
+            
+            {/* Show reminder settings directly after check-in period */}
+            {condition.reminder_hours && condition.reminder_hours.length > 0 && (
+              <div className="flex flex-col">
+                <span className="font-medium">Reminder settings:</span>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {condition.reminder_hours.sort((a: number, b: number) => b - a).map((minutes: number) => (
+                    <Badge 
+                      key={minutes} 
+                      variant="secondary" 
+                      className={`text-xs hover:bg-slate-200 ${HOVER_TRANSITION}`}
+                    >
+                      {formatReminderTime(minutes)} before deadline
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
         )}
         
         {condition.recurring_pattern && (
@@ -68,33 +88,6 @@ export function MessageDeliverySettings({
           </div>
         )}
       </div>
-      
-      {/* Reminder settings section */}
-      {condition.reminder_hours && condition.reminder_hours.length > 0 && (
-        <>
-          <Separator className="my-4" />
-          <div className="text-sm">
-            <div className="flex items-center gap-2">
-              <Clock className={`h-4 w-4 text-muted-foreground ${HOVER_TRANSITION}`} />
-              <p className="font-medium">Reminder Settings</p>
-            </div>
-            <p className="text-muted-foreground mt-1 mb-2">
-              Reminders will be sent to recipients before the message triggers.
-            </p>
-            <div className="flex flex-wrap gap-1 mt-2">
-              {condition.reminder_hours.sort((a: number, b: number) => b - a).map((minutes: number) => (
-                <Badge 
-                  key={minutes} 
-                  variant="secondary" 
-                  className={`text-xs hover:bg-slate-200 ${HOVER_TRANSITION}`}
-                >
-                  {formatReminderTime(minutes)} before deadline
-                </Badge>
-              ))}
-            </div>
-          </div>
-        </>
-      )}
       
       {/* Security settings section - Now showing PIN code here */}
       {(condition.expiry_hours > 0 || condition.unlock_delay_hours > 0 || condition.pin_code) && (
