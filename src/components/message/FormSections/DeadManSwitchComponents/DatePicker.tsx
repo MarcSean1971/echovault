@@ -11,6 +11,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface DatePickerProps {
   selectedDate: Date | null | undefined;
@@ -68,8 +69,9 @@ export function DatePicker({
             <Button
               variant={"outline"}
               className={cn(
-                "justify-start text-left font-normal hover:bg-muted/80 transition-colors",
-                !selectedDate && "text-muted-foreground"
+                "justify-start text-left font-normal hover:text-foreground hover:bg-muted/80",
+                !selectedDate && "text-muted-foreground",
+                HOVER_TRANSITION
               )}
             >
               <CalendarIcon className="mr-2 h-4 w-4" />
@@ -91,7 +93,7 @@ export function DatePicker({
           type="time" 
           value={time}
           onChange={handleTimeChange}
-          className="col-span-1 hover:border-primary/50 focus:border-primary transition-colors"
+          className={`col-span-1 hover:border-primary/50 focus:border-primary ${HOVER_TRANSITION}`}
         />
       </div>
     </div>

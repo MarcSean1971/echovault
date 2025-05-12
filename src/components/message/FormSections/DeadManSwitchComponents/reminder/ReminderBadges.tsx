@@ -21,14 +21,14 @@ export function ReminderBadges({ reminderMinutes, onRemoveReminder }: ReminderBa
         <Badge 
           key={minutes} 
           variant="secondary" 
-          className="flex items-center gap-1 hover:bg-slate-200 transition-colors duration-200"
+          className={`flex items-center gap-1 hover:bg-muted/80 hover:text-foreground ${HOVER_TRANSITION}`}
         >
           {formatReminderTime(minutes)} before
           <Button
             type="button"
             variant="ghost"
             size="sm"
-            className={`h-5 w-5 p-0 hover:bg-muted/80 ${HOVER_TRANSITION}`}
+            className={`h-5 w-5 p-0 hover:bg-muted/80 hover:text-foreground ${HOVER_TRANSITION}`}
             onClick={() => onRemoveReminder(minutes)}
           >
             <X className="h-3 w-3" />
