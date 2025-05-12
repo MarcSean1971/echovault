@@ -9,6 +9,7 @@ import { formatDate, getConditionType } from "@/utils/messageHelpers";
 import { useMessageDetail } from "@/hooks/useMessageDetail";
 import { MessageRecipientProvider } from "@/components/message/detail/MessageRecipientProvider";
 import { useMessageActions } from "@/hooks/useMessageActions";
+import { useMessageDeliveryStatus } from "@/hooks/useMessageDeliveryStatus";
 
 export default function MessageDetail() {
   const { id } = useParams<{ id: string }>();
@@ -30,6 +31,9 @@ export default function MessageDetail() {
     setIsArmed,
     lastCheckIn
   } = useMessageDetail(id, handleError);
+  
+  // Get message delivery status
+  const { isDelivered, lastDelivered, viewCount, isLoading: isLoadingDelivery } = useMessageDeliveryStatus(id || '');
   
   // Use our custom hook for message actions
   const {
@@ -89,6 +93,10 @@ export default function MessageDetail() {
       handleSendTestMessages={handleSendTestMessages}
       lastCheckIn={condition?.last_checked || null}
       checkInCode={condition?.check_in_code || null}
+      lastDelivered={lastDelivered}
+      isDelivered={isDelivered}
+      viewCount={viewCount}
+      isLoadingDelivery={isLoadingDelivery}
     />
   );
 }

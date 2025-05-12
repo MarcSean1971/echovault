@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { MessageDeliverySettings } from "../MessageDeliverySettings";
 import { DesktopTimerAlert } from "../DesktopTimerAlert";
-import { Clock, Lock, Shield, MessageSquare, Mic, Video } from "lucide-react";
+import { Clock, Lock, Shield, MessageSquare, Mic, Video, Mail } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
@@ -19,6 +19,10 @@ interface StatusDeliverySectionProps {
   deadline?: Date | null;
   lastCheckIn?: string | null;
   checkInCode?: string | null;
+  lastDelivered?: string | null;
+  isDelivered?: boolean;
+  viewCount?: number | null;
+  isLoadingDelivery?: boolean;
 }
 
 export function StatusDeliverySection({
@@ -29,7 +33,11 @@ export function StatusDeliverySection({
   message,
   deadline,
   lastCheckIn,
-  checkInCode
+  checkInCode,
+  lastDelivered,
+  isDelivered,
+  viewCount,
+  isLoadingDelivery
 }: StatusDeliverySectionProps) {
   const isMobile = useIsMobile();
   
@@ -69,7 +77,23 @@ export function StatusDeliverySection({
                 </div>
               )}
               
-              {/* Removed the Format/message type display as requested */}
+              {/* Add Last Sent Information */}
+              {lastDelivered && (
+                <div className="grid grid-cols-3 gap-1">
+                  <span className="font-medium">Last sent:</span>
+                  <span className="col-span-2">
+                    {formatDate(lastDelivered)} · {formatDistanceToNow(new Date(lastDelivered), { addSuffix: true })}
+                  </span>
+                </div>
+              )}
+              
+              {/* Viewed Count Information */}
+              {viewCount && viewCount > 0 && (
+                <div className="grid grid-cols-3 gap-1">
+                  <span className="font-medium">View count:</span>
+                  <span className="col-span-2">{viewCount}</span>
+                </div>
+              )}
             </div>
             
             {/* Check-In Information - Now with consistent styling */}

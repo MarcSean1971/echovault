@@ -34,8 +34,12 @@ interface MessageDetailContentProps {
   showSendTestDialog: boolean;
   setShowSendTestDialog: (show: boolean) => void;
   handleSendTestMessages: (selectedRecipients: { id: string; name: string; email: string }[]) => Promise<void>;
-  lastCheckIn?: string | null; // Added prop for last check-in time
-  checkInCode?: string | null; // Added prop for check-in code
+  lastCheckIn?: string | null;
+  checkInCode?: string | null;
+  lastDelivered?: string | null;
+  isDelivered?: boolean;
+  viewCount?: number | null;
+  isLoadingDelivery?: boolean;
 }
 
 export function MessageDetailContent({
@@ -58,7 +62,11 @@ export function MessageDetailContent({
   setShowSendTestDialog,
   handleSendTestMessages,
   lastCheckIn,
-  checkInCode
+  checkInCode,
+  lastDelivered,
+  isDelivered,
+  viewCount,
+  isLoadingDelivery
 }: MessageDetailContentProps) {
   // Add state for delete confirmation
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -94,7 +102,7 @@ export function MessageDetailContent({
           recipientEmail={recipientEmail}
         />
         
-        {/* Status and Delivery Settings - Now with check-in information */}
+        {/* Status and Delivery Settings - Now with last delivery information */}
         <StatusDeliverySection
           condition={condition}
           isArmed={isArmed}
@@ -104,6 +112,10 @@ export function MessageDetailContent({
           deadline={deadline}
           lastCheckIn={lastCheckIn}
           checkInCode={checkInCode}
+          lastDelivered={lastDelivered}
+          isDelivered={isDelivered}
+          viewCount={viewCount}
+          isLoadingDelivery={isLoadingDelivery}
         />
         
         {/* Recipients Section */}

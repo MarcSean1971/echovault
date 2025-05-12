@@ -7,7 +7,7 @@ interface DeliveryStatus {
   isDelivered: boolean;
   deliveryDate: string | null;
   viewCount: number | null;
-  lastDelivered: string | null;  // Added this property
+  lastDelivered: string | null;
 }
 
 export function useMessageDeliveryStatus(messageId: string) {
@@ -15,7 +15,7 @@ export function useMessageDeliveryStatus(messageId: string) {
     isDelivered: false,
     deliveryDate: null,
     viewCount: 0,
-    lastDelivered: null  // Initialize the new property
+    lastDelivered: null
   });
   const [isLoading, setIsLoading] = useState(true);
   
@@ -45,7 +45,7 @@ export function useMessageDeliveryStatus(messageId: string) {
             isDelivered: true,
             deliveryDate: data[0].delivered_at,
             viewCount: data[0].viewed_count,
-            lastDelivered: data[0].delivered_at  // Set the new property
+            lastDelivered: data[0].delivered_at
           });
         }
       } catch (error) {
