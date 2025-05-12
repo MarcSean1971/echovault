@@ -8,7 +8,12 @@ import { useSearchParams } from "react-router-dom";
 import { MainContentSection } from "./content/MainContentSection";
 import { StatusDeliverySection } from "./content/StatusDeliverySection";
 import { RecipientsSection } from "./content/RecipientsSection";
-import { MessageActionFooter } from "./MessageActionFooter";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Edit, Trash2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface MessageDetailContentProps {
   message: Message;
@@ -57,6 +62,7 @@ export function MessageDetailContent({
 }: MessageDetailContentProps) {
   // Add state for delete confirmation
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const navigate = useNavigate();
   
   // Get delivery ID and recipient email from URL for attachment access
   const [searchParams] = useSearchParams();
@@ -72,7 +78,7 @@ export function MessageDetailContent({
   }
 
   return (
-    <div className="container mx-auto max-w-3xl px-4 py-8 pb-20 mb-16">
+    <div className="container mx-auto max-w-3xl px-4 py-8">
       <div className="space-y-6">
         {/* Message Content */}
         <MainContentSection 
@@ -108,18 +114,30 @@ export function MessageDetailContent({
           onSendTestMessage={onSendTestMessage}
         />
         
-        {/* Action Footer */}
-        <MessageActionFooter
-          messageId={message.id}
-          isArmed={isArmed}
-          isActionLoading={isActionLoading}
-          handleArmMessage={handleArmMessage}
-          handleDisarmMessage={handleDisarmMessage}
-          showDeleteConfirm={showDeleteConfirm}
-          setShowDeleteConfirm={setShowDeleteConfirm}
-          handleDelete={handleDelete}
-          onSendTestMessage={onSendTestMessage}
-        />
+        {/* Actions Card - Replacing the fixed footer */}
+        <Card className="overflow-hidden">
+          <CardContent className="p-6">
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => navigate(`/message/${message.id}/edit`)}
+                disabled={isArmed || isActionLoading}
+                className={HOVER_TRANSITION}
+              >
+                <Edit className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} /> Edit
+              </Button>
+              
+              <Button
+                variant="outline"
+                onClick={() => setShowDeleteConfirm(true)}
+                disabled={isArmed || isActionLoading}
+                className={`text-destructive border-destructive hover:bg-destructive/20 hover:text-destructive ${HOVER_TRANSITION}`}
+              >
+                <Trash2 className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} /> Delete
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
       
       <SendTestMessageDialog 
@@ -129,6 +147,24 @@ export function MessageDetailContent({
         recipients={recipients}
         onSendTestMessages={handleSendTestMessages}
       />
+      
+      {/* Delete confirmation sheet */}
+      <Sheet open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <SheetContent>
+          <SheetHeader>
+            <SheetTitle>Are you sure?</SheetTitle>
+            <SheetDescription>
+              This action cannot be undone. This will permanently delete your message.
+            </SheetDescription>
+          </SheetHeader>
+          <SheetFooter className="flex-row justify-end gap-2 mt-6">
+            <SheetClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </SheetClose>
+            <Button variant="destructive" onClick={handleDelete}>Delete</Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
