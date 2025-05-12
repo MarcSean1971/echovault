@@ -4,6 +4,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { MessageDeliverySettings } from "../MessageDeliverySettings";
 import { DesktopTimerAlert } from "../DesktopTimerAlert";
+import { Clock } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 
 interface StatusDeliverySectionProps {
   condition: any | null;
@@ -12,6 +14,8 @@ interface StatusDeliverySectionProps {
   renderConditionType: () => string;
   message: any;
   deadline?: Date | null;
+  lastCheckIn?: string | null;
+  checkInCode?: string | null;
 }
 
 export function StatusDeliverySection({
@@ -20,7 +24,9 @@ export function StatusDeliverySection({
   formatDate,
   renderConditionType,
   message,
-  deadline
+  deadline,
+  lastCheckIn,
+  checkInCode
 }: StatusDeliverySectionProps) {
   return (
     <Card className="overflow-hidden">
@@ -56,6 +62,30 @@ export function StatusDeliverySection({
                 <span className="font-medium">Type:</span>
                 <span className="col-span-2">{message.message_type}</span>
               </div>
+              
+              {/* Check-In Information */}
+              {lastCheckIn && (
+                <div className="grid grid-cols-3 gap-1">
+                  <span className="font-medium">Last check-in:</span>
+                  <span className="col-span-2">
+                    {formatDistanceToNow(new Date(lastCheckIn), { addSuffix: true })}
+                  </span>
+                </div>
+              )}
+              
+              {checkInCode && (
+                <div className="grid grid-cols-3 gap-1">
+                  <span className="font-medium">Check-in code:</span>
+                  <span className="col-span-2 font-mono">{checkInCode}</span>
+                </div>
+              )}
+              
+              {condition?.condition_type?.includes('check_in') && (
+                <div className="grid grid-cols-3 gap-1">
+                  <span className="font-medium">Check-in via:</span>
+                  <span className="col-span-2">App, WhatsApp</span>
+                </div>
+              )}
             </div>
           </div>
           

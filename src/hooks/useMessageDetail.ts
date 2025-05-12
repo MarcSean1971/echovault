@@ -19,6 +19,7 @@ export function useMessageDetail(messageId: string | undefined, onError: () => v
   const [condition, setCondition] = useState<any | null>(null);
   const [recipients, setRecipients] = useState<any[]>([]);
   const [hasAttemptedFetch, setHasAttemptedFetch] = useState(false);
+  const [lastCheckIn, setLastCheckIn] = useState<string | null>(null);
 
   // Memoize the fetch function to prevent it from being recreated on every render
   const fetchMessage = useCallback(async () => {
@@ -44,6 +45,7 @@ export function useMessageDetail(messageId: string | undefined, onError: () => v
         setCondition(conditionData);
         setIsArmed(conditionData.active);
         setConditionId(conditionData.id);
+        setLastCheckIn(conditionData.last_checked || null);
         
         if (conditionData.active) {
           const deadlineDate = await getMessageDeadline(conditionData.id);
@@ -81,6 +83,7 @@ export function useMessageDetail(messageId: string | undefined, onError: () => v
     conditionId,
     condition,
     recipients,
-    setIsArmed
+    setIsArmed,
+    lastCheckIn
   };
 }
