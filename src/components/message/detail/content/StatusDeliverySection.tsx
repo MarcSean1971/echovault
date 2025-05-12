@@ -2,7 +2,6 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { StatusBadge } from "@/components/ui/status-badge";
 import { MessageDeliverySettings } from "../MessageDeliverySettings";
 import { DesktopTimerAlert } from "../DesktopTimerAlert";
 
@@ -28,9 +27,6 @@ export function StatusDeliverySection({
       <CardContent className="p-6 space-y-6">
         <div className="flex items-start justify-between">
           <h2 className="text-lg font-medium">Status & Delivery</h2>
-          <StatusBadge status={isArmed ? "armed" : "disarmed"} size="default">
-            {isArmed ? "Armed" : "Disarmed"}
-          </StatusBadge>
         </div>
         
         {/* Countdown Timer - only displayed when message is armed with deadline */}

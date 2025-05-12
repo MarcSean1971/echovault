@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { Message } from "@/types/message";
 import { getMessageIcon } from "@/utils/messageFormatUtils";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { StatusBadge } from "@/components/ui/status-badge";
 
 interface MessageHeaderProps {
   message: Message;
@@ -34,8 +35,12 @@ export function MessageHeader({
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to Messages
         </Button>
         
-        {/* Arm/Disarm Button */}
-        <div>
+        {/* Arm/Disarm Button with Status Badge */}
+        <div className="flex items-center gap-2">
+          <StatusBadge status={isArmed ? "armed" : "disarmed"} size="default">
+            {isArmed ? "Armed" : "Disarmed"}
+          </StatusBadge>
+          
           {isArmed ? (
             <Button
               variant="outline"

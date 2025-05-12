@@ -1,6 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2, Bell, BellOff } from "lucide-react";
+import { Edit, Trash2 } from "lucide-react";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useNavigate } from "react-router-dom";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
@@ -9,20 +9,19 @@ interface MessageActionFooterProps {
   messageId: string;
   isArmed: boolean;
   isActionLoading: boolean;
-  handleArmMessage: () => Promise<Date | null>; // Changed return type to match the hook
-  handleDisarmMessage: () => Promise<void>;
+  handleArmMessage: () => Promise<Date | null>; // Keeping the prop for compatibility
+  handleDisarmMessage: () => Promise<void>; // Keeping the prop for compatibility
   showDeleteConfirm: boolean;
   setShowDeleteConfirm: (show: boolean) => void;
   handleDelete: () => Promise<void>;
-  onSendTestMessage?: () => void; // Keeping the prop for compatibility, but not using it in the render
+  onSendTestMessage?: () => void; // Keeping the prop for compatibility but not using it in the render
 }
 
 export function MessageActionFooter({
   messageId,
   isArmed,
   isActionLoading,
-  handleArmMessage,
-  handleDisarmMessage,
+  // handleArmMessage and handleDisarmMessage are kept for compatibility but not used anymore
   showDeleteConfirm,
   setShowDeleteConfirm,
   handleDelete,
@@ -33,32 +32,11 @@ export function MessageActionFooter({
   return (
     <>
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/80 backdrop-blur-sm border-t z-10">
-        <div className="flex gap-2 w-full max-w-3xl mx-auto">
-          {isArmed ? (
-            <Button
-              variant="outline"
-              onClick={handleDisarmMessage}
-              disabled={isActionLoading}
-              className="text-green-600 hover:bg-green-100 hover:text-green-700 flex-1 sm:flex-none"
-            >
-              <BellOff className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} /> Disarm
-            </Button>
-          ) : (
-            <Button
-              variant="default"
-              onClick={handleArmMessage}
-              disabled={isActionLoading}
-              className="flex-1 sm:flex-none"
-            >
-              <Bell className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} /> Arm
-            </Button>
-          )}
-          
+        <div className="flex gap-2 w-full max-w-3xl mx-auto justify-end">
           <Button
             variant="outline"
             onClick={() => navigate(`/message/${messageId}/edit`)}
             disabled={isArmed || isActionLoading}
-            className="sm:ml-auto"
           >
             <Edit className={`h-4 w-4 mr-1 sm:mr-2 ${HOVER_TRANSITION}`} /> <span className="hidden sm:inline">Edit</span>
           </Button>
