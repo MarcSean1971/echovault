@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Message } from "@/types/message";
 import { parseVideoContent } from "@/services/messages/mediaService";
@@ -6,32 +7,40 @@ import { Card } from "@/components/ui/card";
 export function VideoMessageContent({ message }: { message: Message }) {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [transcription, setTranscription] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   
   useEffect(() => {
-    if (message.content) {
-      try {
-        // Parse video data from message content
-        const { videoData, transcription: extractedTranscription } = parseVideoContent(message.content);
-        
-        if (videoData) {
-          // Create a blob URL from the base64 data
-          const binaryString = window.atob(videoData);
-          const bytes = new Uint8Array(binaryString.length);
-          for (let i = 0; i < binaryString.length; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-          }
-          const blob = new Blob([bytes], { type: 'video/webm' });
-          const url = URL.createObjectURL(blob);
-          setVideoUrl(url);
+    if (!message.content) {
+      setIsLoading(false);
+      return;
+    }
+    
+    try {
+      // Parse video data from message content
+      const { videoData, transcription: extractedTranscription } = parseVideoContent(message.content);
+      
+      if (videoData) {
+        // Create a blob URL from the base64 data
+        const binaryString = window.atob(videoData);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
         }
-        
-        // Extract transcription for backward compatibility
-        setTranscription(extractedTranscription);
-        
-        // We're no longer extracting additionalText as it's handled by the parent component
-      } catch (e) {
-        console.error("Error parsing video content:", e);
+        const blob = new Blob([bytes], { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        setVideoUrl(url);
+        console.log("Video URL created successfully");
+      } else {
+        console.log("No video data found in message content");
       }
+      
+      // Extract transcription
+      setTranscription(extractedTranscription);
+      
+    } catch (e) {
+      console.error("Error parsing video content:", e);
+    } finally {
+      setIsLoading(false);
     }
     
     // Clean up URLs on unmount
@@ -41,6 +50,14 @@ export function VideoMessageContent({ message }: { message: Message }) {
       }
     };
   }, [message.content]);
+  
+  if (isLoading) {
+    return (
+      <div className="p-4 bg-muted/40 rounded-md text-center text-muted-foreground">
+        Loading video content...
+      </div>
+    );
+  }
   
   if (!videoUrl) {
     return (
@@ -60,7 +77,7 @@ export function VideoMessageContent({ message }: { message: Message }) {
         />
       </div>
       
-      {/* Keep transcription display for backward compatibility */}
+      {/* Display transcription if available */}
       {transcription && (
         <div className="mt-4 space-y-2">
           <h3 className="text-sm font-medium">Video Transcription</h3>

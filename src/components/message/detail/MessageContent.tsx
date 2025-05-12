@@ -34,8 +34,11 @@ export function MessageContent({
   
   // Check for different types of content
   useEffect(() => {
-    if (!message.content) return;
-    
+    if (!message.content) {
+      setHasTextContent(message.message_type === "text"); // Set text content true for text type even if empty
+      return;
+    }
+
     // Check for video content
     try {
       const { videoData } = parseVideoContent(message.content);
@@ -47,8 +50,6 @@ export function MessageContent({
           const contentObj = JSON.parse(message.content);
           if (contentObj.additionalText) {
             setAdditionalText(contentObj.additionalText);
-            // If we have additional text with video, we consider it as having text content too
-            setHasTextContent(true);
           }
         } catch (e) {
           console.error("Error parsing additional text from video content:", e);
@@ -58,8 +59,14 @@ export function MessageContent({
       setHasVideoContent(false);
     }
     
-    // For text content, we consider any non-JSON content or message type="text" as text
-    if (message.message_type === "text" || !message.content.trim().startsWith("{")) {
+    // For text content, consider any content as text if message type is "text"
+    if (message.message_type === "text") {
+      setHasTextContent(true);
+    } 
+    // For non-text message types, check if content could be text
+    else if (!message.content.trim().startsWith("{") || 
+             message.content.trim() === "{}" || 
+             message.content.trim() === "null") {
       setHasTextContent(true);
     }
   }, [message.content, message.message_type]);
@@ -68,34 +75,43 @@ export function MessageContent({
   useEffect(() => {
     console.log(`MessageContent: Rendering message of type: ${message.message_type}`);
     console.log("MessageContent: Message content:", message.content ? message.content.substring(0, 100) + "..." : null);
-    console.log("MessageContent: Extracted transcription:", transcription);
     console.log("MessageContent: Has video content:", hasVideoContent);
     console.log("MessageContent: Has text content:", hasTextContent);
     console.log("MessageContent: Additional text:", additionalText);
     console.log("MessageContent: Is deadman's switch:", isDeadmansSwitch);
-  }, [message, transcription, hasVideoContent, hasTextContent, additionalText, isDeadmansSwitch]);
+  }, [message, hasVideoContent, hasTextContent, additionalText, isDeadmansSwitch]);
 
   // Choose the appropriate content components based on message type and content
   const renderMessageContent = () => {
+    // For text message types, always show the TextMessageContent
+    if (message.message_type === "text") {
+      return <TextMessageContent message={message} content={message.content} />;
+    }
+    
+    // For deadman's switch, show as text regardless of type
+    if (isDeadmansSwitch) {
+      return <TextMessageContent message={message} content={message.content} />;
+    }
+
     return (
       <>
-        {/* For deadman's switch or text messages, show text content */}
-        {(message.message_type === "text" || isDeadmansSwitch) && (
-          <TextMessageContent message={message} content={message.content} />
-        )}
-        
-        {/* Additional text from a video message (if not deadman's switch) */}
-        {additionalText && !isDeadmansSwitch && (
+        {/* If there's additional text from a video message, show it */}
+        {additionalText && (
           <div className="mb-6">
             <TextMessageContent message={{...message, content: additionalText}} content={additionalText} />
           </div>
         )}
         
-        {/* If this is a video message type or contains video data, show video content only if not deadman's switch */}
-        {!isDeadmansSwitch && (message.message_type === "video" || hasVideoContent) && (
+        {/* Show video content if it exists */}
+        {(message.message_type === "video" || hasVideoContent) && (
           <div className="mb-6">
             <VideoMessageContent message={message} />
           </div>
+        )}
+        
+        {/* For regular text content that isn't part of a video */}
+        {hasTextContent && !additionalText && message.message_type !== "video" && !hasVideoContent && (
+          <TextMessageContent message={message} content={message.content} />
         )}
         
         {/* If we don't recognize the content type, use the unknown component */}
@@ -160,3 +176,4 @@ export function MessageContent({
     </div>
   );
 }
+

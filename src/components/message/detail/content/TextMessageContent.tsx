@@ -7,10 +7,13 @@ interface TextMessageContentProps {
   message: Message;
 }
 
-export function TextMessageContent({ message }: TextMessageContentProps) {
+export function TextMessageContent({ message, content }: TextMessageContentProps) {
+  // Use the passed content if available, otherwise use message.content
+  const displayContent = content || message.content;
+  
   return (
     <div className="whitespace-pre-wrap prose dark:prose-invert max-w-none text-sm md:text-base">
-      {message.content || <span className="text-muted-foreground italic">No content</span>}
+      {displayContent || <span className="text-muted-foreground italic">No content</span>}
     </div>
   );
 }
