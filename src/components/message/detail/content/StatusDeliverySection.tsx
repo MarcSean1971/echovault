@@ -23,6 +23,7 @@ interface StatusDeliverySectionProps {
   isDelivered?: boolean;
   viewCount?: number | null;
   isLoadingDelivery?: boolean;
+  refreshTrigger?: number;
 }
 
 export function StatusDeliverySection({
@@ -37,7 +38,8 @@ export function StatusDeliverySection({
   lastDelivered,
   isDelivered,
   viewCount,
-  isLoadingDelivery
+  isLoadingDelivery,
+  refreshTrigger
 }: StatusDeliverySectionProps) {
   const isMobile = useIsMobile();
   
@@ -51,10 +53,10 @@ export function StatusDeliverySection({
           </div>
         </div>
         
-        {/* Countdown Timer - only displayed when message is armed with deadline */}
+        {/* Countdown Timer - now passing refreshTrigger prop */}
         {isArmed && deadline && (
           <div className="mb-2">
-            <DesktopTimerAlert deadline={deadline} isArmed={isArmed} />
+            <DesktopTimerAlert deadline={deadline} isArmed={isArmed} refreshTrigger={refreshTrigger} />
           </div>
         )}
         

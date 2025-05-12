@@ -97,6 +97,7 @@ export default function MessageDetail() {
       isDelivered={isDelivered}
       viewCount={viewCount}
       isLoadingDelivery={isLoadingDelivery}
+      refreshTrigger={refreshTrigger}
     />
   );
 }

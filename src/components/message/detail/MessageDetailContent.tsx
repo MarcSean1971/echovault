@@ -40,6 +40,7 @@ interface MessageDetailContentProps {
   isDelivered?: boolean;
   viewCount?: number | null;
   isLoadingDelivery?: boolean;
+  refreshTrigger?: number;
 }
 
 export function MessageDetailContent({
@@ -66,7 +67,8 @@ export function MessageDetailContent({
   lastDelivered,
   isDelivered,
   viewCount,
-  isLoadingDelivery
+  isLoadingDelivery,
+  refreshTrigger
 }: MessageDetailContentProps) {
   // Add state for delete confirmation
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -102,7 +104,7 @@ export function MessageDetailContent({
           recipientEmail={recipientEmail}
         />
         
-        {/* Status and Delivery Settings - Now with last delivery information */}
+        {/* Status and Delivery Settings - Now with refreshTrigger prop */}
         <StatusDeliverySection
           condition={condition}
           isArmed={isArmed}
@@ -116,6 +118,7 @@ export function MessageDetailContent({
           isDelivered={isDelivered}
           viewCount={viewCount}
           isLoadingDelivery={isLoadingDelivery}
+          refreshTrigger={refreshTrigger}
         />
         
         {/* Recipients Section */}
