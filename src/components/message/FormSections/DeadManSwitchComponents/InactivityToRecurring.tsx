@@ -7,6 +7,8 @@ import { Separator } from "@/components/ui/separator";
 interface InactivityToRecurringProps {
   hoursThreshold: number;
   setHoursThreshold: (value: number) => void;
+  minutesThreshold: number;
+  setMinutesThreshold: (value: number) => void;
   recurringPattern: RecurringPattern | null;
   setRecurringPattern: (pattern: RecurringPattern | null) => void;
   reminderHours: number[];
@@ -16,6 +18,8 @@ interface InactivityToRecurringProps {
 export function InactivityToRecurring({
   hoursThreshold,
   setHoursThreshold,
+  minutesThreshold,
+  setMinutesThreshold,
   recurringPattern,
   setRecurringPattern,
   reminderHours,
@@ -29,6 +33,8 @@ export function InactivityToRecurring({
           conditionType="no_check_in"
           hoursThreshold={hoursThreshold}
           setHoursThreshold={setHoursThreshold}
+          minutesThreshold={minutesThreshold}
+          setMinutesThreshold={setMinutesThreshold}
         />
       </div>
       

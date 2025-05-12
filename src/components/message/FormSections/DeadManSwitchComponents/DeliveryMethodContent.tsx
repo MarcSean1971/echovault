@@ -124,6 +124,8 @@ export function DeliveryMethodContent({
           <InactivityToRecurringCondition
             hoursThreshold={hoursThreshold}
             setHoursThreshold={setHoursThreshold}
+            minutesThreshold={minutesThreshold}
+            setMinutesThreshold={setMinutesThreshold}
             recurringPattern={recurringPattern}
             setRecurringPattern={setRecurringPattern}
             reminderHours={reminderHours}

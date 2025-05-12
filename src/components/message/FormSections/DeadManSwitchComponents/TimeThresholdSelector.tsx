@@ -1,8 +1,10 @@
+
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { TriggerType } from "@/types/message";
 import { useState } from "react";
 import { CustomTimeInput } from "./CustomTimeInput";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface TimeThresholdSelectorProps {
   conditionType: TriggerType;
@@ -50,39 +52,39 @@ export function TimeThresholdSelector({
         onValueChange={handleRadioChange}
         className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2"
       >
-        <div className="flex items-center space-x-2 p-2 rounded border">
+        <div className={`flex items-center space-x-2 p-2 rounded border ${HOVER_TRANSITION}`}>
           <RadioGroupItem value="24" id="hours-24" />
           <Label htmlFor="hours-24" className="cursor-pointer">1 day (24 hours)</Label>
         </div>
         
-        <div className="flex items-center space-x-2 p-2 rounded border">
+        <div className={`flex items-center space-x-2 p-2 rounded border ${HOVER_TRANSITION}`}>
           <RadioGroupItem value="72" id="hours-72" />
           <Label htmlFor="hours-72" className="cursor-pointer">3 days (72 hours)</Label>
         </div>
         
-        <div className="flex items-center space-x-2 p-2 rounded border">
+        <div className={`flex items-center space-x-2 p-2 rounded border ${HOVER_TRANSITION}`}>
           <RadioGroupItem value="168" id="hours-168" />
           <Label htmlFor="hours-168" className="cursor-pointer">1 week (168 hours)</Label>
         </div>
         
-        <div className="flex items-center space-x-2 p-2 rounded border">
+        <div className={`flex items-center space-x-2 p-2 rounded border ${HOVER_TRANSITION}`}>
           <RadioGroupItem value="336" id="hours-336" />
           <Label htmlFor="hours-336" className="cursor-pointer">2 weeks (336 hours)</Label>
         </div>
         
-        <div className="flex items-center space-x-2 p-2 rounded border">
+        <div className={`flex items-center space-x-2 p-2 rounded border ${HOVER_TRANSITION}`}>
           <RadioGroupItem value="720" id="hours-720" />
           <Label htmlFor="hours-720" className="cursor-pointer">1 month (720 hours)</Label>
         </div>
         
-        <div className="flex items-center space-x-2 p-2 rounded border">
+        <div className={`flex items-center space-x-2 p-2 rounded border ${HOVER_TRANSITION}`}>
           <RadioGroupItem value="custom" id="hours-custom" />
           <Label htmlFor="hours-custom" className="cursor-pointer">Custom time</Label>
         </div>
       </RadioGroup>
       
       {useCustomTime && (
-        <div className="mt-4 p-3 border rounded-md">
+        <div className={`mt-4 p-3 border rounded-md ${HOVER_TRANSITION}`}>
           <CustomTimeInput 
             hours={hoursThreshold}
             setHours={setHoursThreshold}
