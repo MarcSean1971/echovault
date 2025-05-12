@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from "@/components/ui/button";
 import { MessageCondition } from "@/types/message";
 import { AlertCircle, FileText, Video, Headphones } from "lucide-react";
-import { HOVER_TRANSITION, BUTTON_HOVER_EFFECTS } from "@/utils/hoverEffects";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { supabase } from "@/integrations/supabase/client";
 
 interface PanicMessageSelectorProps {
@@ -190,7 +190,7 @@ export function PanicMessageSelector({
             variant="destructive" 
             onClick={handleSelect} 
             disabled={!selectedId || isLoading}
-            className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.destructive}`}
+            className={`${HOVER_TRANSITION}`}
           >
             <AlertCircle className="h-4 w-4 mr-2" />
             Trigger Emergency

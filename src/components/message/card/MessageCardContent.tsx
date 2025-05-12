@@ -2,9 +2,8 @@
 import { Message, MessageCondition } from "@/types/message";
 import { MessageTimer } from "../MessageTimer";
 import { MessageTypeIcon } from "../detail/MessageTypeIcon";
-import { MapPin } from "lucide-react";
+import { MapPin, AlertCircle } from "lucide-react";
 import { HOVER_TRANSITION, ICON_HOVER_EFFECTS } from "@/utils/hoverEffects";
-import { AlertCircle } from "lucide-react";
 
 interface MessageCardContentProps {
   message: Message;

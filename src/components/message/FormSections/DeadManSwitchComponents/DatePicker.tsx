@@ -16,13 +16,15 @@ import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 interface DatePickerProps {
   selectedDate: Date | null | undefined;
   setSelectedDate: (date: Date | null) => void;
-  label?: string; // Keep the prop for backward compatibility
+  label?: string;
+  className?: string; // Added className prop
 }
 
 export function DatePicker({ 
   selectedDate, 
   setSelectedDate, 
-  label = "Date" // Default value kept for compatibility
+  label = "Date",
+  className // Accept className prop
 }: DatePickerProps) {
   const [time, setTime] = useState("12:00");
   
@@ -62,7 +64,7 @@ export function DatePicker({
   };
   
   return (
-    <div className="space-y-2">
+    <div className={cn("space-y-2", className)}>
       <div className="grid grid-cols-3 gap-2">
         <Popover>
           <PopoverTrigger asChild className="col-span-2">

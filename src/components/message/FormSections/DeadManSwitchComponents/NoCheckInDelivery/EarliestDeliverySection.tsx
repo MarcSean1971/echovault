@@ -25,7 +25,6 @@ export function EarliestDeliverySection({
           selectedDate={triggerDate} 
           setSelectedDate={setTriggerDate}
           label="Earliest Delivery Date & Time"
-          className={HOVER_TRANSITION}
         />
       </div>
     </div>

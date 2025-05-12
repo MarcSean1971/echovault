@@ -1,6 +1,6 @@
 
 import { useCallback } from "react";
-import { BUTTON_HOVER_EFFECTS, HOVER_TRANSITION, CONFIRMATION_ANIMATION, ICON_HOVER_EFFECTS } from "@/utils/hoverEffects";
+import { BUTTON_HOVER_EFFECTS, HOVER_TRANSITION, ICON_HOVER_EFFECTS, CONFIRMATION_ANIMATION } from "@/utils/hoverEffects";
 
 /**
  * Custom hook for applying consistent hover effects across the application
