@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { Message } from "@/types/message";
 import { parseVideoContent } from "@/services/messages/mediaService";
 import { Card } from "@/components/ui/card";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 export function VideoMessageContent({ message }: { message: Message }) {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);

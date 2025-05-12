@@ -50,6 +50,7 @@ export function MessageContent({
           const contentObj = JSON.parse(message.content);
           if (contentObj.additionalText) {
             setAdditionalText(contentObj.additionalText);
+            console.log("Found additional text:", contentObj.additionalText);
           }
         } catch (e) {
           console.error("Error parsing additional text from video content:", e);
@@ -95,14 +96,14 @@ export function MessageContent({
 
     return (
       <>
-        {/* If there's additional text from a video message, show it */}
+        {/* Show additional text first if it exists */}
         {additionalText && (
           <div className="mb-6">
             <TextMessageContent message={{...message, content: additionalText}} content={additionalText} />
           </div>
         )}
         
-        {/* Show video content if it exists */}
+        {/* Show video content after the text */}
         {(message.message_type === "video" || hasVideoContent) && (
           <div className="mb-6">
             <VideoMessageContent message={message} />
@@ -176,4 +177,3 @@ export function MessageContent({
     </div>
   );
 }
-
