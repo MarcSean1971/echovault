@@ -66,11 +66,10 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
   const getCardClasses = () => {
     if (isPanicSending) {
       return 'border-red-500 shadow-red-100 border-2 animate-pulse bg-gradient-to-br from-red-50 to-white';
-    } else if (isDelivered) {
-      return 'border-blue-300 bg-gradient-to-br from-blue-50 to-white';
     } else if (isArmed) {
       return 'border-destructive/50 bg-gradient-to-br from-red-50 to-white';
     } else {
+      // Ensure unarmed messages have a green border
       return 'border-green-300 bg-gradient-to-br from-green-50 to-white';
     }
   };
@@ -82,7 +81,6 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
     >
       <CardHeader className={`pb-3 ${
         isPanicSending ? 'bg-red-50/50' : 
-        isDelivered ? 'bg-blue-50/20' :
         isArmed ? 'bg-red-50/20' : 
         'bg-green-50/20'
       }`}>

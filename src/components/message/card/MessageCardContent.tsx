@@ -8,6 +8,7 @@ import { HOVER_TRANSITION, ICON_HOVER_EFFECTS } from "@/utils/hoverEffects";
 import { parseVideoContent } from "@/services/messages/mediaService";
 import { useMessageAdditionalText } from "@/hooks/useMessageAdditionalText";
 import { useMessageLastCheckIn } from "@/hooks/useMessageLastCheckIn";
+import { useMessageDeliveryStatus } from "@/hooks/useMessageDeliveryStatus";
 
 interface MessageCardContentProps {
   message: Message;
@@ -51,6 +52,9 @@ export function MessageCardContent({
   
   // Get last check-in time formatting
   const { formattedCheckIn, isDeadmansSwitch: isDMS } = useMessageLastCheckIn(condition);
+
+  // Get delivered status info
+  const { isDelivered: wasDelivered, lastDelivered } = useMessageDeliveryStatus(message.id);
   
   // Detect video content
   useEffect(() => {
@@ -120,6 +124,14 @@ export function MessageCardContent({
         <div className="text-xs flex items-center mt-1 text-muted-foreground">
           <Clock className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
           <span>Last check-in: {formattedCheckIn}</span>
+        </div>
+      )}
+      
+      {/* Show last message sent date if delivered */}
+      {wasDelivered && lastDelivered && (
+        <div className="text-xs flex items-center mt-1 text-muted-foreground">
+          <Clock className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+          <span>Last message sent: {new Date(lastDelivered).toLocaleDateString()}</span>
         </div>
       )}
       

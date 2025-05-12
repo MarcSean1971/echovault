@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { BellOff, Bell, ArrowRight, ExternalLink } from "lucide-react";
+import { BellOff, Bell, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -38,7 +38,7 @@ export function MessageCardActions({
                     size="sm"
                     onClick={onDisarmMessage}
                     disabled={isLoading}
-                    className={`text-green-600 border-green-200 hover:border-green-300 hover:bg-green-50 ${HOVER_TRANSITION}`}
+                    className={`text-green-600 border-green-300 hover:border-green-500 hover:bg-green-50 hover:text-green-700 ${HOVER_TRANSITION}`}
                   >
                     <BellOff className="h-4 w-4 mr-1.5" /> 
                     <span className="hidden sm:inline">Disarm</span>
@@ -49,7 +49,7 @@ export function MessageCardActions({
                     size="sm"
                     onClick={onArmMessage}
                     disabled={isLoading}
-                    className={`text-destructive border-destructive/20 hover:border-destructive/40 hover:bg-destructive/10 ${HOVER_TRANSITION}`}
+                    className={`text-destructive border-destructive/30 hover:border-destructive hover:bg-destructive/10 hover:text-destructive ${HOVER_TRANSITION}`}
                   >
                     <Bell className="h-4 w-4 mr-1.5" /> 
                     <span className="hidden sm:inline">Arm</span>
