@@ -4,7 +4,8 @@ import { MessageCard } from "./MessageCard";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { FileText, Loader2 } from "lucide-react";
+import { FileText, Loader2, PlusCircle } from "lucide-react";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface MessageGridProps {
   messages: Message[];
@@ -18,7 +19,7 @@ export function MessageGrid({ messages, isLoading, onDelete }: MessageGridProps)
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-16">
-        <Loader2 className="h-12 w-12 text-muted-foreground animate-spin mb-4" />
+        <Loader2 className={`h-12 w-12 text-muted-foreground animate-spin mb-4 ${HOVER_TRANSITION}`} />
         <p className="text-muted-foreground">Loading your messages...</p>
       </div>
     );
@@ -29,15 +30,16 @@ export function MessageGrid({ messages, isLoading, onDelete }: MessageGridProps)
       <Card className="text-center py-16 bg-gradient-to-b from-muted/30 to-background">
         <CardContent className="flex flex-col items-center">
           <div className="mb-6 p-6 rounded-full bg-primary/5 text-primary">
-            <FileText className="h-12 w-12" />
+            <FileText className={`h-12 w-12 ${HOVER_TRANSITION}`} />
           </div>
           <h3 className="text-xl font-medium mb-2">No messages yet</h3>
           <p className="mb-6 text-muted-foreground">Create your first message to get started</p>
           <Button 
             onClick={() => navigate("/create-message")}
-            className="animate-bounce-in"
+            className={`${HOVER_TRANSITION} gap-2`}
             size="lg"
           >
+            <PlusCircle className="h-5 w-5" />
             Create Your First Message
           </Button>
         </CardContent>

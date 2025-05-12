@@ -1,6 +1,7 @@
 
 import React from "react";
 import { Message } from "@/types/message";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface TextMessageContentProps {
   content?: string | null;
@@ -17,7 +18,7 @@ export function TextMessageContent({ message, content }: TextMessageContentProps
   
   return (
     displayContent ? (
-      <div className="whitespace-pre-wrap prose dark:prose-invert max-w-none text-sm md:text-base">
+      <div className={`whitespace-pre-wrap prose dark:prose-invert max-w-none text-sm md:text-base ${HOVER_TRANSITION}`}>
         {displayContent}
       </div>
     ) : (

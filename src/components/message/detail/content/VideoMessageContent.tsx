@@ -80,7 +80,7 @@ export function VideoMessageContent({ message }: { message: Message }) {
   
   return (
     <div className="space-y-4">
-      <div className="relative rounded-md overflow-hidden bg-black hover:shadow-md transition-shadow duration-300">
+      <div className={`relative rounded-md overflow-hidden bg-black hover:shadow-md ${HOVER_TRANSITION}`}>
         <video 
           controls
           src={videoUrl}

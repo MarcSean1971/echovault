@@ -57,13 +57,13 @@ export const MessageDisplay = ({
         <Card className="overflow-hidden border-red-100">
           <div className="p-8 text-center">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-50 mb-6">
-              <Lock className="h-8 w-8 text-red-500" />
+              <Lock className={`h-8 w-8 text-red-500 ${HOVER_TRANSITION}`} />
             </div>
             <h2 className="text-2xl font-semibold text-gray-900 mb-2">Message Not Available</h2>
             <p className="text-gray-500 mb-6">
               This message may have been deleted, expired, or the link is invalid.
             </p>
-            <Button variant="outline" className="mt-2" onClick={() => window.location.reload()}>
+            <Button variant="outline" className={`mt-2 ${HOVER_TRANSITION}`} onClick={() => window.location.reload()}>
               Try Again
             </Button>
           </div>
@@ -78,7 +78,7 @@ export const MessageDisplay = ({
         <div className="mb-4 rounded-lg bg-amber-50 p-4 border border-amber-200">
           <div className="flex">
             <div className="flex-shrink-0">
-              <Eye className="h-5 w-5 text-amber-400" aria-hidden="true" />
+              <Eye className={`h-5 w-5 text-amber-400 ${HOVER_TRANSITION}`} aria-hidden="true" />
             </div>
             <div className="ml-3">
               <h3 className="text-sm font-medium text-amber-800">Preview Mode</h3>
@@ -95,7 +95,7 @@ export const MessageDisplay = ({
         <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6 text-white">
           <h1 className="text-2xl font-bold mb-2">{message.title}</h1>
           <div className="flex items-center text-blue-100 text-sm">
-            <Calendar className="h-4 w-4 mr-1" />
+            <Calendar className={`h-4 w-4 mr-1 ${HOVER_TRANSITION}`} />
             <span>{formatMessageDate(message.created_at)}</span>
           </div>
         </div>
@@ -103,11 +103,11 @@ export const MessageDisplay = ({
         {/* Security Badge */}
         <div className="bg-blue-50 px-6 py-2 border-b border-blue-100">
           <div className="flex items-center">
-            <Shield className="h-4 w-4 text-blue-600 mr-2" />
+            <Shield className={`h-4 w-4 text-blue-600 mr-2 ${HOVER_TRANSITION}`} />
             <span className="text-sm font-medium text-blue-700">Secure Message</span>
             
             <Badge variant="outline" className="ml-auto border-blue-200 text-blue-700">
-              <Clock className="h-3 w-3 mr-1" /> {message.expires_at ? 'Expires' : 'No Expiration'}
+              <Clock className={`h-3 w-3 mr-1 ${HOVER_TRANSITION}`} /> {message.expires_at ? 'Expires' : 'No Expiration'}
             </Badge>
           </div>
         </div>
@@ -137,4 +137,4 @@ export const MessageDisplay = ({
       </Card>
     </div>
   );
-};
+}

@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -126,7 +125,7 @@ export default function Messages() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 animate-fade-in">
       <div className="flex flex-col mb-8 animate-fade-in">
         <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 text-transparent bg-clip-text">
           Your Messages
@@ -143,7 +142,7 @@ export default function Messages() {
         />
         <Button 
           onClick={() => navigate("/create-message")}
-          className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default} gap-2 shadow-sm hover:shadow-md transition-all duration-200`}
+          className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default} gap-2 shadow-sm hover:shadow-md`}
           size="lg"
         >
           <PlusCircle className="h-5 w-5" />
@@ -169,7 +168,7 @@ export default function Messages() {
       )}
       
       {/* Display regular messages (deadman's switch) */}
-      <div className={panicMessages.length > 0 ? "mt-6 animate-fade-in" : ""}>
+      <div className={panicMessages.length > 0 ? "mt-6 animate-fade-in" : "animate-fade-in"}>
         {panicMessages.length > 0 && (
           <h2 className="text-xl font-semibold mb-4 flex items-center">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 mr-2">
