@@ -2,8 +2,9 @@
 import { Separator } from "@/components/ui/separator";
 import { formatReminderTime } from "@/components/message/FormSections/DeadManSwitchComponents/reminder/TimeConversionUtils";
 import { Badge } from "@/components/ui/badge";
-import { Clock } from "lucide-react";
+import { Clock, Shield, Lock } from "lucide-react";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface MessageDeliverySettingsProps {
   condition: any | null;
@@ -18,6 +19,8 @@ export function MessageDeliverySettings({
   formatDate,
   showInTabs = false
 }: MessageDeliverySettingsProps) {
+  const isMobile = useIsMobile();
+  
   if (!condition) {
     return (
       <div className="space-y-6 pt-2">
@@ -98,6 +101,11 @@ export function MessageDeliverySettings({
         <>
           <Separator className="my-4" />
           <div className="flex flex-col gap-3">
+            <div className="flex items-center gap-2 mb-1">
+              <Lock className={`h-4 w-4 text-muted-foreground ${HOVER_TRANSITION}`} />
+              <p className="font-medium">Security Settings</p>
+            </div>
+            
             {condition.expiry_hours > 0 && (
               <div className="text-sm">
                 <p className="font-medium">Message Expiry</p>
@@ -112,18 +120,6 @@ export function MessageDeliverySettings({
                 <p className="font-medium">Delay Settings</p>
                 <p className="text-muted-foreground">
                   Recipients will need to wait {condition.unlock_delay_hours} hours after delivery to view this message.
-                </p>
-              </div>
-            )}
-            
-            {condition.pin_code && (
-              <div className="text-sm">
-                <div className="flex items-center gap-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 text-muted-foreground"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"></path><path d="m9 12 2 2 4-4"></path></svg>
-                  <p className="font-medium">PIN Protection</p>
-                </div>
-                <p className="text-muted-foreground">
-                  Recipients will need to enter a PIN to access this message.
                 </p>
               </div>
             )}
