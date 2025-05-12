@@ -7,13 +7,15 @@ interface DeliveryStatus {
   isDelivered: boolean;
   deliveryDate: string | null;
   viewCount: number | null;
+  lastDelivered: string | null;  // Added this property
 }
 
 export function useMessageDeliveryStatus(messageId: string) {
   const [status, setStatus] = useState<DeliveryStatus>({
     isDelivered: false,
     deliveryDate: null,
-    viewCount: 0
+    viewCount: 0,
+    lastDelivered: null  // Initialize the new property
   });
   const [isLoading, setIsLoading] = useState(true);
   
@@ -42,7 +44,8 @@ export function useMessageDeliveryStatus(messageId: string) {
           setStatus({
             isDelivered: true,
             deliveryDate: data[0].delivered_at,
-            viewCount: data[0].viewed_count
+            viewCount: data[0].viewed_count,
+            lastDelivered: data[0].delivered_at  // Set the new property
           });
         }
       } catch (error) {
