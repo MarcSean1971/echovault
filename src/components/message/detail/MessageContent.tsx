@@ -109,8 +109,8 @@ export function MessageContent({
           </div>
         )}
         
-        {/* Show video content after the text, but only if NOT on message detail page */}
-        {!isMessageDetailPage && (message.message_type === "video" || hasVideoContent) && (
+        {/* Show video content after the text - REMOVED THE CONDITION THAT PREVENTED VIDEO DISPLAY */}
+        {(message.message_type === "video" || hasVideoContent) && (
           <div className="mb-6">
             <VideoMessageContent message={message} />
           </div>
