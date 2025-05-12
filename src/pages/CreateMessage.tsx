@@ -6,6 +6,8 @@ import { useState, useEffect } from "react";
 import { fetchRecipients } from "@/services/messages/recipientService";
 import { Recipient } from "@/types/message";
 import { toast } from "@/components/ui/use-toast";
+import { ArrowLeft } from "lucide-react";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 export default function CreateMessage() {
   const navigate = useNavigate();
@@ -35,11 +37,17 @@ export default function CreateMessage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold">Create New Message</h1>
+      <Button 
+        variant="ghost" 
+        onClick={() => navigate("/messages")}
+        className={`mb-6 hover:bg-muted/80 hover:text-foreground ${HOVER_TRANSITION}`}
+      >
+        <ArrowLeft className="mr-2 h-4 w-4" /> Back to Messages
+      </Button>
+      
+      <div className="max-w-3xl mx-auto">
+        <CreateMessageForm onCancel={() => navigate("/messages")} />
       </div>
-
-      <CreateMessageForm onCancel={() => navigate("/dashboard")} />
     </div>
   );
 }
