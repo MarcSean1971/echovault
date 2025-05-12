@@ -35,7 +35,7 @@ export function DesktopTimerAlert({ deadline, isArmed, refreshTrigger }: Desktop
     )}>
       <div className="mb-2">
         <StatusBadge 
-          status={status}
+          status={status as "armed" | "panic" | "disarmed" | "pending" | "warning" | "critical"}
           pulseAnimation={isVeryUrgent}
           className="font-medium"
         >

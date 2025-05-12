@@ -40,7 +40,7 @@ export function MobileTimerAlert({ deadline, isArmed, refreshTrigger }: MobileTi
       >
         <div className={cn("flex items-center gap-2 mb-2")}>
           <StatusBadge 
-            status={status}
+            status={status as "armed" | "panic" | "disarmed" | "pending" | "warning" | "critical"}
             pulseAnimation={isVeryUrgent}
             className="font-medium"
           >

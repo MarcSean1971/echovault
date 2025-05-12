@@ -1,7 +1,9 @@
+
 import { useState, useEffect } from 'react';
 import { Clock, AlertCircle, TimerOff } from 'lucide-react';
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface MessageTimerProps {
   deadline: Date | null;

@@ -37,7 +37,7 @@ export function MessageHeader({
         
         {/* Arm/Disarm Button with Status Badge */}
         <div className="flex items-center gap-2">
-          <StatusBadge status={isArmed ? "armed" : "disarmed"} size="default">
+          <StatusBadge status={isArmed ? "armed" : "disarmed"} size="md">
             {isArmed ? "Armed" : "Disarmed"}
           </StatusBadge>
           

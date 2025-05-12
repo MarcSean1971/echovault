@@ -11,11 +11,17 @@ const statusBadgeVariants = cva(
         disarmed: "bg-green-100 text-green-700 hover:bg-green-200",
         pending: "bg-amber-100 text-amber-700 hover:bg-amber-200",
         panic: "bg-red-100 text-red-700 hover:bg-red-200",
+        // Add new status types
+        warning: "bg-orange-100 text-orange-700 hover:bg-orange-200",
+        critical: "bg-red-100 text-red-700 hover:bg-red-200",
+        success: "bg-green-100 text-green-700 hover:bg-green-200",
+        info: "bg-blue-100 text-blue-700 hover:bg-blue-200",
       },
       size: {
         sm: "text-xs px-2 py-0.5",
         md: "text-sm px-2.5 py-0.5",
         lg: "px-3 py-1",
+        default: "text-sm px-2.5 py-0.5", // Add default size
       },
     },
     defaultVariants: {
@@ -27,10 +33,27 @@ const statusBadgeVariants = cva(
 
 interface StatusBadgeProps
   extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof statusBadgeVariants> {}
+    VariantProps<typeof statusBadgeVariants> {
+  showIcon?: boolean;
+  pulseAnimation?: boolean;
+}
 
-export function StatusBadge({ className, status, size, ...props }: StatusBadgeProps) {
+export function StatusBadge({ 
+  className, 
+  status, 
+  size, 
+  showIcon,
+  pulseAnimation,
+  ...props 
+}: StatusBadgeProps) {
   return (
-    <div className={cn(statusBadgeVariants({ status, size }), className)} {...props} />
+    <div 
+      className={cn(
+        statusBadgeVariants({ status, size }), 
+        pulseAnimation && "animate-pulse",
+        className
+      )} 
+      {...props} 
+    />
   );
 }
