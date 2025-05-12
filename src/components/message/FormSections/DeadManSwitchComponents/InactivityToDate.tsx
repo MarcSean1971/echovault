@@ -60,8 +60,8 @@ export function InactivityToDate({
         </p>
         
         <DatePicker
-          date={triggerDate}
-          setDate={setTriggerDate}
+          selectedDate={triggerDate}
+          setSelectedDate={setTriggerDate}
           label="Select delivery date and time"
         />
         

@@ -1,7 +1,7 @@
 
 import React, { useState } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { DeliveryIcon } from "../DeliveryIcon";
+import { DeliveryIcon } from "../../detail/DeliveryIcon";
 import { DeadmanSwitchControls } from "./deadman/DeadmanSwitchControls";
 import { ReminderHistory } from "./deadman/ReminderHistory";
 import { triggerReminderCheck } from "@/services/messages/reminderService";
