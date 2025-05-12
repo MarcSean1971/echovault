@@ -69,7 +69,7 @@ export function MessageDeliverySettings({
         )}
       </div>
       
-      {/* Reminder settings section - Now positioned after check-in period */}
+      {/* Reminder settings section */}
       {condition.reminder_hours && condition.reminder_hours.length > 0 && (
         <>
           <Separator className="my-4" />
@@ -96,7 +96,7 @@ export function MessageDeliverySettings({
         </>
       )}
       
-      {/* Security settings section */}
+      {/* Security settings section - Now showing PIN code here */}
       {(condition.expiry_hours > 0 || condition.unlock_delay_hours > 0 || condition.pin_code) && (
         <>
           <Separator className="my-4" />
@@ -105,6 +105,20 @@ export function MessageDeliverySettings({
               <Lock className={`h-4 w-4 text-muted-foreground ${HOVER_TRANSITION}`} />
               <p className="font-medium">Security Settings</p>
             </div>
+            
+            {condition.pin_code && (
+              <div className="text-sm">
+                <p className="font-medium">PIN Code</p>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <code className="bg-muted px-2 py-0.5 rounded text-xs font-mono">
+                    {condition.pin_code}
+                  </code>
+                  <span className="text-xs text-muted-foreground">
+                    Recipients will need this PIN to access the message
+                  </span>
+                </div>
+              </div>
+            )}
             
             {condition.expiry_hours > 0 && (
               <div className="text-sm">

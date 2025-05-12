@@ -69,25 +69,7 @@ export function StatusDeliverySection({
                 </div>
               )}
               
-              {/* Message type with icon */}
-              <div className="grid grid-cols-3 gap-1">
-                <span className="font-medium">Format:</span>
-                <span className="col-span-2 flex items-center">
-                  {React.cloneElement(getMessageIcon(message.message_type), { className: `h-4 w-4 mr-1.5 ${HOVER_TRANSITION}` })}
-                  {message.message_type.charAt(0).toUpperCase() + message.message_type.slice(1)} 
-                </span>
-              </div>
-              
-              {/* PIN code if available */}
-              {condition?.pin_code && (
-                <div className="grid grid-cols-3 gap-1">
-                  <span className="font-medium">PIN code:</span>
-                  <span className="col-span-2 flex items-center">
-                    <Lock className={`h-4 w-4 mr-1.5 ${HOVER_TRANSITION}`} />
-                    <code className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono">{condition.pin_code}</code>
-                  </span>
-                </div>
-              )}
+              {/* Removed the Format/message type display as requested */}
             </div>
             
             {/* Check-In Information - Now separated with a separator */}
