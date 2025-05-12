@@ -12,6 +12,7 @@ export const parseVideoContent = (content: string | null): { videoData: string |
     
     // If the content has a direct videoData property
     if (contentObj && contentObj.videoData) {
+      console.log("Found video data in content object");
       return { 
         videoData: contentObj.videoData,
         transcription: contentObj.transcription || null
@@ -24,7 +25,9 @@ export const parseVideoContent = (content: string | null): { videoData: string |
         const videoContentObj = typeof contentObj.videoContent === 'string' ? 
                              JSON.parse(contentObj.videoContent) : 
                              contentObj.videoContent;
-                             
+        
+        console.log("Found nested video content:", !!videoContentObj?.videoData);
+        
         return {
           videoData: videoContentObj?.videoData || null,
           transcription: videoContentObj?.transcription || null

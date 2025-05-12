@@ -30,7 +30,8 @@ export function VideoMessageContent({ message }: { message: Message }) {
         const blob = new Blob([bytes], { type: 'video/webm' });
         const url = URL.createObjectURL(blob);
         setVideoUrl(url);
-        console.log("Video URL created successfully");
+        console.log("Video URL created successfully:", url);
+        console.log("Video blob size:", blob.size, "bytes");
       } else {
         console.log("No video data found in message content");
       }
@@ -75,6 +76,8 @@ export function VideoMessageContent({ message }: { message: Message }) {
           controls
           src={videoUrl}
           className="w-full max-h-[400px]"
+          preload="metadata"
+          style={{ display: 'block' }}
         />
       </div>
       
