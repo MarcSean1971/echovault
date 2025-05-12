@@ -1,9 +1,9 @@
 
 import React from "react";
 import { MessageContent as RefactoredMessageContent } from "./content/message-content";
-import { MessageContentProps } from "./content/message-content/MessageContent";
+import type { MessageContentProps } from "./content/message-content";
 
-export { MessageContentProps };
+export type { MessageContentProps };
 
 export function MessageContent(props: MessageContentProps) {
   return <RefactoredMessageContent {...props} />;
