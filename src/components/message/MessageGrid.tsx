@@ -4,8 +4,9 @@ import { MessageCard } from "./MessageCard";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { FileText, Loader2, PlusCircle } from "lucide-react";
+import { FileText, PlusCircle } from "lucide-react";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { Spinner } from "@/components/ui/spinner";
 
 interface MessageGridProps {
   messages: Message[];
@@ -19,7 +20,7 @@ export function MessageGrid({ messages, isLoading, onDelete }: MessageGridProps)
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-16">
-        <Loader2 className={`h-12 w-12 text-muted-foreground animate-spin mb-4 ${HOVER_TRANSITION}`} />
+        <Spinner size="lg" className="text-muted-foreground mb-4" />
         <p className="text-muted-foreground">Loading your messages...</p>
       </div>
     );
