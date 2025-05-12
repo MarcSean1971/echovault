@@ -39,7 +39,7 @@ export function MessageActionFooter({
               variant="outline"
               onClick={handleDisarmMessage}
               disabled={isActionLoading}
-              className="text-green-600 hover:bg-green-50 hover:text-green-700 flex-1 sm:flex-none"
+              className="text-green-600 hover:bg-green-100 hover:text-green-700 flex-1 sm:flex-none"
             >
               <BellOff className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} /> Disarm
             </Button>
@@ -69,7 +69,7 @@ export function MessageActionFooter({
             variant="outline"
             onClick={() => setShowDeleteConfirm(true)}
             disabled={isArmed || isActionLoading}
-            className="text-destructive border-destructive hover:bg-destructive/10"
+            className="text-destructive border-destructive hover:bg-destructive/20 hover:text-destructive"
           >
             <Trash2 className={`h-4 w-4 sm:mr-2 ${HOVER_TRANSITION}`} /> <span className="hidden sm:inline">Delete</span>
           </Button>

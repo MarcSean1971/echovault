@@ -41,7 +41,7 @@ export function MessageHeader({
               variant="outline"
               onClick={handleDisarmMessage}
               disabled={isActionLoading}
-              className="text-green-600 hover:bg-green-50 hover:text-green-700"
+              className="text-green-600 hover:bg-green-100 hover:text-green-700"
               size="sm"
             >
               <BellOff className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} /> Disarm
@@ -51,7 +51,7 @@ export function MessageHeader({
               variant="outline"
               onClick={handleArmMessage}
               disabled={isActionLoading}
-              className="text-destructive hover:bg-destructive/10"
+              className="text-destructive hover:bg-destructive/20 hover:text-destructive border-destructive"
               size="sm"
             >
               <Bell className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} /> Arm

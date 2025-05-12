@@ -22,7 +22,8 @@ export function ArmButton({
         label="Disarm Message"
         onClick={onDisarmMessage}
         disabled={isActionLoading}
-        variant="destructive"
+        variant="outline"
+        iconClassName="text-green-600"
       />
     );
   }
@@ -33,7 +34,7 @@ export function ArmButton({
       label="Arm Message"
       onClick={onArmMessage}
       disabled={isActionLoading}
-      variant="default"
+      variant="destructive"
     />
   );
 }
