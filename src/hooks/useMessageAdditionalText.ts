@@ -18,7 +18,22 @@ export function useMessageAdditionalText(message: Message) {
       
       // Check if it has additionalText field
       if (contentObj.additionalText) {
-        setAdditionalText(contentObj.additionalText);
+        // If additionalText itself is JSON, try to parse and extract just the text value
+        if (typeof contentObj.additionalText === 'string' && 
+            contentObj.additionalText.trim().startsWith('{') && 
+            contentObj.additionalText.trim().endsWith('}')) {
+          try {
+            const additionalTextObj = JSON.parse(contentObj.additionalText);
+            // If it parsed successfully, just use the text property
+            setAdditionalText(additionalTextObj.text || contentObj.additionalText);
+          } catch (e) {
+            // If it's not valid JSON, use it as is
+            setAdditionalText(contentObj.additionalText);
+          }
+        } else {
+          // Not JSON-formatted, use as is
+          setAdditionalText(contentObj.additionalText);
+        }
       } else {
         // No additional text found
         setAdditionalText(null);
