@@ -2,6 +2,7 @@
 import { CustomTimeInput } from "../CustomTimeInput";
 import { NoCheckInDeliveryOptions } from "../NoCheckInDeliveryOptions";
 import { DeliveryOption, RecurringPattern } from "@/types/message";
+import { ReminderSettings } from "../ReminderSettings";
 
 interface NoCheckInConditionProps {
   hoursThreshold: number;
@@ -51,6 +52,13 @@ export function NoCheckInCondition({
       
       {/* Custom check-in code input */}
       {renderCustomCheckInCode()}
+      
+      {/* Adding back the ReminderSettings component */}
+      <ReminderSettings
+        reminderHours={reminderHours}
+        setReminderHours={setReminderHours}
+        maxHours={calculateTotalThreshold()}
+      />
       
       <NoCheckInDeliveryOptions
         deliveryOption={deliveryOption}

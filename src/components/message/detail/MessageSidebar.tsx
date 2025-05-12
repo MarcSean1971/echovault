@@ -22,6 +22,7 @@ interface MessageSidebarProps {
   recipients?: any[];
   onSendTestMessage?: () => void;
   condition?: any;
+  onViewReminderHistory?: () => void;
 }
 
 export function MessageSidebar({
@@ -39,7 +40,8 @@ export function MessageSidebar({
   handleDelete,
   recipients = [],
   onSendTestMessage,
-  condition
+  condition,
+  onViewReminderHistory
 }: MessageSidebarProps) {
   // Get the condition type
   const conditionType = condition?.condition_type;
@@ -86,6 +88,7 @@ export function MessageSidebar({
         handleDelete={handleDelete}
         onSendTestMessage={handleSendTest}
         conditionType={conditionType}
+        onViewReminderHistory={onViewReminderHistory}
       />
     </div>
   );

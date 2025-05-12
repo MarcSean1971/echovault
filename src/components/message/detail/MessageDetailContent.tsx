@@ -14,6 +14,7 @@ import { Edit, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { MessageSidebar } from "./MessageSidebar"; // Add this import
 
 interface MessageDetailContentProps {
   message: Message;
@@ -34,8 +35,8 @@ interface MessageDetailContentProps {
   showSendTestDialog: boolean;
   setShowSendTestDialog: (show: boolean) => void;
   handleSendTestMessages: (selectedRecipients: { id: string; name: string; email: string }[]) => Promise<void>;
-  lastCheckIn?: string | null; // Added prop for last check-in time
-  checkInCode?: string | null; // Added prop for check-in code
+  lastCheckIn?: string | null;
+  checkInCode?: string | null;
 }
 
 export function MessageDetailContent({
@@ -78,66 +79,90 @@ export function MessageDetailContent({
   }
 
   return (
-    <div className="container mx-auto max-w-3xl px-4 py-8">
-      <div className="space-y-6">
-        {/* Message Content */}
-        <MainContentSection 
+    <div className="container mx-auto max-w-6xl px-4 py-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Content (2/3 width on large screens) */}
+        <div className="lg:col-span-2 order-2 lg:order-1 space-y-6">
+          {/* Message Content */}
+          <MainContentSection 
+            message={message}
+            isArmed={isArmed}
+            isActionLoading={isActionLoading}
+            condition={condition}
+            formatDate={formatDate}
+            renderConditionType={renderConditionType}
+            handleDisarmMessage={handleDisarmMessage}
+            handleArmMessage={handleArmMessage}
+            deliveryId={deliveryId}
+            recipientEmail={recipientEmail}
+          />
+          
+          {/* Status and Delivery Settings - Now with check-in information */}
+          <StatusDeliverySection
+            condition={condition}
+            isArmed={isArmed}
+            formatDate={formatDate}
+            renderConditionType={renderConditionType}
+            message={message}
+            deadline={deadline}
+            lastCheckIn={lastCheckIn}
+            checkInCode={checkInCode}
+          />
+          
+          {/* Recipients Section */}
+          <RecipientsSection
+            recipients={recipients}
+            isArmed={isArmed}
+            isActionLoading={isActionLoading}
+            onSendTestMessage={onSendTestMessage}
+          />
+          
+          {/* Mobile-only Action Buttons */}
+          <div className="lg:hidden">
+            <Card className="overflow-hidden">
+              <CardContent className="p-6">
+                <div className="flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => navigate(`/message/${message.id}/edit`)}
+                    disabled={isArmed || isActionLoading}
+                    className={HOVER_TRANSITION}
+                  >
+                    <Edit className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} /> Edit
+                  </Button>
+                  
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    disabled={isArmed || isActionLoading}
+                    className={`text-destructive border-destructive hover:bg-destructive/20 hover:text-destructive ${HOVER_TRANSITION}`}
+                  >
+                    <Trash2 className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} /> Delete
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+        
+        {/* Sidebar (1/3 width on large screens) */}
+        <MessageSidebar
           message={message}
           isArmed={isArmed}
+          conditionId={conditionId}
           isActionLoading={isActionLoading}
-          condition={condition}
           formatDate={formatDate}
           renderConditionType={renderConditionType}
+          renderRecipients={renderRecipients}
           handleDisarmMessage={handleDisarmMessage}
           handleArmMessage={handleArmMessage}
-          deliveryId={deliveryId}
-          recipientEmail={recipientEmail}
-        />
-        
-        {/* Status and Delivery Settings - Now with check-in information */}
-        <StatusDeliverySection
-          condition={condition}
-          isArmed={isArmed}
-          formatDate={formatDate}
-          renderConditionType={renderConditionType}
-          message={message}
-          deadline={deadline}
-          lastCheckIn={lastCheckIn}
-          checkInCode={checkInCode}
-        />
-        
-        {/* Recipients Section */}
-        <RecipientsSection
+          showDeleteConfirm={showDeleteConfirm}
+          setShowDeleteConfirm={setShowDeleteConfirm}
+          handleDelete={handleDelete}
           recipients={recipients}
-          isArmed={isArmed}
-          isActionLoading={isActionLoading}
           onSendTestMessage={onSendTestMessage}
+          condition={condition}
         />
-        
-        {/* Actions Card - Replacing the fixed footer */}
-        <Card className="overflow-hidden">
-          <CardContent className="p-6">
-            <div className="flex justify-end gap-2">
-              <Button
-                variant="outline"
-                onClick={() => navigate(`/message/${message.id}/edit`)}
-                disabled={isArmed || isActionLoading}
-                className={HOVER_TRANSITION}
-              >
-                <Edit className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} /> Edit
-              </Button>
-              
-              <Button
-                variant="outline"
-                onClick={() => setShowDeleteConfirm(true)}
-                disabled={isArmed || isActionLoading}
-                className={`text-destructive border-destructive hover:bg-destructive/20 hover:text-destructive ${HOVER_TRANSITION}`}
-              >
-                <Trash2 className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} /> Delete
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
       </div>
       
       <SendTestMessageDialog 

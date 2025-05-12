@@ -6,6 +6,7 @@ import { ArmButton } from "./actions/ArmButton";
 import { TestMessageButton } from "./actions/TestMessageButton";
 import { EditMessageButton } from "./actions/EditMessageButton";
 import { DeleteMessageButton } from "./actions/DeleteMessageButton";
+import { ReminderHistoryButton } from "./actions/ReminderHistoryButton";
 
 interface ActionsCardProps {
   messageId: string;
@@ -19,6 +20,7 @@ interface ActionsCardProps {
   handleDelete: () => Promise<void>;
   onSendTestMessage?: () => void;
   conditionType?: string;
+  onViewReminderHistory?: () => void;
 }
 
 export function ActionsCard({
@@ -32,7 +34,8 @@ export function ActionsCard({
   setShowDeleteConfirm,
   handleDelete,
   onSendTestMessage,
-  conditionType
+  conditionType,
+  onViewReminderHistory
 }: ActionsCardProps) {
   return (
     <Card>
@@ -54,6 +57,14 @@ export function ActionsCard({
           <TestMessageButton
             onSendTestMessage={onSendTestMessage}
             isArmed={isArmed}
+            isActionLoading={isActionLoading}
+          />
+        )}
+
+        {/* View Reminder History Button - Add back */}
+        {conditionId && onViewReminderHistory && conditionType === 'no_check_in' && (
+          <ReminderHistoryButton
+            onViewReminderHistory={onViewReminderHistory}
             isActionLoading={isActionLoading}
           />
         )}
