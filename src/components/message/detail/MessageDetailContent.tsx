@@ -68,7 +68,7 @@ export function MessageDetailContent({
   }
 
   return (
-    <div className="max-w-3xl mx-auto py-4 px-4 sm:px-6 pb-20 mb-16">
+    <div className="container mx-auto max-w-3xl px-4 py-8 pb-20 mb-16">
       <div className="space-y-6">
         {/* Message Content */}
         <MainContentSection 

@@ -26,19 +26,15 @@ export function MessageHeader({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate("/messages")}
-            className="rounded-full hover:bg-accent hover:text-accent-foreground"
-          >
-            <ArrowLeft className={`h-5 w-5 ${HOVER_TRANSITION}`} />
-          </Button>
-          <h1 className="text-xl font-medium md:text-2xl">Message Details</h1>
-        </div>
+        <Button 
+          variant="ghost" 
+          onClick={() => navigate("/messages")}
+          className={`mb-0 hover:bg-muted/80 hover:text-foreground ${HOVER_TRANSITION}`}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Messages
+        </Button>
         
-        {/* Arm/Disarm Button - ONLY SHOWN HERE */}
+        {/* Arm/Disarm Button */}
         <div>
           {isArmed ? (
             <Button
@@ -65,7 +61,7 @@ export function MessageHeader({
       </div>
       
       {/* Message Title with Icon */}
-      <div className="flex items-start gap-3 pl-9">
+      <div className="flex items-start gap-3">
         <div className="mt-1 text-muted-foreground">
           {getMessageIcon(message.message_type)}
         </div>
