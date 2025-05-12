@@ -9,6 +9,7 @@ import { MessageAttachments } from "./MessageAttachments";
 import { parseMessageTranscription, parseVideoContent } from "@/services/messages/mediaService";
 import { VideoMessageContent } from "./content/VideoMessageContent";
 import { LocationDisplay } from "./content/LocationDisplay";
+import { useLocation } from "react-router-dom";
 
 export interface MessageContentProps {
   message: Message;
@@ -28,6 +29,10 @@ export function MessageContent({
   const [hasVideoContent, setHasVideoContent] = useState(false);
   const [hasTextContent, setHasTextContent] = useState(false);
   const [additionalText, setAdditionalText] = useState<string | null>(null);
+  const location = useLocation();
+  
+  // Check if we're on the message detail page
+  const isMessageDetailPage = location.pathname.includes('/message/') && !location.pathname.includes('/edit');
   
   // Check if this is a deadman's switch message
   const isDeadmansSwitch = conditionType === 'no_check_in';
@@ -80,7 +85,8 @@ export function MessageContent({
     console.log("MessageContent: Has text content:", hasTextContent);
     console.log("MessageContent: Additional text:", additionalText);
     console.log("MessageContent: Is deadman's switch:", isDeadmansSwitch);
-  }, [message, hasVideoContent, hasTextContent, additionalText, isDeadmansSwitch]);
+    console.log("MessageContent: Is message detail page:", isMessageDetailPage);
+  }, [message, hasVideoContent, hasTextContent, additionalText, isDeadmansSwitch, isMessageDetailPage]);
 
   // Choose the appropriate content components based on message type and content
   const renderMessageContent = () => {
@@ -103,10 +109,22 @@ export function MessageContent({
           </div>
         )}
         
-        {/* Show video content after the text */}
-        {(message.message_type === "video" || hasVideoContent) && (
+        {/* Show video content after the text, but only if NOT on message detail page */}
+        {!isMessageDetailPage && (message.message_type === "video" || hasVideoContent) && (
           <div className="mb-6">
             <VideoMessageContent message={message} />
+          </div>
+        )}
+        
+        {/* For detail page with video content, just show the transcription if available */}
+        {isMessageDetailPage && hasVideoContent && transcription && (
+          <div className="mb-6">
+            <div className="mt-4 space-y-2">
+              <h3 className="text-sm font-medium">Video Transcription</h3>
+              <div className="p-3 bg-muted/40 rounded-md">
+                <p className="whitespace-pre-wrap">{transcription}</p>
+              </div>
+            </div>
           </div>
         )}
         
