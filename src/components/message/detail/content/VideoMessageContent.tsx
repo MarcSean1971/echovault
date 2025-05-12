@@ -9,10 +9,12 @@ export function VideoMessageContent({ message }: { message: Message }) {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [transcription, setTranscription] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   useEffect(() => {
     if (!message.content) {
       setIsLoading(false);
+      setError("No video content available");
       return;
     }
     
@@ -21,19 +23,25 @@ export function VideoMessageContent({ message }: { message: Message }) {
       const { videoData, transcription: extractedTranscription } = parseVideoContent(message.content);
       
       if (videoData) {
-        // Create a blob URL from the base64 data
-        const binaryString = window.atob(videoData);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
+        try {
+          // Create a blob URL from the base64 data
+          const binaryString = window.atob(videoData);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          const blob = new Blob([bytes], { type: 'video/webm' });
+          const url = URL.createObjectURL(blob);
+          setVideoUrl(url);
+          console.log("Video URL created successfully:", url);
+          console.log("Video blob size:", blob.size, "bytes");
+        } catch (e) {
+          console.error("Error creating video blob:", e);
+          setError("Error processing video data");
         }
-        const blob = new Blob([bytes], { type: 'video/webm' });
-        const url = URL.createObjectURL(blob);
-        setVideoUrl(url);
-        console.log("Video URL created successfully:", url);
-        console.log("Video blob size:", blob.size, "bytes");
       } else {
         console.log("No video data found in message content");
+        setError("Video data not available");
       }
       
       // Extract transcription
@@ -41,6 +49,7 @@ export function VideoMessageContent({ message }: { message: Message }) {
       
     } catch (e) {
       console.error("Error parsing video content:", e);
+      setError("Error parsing video content");
     } finally {
       setIsLoading(false);
     }
@@ -56,15 +65,15 @@ export function VideoMessageContent({ message }: { message: Message }) {
   if (isLoading) {
     return (
       <div className="p-4 bg-muted/40 rounded-md text-center text-muted-foreground">
-        Loading video content...
+        <div className="animate-pulse">Loading video content...</div>
       </div>
     );
   }
   
-  if (!videoUrl) {
+  if (error || !videoUrl) {
     return (
       <div className="p-4 bg-muted/40 rounded-md text-center text-muted-foreground">
-        Video content not available or could not be loaded.
+        {error || "Video content not available or could not be loaded."}
       </div>
     );
   }
@@ -80,16 +89,6 @@ export function VideoMessageContent({ message }: { message: Message }) {
           style={{ display: 'block' }}
         />
       </div>
-      
-      {/* Display transcription if available */}
-      {transcription && (
-        <div className="mt-4 space-y-2">
-          <h3 className="text-sm font-medium">Video Transcription</h3>
-          <Card className="p-3 bg-muted/40">
-            <p className="whitespace-pre-wrap">{transcription}</p>
-          </Card>
-        </div>
-      )}
     </div>
   );
 }

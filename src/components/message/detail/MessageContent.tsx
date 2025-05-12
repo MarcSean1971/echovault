@@ -77,7 +77,7 @@ export function MessageContent({
     }
   }, [message.content, message.message_type]);
   
-  // Log for debugging purposes
+  // Debug logging for better understanding of content flow
   useEffect(() => {
     console.log(`MessageContent: Rendering message of type: ${message.message_type}`);
     console.log("MessageContent: Message content:", message.content ? message.content.substring(0, 100) + "..." : null);
@@ -86,59 +86,97 @@ export function MessageContent({
     console.log("MessageContent: Additional text:", additionalText);
     console.log("MessageContent: Is deadman's switch:", isDeadmansSwitch);
     console.log("MessageContent: Is message detail page:", isMessageDetailPage);
+    if (message.message_type === "video") {
+      console.log("MessageContent: This is a video message");
+      try {
+        const { videoData } = parseVideoContent(message.content);
+        console.log("MessageContent: Video data available:", !!videoData);
+      } catch (e) {
+        console.error("Error parsing video data:", e);
+      }
+    }
   }, [message, hasVideoContent, hasTextContent, additionalText, isDeadmansSwitch, isMessageDetailPage]);
 
-  // Choose the appropriate content components based on message type and content
+  // Completely rebuilt renderMessageContent function with simplified logic that prioritizes content display
   const renderMessageContent = () => {
     // For text message types, always show the TextMessageContent
     if (message.message_type === "text") {
-      return <TextMessageContent message={message} content={message.content} />;
+      return (
+        <div className="mb-4">
+          <TextMessageContent message={message} content={message.content} />
+        </div>
+      );
     }
     
-    // For deadman's switch, show as text regardless of type
-    if (isDeadmansSwitch) {
-      return <TextMessageContent message={message} content={message.content} />;
-    }
-
-    return (
-      <>
-        {/* Show additional text first if it exists */}
-        {additionalText && (
-          <div className="mb-6">
-            <TextMessageContent message={{...message, content: additionalText}} content={additionalText} />
-          </div>
-        )}
-        
-        {/* Show video content after the text - REMOVED THE CONDITION THAT PREVENTED VIDEO DISPLAY */}
-        {(message.message_type === "video" || hasVideoContent) && (
+    // For video messages, follow the pattern used in edit mode: show both video and text when available
+    if (message.message_type === "video") {
+      return (
+        <>
+          {/* First show video content */}
           <div className="mb-6">
             <VideoMessageContent message={message} />
           </div>
-        )}
-        
-        {/* For detail page with video content, just show the transcription if available */}
-        {isMessageDetailPage && hasVideoContent && transcription && (
-          <div className="mb-6">
-            <div className="mt-4 space-y-2">
-              <h3 className="text-sm font-medium">Video Transcription</h3>
+          
+          {/* Then show transcription if available */}
+          {transcription && (
+            <div className="mt-6 mb-4">
+              <h3 className="text-sm font-medium mb-2">Video Transcription</h3>
               <div className="p-3 bg-muted/40 rounded-md">
                 <p className="whitespace-pre-wrap">{transcription}</p>
               </div>
             </div>
-          </div>
-        )}
-        
-        {/* For regular text content that isn't part of a video */}
-        {hasTextContent && !additionalText && message.message_type !== "video" && !hasVideoContent && (
+          )}
+          
+          {/* Show additional text if available */}
+          {additionalText && (
+            <div className="mt-6">
+              <h3 className="text-sm font-medium mb-2">Additional Notes</h3>
+              <TextMessageContent message={{...message, content: additionalText}} content={additionalText} />
+            </div>
+          )}
+        </>
+      );
+    }
+    
+    // For deadman's switch messages, show as text regardless of type
+    if (isDeadmansSwitch && message.content) {
+      return (
+        <div className="mb-4">
           <TextMessageContent message={message} content={message.content} />
-        )}
-        
-        {/* If we don't recognize the content type, use the unknown component */}
-        {!hasVideoContent && !hasTextContent && !additionalText && (
-          <UnknownMessageContent message={message} />
-        )}
-      </>
-    );
+        </div>
+      );
+    }
+    
+    // Fallback for other content types - check for video content first
+    if (hasVideoContent) {
+      return (
+        <>
+          {/* First show video content */}
+          <div className="mb-6">
+            <VideoMessageContent message={message} />
+          </div>
+          
+          {/* Then show additional text if available */}
+          {additionalText && (
+            <div className="mt-4">
+              <TextMessageContent message={{...message, content: additionalText}} content={additionalText} />
+            </div>
+          )}
+        </>
+      );
+    }
+    
+    // If we have text content but no video
+    if (hasTextContent && message.content) {
+      return (
+        <div className="mb-4">
+          <TextMessageContent message={message} content={message.content} />
+        </div>
+      );
+    }
+    
+    // If nothing else matches, use the unknown component
+    return <UnknownMessageContent message={message} />;
   };
 
   // Check if this is a panic trigger message with WhatsApp configuration

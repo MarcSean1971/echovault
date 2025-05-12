@@ -11,6 +11,10 @@ export function TextMessageContent({ message, content }: TextMessageContentProps
   // Use the passed content if available, otherwise use message.content
   const displayContent = content || message.content;
   
+  // Debug logging
+  console.log("TextMessageContent: Rendering with content:", displayContent ? 
+    (displayContent.length > 50 ? displayContent.substring(0, 50) + "..." : displayContent) : "null");
+  
   return (
     displayContent ? (
       <div className="whitespace-pre-wrap prose dark:prose-invert max-w-none text-sm md:text-base">
