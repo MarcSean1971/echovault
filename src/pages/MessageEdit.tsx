@@ -10,6 +10,7 @@ import { Message } from "@/types/message";
 import { EditMessageForm } from "@/components/message/FormSections/EditMessageForm";
 import { Spinner } from "@/components/ui/spinner";
 import { getConditionByMessageId } from "@/services/messages/conditionService";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 export default function MessageEdit() {
   const { id } = useParams<{ id: string }>();
@@ -94,7 +95,7 @@ export default function MessageEdit() {
       <Button 
         variant="ghost" 
         onClick={() => navigate(`/message/${id}`)}
-        className="mb-6 hover:bg-muted/80 transition-colors duration-200"
+        className={`mb-6 hover:bg-muted/80 hover:text-foreground ${HOVER_TRANSITION}`}
       >
         <ArrowLeft className="mr-2 h-4 w-4" /> Back to Message
       </Button>
