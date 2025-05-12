@@ -1,4 +1,3 @@
-
 import { useEffect } from "react";
 import { Message, MessageCondition, TriggerType } from "@/types/message";
 import { fetchMessageConditions } from "@/services/messages/conditionService";
@@ -120,8 +119,10 @@ export function useMessageFormLoader(message: Message) {
             setDeliveryOption("once");
           }
           
-          // Set reminder hours
+          // Set reminder hours - these are stored as minutes in the database
           if (messageCondition.reminder_hours && messageCondition.reminder_hours.length > 0) {
+            // reminder_hours already contains minute values, so no conversion needed
+            console.log("Setting reminder minutes from condition:", messageCondition.reminder_hours);
             setReminderHours(messageCondition.reminder_hours);
           }
           

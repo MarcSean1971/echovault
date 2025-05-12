@@ -22,20 +22,17 @@ export function ReminderSettings({
   const [validationError, setValidationError] = useState<string | null>(null);
   const [maxMinutes, setMaxMinutes] = useState<number>(59);
 
-  // Helper function to convert between display format and storage format
-  const decimalToHoursMinutes = (decimalHours: number): { hours: number, minutes: number } => {
-    const hours = Math.floor(decimalHours);
-    const minutes = Math.round((decimalHours - hours) * 60);
+  // Convert from minutes to hours and minutes for display
+  // Note that reminderHours array actually contains minute values
+  const minutesToHoursAndMinutes = (totalMinutes: number): { hours: number, minutes: number } => {
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
     return { hours, minutes };
-  };
-
-  const hoursMinutesToDecimal = (hours: number, minutes: number): number => {
-    return hours + (minutes / 60);
   };
 
   // Format the threshold for display in error messages and labels
   const formatThreshold = (decimalHours: number): string => {
-    const { hours, minutes } = decimalToHoursMinutes(decimalHours);
+    const { hours, minutes } = minutesToHoursAndMinutes(decimalHours);
     if (hours === 0) {
       return `${minutes} minutes`;
     } else if (minutes === 0) {
@@ -43,6 +40,11 @@ export function ReminderSettings({
     } else {
       return `${hours} ${hours === 1 ? 'hour' : 'hours'} and ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`;
     }
+  };
+
+  // Convert hours and minutes to minutes for storage
+  const hoursMinutesToMinutes = (hours: number, minutes: number): number => {
+    return (hours * 60) + minutes;
   };
 
   // Update maxMinutes when newHour or maxHours changes
@@ -68,8 +70,11 @@ export function ReminderSettings({
     const hourValue = parseInt(hour) || 0;
     const minuteValue = parseInt(minute) || 0;
     
-    const decimalValue = hoursMinutesToDecimal(hourValue, minuteValue);
-    return decimalValue < maxHours;
+    // Convert to total minutes for comparison
+    const totalMinutes = hoursMinutesToMinutes(hourValue, minuteValue);
+    
+    // Compare to maxHours converted to minutes
+    return totalMinutes < (maxHours * 60);
   };
 
   // Handle hour input change
@@ -128,18 +133,18 @@ export function ReminderSettings({
       return;
     }
     
-    // Convert to decimal hours for storage
-    const decimalHours = hoursMinutesToDecimal(hourValue, minuteValue);
+    // Convert to minutes for storage
+    const totalMinutes = hoursMinutesToMinutes(hourValue, minuteValue);
     
     // If maxHours is provided, ensure the combined value is less than it
-    if (maxHours && decimalHours >= maxHours) {
-      setValidationError(`Reminder time must be less than the check-in threshold (${formatThreshold(maxHours)})`);
+    if (maxHours && totalMinutes >= (maxHours * 60)) {
+      setValidationError(`Reminder time must be less than the check-in threshold (${formatThreshold(maxHours * 60)})`);
       return;
     }
     
     // Check if this time already exists in the array
-    if (!reminderHours.includes(decimalHours)) {
-      setReminderHours([...reminderHours, decimalHours].sort((a, b) => a - b));
+    if (!reminderHours.includes(totalMinutes)) {
+      setReminderHours([...reminderHours, totalMinutes].sort((a, b) => a - b));
       setNewHour("");
       setNewMinute("");
     } else {
@@ -147,20 +152,20 @@ export function ReminderSettings({
     }
   };
   
-  const handleRemoveReminder = (decimalHours: number) => {
-    setReminderHours(reminderHours.filter(h => h !== decimalHours));
+  const handleRemoveReminder = (minutes: number) => {
+    setReminderHours(reminderHours.filter(h => h !== minutes));
   };
   
-  // Format the decimal hours for display
-  const formatReminderTime = (decimalHours: number): string => {
-    const { hours, minutes } = decimalToHoursMinutes(decimalHours);
+  // Format the minutes for display
+  const formatReminderTime = (minutes: number): string => {
+    const { hours, minutes: mins } = minutesToHoursAndMinutes(minutes);
     
     if (hours === 0) {
-      return `${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`;
-    } else if (minutes === 0) {
+      return `${mins} ${mins === 1 ? 'minute' : 'minutes'}`;
+    } else if (mins === 0) {
       return `${hours} ${hours === 1 ? 'hour' : 'hours'}`;
     } else {
-      return `${hours} ${hours === 1 ? 'hour' : 'hours'} and ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`;
+      return `${hours} ${hours === 1 ? 'hour' : 'hours'} and ${mins} ${mins === 1 ? 'minute' : 'minutes'}`;
     }
   };
   
@@ -170,32 +175,27 @@ export function ReminderSettings({
         <Label htmlFor="reminder-hours">Reminder notifications</Label>
         <p className="text-sm text-muted-foreground mt-1">
           Send reminders before the message is delivered
-          {maxHours && ` (must be less than ${formatThreshold(maxHours)})`}
+          {maxHours && ` (must be less than ${formatThreshold(maxHours * 60)})`}
         </p>
       </div>
 
       {reminderHours.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {reminderHours.map(decimalHours => {
-            const { hours, minutes } = decimalToHoursMinutes(decimalHours);
-            // Use a unique key by combining hours and minutes
-            const key = `${hours}-${minutes}`;
-            
-            return (
-              <Badge key={key} variant="secondary" className="flex items-center gap-1">
-                {formatReminderTime(decimalHours)} before
+          {reminderHours.map(minutes => (
+              <Badge key={minutes} variant="secondary" className="flex items-center gap-1 hover:bg-slate-200 transition-colors duration-200">
+                {formatReminderTime(minutes)} before
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
                   className="h-5 w-5 p-0 hover:bg-muted/80 transition-colors duration-200"
-                  onClick={() => handleRemoveReminder(decimalHours)}
+                  onClick={() => handleRemoveReminder(minutes)}
                 >
                   <X className="h-3 w-3" />
                 </Button>
               </Badge>
-            );
-          })}
+            )
+          )}
         </div>
       )}
       

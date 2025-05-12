@@ -1,4 +1,3 @@
-
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/components/ui/use-toast";
@@ -98,15 +97,8 @@ export function useFormSubmission() {
             return;
           }
           
-          // Convert decimal reminder hours to integers by converting to minutes
-          const reminderMinutes = reminderHours.map(hour => {
-            if (Number.isInteger(hour)) {
-              return hour * 60;
-            }
-            return Math.round(hour * 60);
-          });
-          
-          console.log("Converting reminder hours to minutes:", reminderHours, "->", reminderMinutes);
+          // The reminderHours array already contains minute values - no conversion needed
+          console.log("Using reminder minutes:", reminderHours);
           
           // Create the message condition with all options
           await createMessageCondition(
@@ -127,7 +119,7 @@ export function useFormSubmission() {
               expiryHours,
               
               // Reminders - now using minutes instead of decimal hours
-              reminderHours: reminderMinutes,
+              reminderHours,
               
               // Panic trigger settings
               panicTriggerConfig,
