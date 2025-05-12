@@ -40,8 +40,23 @@ export function useMessageContentTypes(message: Message, conditionType?: string)
         try {
           const contentObj = JSON.parse(message.content);
           if (contentObj.additionalText) {
-            setAdditionalText(contentObj.additionalText);
-            console.log("Found additional text:", contentObj.additionalText);
+            // Process additionalText to extract clean text without JSON
+            if (typeof contentObj.additionalText === 'string' && 
+                contentObj.additionalText.trim().startsWith('{') && 
+                contentObj.additionalText.trim().endsWith('}')) {
+              try {
+                const additionalTextObj = JSON.parse(contentObj.additionalText);
+                // If it parsed successfully, just use the text property or other relevant property
+                setAdditionalText(additionalTextObj.text || contentObj.additionalText);
+              } catch (e) {
+                // If it's not valid JSON, use it as is
+                setAdditionalText(contentObj.additionalText);
+              }
+            } else {
+              // Not JSON-formatted, use as is
+              setAdditionalText(contentObj.additionalText);
+            }
+            console.log("Found and processed additional text");
           }
         } catch (e) {
           console.error("Error parsing additional text from video content:", e);
