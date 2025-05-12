@@ -4,6 +4,7 @@ import { MessageCard } from "./MessageCard";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { FileText, Loader2 } from "lucide-react";
 
 interface MessageGridProps {
   messages: Message[];
@@ -16,31 +17,47 @@ export function MessageGrid({ messages, isLoading, onDelete }: MessageGridProps)
   
   if (isLoading) {
     return (
-      <div className="flex justify-center py-12">
-        <p>Loading your messages...</p>
+      <div className="flex flex-col items-center justify-center py-16">
+        <Loader2 className="h-12 w-12 text-muted-foreground animate-spin mb-4" />
+        <p className="text-muted-foreground">Loading your messages...</p>
       </div>
     );
   }
   
   if (messages.length === 0) {
     return (
-      <Card className="text-center py-12">
-        <CardContent>
-          <p className="mb-4 text-muted-foreground">You don't have any messages yet</p>
-          <Button onClick={() => navigate("/create-message")}>Create Your First Message</Button>
+      <Card className="text-center py-16 bg-gradient-to-b from-muted/30 to-background">
+        <CardContent className="flex flex-col items-center">
+          <div className="mb-6 p-6 rounded-full bg-primary/5 text-primary">
+            <FileText className="h-12 w-12" />
+          </div>
+          <h3 className="text-xl font-medium mb-2">No messages yet</h3>
+          <p className="mb-6 text-muted-foreground">Create your first message to get started</p>
+          <Button 
+            onClick={() => navigate("/create-message")}
+            className="animate-bounce-in"
+            size="lg"
+          >
+            Create Your First Message
+          </Button>
         </CardContent>
       </Card>
     );
   }
   
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {messages.map((message) => (
-        <MessageCard 
-          key={message.id} 
-          message={message} 
-          onDelete={onDelete} 
-        />
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
+      {messages.map((message, index) => (
+        <div
+          key={message.id}
+          className="animate-fade-in"
+          style={{ animationDelay: `${index * 0.1}s` }}
+        >
+          <MessageCard 
+            message={message} 
+            onDelete={onDelete} 
+          />
+        </div>
       ))}
     </div>
   );

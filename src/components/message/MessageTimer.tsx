@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Clock, AlertCircle, TimerOff } from 'lucide-react';
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -114,7 +113,7 @@ export function MessageTimer({ deadline, isArmed, refreshTrigger }: MessageTimer
   };
   
   return (
-    <div className={`space-y-2 ${isMobile ? 'px-1' : ''}`}>
+    <div className={`space-y-2 ${isMobile ? 'px-1' : ''} p-2 rounded-lg ${isArmed ? (isVeryUrgent ? 'bg-destructive/5' : isUrgent ? 'bg-orange-50' : 'bg-green-50') : 'bg-muted/30'}`}>
       <div className={cn(
         "flex items-center justify-between transition-colors duration-300",
         isArmed ? (
@@ -125,12 +124,12 @@ export function MessageTimer({ deadline, isArmed, refreshTrigger }: MessageTimer
         <div className="flex items-center">
           {isArmed ? (
             isVeryUrgent ? (
-              <AlertCircle className="h-5 w-5 mr-1.5" />
+              <AlertCircle className={`h-5 w-5 mr-1.5 ${HOVER_TRANSITION}`} />
             ) : (
-              <Clock className="h-5 w-5 mr-1.5" />
+              <Clock className={`h-5 w-5 mr-1.5 ${HOVER_TRANSITION}`} />
             )
           ) : (
-            <TimerOff className="h-5 w-5 mr-1.5" />
+            <TimerOff className={`h-5 w-5 mr-1.5 ${HOVER_TRANSITION}`} />
           )}
           <span className={cn(
             "font-mono text-lg transition-all duration-300",

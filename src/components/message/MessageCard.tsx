@@ -4,8 +4,7 @@ import {
   Card,
   CardHeader,
   CardContent,
-  CardFooter,
-  CardDescription,
+  CardFooter
 } from "@/components/ui/card";
 import { Message, MessageCondition } from "@/types/message";
 import { toast } from "@/components/ui/use-toast";
@@ -205,18 +204,21 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
   return (
     <Card 
       key={message.id} 
-      className={`overflow-hidden ${isPanicSending ? 'border-red-500 border-2 animate-pulse' : isArmed ? 'border-destructive border-2' : 'border-green-500 border-2'}`}
+      className={`overflow-hidden group transition-all duration-300 hover:shadow-md ${
+        isPanicSending 
+          ? 'border-red-500 shadow-red-100 border-2 animate-pulse bg-gradient-to-br from-red-50 to-white' 
+          : isArmed 
+            ? 'border-destructive/50 bg-gradient-to-br from-red-50 to-white' 
+            : 'border-green-300 bg-gradient-to-br from-green-50 to-white'
+      }`}
     >
-      <CardHeader className="pb-3">
+      <CardHeader className={`pb-3 ${isPanicSending ? 'bg-red-50/50' : isArmed ? 'bg-red-50/20' : 'bg-green-50/20'}`}>
         <MessageCardHeader 
           message={message} 
           isArmed={isArmed} 
           formatDate={formatDate}
           isPanicTrigger={isPanicTrigger}
         />
-        <CardDescription className="pt-2 ml-7">
-          {formatDate(message.created_at)}
-        </CardDescription>
       </CardHeader>
       <CardContent>
         <MessageCardContent 
@@ -230,7 +232,7 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
           panicCountDown={panicCountDown}
         />
       </CardContent>
-      <CardFooter className="flex justify-between border-t pt-4">
+      <CardFooter className="flex justify-between border-t pt-4 bg-gradient-to-t from-muted/20 to-transparent">
         <MessageCardActions
           messageId={message.id}
           condition={condition}

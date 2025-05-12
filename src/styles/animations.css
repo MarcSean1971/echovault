@@ -1,136 +1,78 @@
 
-/* Base animations */
-.animate-fade-in {
-  animation: fadeIn 0.6s ease-out forwards;
-}
-
-.animate-slide-up {
-  animation: slideUp 0.5s ease-out forwards;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
+@keyframes pulse {
+  0%, 100% {
     opacity: 1;
   }
+  50% {
+    opacity: 0.7;
+  }
 }
 
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
   }
-  to {
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-5px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(5px);
+  }
+}
+
+@keyframes highlight {
+  0% {
+    background-color: rgba(255, 255, 224, 0);
+  }
+  50% {
+    background-color: rgba(255, 255, 224, 0.5);
+  }
+  100% {
+    background-color: rgba(255, 255, 224, 0);
+  }
+}
+
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
-/* Staggered animations */
-.stagger-1 { animation-delay: 0.1s; }
-.stagger-2 { animation-delay: 0.2s; }
-.stagger-3 { animation-delay: 0.3s; }
-.stagger-4 { animation-delay: 0.4s; }
-
-/* Header specific animations */
-.nav-item-hover {
-  @apply transition-all duration-200;
-}
-
-.nav-item-hover:hover {
-  @apply transform scale-105;
-}
-
-.menu-item-transition {
-  @apply transition-all duration-150 ease-in-out;
-}
-
-.menu-item-transition:hover {
-  @apply bg-accent/10;
-}
-
-/* Navigation hover styles */
-.navigation-link-underline {
-  @apply relative inline-block;
-}
-
-.navigation-link-underline::after {
-  content: '';
-  @apply absolute bottom-0 left-0 w-0 h-0.5 bg-gray-800 dark:bg-gray-200 transition-all duration-300;
-}
-
-.navigation-link-underline:hover::after {
-  @apply w-full;
-}
-
-/* Pulse animation for Check In button */
-@keyframes pulse-light {
-  0%, 100% {
-    box-shadow: 0 0 0 rgba(155, 135, 245, 0);
+@keyframes bounce-in {
+  0% {
+    transform: scale(0.95);
+    opacity: 0;
   }
-  50% {
-    box-shadow: 0 0 15px rgba(155, 135, 245, 0.6);
+  70% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
   }
 }
 
-.animate-pulse-light {
-  animation: pulse-light 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  z-index: 10; /* Ensure button appears above other elements */
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out forwards;
 }
 
-/* Emergency button specific animation */
-@keyframes wiggle {
-  0% { transform: translateX(0); }
-  25% { transform: translateX(-5px); }
-  50% { transform: translateX(5px); }
-  75% { transform: translateX(-5px); }
-  100% { transform: translateX(0); }
+.animate-bounce-in {
+  animation: bounce-in 0.5s ease-out forwards;
 }
 
-.pulse-subtle {
-  position: relative;
-  overflow: hidden;
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-.pulse-subtle::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  border-radius: inherit;
-  box-shadow: 0 0 0 0 rgba(155, 135, 245, 0.7);
-  animation: pulse-light 2s infinite;
+.animate-shake {
+  animation: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
 }
 
-/* Ensure dropdown menus always appear above other content */
-[data-radix-popper-content-wrapper] {
-  z-index: 100 !important; 
-}
-
-/* Ensure popups have solid backgrounds */
-.radix-dropdown-content {
-  background-color: hsl(var(--popover)) !important;
-  backdrop-filter: none !important;
-}
-
-/* Remove any hover effects from avatar dropdown trigger */
-[data-radix-dropdown-menu-trigger][role="button"] {
-  background-color: transparent !important;
-}
-
-[data-radix-dropdown-menu-trigger][role="button"]:hover {
-  background-color: transparent !important;
-  transform: none !important;
-  border-color: hsl(var(--border)) !important;
-}
-
-/* Enhance dropdown visibility */
-[data-state="open"] > [data-radix-popper-content-wrapper] {
-  visibility: visible !important;
-  opacity: 1 !important;
-  z-index: 100 !important;
+.animate-highlight {
+  animation: highlight 2s ease-in-out;
 }
