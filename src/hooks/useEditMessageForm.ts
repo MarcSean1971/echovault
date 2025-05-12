@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Message, MessageCondition } from "@/types/message";
 import { fetchMessageConditions } from "@/services/messages/conditionService";
 import { useMessageForm } from "@/components/message/MessageFormContext";
@@ -13,7 +13,9 @@ export function useEditMessageForm(message: Message, onCancel: () => void) {
     showUploadDialog, 
     setShowUploadDialog, 
     uploadProgress,
-    files
+    files,
+    recurringPattern,
+    setDeliveryOption
   } = useMessageForm();
   
   const [initialLoading, setInitialLoading] = useState(true);
@@ -28,14 +30,24 @@ export function useEditMessageForm(message: Message, onCancel: () => void) {
   // Form validation
   const { isFormValid } = useEditFormValidation();
   
-  // Load existing condition
-  useState(() => {
+  // Load existing condition and set delivery option based on recurring pattern
+  useEffect(() => {
     const loadExistingCondition = async () => {
       try {
         const conditions = await fetchMessageConditions(message.user_id);
         const condition = conditions.find(c => c.message_id === message.id);
+        
         if (condition) {
           setExistingCondition(condition);
+          
+          // Set delivery option based on recurring_pattern
+          if (condition.recurring_pattern) {
+            console.log("Found recurring pattern, setting deliveryOption to recurring");
+            setDeliveryOption("recurring");
+          } else {
+            console.log("No recurring pattern found, setting deliveryOption to once");
+            setDeliveryOption("once");
+          }
         }
       } catch (error) {
         console.error("Error loading existing condition:", error);
@@ -45,7 +57,7 @@ export function useEditMessageForm(message: Message, onCancel: () => void) {
     };
     
     loadExistingCondition();
-  });
+  }, [message.id, message.user_id, setDeliveryOption]);
   
   return {
     isLoading,

@@ -15,13 +15,20 @@ export function DeliveryOptionSelector({
   deliveryOption,
   setDeliveryOption
 }: DeliveryOptionSelectorProps) {
+  // Handle option change and log for debugging
+  const handleOptionChange = (value: string) => {
+    const option = value as DeliveryOption;
+    console.log(`Delivery option changed from ${deliveryOption} to ${option}`);
+    setDeliveryOption(option);
+  };
+
   return (
     <div>
       <Label className="font-medium">How should the message be delivered?</Label>
       
       <RadioGroup 
         value={deliveryOption} 
-        onValueChange={(value) => setDeliveryOption(value as DeliveryOption)}
+        onValueChange={handleOptionChange}
         className="grid grid-cols-1 gap-3 mt-2"
       >
         <RadioCardOption

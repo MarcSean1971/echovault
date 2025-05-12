@@ -32,12 +32,13 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
     pinCode,
     unlockDelay,
     expiryHours,
-    reminderMinutes, // Renamed from reminderHours to reminderMinutes
+    reminderMinutes,
     checkInCode,
     shareLocation,
     locationName,
     locationLatitude,
-    locationLongitude
+    locationLongitude,
+    deliveryOption // Added this field to access delivery option
   } = useMessageForm();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -159,15 +160,32 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
       
       console.log("Using reminder minutes:", reminderMinutesArray);
       
+      // Log delivery option and recurring pattern for debugging
+      console.log("Delivery option:", deliveryOption);
+      console.log("Recurring pattern before processing:", recurringPattern);
+      
+      // Ensure recurring pattern is null if "once" delivery is selected
+      let finalRecurringPattern = recurringPattern;
+      if (deliveryOption === "once") {
+        console.log("Once-off delivery selected, clearing recurring pattern");
+        finalRecurringPattern = null;
+      } else if (deliveryOption === "recurring" && !finalRecurringPattern) {
+        // If recurring is selected but no pattern, create a default one
+        finalRecurringPattern = { type: "daily", interval: 1 };
+        console.log("Created default recurring pattern:", finalRecurringPattern);
+      }
+      
+      console.log("Final recurring pattern to save:", finalRecurringPattern);
+      
       // Handle trigger conditions
       if (existingCondition) {
-        console.log("Updating existing condition with panic config:", panicTriggerConfig);
+        console.log("Updating existing condition with delivery option:", deliveryOption);
         // Update existing condition
         await updateMessageCondition(existingCondition.id, {
           condition_type: conditionType,
           hours_threshold: hoursThreshold,
           minutes_threshold: minutesThreshold,
-          recurring_pattern: recurringPattern,
+          recurring_pattern: finalRecurringPattern,
           pin_code: pinCode || null,
           trigger_date: triggerDate ? triggerDate.toISOString() : null,
           panic_trigger_config: panicTriggerConfig,
@@ -178,7 +196,7 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
           check_in_code: checkInCode || null
         });
       } else {
-        console.log("Creating new condition with panic config:", panicTriggerConfig);
+        console.log("Creating new condition with delivery option:", deliveryOption);
         // Create new condition
         await createMessageCondition(
           message.id,
@@ -187,7 +205,7 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
             hoursThreshold,
             minutesThreshold,
             triggerDate: triggerDate ? triggerDate.toISOString() : undefined,
-            recurringPattern,
+            recurringPattern: finalRecurringPattern,
             recipients: selectedRecipientObjects,
             pinCode,
             unlockDelayHours: unlockDelay,
