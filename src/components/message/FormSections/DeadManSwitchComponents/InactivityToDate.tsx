@@ -4,15 +4,14 @@ import { DatePicker } from "./DatePicker";
 import { RecurringPatternSelector } from "./RecurringPatternSelector";
 import { RecurringPattern } from "@/types/message";
 import { Separator } from "@/components/ui/separator";
-import { ReminderSettings } from "./ReminderSettings";
 
 interface InactivityToDateProps {
   hoursThreshold: number;
   setHoursThreshold: (value: number) => void;
   minutesThreshold: number;
   setMinutesThreshold: (value: number) => void;
-  triggerDate: Date | null;
-  setTriggerDate: (date: Date | null) => void;
+  triggerDate: Date | undefined;
+  setTriggerDate: (date: Date | undefined) => void;
   recurringPattern: RecurringPattern | null;
   setRecurringPattern: (pattern: RecurringPattern | null) => void;
   reminderHours: number[];
@@ -42,33 +41,25 @@ export function InactivityToDate({
           minutesThreshold={minutesThreshold}
           setMinutesThreshold={setMinutesThreshold}
         />
-        
-        {/* Restore reminder settings */}
-        <ReminderSettings
-          reminderHours={reminderHours}
-          setReminderHours={setReminderHours}
-          maxHours={hoursThreshold + (minutesThreshold / 60)}
-        />
       </div>
       
       <Separator />
       
       <div className="space-y-4">
-        <h3 className="font-medium">Second Phase: Scheduled Delivery</h3>
+        <h3 className="font-medium">Second Phase: Specific Date Delivery</h3>
         <p className="text-sm text-muted-foreground">
-          After inactivity is detected, the message will be scheduled for this specific date:
+          After the inactivity period, the message will be sent on this specific date:
         </p>
         
         <DatePicker
           selectedDate={triggerDate}
           setSelectedDate={setTriggerDate}
-          label="Select delivery date and time"
+          label="Select Delivery Date & Time"
         />
         
         <RecurringPatternSelector
           pattern={recurringPattern}
           setPattern={setRecurringPattern}
-          forceEnabled={false}
         />
       </div>
     </div>

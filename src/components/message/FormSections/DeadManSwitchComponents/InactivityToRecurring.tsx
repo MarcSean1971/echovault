@@ -3,7 +3,6 @@ import { TimeThresholdSelector } from "./TimeThresholdSelector";
 import { RecurringPatternSelector } from "./RecurringPatternSelector";
 import { RecurringPattern } from "@/types/message";
 import { Separator } from "@/components/ui/separator";
-import { ReminderSettings } from "./ReminderSettings";
 
 interface InactivityToRecurringProps {
   hoursThreshold: number;
@@ -36,13 +35,6 @@ export function InactivityToRecurring({
           setHoursThreshold={setHoursThreshold}
           minutesThreshold={minutesThreshold}
           setMinutesThreshold={setMinutesThreshold}
-        />
-        
-        {/* Restore reminder settings */}
-        <ReminderSettings
-          reminderHours={reminderHours}
-          setReminderHours={setReminderHours}
-          maxHours={hoursThreshold + (minutesThreshold / 60)}
         />
       </div>
       
