@@ -11,8 +11,8 @@ interface InactivityToDateConditionProps {
   setTriggerDate: (date: Date | null) => void;
   recurringPattern: RecurringPattern | null;
   setRecurringPattern: (pattern: RecurringPattern | null) => void;
-  reminderHours: number[];
-  setReminderHours: (hours: number[]) => void;
+  reminderMinutes: number[];
+  setReminderMinutes: (minutes: number[]) => void;
 }
 
 export function InactivityToDateCondition({
@@ -24,8 +24,8 @@ export function InactivityToDateCondition({
   setTriggerDate,
   recurringPattern,
   setRecurringPattern,
-  reminderHours,
-  setReminderHours
+  reminderMinutes,
+  setReminderMinutes
 }: InactivityToDateConditionProps) {
   return (
     <InactivityToDate
@@ -37,8 +37,8 @@ export function InactivityToDateCondition({
       setTriggerDate={setTriggerDate}
       recurringPattern={recurringPattern}
       setRecurringPattern={setRecurringPattern}
-      reminderHours={reminderHours}
-      setReminderHours={setReminderHours}
+      reminderMinutes={reminderMinutes}
+      setReminderMinutes={setReminderMinutes}
     />
   );
 }

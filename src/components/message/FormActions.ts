@@ -35,7 +35,7 @@ export function useFormActions() {
     unlockDelay,
     expiryHours,
     deliveryOption,
-    reminderHours,
+    reminderMinutes,
     // Location fields
     shareLocation,
     locationLatitude,
@@ -141,15 +141,8 @@ export function useFormActions() {
             throw new Error("Please select at least one recipient.");
           }
           
-          // Convert decimal reminder hours to minutes to ensure integers are stored
-          const reminderMinutes = reminderHours.map(hour => {
-            if (Number.isInteger(hour)) {
-              return hour * 60;
-            }
-            return Math.round(hour * 60);
-          });
-          
-          console.log("Converting reminder hours to minutes:", reminderHours, "->", reminderMinutes);
+          // Values are already stored as minutes, no need to convert
+          console.log("Using reminder minutes:", reminderMinutes);
           
           await createMessageCondition(
             message.id,

@@ -11,8 +11,8 @@ interface InactivityToRecurringProps {
   setMinutesThreshold: (value: number) => void;
   recurringPattern: RecurringPattern | null;
   setRecurringPattern: (pattern: RecurringPattern | null) => void;
-  reminderHours: number[];
-  setReminderHours: (value: number[]) => void;
+  reminderMinutes: number[];
+  setReminderMinutes: (value: number[]) => void;
 }
 
 export function InactivityToRecurring({
@@ -22,8 +22,8 @@ export function InactivityToRecurring({
   setMinutesThreshold,
   recurringPattern,
   setRecurringPattern,
-  reminderHours,
-  setReminderHours
+  reminderMinutes,
+  setReminderMinutes
 }: InactivityToRecurringProps) {
   return (
     <div className="space-y-6">

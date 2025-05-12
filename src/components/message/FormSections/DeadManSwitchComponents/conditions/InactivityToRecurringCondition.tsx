@@ -9,8 +9,8 @@ interface InactivityToRecurringConditionProps {
   setMinutesThreshold: (minutes: number) => void;
   recurringPattern: RecurringPattern | null;
   setRecurringPattern: (pattern: RecurringPattern | null) => void;
-  reminderHours: number[];
-  setReminderHours: (hours: number[]) => void;
+  reminderMinutes: number[];
+  setReminderMinutes: (minutes: number[]) => void;
 }
 
 export function InactivityToRecurringCondition({
@@ -20,8 +20,8 @@ export function InactivityToRecurringCondition({
   setMinutesThreshold,
   recurringPattern,
   setRecurringPattern,
-  reminderHours,
-  setReminderHours
+  reminderMinutes,
+  setReminderMinutes
 }: InactivityToRecurringConditionProps) {
   return (
     <InactivityToRecurring
@@ -31,8 +31,8 @@ export function InactivityToRecurringCondition({
       setMinutesThreshold={setMinutesThreshold}
       recurringPattern={recurringPattern}
       setRecurringPattern={setRecurringPattern}
-      reminderHours={reminderHours}
-      setReminderHours={setReminderHours}
+      reminderMinutes={reminderMinutes}
+      setReminderMinutes={setReminderMinutes}
     />
   );
 }

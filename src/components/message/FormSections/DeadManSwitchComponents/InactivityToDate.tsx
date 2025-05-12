@@ -14,8 +14,8 @@ interface InactivityToDateProps {
   setTriggerDate: (date: Date | undefined) => void;
   recurringPattern: RecurringPattern | null;
   setRecurringPattern: (pattern: RecurringPattern | null) => void;
-  reminderHours: number[];
-  setReminderHours: (value: number[]) => void;
+  reminderMinutes: number[];
+  setReminderMinutes: (value: number[]) => void;
 }
 
 export function InactivityToDate({
@@ -27,8 +27,8 @@ export function InactivityToDate({
   setTriggerDate,
   recurringPattern,
   setRecurringPattern,
-  reminderHours,
-  setReminderHours
+  reminderMinutes,
+  setReminderMinutes
 }: InactivityToDateProps) {
   return (
     <div className="space-y-6">
