@@ -83,16 +83,15 @@ export function MessageDeliverySettings({
         )}
       </div>
       
-      {/* Security settings section - Now showing PIN code in consistent format */}
+      {/* Security settings section - Now with consistent heading style */}
       {(condition.expiry_hours > 0 || condition.unlock_delay_hours > 0 || condition.pin_code) && (
         <>
           <Separator className="my-4" />
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-2 mb-1">
-              <Lock className={`h-4 w-4 text-muted-foreground ${HOVER_TRANSITION}`} />
-              <p className="font-medium">Security Settings</p>
-            </div>
-            
+          <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center">
+            <Lock className={`h-4 w-4 mr-1.5 ${HOVER_TRANSITION}`} />
+            Security Settings
+          </h3>
+          <div className="grid grid-cols-1 gap-2 text-sm">
             {condition.pin_code && (
               <div className="flex justify-between text-sm">
                 <span className="font-medium">PIN Code:</span>
@@ -103,20 +102,20 @@ export function MessageDeliverySettings({
             )}
             
             {condition.expiry_hours > 0 && (
-              <div className="text-sm">
-                <p className="font-medium">Message Expiry</p>
-                <p className="text-muted-foreground">
-                  This message will expire {condition.expiry_hours} hours after delivery.
-                </p>
+              <div className="flex justify-between text-sm">
+                <span className="font-medium">Message Expiry:</span>
+                <span className="text-right">
+                  {condition.expiry_hours} hours after delivery
+                </span>
               </div>
             )}
             
             {condition.unlock_delay_hours > 0 && (
-              <div className="text-sm">
-                <p className="font-medium">Delay Settings</p>
-                <p className="text-muted-foreground">
-                  Recipients will need to wait {condition.unlock_delay_hours} hours after delivery to view this message.
-                </p>
+              <div className="flex justify-between text-sm">
+                <span className="font-medium">Delay Settings:</span>
+                <span className="text-right">
+                  {condition.unlock_delay_hours} hours after delivery
+                </span>
               </div>
             )}
           </div>

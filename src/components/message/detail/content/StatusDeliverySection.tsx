@@ -72,7 +72,7 @@ export function StatusDeliverySection({
               {/* Removed the Format/message type display as requested */}
             </div>
             
-            {/* Check-In Information - Now separated with a separator */}
+            {/* Check-In Information - Now with consistent styling */}
             {(lastCheckIn || checkInCode || condition?.condition_type?.includes('check_in')) && (
               <>
                 <Separator className="my-3" />
@@ -93,7 +93,7 @@ export function StatusDeliverySection({
                   {checkInCode && (
                     <div className="grid grid-cols-3 gap-1">
                       <span className="font-medium">Check-in code:</span>
-                      <span className="col-span-2 font-mono bg-muted px-1.5 py-0.5 rounded text-xs">
+                      <span className="col-span-2">
                         {checkInCode}
                       </span>
                     </div>
