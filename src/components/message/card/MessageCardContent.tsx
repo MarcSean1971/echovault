@@ -6,6 +6,7 @@ import { MessageTypeIcon } from "../detail/MessageTypeIcon";
 import { MapPin, AlertCircle, Calendar, MessageSquare, Video } from "lucide-react";
 import { HOVER_TRANSITION, ICON_HOVER_EFFECTS } from "@/utils/hoverEffects";
 import { parseVideoContent } from "@/services/messages/mediaService";
+import { useMessageAdditionalText } from "@/hooks/useMessageAdditionalText";
 
 interface MessageCardContentProps {
   message: Message;
@@ -42,6 +43,9 @@ export function MessageCardContent({
   // Check if this is a deadman's switch message
   const isDeadmansSwitch = condition?.condition_type === 'no_check_in';
   
+  // Get additional text for video messages
+  const { additionalText } = useMessageAdditionalText(message);
+  
   // Detect video content
   useEffect(() => {
     if (message.content) {
@@ -55,6 +59,36 @@ export function MessageCardContent({
     }
   }, [message.content]);
 
+  // Determine what content to display
+  const getDisplayContent = () => {
+    // For deadman's switch or text messages, show simple text content
+    if (message.message_type === "text") {
+      return message.content;
+    }
+    
+    // For video messages with additional text, show that text
+    if (hasVideo && additionalText) {
+      return additionalText;
+    }
+    
+    // For video messages without additional text, show "Video message"
+    if (hasVideo) {
+      return "Video message";
+    }
+    
+    // Fallback to transcription if available
+    if (transcription) {
+      return transcription;
+    }
+    
+    // Ultimate fallback
+    return message.content || (
+      <span className="italic">
+        {message.message_type.charAt(0).toUpperCase() + message.message_type.slice(1)} message
+      </span>
+    );
+  };
+
   return (
     <div className="space-y-3">
       {/* Show panic sending state with countdown if active */}
@@ -65,19 +99,12 @@ export function MessageCardContent({
         </div>
       )}
 
-      {/* Show content preview - for deadman's switch, only show text */}
+      {/* Show content preview */}
       <div className="text-sm text-muted-foreground line-clamp-2 group-hover:text-foreground/80 transition-colors duration-200">
         <div className="flex items-start">
           <MessageSquare className="h-4 w-4 mr-1.5 mt-0.5 flex-shrink-0 text-muted-foreground group-hover:text-primary/70" />
           <span className="flex-grow">
-            {/* For deadman's switch messages, only show text content or transcription */}
-            {message.content || transcription || (
-              <span className="italic">
-                {message.message_type === "text" 
-                  ? "No content" 
-                  : `${message.message_type.charAt(0).toUpperCase() + message.message_type.slice(1)} message`}
-              </span>
-            )}
+            {getDisplayContent()}
           </span>
         </div>
       </div>
@@ -132,4 +159,3 @@ export function MessageCardContent({
     </div>
   );
 }
-
