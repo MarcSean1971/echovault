@@ -2,7 +2,6 @@
 import { TimeThresholdSelector } from "./TimeThresholdSelector";
 import { DatePicker } from "./DatePicker";
 import { RecurringPatternSelector } from "./RecurringPatternSelector";
-import { ReminderSettings } from "./ReminderSettings";
 import { RecurringPattern } from "@/types/message";
 import { Separator } from "@/components/ui/separator";
 
@@ -31,9 +30,6 @@ export function InactivityToDate({
   reminderHours,
   setReminderHours
 }: InactivityToDateProps) {
-  // Calculate total hours for max reminder setting
-  const totalHoursThreshold = hoursThreshold + (minutesThreshold / 60);
-  
   return (
     <div className="space-y-6">
       <div className="space-y-4">
@@ -44,12 +40,6 @@ export function InactivityToDate({
           setHoursThreshold={setHoursThreshold}
           minutesThreshold={minutesThreshold}
           setMinutesThreshold={setMinutesThreshold}
-        />
-        
-        <ReminderSettings
-          reminderHours={reminderHours}
-          setReminderHours={setReminderHours}
-          maxHours={totalHoursThreshold}
         />
       </div>
       

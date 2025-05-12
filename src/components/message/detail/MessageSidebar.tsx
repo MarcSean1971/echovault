@@ -3,7 +3,6 @@ import { useState } from "react";
 import { StatusCard } from "./sidebar/StatusCard";
 import { RecipientsCard } from "./sidebar/RecipientsCard";
 import { ActionsCard } from "./sidebar/ActionsCard";
-import { ReminderHistoryDialog } from "./ReminderHistoryDialog";
 import { Message } from "@/types/message";
 import { sendTestNotification } from "@/services/messages/notificationService";
 
@@ -42,15 +41,8 @@ export function MessageSidebar({
   onSendTestMessage,
   condition
 }: MessageSidebarProps) {
-  const [reminderHistoryOpen, setReminderHistoryOpen] = useState(false);
-  
-  // Get the condition type for checking if reminders are supported
+  // Get the condition type
   const conditionType = condition?.condition_type;
-  
-  // Check if condition supports reminders - explicitly exclude panic_trigger and any other immediate trigger types
-  const supportsReminders = conditionType && 
-                           conditionType !== 'panic_trigger' && 
-                           (condition?.reminder_hours?.length > 0);
   
   // Handle sending a test message
   const handleSendTest = async () => {
@@ -93,19 +85,8 @@ export function MessageSidebar({
         setShowDeleteConfirm={setShowDeleteConfirm}
         handleDelete={handleDelete}
         onSendTestMessage={handleSendTest}
-        onViewReminderHistory={supportsReminders ? () => setReminderHistoryOpen(true) : undefined}
         conditionType={conditionType}
-        supportsReminders={supportsReminders}
       />
-      
-      {/* Only render the reminder dialog if condition supports reminders */}
-      {conditionId && supportsReminders && (
-        <ReminderHistoryDialog 
-          open={reminderHistoryOpen} 
-          onOpenChange={setReminderHistoryOpen} 
-          messageId={message.id}
-        />
-      )}
     </div>
   );
 }

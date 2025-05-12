@@ -4,8 +4,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { MessageDeliverySettings } from "../MessageDeliverySettings";
-import { DeadmanSwitchControls } from "./deadman/DeadmanSwitchControls";
-import { ReminderHistory } from "./deadman/ReminderHistory";
 
 interface StatusDeliverySectionProps {
   condition: any | null;
@@ -22,10 +20,6 @@ export function StatusDeliverySection({
   renderConditionType,
   message
 }: StatusDeliverySectionProps) {
-  // Check if this is a deadman's switch with reminders
-  const isDeadmanSwitch = condition?.condition_type === 'no_check_in';
-  const hasReminderHours = condition?.reminder_hours && condition.reminder_hours.length > 0;
-  
   return (
     <Card className="overflow-hidden">
       <CardContent className="p-6 space-y-6">
@@ -73,20 +67,6 @@ export function StatusDeliverySection({
             )}
           </div>
         </div>
-        
-        {/* Add Deadman's Switch Reminder Controls */}
-        {isDeadmanSwitch && hasReminderHours && (
-          <>
-            <Separator className="my-4" />
-            <DeadmanSwitchControls 
-              messageId={message.id}
-              reminderHours={condition.reminder_hours}
-              isArmed={isArmed}
-            />
-            
-            <ReminderHistory messageId={message.id} />
-          </>
-        )}
       </CardContent>
     </Card>
   );

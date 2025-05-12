@@ -3,7 +3,6 @@ import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { ActionsHeader } from "./actions/ActionsHeader";
 import { ArmButton } from "./actions/ArmButton";
-import { ReminderHistoryButton } from "./actions/ReminderHistoryButton";
 import { TestMessageButton } from "./actions/TestMessageButton";
 import { EditMessageButton } from "./actions/EditMessageButton";
 import { DeleteMessageButton } from "./actions/DeleteMessageButton";
@@ -19,9 +18,7 @@ interface ActionsCardProps {
   setShowDeleteConfirm: (value: boolean) => void;
   handleDelete: () => Promise<void>;
   onSendTestMessage?: () => void;
-  onViewReminderHistory?: () => void;
   conditionType?: string;
-  supportsReminders?: boolean;
 }
 
 export function ActionsCard({
@@ -35,8 +32,7 @@ export function ActionsCard({
   setShowDeleteConfirm,
   handleDelete,
   onSendTestMessage,
-  onViewReminderHistory,
-  supportsReminders = false
+  conditionType
 }: ActionsCardProps) {
   return (
     <Card>
@@ -53,15 +49,7 @@ export function ActionsCard({
           />
         )}
 
-        {/* Reminders Button - SECOND - Only show for supported condition types */}
-        {conditionId && supportsReminders && onViewReminderHistory && (
-          <ReminderHistoryButton
-            onViewReminderHistory={onViewReminderHistory}
-            isActionLoading={isActionLoading}
-          />
-        )}
-
-        {/* Send Test Message Button - THIRD */}
+        {/* Send Test Message Button - SECOND */}
         {conditionId && onSendTestMessage && (
           <TestMessageButton
             onSendTestMessage={onSendTestMessage}
@@ -70,14 +58,14 @@ export function ActionsCard({
           />
         )}
 
-        {/* Edit Message Button - FOURTH */}
+        {/* Edit Message Button - THIRD */}
         <EditMessageButton
           messageId={messageId}
           isArmed={isArmed}
           isActionLoading={isActionLoading}
         />
 
-        {/* Delete Button / Confirm - FIFTH */}
+        {/* Delete Button / Confirm - FOURTH */}
         <DeleteMessageButton
           showDeleteConfirm={showDeleteConfirm}
           setShowDeleteConfirm={setShowDeleteConfirm}
