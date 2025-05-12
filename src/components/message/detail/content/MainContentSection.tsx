@@ -45,6 +45,7 @@ export function MainContentSection({
           message={message}
           deliveryId={deliveryId}
           recipientEmail={recipientEmail}
+          conditionType={condition?.condition_type}
         />
       </MessageMainCard>
     </>

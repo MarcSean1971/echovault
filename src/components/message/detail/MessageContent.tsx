@@ -14,18 +14,23 @@ export interface MessageContentProps {
   message: Message;
   deliveryId?: string | null;
   recipientEmail?: string | null;
+  conditionType?: string;
 }
 
 export function MessageContent({ 
   message,
   deliveryId,
-  recipientEmail
+  recipientEmail,
+  conditionType
 }: MessageContentProps) {
   // Extract transcription from message content
   const transcription = parseMessageTranscription(message.content);
   const [hasVideoContent, setHasVideoContent] = useState(false);
   const [hasTextContent, setHasTextContent] = useState(false);
   const [additionalText, setAdditionalText] = useState<string | null>(null);
+  
+  // Check if this is a deadman's switch message
+  const isDeadmansSwitch = conditionType === 'no_check_in';
   
   // Check for different types of content
   useEffect(() => {
@@ -67,26 +72,27 @@ export function MessageContent({
     console.log("MessageContent: Has video content:", hasVideoContent);
     console.log("MessageContent: Has text content:", hasTextContent);
     console.log("MessageContent: Additional text:", additionalText);
-  }, [message, transcription, hasVideoContent, hasTextContent, additionalText]);
+    console.log("MessageContent: Is deadman's switch:", isDeadmansSwitch);
+  }, [message, transcription, hasVideoContent, hasTextContent, additionalText, isDeadmansSwitch]);
 
   // Choose the appropriate content components based on message type and content
   const renderMessageContent = () => {
     return (
       <>
-        {/* If this is text only (not mixed with video), show text content */}
-        {message.message_type === "text" && !hasVideoContent && (
+        {/* For deadman's switch or text messages, show text content */}
+        {(message.message_type === "text" || isDeadmansSwitch) && (
           <TextMessageContent message={message} content={message.content} />
         )}
         
-        {/* Additional text from a video message */}
-        {additionalText && (
+        {/* Additional text from a video message (if not deadman's switch) */}
+        {additionalText && !isDeadmansSwitch && (
           <div className="mb-6">
             <TextMessageContent message={{...message, content: additionalText}} content={additionalText} />
           </div>
         )}
         
-        {/* If this is a video message type or contains video data, show video content */}
-        {(message.message_type === "video" || hasVideoContent) && (
+        {/* If this is a video message type or contains video data, show video content only if not deadman's switch */}
+        {!isDeadmansSwitch && (message.message_type === "video" || hasVideoContent) && (
           <div className="mb-6">
             <VideoMessageContent message={message} />
           </div>
@@ -116,7 +122,7 @@ export function MessageContent({
         {renderMessageContent()}
       </div>
       
-      {/* Attachments section - MOVED ABOVE location display */}
+      {/* Attachments section */}
       {message.attachments && message.attachments.length > 0 && (
         <div>
           <Separator className="my-4" />
@@ -129,7 +135,7 @@ export function MessageContent({
         </div>
       )}
       
-      {/* Location display section - NOW BELOW attachments */}
+      {/* Location display section */}
       {hasLocationData && (
         <div className="mt-6">
           <Separator className="my-4" />

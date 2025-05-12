@@ -1,9 +1,11 @@
 
+import { useState, useEffect } from "react";
 import { Message, MessageCondition } from "@/types/message";
 import { MessageTimer } from "../MessageTimer";
 import { MessageTypeIcon } from "../detail/MessageTypeIcon";
-import { MapPin, AlertCircle, Calendar, MessageSquare } from "lucide-react";
+import { MapPin, AlertCircle, Calendar, MessageSquare, Video } from "lucide-react";
 import { HOVER_TRANSITION, ICON_HOVER_EFFECTS } from "@/utils/hoverEffects";
+import { parseVideoContent } from "@/services/messages/mediaService";
 
 interface MessageCardContentProps {
   message: Message;
@@ -33,6 +35,25 @@ export function MessageCardContent({
                     
   // Check for attachments
   const hasAttachments = message.attachments && message.attachments.length > 0;
+  
+  // Check if message contains video content
+  const [hasVideo, setHasVideo] = useState(false);
+  
+  // Check if this is a deadman's switch message
+  const isDeadmansSwitch = condition?.condition_type === 'no_check_in';
+  
+  // Detect video content
+  useEffect(() => {
+    if (message.content) {
+      try {
+        const { videoData } = parseVideoContent(message.content);
+        setHasVideo(!!videoData);
+      } catch (e) {
+        console.error("Error detecting video content:", e);
+        setHasVideo(false);
+      }
+    }
+  }, [message.content]);
 
   return (
     <div className="space-y-3">
@@ -44,11 +65,12 @@ export function MessageCardContent({
         </div>
       )}
 
-      {/* Show content preview */}
+      {/* Show content preview - for deadman's switch, only show text */}
       <div className="text-sm text-muted-foreground line-clamp-2 group-hover:text-foreground/80 transition-colors duration-200">
         <div className="flex items-start">
           <MessageSquare className="h-4 w-4 mr-1.5 mt-0.5 flex-shrink-0 text-muted-foreground group-hover:text-primary/70" />
           <span className="flex-grow">
+            {/* For deadman's switch messages, only show text content or transcription */}
             {message.content || transcription || (
               <span className="italic">
                 {message.message_type === "text" 
@@ -69,6 +91,14 @@ export function MessageCardContent({
             {new Date(message.created_at).toLocaleDateString()}
           </span>
         </div>
+        
+        {/* Video content badge - show for all messages with video */}
+        {hasVideo && (
+          <div className="inline-flex items-center text-xs text-muted-foreground bg-muted/50 rounded-full px-2 py-0.5">
+            <Video className="h-3 w-3 mr-1" />
+            <span>Video</span>
+          </div>
+        )}
         
         {/* Location badge */}
         {hasLocation && (
@@ -102,3 +132,4 @@ export function MessageCardContent({
     </div>
   );
 }
+
