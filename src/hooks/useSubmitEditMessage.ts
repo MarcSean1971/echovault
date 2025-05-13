@@ -38,7 +38,7 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
     locationName,
     locationLatitude,
     locationLongitude,
-    deliveryOption // Added this field to access delivery option
+    deliveryOption
   } = useMessageForm();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -75,9 +75,11 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
         content: content ? content.substring(0, 30) + "..." : "none"
       });
       
-      // IMPROVED CONTENT HANDLING: Always check for both text and video content
+      // Save the text and video content separately
       let contentToSave = null;
       let finalMessageType = messageType;
+      let finalTextContent = textContent;
+      let finalVideoContent = videoContent;
       
       // Check if we have valid video content
       const hasValidVideo = videoContent && 
@@ -87,9 +89,12 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
       // Check if we have valid text content
       const hasValidText = textContent && textContent.trim() !== '';
       
+      // For backward compatibility, generate the merged content as well
       if (hasValidVideo && hasValidText) {
-        // We have both video and text content - combine them
-        console.log("Saving both video and text content together");
+        // We have both video and text content - combine them for legacy content field
+        console.log("Saving both video and text content separately");
+        
+        // For legacy content field, combine them
         try {
           // Parse the video content to add text content to it
           const videoContentObj = JSON.parse(videoContent);
@@ -97,10 +102,10 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
           contentToSave = JSON.stringify(videoContentObj);
           // When we have both, use video as the primary type for correct rendering
           finalMessageType = "video";
-          console.log("Combined content created with both text and video");
+          console.log("Combined content created with both text and video for legacy content field");
         } catch (error) {
           console.error("Error combining text and video content:", error);
-          // Fallback to using the selected tab's content
+          // Fallback to using the selected tab's content for legacy field
           contentToSave = messageType === "video" ? videoContent : textContent;
         }
       } else if (hasValidVideo) {
@@ -119,15 +124,21 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
         contentToSave = content; // Use whatever was there before
       }
       
-      console.log("Final content to save:", contentToSave ? contentToSave.substring(0, 30) + "..." : "none");
-      console.log("Final message type:", finalMessageType);
+      console.log("Final content to save:", {
+        legacyContent: contentToSave ? contentToSave.substring(0, 30) + "..." : "none",
+        textContent: finalTextContent ? finalTextContent.substring(0, 30) + "..." : "none",
+        videoContent: finalVideoContent ? "present (length: " + finalVideoContent.length + ")" : "none",
+        messageType: finalMessageType
+      });
 
       // Update message in database
       const { error } = await supabase
         .from('messages')
         .update({
           title,
-          content: contentToSave,
+          content: contentToSave, // For backward compatibility
+          text_content: finalTextContent,
+          video_content: finalVideoContent,
           message_type: finalMessageType,
           attachments: attachmentsToSave.length > 0 ? attachmentsToSave : null,
           updated_at: new Date().toISOString(),

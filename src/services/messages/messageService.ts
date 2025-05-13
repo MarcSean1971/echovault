@@ -80,13 +80,43 @@ export async function createMessage(
       ? await uploadAttachments(userId, attachments)
       : [];
 
-    // Then create the message with attachment references and location data
+    // Determine which content field to use based on type
+    let textContent = null;
+    let videoContent = null;
+    
+    if (messageType === 'text') {
+      textContent = content;
+    } else if (messageType === 'video') {
+      videoContent = content;
+      
+      // Check if the video content has additionalText we should extract
+      try {
+        const contentObj = JSON.parse(content || '{}');
+        if (contentObj.additionalText) {
+          textContent = contentObj.additionalText;
+        }
+      } catch (e) {
+        // Not JSON or no additionalText field
+      }
+    } else {
+      // For other types, preserve the content in the legacy field
+      // but also try to determine if it's text or video
+      if (content && content.includes('videoData')) {
+        videoContent = content;
+      } else {
+        textContent = content;
+      }
+    }
+
+    // Then create the message with attachment references, location data, and separated content fields
     const client = await getAuthClient();
     
     const messageData: any = {
       user_id: userId,
       title,
-      content,
+      content,  // Keep legacy content for backward compatibility
+      text_content: textContent,
+      video_content: videoContent,
       message_type: messageType,
       attachments: uploadedAttachments.length > 0 ? uploadedAttachments : null
     };

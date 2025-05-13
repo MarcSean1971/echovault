@@ -12,7 +12,10 @@ export function VideoMessageContent({ message }: { message: Message }) {
   const [error, setError] = useState<string | null>(null);
   
   useEffect(() => {
-    if (!message.content) {
+    // First check video_content field, then fall back to content if needed
+    const contentToUse = message.video_content || message.content;
+    
+    if (!contentToUse) {
       setIsLoading(false);
       setError("No video content available");
       return;
@@ -20,7 +23,7 @@ export function VideoMessageContent({ message }: { message: Message }) {
     
     try {
       // Parse video data from message content
-      const { videoData, transcription: extractedTranscription } = parseVideoContent(message.content);
+      const { videoData, transcription: extractedTranscription } = parseVideoContent(contentToUse);
       
       if (videoData) {
         try {
@@ -60,7 +63,7 @@ export function VideoMessageContent({ message }: { message: Message }) {
         URL.revokeObjectURL(videoUrl);
       }
     };
-  }, [message.content]);
+  }, [message.video_content, message.content]);
   
   if (isLoading) {
     return (

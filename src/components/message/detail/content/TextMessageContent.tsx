@@ -9,10 +9,10 @@ interface TextMessageContentProps {
 }
 
 export function TextMessageContent({ message, content }: TextMessageContentProps) {
-  // Use the passed content if available, otherwise use message.content
-  const displayContent = content || message.content;
+  // First try to use the passed content, then message.text_content, finally fall back to message.content
+  const displayContent = content || message.text_content || message.content;
   
-  // Helper function to clean JSON content if needed
+  // Helper function to clean JSON content if needed (for backward compatibility)
   const cleanTextContent = (text: string | null): string | null => {
     if (!text) return null;
     
@@ -42,10 +42,6 @@ export function TextMessageContent({ message, content }: TextMessageContentProps
   
   // Clean the content if needed
   const cleanedContent = cleanTextContent(displayContent);
-  
-  // Debug logging
-  console.log("TextMessageContent: Rendering with content:", cleanedContent ? 
-    (cleanedContent.length > 50 ? cleanedContent.substring(0, 50) + "..." : cleanedContent) : "null");
   
   return (
     cleanedContent ? (

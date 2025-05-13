@@ -175,9 +175,11 @@ export type Database = {
           location_name: string | null
           message_type: string
           share_location: boolean
+          text_content: string | null
           title: string
           updated_at: string
           user_id: string
+          video_content: string | null
         }
         Insert: {
           attachments?: Json | null
@@ -189,9 +191,11 @@ export type Database = {
           location_name?: string | null
           message_type?: string
           share_location?: boolean
+          text_content?: string | null
           title: string
           updated_at?: string
           user_id: string
+          video_content?: string | null
         }
         Update: {
           attachments?: Json | null
@@ -203,9 +207,11 @@ export type Database = {
           location_name?: string | null
           message_type?: string
           share_location?: boolean
+          text_content?: string | null
           title?: string
           updated_at?: string
           user_id?: string
+          video_content?: string | null
         }
         Relationships: []
       }
