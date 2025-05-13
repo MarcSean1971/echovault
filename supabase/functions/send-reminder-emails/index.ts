@@ -2,7 +2,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getMessagesNeedingReminders } from "./db-service.ts";
 import { sendReminder } from "./reminder-service.ts";
-import { corsHeaders } from "./utils/env.ts";
+
+// Define CORS headers here instead of importing them
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 const handler = async (req: Request) => {
   // Handle CORS preflight requests
