@@ -22,12 +22,12 @@ export interface ReminderData {
       phone?: string;
     }>;
     trigger_date?: string;
-    reminder_hours?: number[];
+    reminder_hours?: number[]; // These are actually minutes values
     // Add other condition fields as needed
   };
   hoursUntilDeadline: number;
-  reminderHours: number[];
-  matchedReminderHour: number | null;
+  reminderMinutes: number[]; // Renamed for clarity - these are minutes
+  matchedReminderMinute: number | null; // Renamed for clarity
 }
 
 export interface ReminderResult {

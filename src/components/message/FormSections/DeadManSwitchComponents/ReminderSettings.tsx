@@ -6,9 +6,9 @@ import { AddReminderForm } from "./reminder/AddReminderForm";
 import { formatThreshold } from "./reminder/TimeConversionUtils";
 
 interface ReminderSettingsProps {
-  reminderMinutes: number[]; // Changed from reminderHours to reminderMinutes for clarity
-  setReminderMinutes: (minutes: number[]) => void; // Updated parameter name
-  maxMinutes?: number; // Changed from maxHours to maxMinutes
+  reminderMinutes: number[]; // These are stored as minutes in the database
+  setReminderMinutes: (minutes: number[]) => void;
+  maxMinutes?: number; // This is also in minutes
 }
 
 export function ReminderSettings({

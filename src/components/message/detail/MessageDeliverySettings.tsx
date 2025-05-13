@@ -47,7 +47,7 @@ export function MessageDeliverySettings({
               </span>
             </div>
             
-            {/* Show reminder settings in same format as other settings */}
+            {/* Fixed: Show reminder settings in same format as other settings */}
             {condition.reminder_hours && condition.reminder_hours.length > 0 && (
               <div className="flex justify-between">
                 <span className="font-medium">Reminder settings:</span>

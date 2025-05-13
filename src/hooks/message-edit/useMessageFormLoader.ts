@@ -23,7 +23,7 @@ export function useMessageFormLoader(message: Message) {
     setUnlockDelay,
     setExpiryHours,
     setDeliveryOption,
-    setReminderMinutes, // Renamed from setReminderHours to setReminderMinutes
+    setReminderMinutes, // Important: This handles minutes values
     setCheckInCode,
     setShareLocation,
     setLocationLatitude,
@@ -120,7 +120,7 @@ export function useMessageFormLoader(message: Message) {
             setDeliveryOption("once");
           }
           
-          // Set reminder minutes - values are already stored as minutes in the database
+          // CRITICAL FIX: reminder_hours already stores minutes values
           if (messageCondition.reminder_hours && messageCondition.reminder_hours.length > 0) {
             console.log("Setting reminder minutes from condition:", messageCondition.reminder_hours);
             setReminderMinutes(messageCondition.reminder_hours);
@@ -157,7 +157,7 @@ export function useMessageFormLoader(message: Message) {
     setUnlockDelay,
     setExpiryHours,
     setDeliveryOption,
-    setReminderMinutes, // Updated prop name
+    setReminderMinutes, // Important: This handles minutes values
     setCheckInCode,
     setShareLocation,
     setLocationLatitude,

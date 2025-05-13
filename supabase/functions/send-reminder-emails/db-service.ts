@@ -25,7 +25,7 @@ interface Condition {
     phone?: string;
   }>;
   trigger_date?: string; // Changed from deadline to trigger_date
-  reminder_hours?: number[];
+  reminder_hours?: number[]; // This actually contains minutes, not hours!
   // Add other condition fields as needed
 }
 
@@ -93,14 +93,13 @@ export async function getMessagesNeedingReminders(
       console.log(`Condition type: ${condition.condition_type}`);
       console.log(`Message ID: ${condition.message_id}`);
       
-      // Skip if no reminder hours
+      // Skip if no reminder hours (which contains minutes)
       if (!condition.reminder_hours || condition.reminder_hours.length === 0) {
-        console.log(`DB: No reminder hours for condition ${condition.id}, skipping`);
+        console.log(`DB: No reminder minutes for condition ${condition.id}, skipping`);
         continue;
       }
       
-      // Skip if no trigger_date AND NOT forceSend - this is the key change
-      // When forceSend is true, we'll proceed even if trigger_date is null
+      // Skip if no trigger_date AND NOT forceSend
       if (!condition.trigger_date && !forceSend) {
         console.log(`DB: No trigger_date for condition ${condition.id} and forceSend is not enabled, skipping`);
         continue;
@@ -129,12 +128,11 @@ export async function getMessagesNeedingReminders(
       }
       
       // CRITICAL FIX: reminder_hours actually contains values in MINUTES, not hours!
-      // We need to convert the stored reminder times from minutes to hours for comparison
       const reminderMinutes = condition.reminder_hours as number[];
       console.log(`DB: Reminder minutes in database: ${JSON.stringify(reminderMinutes)}`);
       
       let shouldSendReminder = false;
-      let matchedReminderHour = null;
+      let matchedReminderMinute = null;
       
       if (forceSend) {
         // If forceSend is true, always send a reminder
@@ -142,20 +140,20 @@ export async function getMessagesNeedingReminders(
         console.log(`DB: Force sending reminder for message ${message.id}, deadline in ${condition.trigger_date ? hoursUntilDeadline.toFixed(1) : 'N/A'} hours`);
       } else {
         // Check if the current time matches any reminder window
-        // Updated to properly convert reminder_hours (actually minutes) to hours for comparison
-        for (const reminderMinutes of reminderMinutes) {
+        // Properly convert reminder_hours (actually minutes) to hours for comparison
+        for (const reminderMinute of reminderMinutes) {
           // Convert reminder minutes to hours for proper comparison
-          const reminderInHours = reminderMinutes / 60;
+          const reminderInHours = reminderMinute / 60;
           
           // Reminder should be sent if current time is within 15 minutes (0.25 hours) of the reminder time
           const difference = Math.abs(hoursUntilDeadline - reminderInHours);
-          console.log(`DB: Checking reminder time ${reminderMinutes} minutes (${reminderInHours.toFixed(2)} hours), difference: ${difference.toFixed(2)} hours`);
+          console.log(`DB: Checking reminder time ${reminderMinute} minutes (${reminderInHours.toFixed(2)} hours), difference: ${difference.toFixed(2)} hours`);
           
           if (difference < 0.25) { // Within 15 minutes window
             shouldSendReminder = true;
-            matchedReminderHour = reminderMinutes;
+            matchedReminderMinute = reminderMinute;
             console.log(`DB: MATCH FOUND! Time difference ${difference.toFixed(2)} hours is within 15-minute window`);
-            console.log(`DB: Will send reminder for ${reminderMinutes} minutes (${reminderInHours.toFixed(2)} hours) before deadline`);
+            console.log(`DB: Will send reminder for ${reminderMinute} minutes (${reminderInHours.toFixed(2)} hours) before deadline`);
             break;
           }
         }
@@ -178,8 +176,8 @@ export async function getMessagesNeedingReminders(
           message: message as Message,
           condition: condition as unknown as Condition,
           hoursUntilDeadline: hoursUntilDeadline,
-          reminderHours: reminderMinutes,
-          matchedReminderHour: matchedReminderHour
+          reminderMinutes: reminderMinutes,
+          matchedReminderMinute: matchedReminderMinute
         });
       } else {
         console.log(`DB: No reminder needed for message ${message.id} at this time. No matching reminder time.`);

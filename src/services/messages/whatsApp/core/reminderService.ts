@@ -3,19 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 
 /**
- * Send a WhatsApp reminder for a message
- * Note: This is implemented in the edge function, and this is just a stub for typing
- */
-export async function sendWhatsAppReminder(messageId: string) {
-  // This is primarily implemented in the edge function
-  // This function exists for proper typing in the frontend
-  return {
-    success: false,
-    message: "WhatsApp reminders are processed in the Edge Function"
-  };
-}
-
-/**
  * Trigger a manual reminder for a message
  */
 export async function triggerManualReminder(messageId: string, forceSend: boolean = true) {

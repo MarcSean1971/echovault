@@ -54,6 +54,7 @@ END
 $$;
 
 -- Run the reminder check immediately once to catch any pending reminders
+-- FIXED: Now using forceSend: true to ensure reminders are sent even without trigger dates
 DO $$
 BEGIN
   PERFORM

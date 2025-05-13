@@ -9,6 +9,7 @@ import { Reminder } from "@/services/messages/reminderService";
 import { SystemTimelineChart } from "./system/SystemTimelineChart";
 import { SystemStatusCards } from "./system/SystemStatusCards";
 import { formatDistanceToNow, parseISO, addHours, subHours } from "date-fns";
+import { formatReminderTime } from "@/components/message/FormSections/DeadManSwitchComponents/reminder/TimeConversionUtils";
 
 // Types for our monitoring data
 interface CronExecution {
@@ -108,14 +109,13 @@ export default function SystemMonitor() {
         const lastChecked = new Date(condition.last_checked);
         const deadline = addHours(lastChecked, condition.hours_threshold);
         
-        // If there are reminder_hours, schedule reminders based on them
+        // CRITICAL FIX: reminder_hours contains minutes values, not hours!
         if (condition.reminder_hours && condition.reminder_hours.length > 0) {
-          condition.reminder_hours.forEach(reminderHour => {
-            // Convert from minutes to hours if needed (our system stores in minutes)
-            const hoursBefore = typeof reminderHour === 'number' ? 
-              (reminderHour > 12 ? reminderHour / 60 : reminderHour) : 24;
+          condition.reminder_hours.forEach(reminderMinutes => {
+            // Convert from minutes to hours for scheduling
+            const hoursBeforeDeadline = reminderMinutes / 60;
             
-            const reminderTime = addHours(deadline, -hoursBefore);
+            const reminderTime = new Date(deadline.getTime() - (hoursBeforeDeadline * 60 * 60 * 1000));
             
             // Only include future reminders
             if (reminderTime > now) {

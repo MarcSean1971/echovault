@@ -42,9 +42,9 @@ export async function sendReminder(data: ReminderData, debug = false): Promise<{
       console.log(`Message user_id: ${message.user_id}`);
       console.log(`Deadline in ${condition.trigger_date ? hoursUntilDeadline.toFixed(1) : 'N/A'} hours`);
       
-      // IMPORTANT: Add debug log to clarify that reminder_hours contains minutes
-      if (data.matchedReminderHour !== null) {
-        console.log(`Matched reminder time: ${data.matchedReminderHour} minutes (${(data.matchedReminderHour / 60).toFixed(2)} hours) before deadline`);
+      // IMPORTANT: FIXED - Clarify that reminder_hours contains minutes
+      if (data.matchedReminderMinute !== null) {
+        console.log(`Matched reminder time: ${data.matchedReminderMinute} minutes (${(data.matchedReminderMinute / 60).toFixed(2)} hours) before deadline`);
       }
     }
     
