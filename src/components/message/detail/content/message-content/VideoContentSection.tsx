@@ -32,13 +32,11 @@ export function VideoContentSection({
         </div>
       )}
       
-      {/* Show additional text if available */}
+      {/* Show additional text if available - now using TextMessageContent component */}
       {additionalText && (
         <div className="mt-6">
           <h3 className="text-sm font-medium mb-2">Additional Notes</h3>
-          <div className="whitespace-pre-wrap prose dark:prose-invert max-w-none text-sm md:text-base">
-            {additionalText}
-          </div>
+          <TextMessageContent message={message} content={additionalText} />
         </div>
       )}
     </>
