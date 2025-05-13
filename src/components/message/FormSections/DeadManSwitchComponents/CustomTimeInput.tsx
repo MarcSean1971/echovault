@@ -61,27 +61,27 @@ export function CustomTimeInput({
       {label && <Label className="block">{label}</Label>}
       {description && <p className="text-sm text-muted-foreground">{description}</p>}
       
-      <div className="flex gap-4 items-end">
-        <div className="w-1/2">
-          <Label htmlFor="hours" className="text-sm">Hours</Label>
+      <div className="flex gap-2 items-end">
+        <div>
+          <Label htmlFor="hours" className="text-xs">Hours</Label>
           <Input 
             id="hours"
             type="number" 
             value={hours} 
             onChange={handleHoursChange} 
             min={0}
-            className="mt-1 hover:border-primary/50 focus:border-primary transition-colors"
+            className="w-20 mt-1 hover:border-primary/50 focus:border-primary transition-colors"
           />
         </div>
-        <div className="w-1/2">
-          <Label htmlFor="minutes" className="text-sm">Minutes</Label>
+        <div>
+          <Label htmlFor="minutes" className="text-xs">Minutes</Label>
           <Select
             value={minutes.toString()}
             onValueChange={handleMinuteChange}
           >
             <SelectTrigger 
               id="minutes"
-              className="mt-1 hover:border-primary/50 focus:border-primary transition-colors"
+              className="w-24 mt-1 hover:border-primary/50 focus:border-primary transition-colors"
             >
               <SelectValue placeholder="0" />
             </SelectTrigger>
