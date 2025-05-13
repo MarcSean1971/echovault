@@ -1,20 +1,11 @@
 
+import { supabaseClient } from "../supabase-client.ts";
+import { ReminderResult } from "../types/reminder-types.ts";
 import { sendEmailReminder } from "./email-service.ts";
 import { sendWhatsAppReminder } from "./whatsapp-service.ts";
-import { recordReminderSent } from "../db/reminder-tracking.ts";
-import { supabaseClient } from "../supabase-client.ts";
-
-interface ReminderResult {
-  success: boolean;
-  recipientId?: string;
-  recipientEmail?: string;
-  recipientPhone?: string;
-  method?: string;
-  error?: string;
-}
 
 /**
- * Send creator reminders for check-in related conditions
+ * Send a reminder to the message creator for check-in conditions
  */
 export async function sendCreatorReminder(
   messageId: string,
@@ -25,238 +16,262 @@ export async function sendCreatorReminder(
   triggerDate: string,
   debug = false
 ): Promise<ReminderResult[]> {
-  const reminderResults: ReminderResult[] = [];
+  const results: ReminderResult[] = [];
   
   try {
-    // Get sender/creator profile info
     const supabase = supabaseClient();
-    const { data: profile, error } = await supabase
+    
+    console.log(`Sending reminder to message creator (user_id: ${userId}) for message ${messageId}`);
+    
+    // Get user profile to get their email
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('first_name, last_name, backup_email, whatsapp_number')
+      .select('first_name, last_name, avatar_url, whatsapp_number')
       .eq('id', userId)
       .single();
-    
-    if (error || !profile) {
-      console.error("Error fetching creator profile:", error || "No profile found");
-      return [{
+      
+    if (profileError) {
+      console.error(`Error fetching creator profile for user ${userId}:`, profileError);
+      results.push({
         success: false,
-        error: error?.message || "No profile found for message creator"
-      }];
+        error: `Failed to fetch profile: ${profileError.message}`
+      });
+      return results;
     }
     
-    const senderName = `${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "EchoVault User";
-    const senderEmail = profile.backup_email;
-    const senderPhone = profile.whatsapp_number;
-    
-    if (!senderEmail) {
-      console.warn(`No email found for message creator (user_id: ${userId}), cannot send check-in reminder`);
-      reminderResults.push({
+    if (!profile) {
+      console.error(`No profile found for user ${userId}`);
+      results.push({
         success: false,
-        error: "No email found for message creator"
+        error: "No profile found for user"
       });
+      return results;
+    }
+    
+    // Get user auth data to get their email
+    const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(userId);
+    
+    if (authError || !authUser || !authUser.user) {
+      console.error(`Error fetching auth user ${userId}:`, authError);
+      results.push({
+        success: false,
+        error: `Failed to fetch auth user: ${authError?.message || "User not found"}`
+      });
+      return results;
+    }
+    
+    const email = authUser.user.email;
+    const name = `${profile.first_name || ""} ${profile.last_name || ""}`.trim() || "User";
+    
+    if (!email) {
+      console.error(`No email found for user ${userId}`);
+      results.push({
+        success: false,
+        error: "No email found for user"
+      });
+      return results;
+    }
+    
+    console.log(`Creator email: ${email}, name: ${name}`);
+    
+    // Calculate deadline in human-readable format
+    let deadlineText = "";
+    if (hoursUntilDeadline < 1) {
+      const minutesLeft = Math.floor(hoursUntilDeadline * 60);
+      deadlineText = `${minutesLeft} minute${minutesLeft !== 1 ? 's' : ''}`;
     } else {
-      // Send email reminder to creator
+      const hoursRounded = Math.floor(hoursUntilDeadline);
+      deadlineText = `${hoursRounded} hour${hoursRounded !== 1 ? 's' : ''}`;
+    }
+    
+    // Send email reminder
+    try {
+      console.log(`Sending email reminder to creator ${email} for message ${messageId}`);
+      
+      const emailResult = await sendEmailReminder({
+        recipientEmail: email,
+        recipientName: name,
+        messageTitle,
+        deadlineText,
+        messageId,
+        isCreatorReminder: true,
+        triggerDate
+      });
+      
+      if (debug) {
+        console.log(`Email reminder result:`, emailResult);
+      }
+      
+      results.push({
+        success: emailResult.success,
+        recipient: email,
+        method: "email",
+        error: emailResult.error
+      });
+      
+      console.log(`${emailResult.success ? 'Successfully sent' : 'Failed to send'} email reminder to creator ${email}`);
+    } catch (emailError: any) {
+      console.error(`Error sending email reminder to creator ${email}:`, emailError);
+      results.push({
+        success: false,
+        recipient: email,
+        method: "email",
+        error: emailError.message || "Unknown email error"
+      });
+    }
+    
+    // If WhatsApp number is available, send WhatsApp reminder too
+    if (profile.whatsapp_number) {
       try {
-        const emailResult = await sendEmailReminder(
-          messageId,
-          senderEmail,
-          senderName,
-          senderName, // The sender name is the same as recipient name in this case
-          messageTitle,
-          hoursUntilDeadline,
-          triggerDate,
-          debug
-        );
+        console.log(`Sending WhatsApp reminder to creator ${profile.whatsapp_number} for message ${messageId}`);
         
-        reminderResults.push({
-          success: emailResult.success,
-          recipientEmail: senderEmail,
-          method: "email",
-          error: emailResult.error
+        const whatsappResult = await sendWhatsAppReminder({
+          phone: profile.whatsapp_number,
+          name,
+          messageTitle,
+          deadlineText,
+          messageId,
+          isCreatorReminder: true
         });
         
         if (debug) {
-          console.log(`Creator email reminder ${emailResult.success ? "sent" : "failed"} to ${senderEmail}`);
-          if (!emailResult.success) {
-            console.error(`Creator email error: ${emailResult.error}`);
-          }
+          console.log(`WhatsApp reminder result:`, whatsappResult);
         }
-      } catch (error: any) {
-        console.error(`Error sending email reminder to creator ${senderEmail}:`, error);
-        reminderResults.push({
-          success: false,
-          recipientEmail: senderEmail,
-          method: "email",
-          error: error.message || "Unknown error"
-        });
-      }
-    }
-    
-    // Send WhatsApp reminder to creator if phone is available
-    if (senderPhone) {
-      try {
-        const whatsappResult = await sendWhatsAppReminder(
-          {
-            id: 'creator',
-            name: senderName,
-            email: senderEmail || "",
-            phone: senderPhone
-          },
-          {
-            id: messageId,
-            title: messageTitle,
-            deadline: triggerDate,
-            hoursUntil: Math.round(hoursUntilDeadline)
-          },
-          senderName,
-          debug
-        );
         
-        reminderResults.push({
+        results.push({
           success: whatsappResult.success,
-          recipientPhone: senderPhone,
+          recipient: profile.whatsapp_number,
           method: "whatsapp",
           error: whatsappResult.error
         });
         
-        if (debug) {
-          console.log(`Creator WhatsApp reminder ${whatsappResult.success ? "sent" : "failed"} to ${senderPhone}`);
-          if (!whatsappResult.success) {
-            console.error(`Creator WhatsApp error: ${whatsappResult.error}`);
-          }
-        }
-      } catch (error: any) {
-        console.error(`Error sending WhatsApp reminder to creator ${senderPhone}:`, error);
-        reminderResults.push({
+        console.log(`${whatsappResult.success ? 'Successfully sent' : 'Failed to send'} WhatsApp reminder to creator ${profile.whatsapp_number}`);
+      } catch (whatsappError: any) {
+        console.error(`Error sending WhatsApp reminder to creator ${profile.whatsapp_number}:`, whatsappError);
+        results.push({
           success: false,
-          recipientPhone: senderPhone,
+          recipient: profile.whatsapp_number,
           method: "whatsapp",
-          error: error.message || "Unknown error"
+          error: whatsappError.message || "Unknown WhatsApp error"
         });
       }
+    } else {
+      console.log(`No WhatsApp number found for creator, skipping WhatsApp reminder`);
     }
     
-    return reminderResults;
+    return results;
   } catch (error: any) {
-    console.error(`Error in sendCreatorReminder:`, error);
-    return [{
+    console.error(`Error sending creator reminder:`, error);
+    results.push({
       success: false,
-      error: error.message || "Unknown error in sendCreatorReminder function"
-    }];
+      error: error.message || "Unknown error in sendCreatorReminder"
+    });
+    return results;
   }
 }
 
 /**
- * Send reminders to recipients for non-check-in conditions
+ * Send reminders to message recipients
  */
 export async function sendRecipientReminders(
   messageId: string,
   messageTitle: string,
   senderName: string,
-  recipients: any[],
+  recipients: Array<{ id: string, name: string, email: string, phone?: string }>,
   hoursUntilDeadline: number,
   triggerDate: string,
   debug = false
 ): Promise<ReminderResult[]> {
-  const reminderResults: ReminderResult[] = [];
+  const results: ReminderResult[] = [];
   
-  if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
-    console.warn(`No recipients for message ${messageId}`);
-    return [{
-      success: false,
-      error: "No recipients provided"
-    }];
+  // Calculate deadline in human-readable format
+  let deadlineText = "";
+  if (hoursUntilDeadline < 1) {
+    const minutesLeft = Math.floor(hoursUntilDeadline * 60);
+    deadlineText = `${minutesLeft} minute${minutesLeft !== 1 ? 's' : ''}`;
+  } else {
+    const hoursRounded = Math.floor(hoursUntilDeadline);
+    deadlineText = `${hoursRounded} hour${hoursRounded !== 1 ? 's' : ''}`;
   }
   
-  if (debug) {
-    console.log(`Sending reminders to ${recipients.length} recipients`);
-  }
-  
-  // Send reminders to each recipient
   for (const recipient of recipients) {
-    if (debug) {
-      console.log(`Processing reminder for recipient ${recipient.name} (${recipient.email})`);
-    }
-    
     // Send email reminder
-    try {
-      const emailResult = await sendEmailReminder(
-        messageId,
-        recipient.email,
-        recipient.name,
-        senderName,
-        messageTitle,
-        hoursUntilDeadline,
-        triggerDate,
-        debug
-      );
-      
-      reminderResults.push({
-        success: emailResult.success,
-        recipientId: recipient.id,
-        recipientEmail: recipient.email,
-        method: "email",
-        error: emailResult.error
-      });
-      
-      if (debug) {
-        console.log(`Email reminder ${emailResult.success ? "sent" : "failed"} to ${recipient.email}`);
-        if (!emailResult.success) {
-          console.error(`Email error: ${emailResult.error}`);
+    if (recipient.email) {
+      try {
+        console.log(`Sending email reminder to recipient ${recipient.email} (${recipient.name}) for message ${messageId}`);
+        
+        const emailResult = await sendEmailReminder({
+          recipientEmail: recipient.email,
+          recipientName: recipient.name,
+          messageTitle,
+          senderName,
+          deadlineText,
+          messageId,
+          isCreatorReminder: false,
+          triggerDate
+        });
+        
+        if (debug) {
+          console.log(`Email reminder result for ${recipient.email}:`, emailResult);
         }
+        
+        results.push({
+          success: emailResult.success,
+          recipient: recipient.email,
+          method: "email",
+          error: emailResult.error
+        });
+        
+        console.log(`${emailResult.success ? 'Successfully sent' : 'Failed to send'} email reminder to recipient ${recipient.email}`);
+      } catch (emailError: any) {
+        console.error(`Error sending email reminder to recipient ${recipient.email}:`, emailError);
+        results.push({
+          success: false,
+          recipient: recipient.email,
+          method: "email",
+          error: emailError.message || "Unknown email error"
+        });
       }
-    } catch (error: any) {
-      console.error(`Error sending email reminder to ${recipient.email}:`, error);
-      reminderResults.push({
-        success: false,
-        recipientId: recipient.id,
-        recipientEmail: recipient.email,
-        method: "email",
-        error: error.message || "Unknown error"
-      });
     }
     
-    // Send WhatsApp reminder if phone is available
+    // If WhatsApp number is available, send WhatsApp reminder too
     if (recipient.phone) {
       try {
-        const whatsappResult = await sendWhatsAppReminder(
-          recipient,
-          {
-            id: messageId,
-            title: messageTitle,
-            deadline: triggerDate,
-            hoursUntil: Math.round(hoursUntilDeadline)
-          },
-          senderName,
-          debug
-        );
+        console.log(`Sending WhatsApp reminder to recipient ${recipient.phone} (${recipient.name}) for message ${messageId}`);
         
-        reminderResults.push({
+        const whatsappResult = await sendWhatsAppReminder({
+          phone: recipient.phone,
+          name: recipient.name,
+          messageTitle,
+          senderName,
+          deadlineText,
+          messageId,
+          isCreatorReminder: false
+        });
+        
+        if (debug) {
+          console.log(`WhatsApp reminder result for ${recipient.phone}:`, whatsappResult);
+        }
+        
+        results.push({
           success: whatsappResult.success,
-          recipientId: recipient.id,
-          recipientPhone: recipient.phone,
+          recipient: recipient.phone,
           method: "whatsapp",
           error: whatsappResult.error
         });
         
-        if (debug) {
-          console.log(`WhatsApp reminder ${whatsappResult.success ? "sent" : "failed"} to ${recipient.phone}`);
-          if (!whatsappResult.success) {
-            console.error(`WhatsApp error: ${whatsappResult.error}`);
-          }
-        }
-      } catch (error: any) {
-        console.error(`Error sending WhatsApp reminder to ${recipient.phone}:`, error);
-        reminderResults.push({
+        console.log(`${whatsappResult.success ? 'Successfully sent' : 'Failed to send'} WhatsApp reminder to recipient ${recipient.phone}`);
+      } catch (whatsappError: any) {
+        console.error(`Error sending WhatsApp reminder to recipient ${recipient.phone}:`, whatsappError);
+        results.push({
           success: false,
-          recipientId: recipient.id,
-          recipientPhone: recipient.phone,
+          recipient: recipient.phone,
           method: "whatsapp",
-          error: error.message || "Unknown error"
+          error: whatsappError.message || "Unknown WhatsApp error"
         });
       }
     }
   }
   
-  return reminderResults;
+  return results;
 }

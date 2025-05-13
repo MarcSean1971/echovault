@@ -32,6 +32,7 @@ export async function sendReminder(data: ReminderData, debug = false): Promise<{
         senderName = `${profile.first_name || ""} ${profile.last_name || ""}`.trim();
         if (!senderName) senderName = "EchoVault User";
       }
+      console.log(`Sender resolved as: ${senderName} (user_id: ${message.user_id})`);
     } catch (error) {
       console.error("Error fetching sender info:", error);
     }
@@ -48,16 +49,12 @@ export async function sendReminder(data: ReminderData, debug = false): Promise<{
     // These condition types should only send reminders to the message creator
     const checkInCondition = isCheckInCondition(condition.condition_type);
     
-    if (debug) {
-      console.log(`Condition type: ${condition.condition_type}`);
-      console.log(`Is check-in condition: ${checkInCondition}`);
-    }
+    console.log(`Condition type: ${condition.condition_type}`);
+    console.log(`Is check-in condition: ${checkInCondition}`);
     
     if (checkInCondition) {
       // For check-in conditions, only send reminder to the message creator
-      if (debug) {
-        console.log(`This is a check-in condition, only sending reminder to creator`);
-      }
+      console.log(`This is a check-in condition, only sending reminder to creator (user_id: ${message.user_id})`);
       
       const creatorResults = await sendCreatorReminder(
         message.id,
@@ -66,23 +63,38 @@ export async function sendReminder(data: ReminderData, debug = false): Promise<{
         message.user_id,
         hoursUntilDeadline,
         condition.trigger_date || new Date().toISOString(),
-        debug
+        debug || true // Always debug for now to get more info
       );
       
       reminderResults.push(...creatorResults);
+      
+      if (creatorResults.some(r => r.success)) {
+        console.log(`Successfully sent reminder to creator for check-in condition message ${message.id}`);
+      } else {
+        console.log(`Failed to send reminder to creator for check-in condition message ${message.id}`);
+      }
     } else {
       // For non-check-in conditions (e.g., panic_trigger), send reminders to the recipients
-      const recipientResults = await sendRecipientReminders(
-        message.id,
-        message.title,
-        senderName,
-        condition.recipients,
-        hoursUntilDeadline,
-        condition.trigger_date || new Date().toISOString(),
-        debug
-      );
-      
-      reminderResults.push(...recipientResults);
+      if (condition.recipients && condition.recipients.length > 0) {
+        console.log(`Sending reminders to ${condition.recipients.length} recipients for message ${message.id}`);
+        
+        const recipientResults = await sendRecipientReminders(
+          message.id,
+          message.title,
+          senderName,
+          condition.recipients,
+          hoursUntilDeadline,
+          condition.trigger_date || new Date().toISOString(),
+          debug || true // Always debug for now to get more info
+        );
+        
+        reminderResults.push(...recipientResults);
+        
+        const successCount = recipientResults.filter(r => r.success).length;
+        console.log(`Successfully sent ${successCount} out of ${recipientResults.length} recipient reminders for message ${message.id}`);
+      } else {
+        console.log(`No recipients found for message ${message.id}, skipping reminder`);
+      }
     }
     
     // Record that reminders were sent
@@ -100,7 +112,9 @@ export async function sendReminder(data: ReminderData, debug = false): Promise<{
         message.user_id || 'unknown'
       );
       
-      if (!recordResult) {
+      if (recordResult) {
+        console.log(`Successfully recorded reminder for message ${message.id} in database`);
+      } else {
         console.warn(`Failed to record reminder for message ${message.id}`);
       }
     } catch (error) {

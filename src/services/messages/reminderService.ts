@@ -6,26 +6,42 @@ import { toast } from "@/components/ui/use-toast";
  * Manually trigger a reminder check for a specific message
  * This is useful for testing the reminder system
  */
-export async function triggerReminderCheck(messageId: string) {
+export async function triggerReminderCheck(messageId: string, forceSend: boolean = true) {
   try {
+    console.log(`Triggering reminder check for message ${messageId}, forceSend: ${forceSend}`);
+    
     const { data, error } = await supabase.functions.invoke("send-reminder-emails", {
-      body: { messageId }
+      body: { 
+        messageId,
+        debug: true,
+        forceSend
+      }
     });
     
     if (error) throw error;
     
-    toast({
-      title: "Reminder check triggered",
-      description: "The system will check if a reminder needs to be sent",
-    });
+    if (data && data.successful_reminders > 0) {
+      toast({
+        title: "Reminders sent",
+        description: `Successfully sent ${data.successful_reminders} reminder(s) for this message`,
+        duration: 5000,
+      });
+    } else {
+      toast({
+        title: "No reminders sent",
+        description: data?.message || "No reminders needed at this time",
+        duration: 5000,
+      });
+    }
     
     return data;
   } catch (error: any) {
     console.error("Error triggering reminder check:", error);
     toast({
       title: "Error",
-      description: "Failed to trigger reminder check",
-      variant: "destructive"
+      description: "Failed to trigger reminder check: " + (error.message || "Unknown error"),
+      variant: "destructive",
+      duration: 5000
     });
     throw error;
   }

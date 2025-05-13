@@ -20,7 +20,7 @@ export async function sendWhatsAppReminder(messageId: string) {
  */
 export async function triggerManualReminder(messageId: string, forceSend: boolean = true) {
   try {
-    console.log(`Triggering manual reminder check for message ${messageId}`);
+    console.log(`Triggering manual reminder check for message ${messageId}, forceSend: ${forceSend}`);
 
     toast({
       title: "Reminder Check Triggered",
@@ -67,6 +67,14 @@ export async function triggerManualReminder(messageId: string, forceSend: boolea
       
       if (data && data.message) {
         errorMessage += data.message;
+      } else if (data && data.results && data.results.length > 0) {
+        // Check if there are any specific errors in the results
+        const errors = data.results.filter(r => r.error).map(r => r.error);
+        if (errors.length > 0) {
+          errorMessage += errors[0]; // Just show the first error
+        } else {
+          errorMessage += "Check that the message has recipients and reminder settings configured.";
+        }
       } else {
         errorMessage += "Check that the message has recipients and reminder settings configured.";
       }
@@ -86,6 +94,14 @@ export async function triggerManualReminder(messageId: string, forceSend: boolea
     }
   } catch (error: any) {
     console.error("Error in triggerManualReminder:", error);
+    
+    toast({
+      title: "Error",
+      description: error.message || "An unknown error occurred",
+      variant: "destructive", 
+      duration: 5000,
+    });
+    
     return {
       success: false,
       error: error.message || "An unknown error occurred"

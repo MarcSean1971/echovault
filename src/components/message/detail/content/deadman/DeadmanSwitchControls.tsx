@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Bell, Clock } from "lucide-react";
+import { Bell, Clock, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { triggerManualReminder } from "@/services/messages/whatsApp";
 import { toast } from "@/components/ui/use-toast";
@@ -19,11 +19,6 @@ export function DeadmanSwitchControls({
 }: DeadmanSwitchControlsProps) {
   const [isSendingReminder, setIsSendingReminder] = useState(false);
   
-  // Only show reminders section if there are reminder minutes configured
-  if (reminderMinutes.length === 0) {
-    return null;
-  }
-
   // Convert minutes to hours and minutes
   const minutesToHoursAndMinutes = (totalMinutes: number): { hours: number, minutes: number } => {
     const hours = Math.floor(totalMinutes / 60);
@@ -66,7 +61,7 @@ export function DeadmanSwitchControls({
         duration: 3000,
       });
       
-      const result = await triggerManualReminder(messageId);
+      const result = await triggerManualReminder(messageId, true);
       
       if (result.success) {
         console.log(`Reminder triggered successfully for message ${messageId}`);
@@ -119,7 +114,7 @@ export function DeadmanSwitchControls({
         )}
       </div>
       
-      {reminderMinutes.length > 0 && (
+      {reminderMinutes.length > 0 ? (
         <div className="mt-2">
           <p className="text-xs font-medium mb-1">Reminders scheduled at:</p>
           <div className="flex flex-wrap gap-1">
@@ -132,6 +127,13 @@ export function DeadmanSwitchControls({
                 {formatReminderTime(minutes)} before deadline
               </Badge>
             ))}
+          </div>
+        </div>
+      ) : (
+        <div className="mt-2">
+          <div className="flex items-center">
+            <AlertCircle className="h-3 w-3 text-amber-600 mr-1" />
+            <p className="text-xs text-amber-600">No reminders configured for this message.</p>
           </div>
         </div>
       )}
