@@ -1,17 +1,27 @@
+
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { uploadAttachments } from "@/services/messages/fileService";
 import { useMessageForm } from "@/components/message/MessageFormContext";
-import { fetchRecipients } from "@/services/messages/recipientService";
 import { Message, TriggerType, MessageCondition } from "@/types/message";
 import {
   updateMessageCondition,
   createMessageCondition 
 } from "@/services/messages/conditionService";
+import { useAttachmentHandler } from "./message-edit/useAttachmentHandler";
+import { useContentHandler } from "./message-edit/useContentHandler";
+import { useTimeThresholdHandler } from "./message-edit/useTimeThresholdHandler";
+import { useRecipientHandler } from "./message-edit/useRecipientHandler";
+import { useRecurringPatternHandler } from "./message-edit/useRecurringPatternHandler";
 
 export function useSubmitEditMessage(message: Message, existingCondition: MessageCondition | null) {
   const navigate = useNavigate();
+  const { handleAttachments } = useAttachmentHandler();
+  const { prepareContent } = useContentHandler();
+  const { processTimeThreshold } = useTimeThresholdHandler();
+  const { fetchSelectedRecipients } = useRecipientHandler();
+  const { processRecurringPattern } = useRecurringPatternHandler();
+  
   const { 
     setIsLoading,
     files,
@@ -47,88 +57,22 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
     setIsLoading(true);
     
     try {
-      // Upload any new files that haven't been uploaded
-      const newFiles = files.filter(f => f.file && !f.isUploaded);
-      let attachmentsToSave = [...(message.attachments || [])].filter(
-        // Filter out any deleted attachments
-        attachment => files.some(f => f.path === attachment.path)
+      // Process attachments
+      setShowUploadDialog(true);
+      const attachmentsToSave = await handleAttachments(
+        message.user_id, 
+        files, 
+        message.attachments
       );
+      setShowUploadDialog(false);
       
-      if (newFiles.length > 0) {
-        setShowUploadDialog(true);
-        const uploadedFiles = await uploadAttachments(message.user_id, newFiles);
-        setShowUploadDialog(false);
-        attachmentsToSave = [
-          ...attachmentsToSave,
-          ...uploadedFiles
-        ];
-      }
-      
-      // Log the current state of content before saving
-      console.log("Message edit - content state before save:", {
-        messageType,
-        hasTextContent: !!textContent && textContent.trim() !== '',
-        hasVideoContent: !!videoContent && videoContent.trim() !== '',
-        textContentLength: textContent?.length || 0,
-        videoContentLength: videoContent?.length || 0,
-        content: content ? content.substring(0, 30) + "..." : "none"
-      });
-      
-      // Save the text and video content separately
-      let contentToSave = null;
-      let finalMessageType = messageType;
-      let finalTextContent = textContent;
-      let finalVideoContent = videoContent;
-      
-      // Check if we have valid video content
-      const hasValidVideo = videoContent && 
-        (videoContent.includes('videoData') || 
-          (videoContent.startsWith('{') && videoContent.endsWith('}')));
-      
-      // Check if we have valid text content
-      const hasValidText = textContent && textContent.trim() !== '';
-      
-      // For backward compatibility, generate the merged content as well
-      if (hasValidVideo && hasValidText) {
-        // We have both video and text content - combine them for legacy content field
-        console.log("Saving both video and text content separately");
-        
-        // For legacy content field, combine them
-        try {
-          // Parse the video content to add text content to it
-          const videoContentObj = JSON.parse(videoContent);
-          videoContentObj.additionalText = textContent;
-          contentToSave = JSON.stringify(videoContentObj);
-          // When we have both, use video as the primary type for correct rendering
-          finalMessageType = "video";
-          console.log("Combined content created with both text and video for legacy content field");
-        } catch (error) {
-          console.error("Error combining text and video content:", error);
-          // Fallback to using the selected tab's content for legacy field
-          contentToSave = messageType === "video" ? videoContent : textContent;
-        }
-      } else if (hasValidVideo) {
-        // Only video content available
-        console.log("Saving video content only");
-        contentToSave = videoContent;
-        finalMessageType = "video";
-      } else if (hasValidText) {
-        // Only text content available
-        console.log("Saving text content only");
-        contentToSave = textContent;
-        finalMessageType = "text";
-      } else {
-        // No valid content - this should not normally happen
-        console.log("No valid content found to save");
-        contentToSave = content; // Use whatever was there before
-      }
-      
-      console.log("Final content to save:", {
-        legacyContent: contentToSave ? contentToSave.substring(0, 30) + "..." : "none",
-        textContent: finalTextContent ? finalTextContent.substring(0, 30) + "..." : "none",
-        videoContent: finalVideoContent ? "present (length: " + finalVideoContent.length + ")" : "none",
-        messageType: finalMessageType
-      });
+      // Process content
+      const { 
+        contentToSave, 
+        finalMessageType, 
+        finalTextContent, 
+        finalVideoContent 
+      } = prepareContent(messageType, textContent, videoContent, content);
 
       // Update message in database
       const { error } = await supabase
@@ -150,62 +94,20 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
         
       if (error) throw error;
       
-      // Fetch actual recipient data for the selected recipient IDs
-      let selectedRecipientObjects = [];
-      if (selectedRecipients.length > 0) {
-        const allRecipients = await fetchRecipients();
-        selectedRecipientObjects = allRecipients.filter(recipient => 
-          selectedRecipients.includes(recipient.id)
-        );
-        
-        if (selectedRecipientObjects.length === 0) {
-          throw new Error("No valid recipients found. Please check your recipient selection.");
-        }
-      } else {
-        throw new Error("Please select at least one recipient.");
-      }
+      // Get recipient data
+      const selectedRecipientObjects = await fetchSelectedRecipients(selectedRecipients);
       
-      // Values are already in minutes (not hours), so no conversion needed
-      const reminderMinutesArray = reminderMinutes;
+      // Process time thresholds for database constraint
+      const finalHoursThreshold = processTimeThreshold(hoursThreshold, minutesThreshold);
       
-      console.log("Using reminder minutes:", reminderMinutesArray);
-      
-      // Log delivery option and recurring pattern for debugging
-      console.log("Delivery option:", deliveryOption);
-      console.log("Recurring pattern before processing:", recurringPattern);
-      
-      // Ensure recurring pattern is null if "once" delivery is selected
-      let finalRecurringPattern = recurringPattern;
-      if (deliveryOption === "once") {
-        console.log("Once-off delivery selected, clearing recurring pattern");
-        finalRecurringPattern = null;
-      } else if (deliveryOption === "recurring" && !finalRecurringPattern) {
-        // If recurring is selected but no pattern, create a default one
-        finalRecurringPattern = { type: "daily", interval: 1 };
-        console.log("Created default recurring pattern:", finalRecurringPattern);
-      }
-      
-      console.log("Final recurring pattern to save:", finalRecurringPattern);
-      
-      // Handle hours_threshold constraint by ensuring it's never 0 when minutes > 0
-      let finalHoursThreshold = hoursThreshold;
-      if (finalHoursThreshold === 0 && minutesThreshold > 0) {
-        console.log("Converting minutes to hours to satisfy database constraint");
-        // Convert minutes to hours with one decimal point precision
-        finalHoursThreshold = parseFloat((minutesThreshold / 60).toFixed(1));
-        
-        // If it's still 0 after rounding, set it to the minimum valid value (0.1)
-        if (finalHoursThreshold < 0.1) {
-          finalHoursThreshold = 0.1;
-        }
-        
-        console.log(`Converted ${minutesThreshold} minutes to ${finalHoursThreshold} hours`);
-      }
+      // Process recurring pattern based on delivery option
+      const finalRecurringPattern = processRecurringPattern(deliveryOption, recurringPattern);
       
       // Handle trigger conditions
       if (existingCondition) {
         console.log("Updating existing condition with delivery option:", deliveryOption);
         console.log("Using hours_threshold:", finalHoursThreshold, "minutes_threshold:", minutesThreshold);
+        
         // Update existing condition
         await updateMessageCondition(existingCondition.id, {
           condition_type: conditionType,
@@ -215,7 +117,7 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
           pin_code: pinCode || null,
           trigger_date: triggerDate ? triggerDate.toISOString() : null,
           panic_trigger_config: panicTriggerConfig,
-          reminder_hours: reminderMinutesArray, // Values already in minutes
+          reminder_hours: reminderMinutes, // Values already in minutes
           unlock_delay_hours: unlockDelay,
           expiry_hours: expiryHours,
           recipients: selectedRecipientObjects,
@@ -224,6 +126,7 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
       } else {
         console.log("Creating new condition with delivery option:", deliveryOption);
         console.log("Using hours_threshold:", finalHoursThreshold, "minutes_threshold:", minutesThreshold);
+        
         // Create new condition
         await createMessageCondition(
           message.id,
@@ -238,7 +141,7 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
             unlockDelayHours: unlockDelay,
             expiryHours,
             panicTriggerConfig,
-            reminderHours: reminderMinutesArray, // Values already in minutes
+            reminderHours: reminderMinutes, // Values already in minutes
             checkInCode: checkInCode || undefined
           }
         );
