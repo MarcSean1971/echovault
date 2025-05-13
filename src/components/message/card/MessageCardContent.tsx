@@ -3,13 +3,15 @@ import { useState, useEffect } from "react";
 import { Message, MessageCondition } from "@/types/message";
 import { MessageTimer } from "../MessageTimer";
 import { MessageTypeIcon } from "../detail/MessageTypeIcon";
-import { MapPin, AlertCircle, Calendar, MessageSquare, Video, Clock, Calendar as CalendarIcon } from "lucide-react";
+import { MapPin, AlertCircle, Calendar, MessageSquare, Video, Clock, Calendar as CalendarIcon, Bell } from "lucide-react";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { parseVideoContent } from "@/services/messages/mediaService";
 import { useMessageAdditionalText } from "@/hooks/useMessageAdditionalText";
 import { useMessageLastCheckIn } from "@/hooks/useMessageLastCheckIn";
 import { useMessageDeliveryStatus } from "@/hooks/useMessageDeliveryStatus";
 import { formatShortDate, formatRelativeTime } from "@/utils/messageFormatUtils";
+import { useNextReminders } from "@/hooks/useNextReminders";
+import { parseReminderMinutes } from "@/utils/reminderUtils";
 
 interface MessageCardContentProps {
   message: Message;
@@ -56,6 +58,16 @@ export function MessageCardContent({
 
   // Get delivered status info
   const { isDelivered: wasDelivered, lastDelivered } = useMessageDeliveryStatus(message.id);
+  
+  // Parse reminder minutes from the condition
+  const reminderMinutes = parseReminderMinutes(condition?.reminder_hours);
+  
+  // Get upcoming reminder information
+  const { nextReminder, upcomingReminders, hasReminders } = useNextReminders(
+    deadline,
+    reminderMinutes,
+    refreshTrigger
+  );
   
   // Detect video content
   useEffect(() => {
@@ -143,6 +155,14 @@ export function MessageCardContent({
             <span>Last sent: {formatShortDate(lastDelivered)}</span>
           </div>
         )}
+        
+        {/* Show next reminder time if available */}
+        {isArmed && nextReminder && (
+          <div className="text-xs flex items-center text-amber-600 font-medium hover:text-amber-700 transition-colors">
+            <Bell className="h-3.5 w-3.5 mr-1 text-amber-600" />
+            <span>Next reminder: {nextReminder.formattedText}</span>
+          </div>
+        )}
       </div>
       
       {/* Show metadata badges in a flex row */}
@@ -170,6 +190,26 @@ export function MessageCardContent({
           <div className="inline-flex items-center text-xs text-muted-foreground bg-muted/50 rounded-full px-2 py-0.5 hover:bg-muted transition-colors">
             <MessageTypeIcon messageType="file" className="h-3 w-3 mr-1" />
             <span>{message.attachments.length} file{message.attachments.length !== 1 ? 's' : ''}</span>
+          </div>
+        )}
+        
+        {/* Reminders badge */}
+        {isArmed && hasReminders && (
+          <div className="inline-flex items-center text-xs bg-amber-100 text-amber-700 rounded-full px-2 py-0.5 hover:bg-amber-200 transition-colors">
+            <Bell className="h-3 w-3 mr-1" />
+            <span>
+              {upcomingReminders.length === 0 
+                ? "No upcoming reminders" 
+                : `${upcomingReminders.length} reminder${upcomingReminders.length !== 1 ? 's' : ''}`}
+            </span>
+          </div>
+        )}
+        
+        {/* No reminders badge */}
+        {isArmed && !hasReminders && (
+          <div className="inline-flex items-center text-xs bg-gray-100 text-gray-500 rounded-full px-2 py-0.5 hover:bg-gray-200 transition-colors">
+            <Bell className="h-3 w-3 mr-1 text-gray-400" />
+            <span>No reminders</span>
           </div>
         )}
       </div>

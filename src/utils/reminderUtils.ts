@@ -1,0 +1,83 @@
+
+/**
+ * Utility functions for reminder calculations
+ */
+
+import { formatDistanceToNow, formatRelative, isAfter, addMinutes, addHours } from "date-fns";
+import { formatThreshold, formatReminderTime } from "@/components/message/FormSections/DeadManSwitchComponents/reminder/TimeConversionUtils";
+
+/**
+ * Calculate all upcoming reminders based on a deadline and reminder configuration
+ * @param deadline The deadline date for the message
+ * @param reminderMinutes Array of reminder times in minutes before the deadline
+ * @returns Array of upcoming reminder dates sorted by closest first
+ */
+export function calculateUpcomingReminders(
+  deadline: Date | null, 
+  reminderMinutes: number[] = []
+): Date[] {
+  if (!deadline || reminderMinutes.length === 0) {
+    return [];
+  }
+
+  const now = new Date();
+  const upcomingReminders: Date[] = [];
+
+  // Calculate reminder dates by subtracting reminder minutes from deadline
+  reminderMinutes.forEach(minutes => {
+    // Convert minutes to milliseconds
+    const reminderDate = new Date(deadline.getTime() - (minutes * 60 * 1000));
+    
+    // Only include future reminders
+    if (isAfter(reminderDate, now)) {
+      upcomingReminders.push(reminderDate);
+    }
+  });
+
+  // Sort reminders by the closest ones first
+  return upcomingReminders.sort((a, b) => a.getTime() - b.getTime());
+}
+
+/**
+ * Format a reminder date for display
+ * @param reminderDate The reminder date to format
+ * @returns Formatted string like "in 2 hours"
+ */
+export function formatReminderDate(reminderDate: Date): string {
+  return formatDistanceToNow(reminderDate, { addSuffix: true });
+}
+
+/**
+ * Get display text for next reminder
+ */
+export function getNextReminderText(deadline: Date | null, reminderMinutes: number[] = []): string | null {
+  const upcomingReminders = calculateUpcomingReminders(deadline, reminderMinutes);
+  
+  if (upcomingReminders.length === 0) {
+    return null;
+  }
+  
+  const nextReminder = upcomingReminders[0];
+  return formatReminderDate(nextReminder);
+}
+
+/**
+ * Format all upcoming reminders as an array of strings
+ */
+export function getAllUpcomingReminderTexts(deadline: Date | null, reminderMinutes: number[] = []): string[] {
+  const upcomingReminders = calculateUpcomingReminders(deadline, reminderMinutes);
+  
+  return upcomingReminders.map(date => formatReminderDate(date));
+}
+
+/**
+ * Convert reminder_hours from database (actually in minutes) to an array of minutes
+ */
+export function parseReminderMinutes(reminderHours: number[] | null | undefined): number[] {
+  if (!reminderHours || !Array.isArray(reminderHours)) {
+    return [];
+  }
+  
+  // The database field is called reminder_hours but actually contains minutes
+  return reminderHours;
+}

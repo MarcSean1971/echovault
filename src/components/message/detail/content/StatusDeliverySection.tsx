@@ -4,11 +4,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { MessageDeliverySettings } from "../MessageDeliverySettings";
 import { DesktopTimerAlert } from "../DesktopTimerAlert";
-import { Clock, Lock, Shield, MessageSquare, Mic, Video, Mail } from "lucide-react";
+import { Clock, Lock, Shield, MessageSquare, Mic, Video, Mail, Bell } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { getMessageIcon } from "@/utils/messageFormatUtils";
+import { useNextReminders } from "@/hooks/useNextReminders";
+import { parseReminderMinutes } from "@/utils/reminderUtils";
+import { Badge } from "@/components/ui/badge";
 
 interface StatusDeliverySectionProps {
   condition: any | null;
@@ -42,6 +45,16 @@ export function StatusDeliverySection({
   refreshTrigger
 }: StatusDeliverySectionProps) {
   const isMobile = useIsMobile();
+  
+  // Parse reminder minutes from the condition
+  const reminderMinutes = parseReminderMinutes(condition?.reminder_hours);
+  
+  // Get upcoming reminder information
+  const { upcomingReminders, hasReminders } = useNextReminders(
+    deadline,
+    reminderMinutes,
+    refreshTrigger
+  );
   
   return (
     <Card className="overflow-hidden">
@@ -129,6 +142,52 @@ export function StatusDeliverySection({
                     <div className="grid grid-cols-3 gap-1">
                       <span className="font-medium">Check-in via:</span>
                       <span className="col-span-2">App, WhatsApp</span>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+            
+            {/* Reminder Information */}
+            {isArmed && (
+              <>
+                <Separator className="my-3" />
+                <h3 className="text-sm font-medium text-muted-foreground mb-3 mt-3 flex items-center">
+                  <Bell className={`h-4 w-4 mr-1.5 ${HOVER_TRANSITION}`} />
+                  Reminder Information
+                </h3>
+                <div className="space-y-3 text-sm">
+                  {hasReminders ? (
+                    <>
+                      <div className="grid grid-cols-3 gap-1">
+                        <span className="font-medium">Status:</span>
+                        <span className="col-span-2">
+                          {upcomingReminders.length > 0 
+                            ? `${upcomingReminders.length} upcoming reminder${upcomingReminders.length !== 1 ? 's' : ''}` 
+                            : "All reminders sent"}
+                        </span>
+                      </div>
+                      {upcomingReminders.length > 0 && (
+                        <div className="grid grid-cols-3 gap-1">
+                          <span className="font-medium">Next reminders:</span>
+                          <div className="col-span-2 flex flex-wrap gap-1">
+                            {upcomingReminders.map((reminder, index) => (
+                              <Badge 
+                                key={index} 
+                                variant="outline" 
+                                className="bg-amber-50 border-amber-200 text-amber-700"
+                              >
+                                {reminder.formattedText}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-1">
+                      <span className="font-medium">Status:</span>
+                      <span className="col-span-2 text-muted-foreground italic">No reminders configured</span>
                     </div>
                   )}
                 </div>
