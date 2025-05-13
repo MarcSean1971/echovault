@@ -41,6 +41,8 @@ export async function triggerManualReminder(messageId: string, forceSend: boolea
       throw error;
     }
 
+    console.log("Reminder response:", data);
+
     if (data && data.successful_reminders > 0) {
       // Create a more specific success message based on the condition type
       let successMessage = `Successfully sent ${data.successful_reminders} reminder(s).`;
@@ -73,10 +75,10 @@ export async function triggerManualReminder(messageId: string, forceSend: boolea
         if (errors.length > 0) {
           errorMessage += errors[0]; // Just show the first error
         } else {
-          errorMessage += "Check that the message has recipients and reminder settings configured.";
+          errorMessage += "Message may not be active or have recipients configured.";
         }
       } else {
-        errorMessage += "Check that the message has recipients and reminder settings configured.";
+        errorMessage += "Check that the message has reminder settings configured and is active.";
       }
 
       toast({

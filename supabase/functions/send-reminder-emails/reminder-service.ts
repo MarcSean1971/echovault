@@ -12,11 +12,10 @@ export async function sendReminder(data: ReminderData, debug = false): Promise<{
   const { message, condition, hoursUntilDeadline } = data;
   
   try {
-    // Remove the blocking check for trigger_date since we now handle null dates elsewhere
-    // Instead, log a warning but continue with the reminder
-    if (!condition.trigger_date) {
-      console.log(`No trigger_date set for condition ${condition.id}, but proceeding with test reminder`);
-    }
+    console.log(`\n====== SENDING REMINDERS FOR MESSAGE ${message.id} ======`);
+    console.log(`Message title: "${message.title}"`);
+    console.log(`Condition type: ${condition.condition_type}`);
+    console.log(`Debug mode: ${debug ? 'Enabled' : 'Disabled'}`);
     
     // Get sender name
     let senderName = "Unknown Sender";
@@ -37,6 +36,7 @@ export async function sendReminder(data: ReminderData, debug = false): Promise<{
       console.error("Error fetching sender info:", error);
     }
     
+    // Log details about the deadline and reminder time
     if (debug) {
       console.log(`Sending reminders for message "${message.title}" from ${senderName}`);
       console.log(`Message user_id: ${message.user_id}`);
@@ -56,7 +56,7 @@ export async function sendReminder(data: ReminderData, debug = false): Promise<{
     console.log(`Condition type: ${condition.condition_type}`);
     console.log(`Is check-in condition: ${checkInCondition}`);
     
-    // ALWAYS send reminder to creator regardless of condition type
+    // CRITICAL FIX: ALWAYS send reminder to creator regardless of condition type
     console.log(`Sending reminder to creator (user_id: ${message.user_id})`);
     
     const creatorResults = await sendCreatorReminder(
@@ -73,8 +73,18 @@ export async function sendReminder(data: ReminderData, debug = false): Promise<{
     
     if (creatorResults.some(r => r.success)) {
       console.log(`Successfully sent reminder to creator for message ${message.id}`);
+      
+      // Log details of successful reminders
+      creatorResults.filter(r => r.success).forEach(r => {
+        console.log(`✅ Creator reminder sent via ${r.method} to ${r.recipient}`);
+      });
     } else {
       console.log(`Failed to send reminder to creator for message ${message.id}`);
+      
+      // Log details of failed reminders
+      creatorResults.filter(r => !r.success).forEach(r => {
+        console.log(`❌ Creator reminder failed via ${r.method} to ${r.recipient}: ${r.error}`);
+      });
     }
     
     // For non-check-in conditions, also send reminders to the recipients
@@ -127,6 +137,11 @@ export async function sendReminder(data: ReminderData, debug = false): Promise<{
     
     // Count successes
     const successfulReminders = reminderResults.filter(r => r.success).length;
+    
+    console.log(`====== REMINDER SENDING COMPLETE ======`);
+    console.log(`Total reminders attempted: ${reminderResults.length}`);
+    console.log(`Successful reminders: ${successfulReminders}`);
+    console.log(`Failed reminders: ${reminderResults.length - successfulReminders}`);
     
     return {
       success: successfulReminders > 0,
