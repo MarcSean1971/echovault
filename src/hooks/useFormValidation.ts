@@ -21,6 +21,7 @@ export function useFormValidation() {
     
     // Trigger validation (always required now)
     // Make sure there's at least some threshold
+    // If hours is 0, we must have minutes > 0
     if (hoursThreshold <= 0 && minutesThreshold <= 0) return false;
     
     // For recurring delivery, make sure there's a pattern

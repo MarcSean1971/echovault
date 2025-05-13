@@ -42,6 +42,20 @@ export async function createConditionInDb(
     checkInCode
   } = options;
 
+  // Ensure hours_threshold is never 0 when minutes are set
+  let finalHoursThreshold = hoursThreshold;
+  if (finalHoursThreshold === 0 && minutesThreshold > 0) {
+    // Convert minutes to hours with one decimal point precision
+    finalHoursThreshold = parseFloat((minutesThreshold / 60).toFixed(1));
+    
+    // If it's still 0 after rounding, set it to the minimum valid value (0.1)
+    if (finalHoursThreshold < 0.1) {
+      finalHoursThreshold = 0.1;
+    }
+    
+    console.log(`[createConditionInDb] Converted ${minutesThreshold} minutes to ${finalHoursThreshold} hours`);
+  }
+
   const client = await getAuthClient();
   
   const { data, error } = await client
@@ -49,7 +63,7 @@ export async function createConditionInDb(
     .insert({
       message_id: messageId,
       condition_type: conditionType,
-      hours_threshold: hoursThreshold,
+      hours_threshold: finalHoursThreshold,
       minutes_threshold: minutesThreshold,
       trigger_date: triggerDate || null,
       recurring_pattern: recurringPattern || null,
@@ -131,11 +145,30 @@ export async function updateConditionInDb(
   const client = await getAuthClient();
   
   // Filter out properties that don't exist in the database and map field names
-  const { triggered, delivered, panic_trigger_config, ...validUpdates } = updates;
+  const { triggered, delivered, panic_trigger_config, hours_threshold, minutes_threshold, ...restUpdates } = updates;
+  
+  // Handle the hours_threshold constraint
+  let finalHoursThreshold = hours_threshold;
+  
+  if (finalHoursThreshold === 0 && minutes_threshold && minutes_threshold > 0) {
+    // Convert minutes to hours with one decimal point precision
+    finalHoursThreshold = parseFloat((minutes_threshold / 60).toFixed(1));
+    
+    // If it's still 0 after rounding, set it to the minimum valid value (0.1)
+    if (finalHoursThreshold < 0.1) {
+      finalHoursThreshold = 0.1;
+    }
+    
+    console.log(`[updateConditionInDb] Converted ${minutes_threshold} minutes to ${finalHoursThreshold} hours`);
+  }
   
   // Map panic_trigger_config to panic_config for database updates
   const dbUpdates = {
-    ...validUpdates,
+    ...restUpdates,
+    // Only include hours_threshold if it was in the original updates
+    ...(hours_threshold !== undefined && { hours_threshold: finalHoursThreshold }),
+    // Add minutes_threshold back if it existed
+    ...(minutes_threshold !== undefined && { minutes_threshold }),
     // If panic_trigger_config exists in the updates, map it to panic_config
     ...(panic_trigger_config !== undefined && { panic_config: panic_trigger_config }),
     // Ensure check_in_code is properly handled (could be null)

@@ -1,4 +1,3 @@
-
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -188,13 +187,29 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
       
       console.log("Final recurring pattern to save:", finalRecurringPattern);
       
+      // Handle hours_threshold constraint by ensuring it's never 0 when minutes > 0
+      let finalHoursThreshold = hoursThreshold;
+      if (finalHoursThreshold === 0 && minutesThreshold > 0) {
+        console.log("Converting minutes to hours to satisfy database constraint");
+        // Convert minutes to hours with one decimal point precision
+        finalHoursThreshold = parseFloat((minutesThreshold / 60).toFixed(1));
+        
+        // If it's still 0 after rounding, set it to the minimum valid value (0.1)
+        if (finalHoursThreshold < 0.1) {
+          finalHoursThreshold = 0.1;
+        }
+        
+        console.log(`Converted ${minutesThreshold} minutes to ${finalHoursThreshold} hours`);
+      }
+      
       // Handle trigger conditions
       if (existingCondition) {
         console.log("Updating existing condition with delivery option:", deliveryOption);
+        console.log("Using hours_threshold:", finalHoursThreshold, "minutes_threshold:", minutesThreshold);
         // Update existing condition
         await updateMessageCondition(existingCondition.id, {
           condition_type: conditionType,
-          hours_threshold: hoursThreshold,
+          hours_threshold: finalHoursThreshold,
           minutes_threshold: minutesThreshold,
           recurring_pattern: finalRecurringPattern,
           pin_code: pinCode || null,
@@ -208,12 +223,13 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
         });
       } else {
         console.log("Creating new condition with delivery option:", deliveryOption);
+        console.log("Using hours_threshold:", finalHoursThreshold, "minutes_threshold:", minutesThreshold);
         // Create new condition
         await createMessageCondition(
           message.id,
           conditionType as TriggerType,
           {
-            hoursThreshold,
+            hoursThreshold: finalHoursThreshold,
             minutesThreshold,
             triggerDate: triggerDate ? triggerDate.toISOString() : undefined,
             recurringPattern: finalRecurringPattern,
