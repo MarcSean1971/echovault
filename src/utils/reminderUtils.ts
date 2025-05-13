@@ -3,7 +3,7 @@
  * Utility functions for reminder calculations
  */
 
-import { formatDistanceToNow, formatRelative, isAfter, addMinutes, addHours } from "date-fns";
+import { formatDistanceToNow, formatRelative, isAfter, addMinutes, addHours, isBefore } from "date-fns";
 import { formatThreshold, formatReminderTime } from "@/components/message/FormSections/DeadManSwitchComponents/reminder/TimeConversionUtils";
 
 /**
@@ -80,4 +80,26 @@ export function parseReminderMinutes(reminderHours: number[] | null | undefined)
   
   // The database field is called reminder_hours but actually contains minutes
   return reminderHours;
+}
+
+/**
+ * Calculate if a deadline date has already passed
+ */
+export function isDeadlinePassed(deadline: Date | null): boolean {
+  if (!deadline) return false;
+  return isBefore(deadline, new Date());
+}
+
+/**
+ * Format a scheduled reminder time for display
+ */
+export function formatScheduledReminderTime(scheduledFor: string | null | undefined): string {
+  if (!scheduledFor) return "Unknown";
+  
+  try {
+    return formatDistanceToNow(new Date(scheduledFor), { addSuffix: true });
+  } catch (error) {
+    console.error("Error formatting scheduled reminder time:", error);
+    return "Invalid date";
+  }
 }

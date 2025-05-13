@@ -90,6 +90,7 @@ export type Database = {
           message_id: string
           minutes_threshold: number | null
           next_check: string | null
+          next_reminder_at: string | null
           panic_config: Json | null
           pin_code: string | null
           recipients: Json
@@ -116,6 +117,7 @@ export type Database = {
           message_id: string
           minutes_threshold?: number | null
           next_check?: string | null
+          next_reminder_at?: string | null
           panic_config?: Json | null
           pin_code?: string | null
           recipients: Json
@@ -142,6 +144,7 @@ export type Database = {
           message_id?: string
           minutes_threshold?: number | null
           next_check?: string | null
+          next_reminder_at?: string | null
           panic_config?: Json | null
           pin_code?: string | null
           recipients?: Json
@@ -288,6 +291,7 @@ export type Database = {
           deadline: string
           id: string
           message_id: string
+          scheduled_for: string | null
           sent_at: string
           user_id: string
         }
@@ -297,6 +301,7 @@ export type Database = {
           deadline: string
           id?: string
           message_id: string
+          scheduled_for?: string | null
           sent_at?: string
           user_id: string
         }
@@ -306,6 +311,7 @@ export type Database = {
           deadline?: string
           id?: string
           message_id?: string
+          scheduled_for?: string | null
           sent_at?: string
           user_id?: string
         }

@@ -8,7 +8,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { formatDate } from "@/utils/messageHelpers";
-import { Loader2, Clock, Mail } from "lucide-react";
+import { Loader2, Clock, Mail, Calendar } from "lucide-react";
 import { getReminderHistory, Reminder } from "@/services/messages/reminderService";
 import { ICON_HOVER_EFFECTS } from "@/utils/hoverEffects";
 
@@ -89,10 +89,17 @@ export function ReminderHistoryDialog({
                       {formatDate(reminder.sent_at)}
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+                  <div className="flex items-center space-x-2 text-xs text-muted-foreground mt-1">
                     <Clock className={`h-3 w-3 ${ICON_HOVER_EFFECTS.muted}`} />
                     <span>Deadline: {formatDate(reminder.deadline)}</span>
                   </div>
+                  
+                  {reminder.scheduled_for && (
+                    <div className="flex items-center space-x-2 text-xs text-muted-foreground mt-1">
+                      <Calendar className={`h-3 w-3 ${ICON_HOVER_EFFECTS.muted}`} />
+                      <span>Scheduled for: {formatDate(reminder.scheduled_for)}</span>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

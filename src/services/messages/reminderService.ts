@@ -58,6 +58,7 @@ export interface Reminder {
   sent_at: string;
   deadline: string;
   created_at: string;
+  scheduled_for?: string; // Added the scheduled_for field
 }
 
 /**
@@ -93,5 +94,33 @@ export async function getReminderHistory(messageId: string): Promise<Reminder[]>
   } catch (error: any) {
     console.error("Error fetching reminder history:", error);
     throw error;
+  }
+}
+
+/**
+ * Get next scheduled reminder for a message
+ */
+export async function getNextScheduledReminder(messageId: string): Promise<Date | null> {
+  try {
+    const { data, error } = await supabase
+      .from('message_conditions')
+      .select('next_reminder_at')
+      .eq('message_id', messageId)
+      .eq('active', true)
+      .single();
+    
+    if (error) {
+      console.error("Error fetching next scheduled reminder:", error);
+      return null;
+    }
+    
+    if (data && data.next_reminder_at) {
+      return new Date(data.next_reminder_at);
+    }
+    
+    return null;
+  } catch (error: any) {
+    console.error("Error in getNextScheduledReminder:", error);
+    return null;
   }
 }

@@ -1,4 +1,3 @@
-
 export type Message = {
   id: string;
   user_id: string;
@@ -80,6 +79,7 @@ export type MessageCondition = {
   updated_at: string;
   last_checked?: string;
   next_check?: string;
+  next_reminder_at?: string; // Added this field for the next scheduled reminder
   recipients: Recipient[];
   active: boolean;
   triggered?: boolean;
@@ -99,6 +99,18 @@ export type MessageCondition = {
   };
   reminder_hours?: number[];
   check_in_code?: string; // Add the new field for custom check-in code
+};
+
+// Update Reminder type to include scheduled_for field
+export type Reminder = {
+  id: string;
+  condition_id: string;
+  message_id: string;
+  user_id: string;
+  sent_at: string;
+  deadline: string;
+  created_at: string;
+  scheduled_for?: string; // Add this field for when the reminder was scheduled
 };
 
 // Update CheckIn type to include timestamp and device_info

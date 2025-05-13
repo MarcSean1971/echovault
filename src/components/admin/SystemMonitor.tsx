@@ -103,21 +103,38 @@ export default function SystemMonitor() {
       }
       executionData.push(...syntheticCrons);
 
-      // Create upcoming reminders predictions
+      // Create upcoming reminders predictions - now using the next_reminder_at field
       const upcomingReminders: UpcomingReminder[] = [];
+      
       conditions?.forEach(condition => {
         // Skip panic triggers - they don't have reminders
         if (condition.condition_type === 'panic_trigger') {
           return;
         }
         
-        if (!condition.last_checked || !condition.hours_threshold) return;
-        
-        const lastChecked = new Date(condition.last_checked);
-        const deadline = addHours(lastChecked, condition.hours_threshold);
-        
-        // CRITICAL FIX: reminder_hours contains minutes values, not hours!
-        if (condition.reminder_hours && condition.reminder_hours.length > 0) {
+        // Use next_reminder_at field if available (new approach)
+        if (condition.next_reminder_at) {
+          const reminderTime = new Date(condition.next_reminder_at);
+          
+          // Only include future reminders
+          if (reminderTime > now) {
+            // Calculate minutes until reminder
+            const minutesUntil = differenceInMinutes(reminderTime, now);
+            
+            upcomingReminders.push({
+              messageId: condition.message_id,
+              timestamp: reminderTime.toISOString(),
+              title: condition.messages?.title || 'Unknown Message',
+              minutesUntil: minutesUntil
+            });
+          }
+        } 
+        // Fallback to calculating from reminder_hours if next_reminder_at not set
+        else if (condition.last_checked && condition.hours_threshold && condition.reminder_hours?.length > 0) {
+          const lastChecked = new Date(condition.last_checked);
+          const deadline = addHours(lastChecked, condition.hours_threshold);
+          
+          // CRITICAL FIX: reminder_hours contains minutes values, not hours!
           condition.reminder_hours.forEach(reminderMinutes => {
             // Calculate reminder time properly from minutes
             const reminderTime = new Date(deadline.getTime() - (reminderMinutes * 60 * 1000));

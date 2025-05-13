@@ -1,15 +1,16 @@
 
-import { recordReminderSent } from "./db/reminder-tracking.ts";
+import { recordReminderSent, updateNextReminderTime } from "./db/reminder-tracking.ts";
 import { sendCreatorReminder, sendRecipientReminders } from "./services/reminder-sender.ts";
 import { supabaseClient } from "./supabase-client.ts";
 import { ReminderData, ReminderResult } from "./types/reminder-types.ts";
 import { isCheckInCondition } from "./utils/condition-type.ts";
+import { calculateNextReminderTime } from "./utils/reminder-calculator.ts";
 
 /**
  * Send reminder for a message
  */
 export async function sendReminder(data: ReminderData, debug = false): Promise<{ success: boolean; results: ReminderResult[] }> {
-  const { message, condition, hoursUntilDeadline } = data;
+  const { message, condition, hoursUntilDeadline, matchedReminderMinute } = data;
   
   try {
     console.log(`\n====== SENDING REMINDERS FOR MESSAGE ${message.id} ======`);
@@ -42,7 +43,6 @@ export async function sendReminder(data: ReminderData, debug = false): Promise<{
       console.log(`Message user_id: ${message.user_id}`);
       console.log(`Deadline in ${condition.trigger_date ? hoursUntilDeadline.toFixed(1) : 'N/A'} hours`);
       
-      // IMPORTANT: FIXED - Clarify that reminder_hours contains minutes
       if (data.matchedReminderMinute !== null) {
         console.log(`Matched reminder time: ${data.matchedReminderMinute} minutes (${(data.matchedReminderMinute / 60).toFixed(2)} hours) before deadline`);
       }
@@ -55,6 +55,20 @@ export async function sendReminder(data: ReminderData, debug = false): Promise<{
     
     console.log(`Condition type: ${condition.condition_type}`);
     console.log(`Is check-in condition: ${checkInCondition}`);
+    
+    // Calculate the scheduled time for this reminder (when it was due)
+    const now = new Date();
+    let scheduledForTime: Date | null = null;
+    
+    if (matchedReminderMinute !== null && condition.trigger_date) {
+      // This is a scheduled reminder that matched a specific time window
+      const deadline = new Date(condition.trigger_date);
+      scheduledForTime = new Date(deadline.getTime() - (matchedReminderMinute * 60 * 1000));
+      console.log(`Calculated scheduled time: ${scheduledForTime.toISOString()}`);
+    } else {
+      // Force-sent reminder without a specific schedule
+      console.log("No specific scheduled time for this reminder (force sent or manual trigger)");
+    }
     
     // CRITICAL FIX: ALWAYS send reminder to creator regardless of condition type
     console.log(`Sending reminder to creator (user_id: ${message.user_id})`);
@@ -111,6 +125,31 @@ export async function sendReminder(data: ReminderData, debug = false): Promise<{
       }
     }
     
+    // Calculate the next reminder time
+    let nextReminderTime: Date | null = null;
+    if (condition.trigger_date && condition.reminder_hours && condition.reminder_hours.length > 0) {
+      const deadlineDate = new Date(condition.trigger_date);
+      const reminderMinutes = condition.reminder_hours;
+      
+      // Find the next upcoming reminder time
+      nextReminderTime = calculateNextReminderTime(deadlineDate, reminderMinutes, matchedReminderMinute);
+      
+      if (nextReminderTime) {
+        console.log(`Next reminder time calculated: ${nextReminderTime.toISOString()}`);
+        
+        // Update the next reminder time in the database
+        const updateResult = await updateNextReminderTime(condition.id, nextReminderTime.toISOString());
+        if (updateResult) {
+          console.log(`Successfully updated next reminder time for condition ${condition.id}`);
+        } else {
+          console.warn(`Failed to update next reminder time for condition ${condition.id}`);
+        }
+      } else {
+        console.log(`No more reminders scheduled for message ${message.id}`);
+        await updateNextReminderTime(condition.id, null);
+      }
+    }
+    
     // Record that reminders were sent
     try {
       // Get user_id from message
@@ -123,7 +162,8 @@ export async function sendReminder(data: ReminderData, debug = false): Promise<{
         message.id, 
         condition.id, 
         condition.trigger_date || new Date().toISOString(),
-        message.user_id || 'unknown'
+        message.user_id || 'unknown',
+        scheduledForTime ? scheduledForTime.toISOString() : null
       );
       
       if (recordResult) {
