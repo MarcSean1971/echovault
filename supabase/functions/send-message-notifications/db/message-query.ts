@@ -2,13 +2,6 @@
 import { supabaseClient } from "../supabase-client.ts";
 import { Message, Condition } from "../types.ts";
 
-interface MessageToRemind {
-  message: Message;
-  condition: Condition;
-  hoursUntilDeadline: number;
-  reminderHours: number[];
-}
-
 /**
  * Get messages that need notifications to be sent
  */
@@ -63,8 +56,12 @@ export async function getMessagesToNotify(messageId?: string) {
         const thresholdMs = (condition.hours_threshold || 0) * 60 * 60 * 1000 + 
                            (condition.minutes_threshold || 0) * 60 * 1000;
         
-        if (now.getTime() - lastChecked.getTime() >= thresholdMs) {
-          console.log(`Deadman's switch condition ${condition.id} has passed its threshold`);
+        const deadline = new Date(lastChecked.getTime() + thresholdMs);
+        console.log(`Checking no_check_in condition ${condition.id} - deadline: ${deadline.toISOString()}, now: ${now.toISOString()}`);
+        console.log(`Time until deadline: ${(deadline.getTime() - now.getTime()) / (60 * 1000)} minutes`);
+        
+        if (now.getTime() >= deadline.getTime()) {
+          console.log(`ALERT: Deadman's switch condition ${condition.id} has passed its threshold! Triggering notification.`);
           shouldTrigger = true;
         }
       }
