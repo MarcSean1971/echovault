@@ -74,6 +74,13 @@ const handler = async (req: Request) => {
         console.log(`Condition type: ${messageToRemind.condition.condition_type}`);
         console.log(`Hours until deadline: ${messageToRemind.hoursUntilDeadline.toFixed(1)}`);
         
+        // IMPORTANT: Add debug log to show proper reminder time interpretation
+        if (messageToRemind.matchedReminderHour !== null) {
+          const reminderMinutes = messageToRemind.matchedReminderHour;
+          const reminderHours = reminderMinutes / 60;
+          console.log(`Matched reminder time: ${reminderMinutes} minutes (${reminderHours.toFixed(2)} hours) before deadline`);
+        }
+        
         const reminderResult = await sendReminder(messageToRemind, debug);
         
         // Count successful reminders

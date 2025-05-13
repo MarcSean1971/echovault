@@ -118,7 +118,8 @@ export async function getMessagesNeedingReminders(
         console.log(`DB: Force sending reminder for message ${message.id} with no trigger_date, using default ${hoursUntilDeadline} hours`);
       }
       
-      // Check if any reminder hour matches
+      // CRITICAL FIX: reminder_hours actually contains values in MINUTES, not hours!
+      // We need to convert the stored reminder times from minutes to hours for comparison
       const reminderHours = condition.reminder_hours as number[];
       let shouldSendReminder = false;
       let matchedReminderHour = null;
@@ -129,16 +130,19 @@ export async function getMessagesNeedingReminders(
         console.log(`DB: Force sending reminder for message ${message.id}, deadline in ${condition.trigger_date ? hoursUntilDeadline.toFixed(1) : 'N/A'} hours`);
       } else {
         // Check if the current time matches any reminder window
-        // Updated to check within 15 minutes (0.25 hours) to catch reminders in a wider interval
-        for (const hour of reminderHours) {
-          // Reminder should be sent if current time is within 15 minutes (0.25 hours) of the reminder time
-          const difference = Math.abs(hoursUntilDeadline - hour);
-          console.log(`DB: Checking reminder hour ${hour}, difference: ${difference.toFixed(2)}`);
+        // Updated to properly convert reminder_hours (actually minutes) to hours for comparison
+        for (const reminderMinutes of reminderHours) {
+          // Convert reminder minutes to hours for proper comparison
+          const reminderInHours = reminderMinutes / 60;
           
-          if (difference < 0.25) {
+          // Reminder should be sent if current time is within 15 minutes (0.25 hours) of the reminder time
+          const difference = Math.abs(hoursUntilDeadline - reminderInHours);
+          console.log(`DB: Checking reminder time ${reminderMinutes} minutes (${reminderInHours.toFixed(2)} hours), difference: ${difference.toFixed(2)} hours`);
+          
+          if (difference < 0.25) { // Within 15 minutes window
             shouldSendReminder = true;
-            matchedReminderHour = hour;
-            console.log(`DB: Reminder time match for message ${message.id}: ${hour} hours before deadline (difference: ${difference.toFixed(2)} hours)`);
+            matchedReminderHour = reminderMinutes;
+            console.log(`DB: Reminder time match for message ${message.id}: ${reminderMinutes} minutes (${reminderInHours.toFixed(2)} hours) before deadline (difference: ${difference.toFixed(2)} hours)`);
             break;
           }
         }
