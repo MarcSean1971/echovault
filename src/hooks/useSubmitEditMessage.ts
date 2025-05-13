@@ -96,7 +96,7 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
       // Get recipient data
       const selectedRecipientObjects = await fetchSelectedRecipients(selectedRecipients);
       
-      // Process time thresholds for database constraint - will now return integer values
+      // Get the directly processed hours threshold - no special handling needed now
       const finalHoursThreshold = processTimeThreshold(hoursThreshold, minutesThreshold);
       
       // Process recurring pattern based on delivery option
@@ -110,7 +110,7 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
         // Update existing condition
         await updateMessageCondition(existingCondition.id, {
           condition_type: conditionType,
-          hours_threshold: finalHoursThreshold, // This is now guaranteed to be an integer
+          hours_threshold: finalHoursThreshold,
           minutes_threshold: minutesThreshold,
           recurring_pattern: finalRecurringPattern,
           pin_code: pinCode || null,
@@ -131,7 +131,7 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
           message.id,
           conditionType as TriggerType,
           {
-            hoursThreshold: finalHoursThreshold, // This is now guaranteed to be an integer
+            hoursThreshold: finalHoursThreshold,
             minutesThreshold,
             triggerDate: triggerDate ? triggerDate.toISOString() : undefined,
             recurringPattern: finalRecurringPattern,

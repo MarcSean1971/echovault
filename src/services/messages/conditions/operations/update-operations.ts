@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { MessageCondition } from "@/types/message";
 import { getAuthClient } from "@/lib/supabaseClient";
@@ -15,23 +14,13 @@ export async function updateConditionInDb(
   // Filter out properties that don't exist in the database and map field names
   const { triggered, delivered, panic_trigger_config, hours_threshold, minutes_threshold, ...restUpdates } = updates;
   
-  // Handle the hours_threshold constraint - ensuring it's always an integer
-  let finalHoursThreshold = hours_threshold;
-  
-  if (finalHoursThreshold === 0 && minutes_threshold && minutes_threshold > 0) {
-    // Calculate raw hours value for logging
-    const rawHoursValue = parseFloat((minutes_threshold / 60).toFixed(1));
-    
-    // For database storage, we need an integer - using Math.ceil to ensure we never round down to zero
-    finalHoursThreshold = Math.ceil(rawHoursValue);
-    
-    console.log(`[updateConditionInDb] Converted ${minutes_threshold} minutes to ${rawHoursValue} hours (stored as ${finalHoursThreshold})`);
-  }
+  // No special handling needed for hours_threshold - we can now use it directly
+  const finalHoursThreshold = hours_threshold;
   
   // Map panic_trigger_config to panic_config for database updates
   const dbUpdates = {
     ...restUpdates,
-    // Only include hours_threshold if it was in the original updates, ensuring it's always an integer
+    // Include hours_threshold if it was in the original updates
     ...(hours_threshold !== undefined && { hours_threshold: finalHoursThreshold }),
     // Add minutes_threshold back if it existed
     ...(minutes_threshold !== undefined && { minutes_threshold }),

@@ -1,3 +1,4 @@
+
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/components/ui/use-toast";
@@ -39,7 +40,7 @@ export function useFormSubmission() {
     unlockDelay,
     expiryHours,
     deliveryOption,
-    reminderMinutes, // Renamed from reminderHours to reminderMinutes
+    reminderMinutes,
     checkInCode
   } = useMessageForm();
 
@@ -99,7 +100,7 @@ export function useFormSubmission() {
             return;
           }
           
-          // Handle hours_threshold constraint by ensuring it's always an integer
+          // Get the directly processed hours threshold - no special handling needed now
           const finalHoursThreshold = processTimeThreshold(hoursThreshold, minutesThreshold);
           
           // Create the message condition with all options
@@ -108,7 +109,7 @@ export function useFormSubmission() {
             conditionType as TriggerType,
             {
               // Basic timing options
-              hoursThreshold: finalHoursThreshold, // This is now guaranteed to be an integer
+              hoursThreshold: finalHoursThreshold,
               minutesThreshold,
               triggerDate: triggerDate ? triggerDate.toISOString() : undefined,
               
