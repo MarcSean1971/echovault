@@ -23,37 +23,6 @@ export function useMessageContentTypes(message: Message, conditionType?: string)
     setTranscription(extractedTranscription);
   }, [message.content]);
   
-  // Helper function to clean text from JSON and formatting artifacts
-  const cleanTextContent = (text: string): string => {
-    if (!text) return "";
-    
-    // If it's a JSON string, try to extract just the text
-    if (text.trim().startsWith('{') && text.trim().endsWith('}')) {
-      try {
-        const parsed = JSON.parse(text);
-        // If parsed has a text field, use that
-        if (parsed.text) return parsed.text;
-        // If parsed has a content field, use that
-        if (parsed.content) return parsed.content;
-        // If parsed has a message field, use that
-        if (parsed.message) return parsed.message;
-        // If parsed has a note field, use that
-        if (parsed.note) return parsed.note;
-        
-        // If we can't find a specific field, stringify the object and remove the braces
-        const stringified = JSON.stringify(parsed);
-        if (stringified !== "{}") {
-          return stringified.replace(/[{}"]/g, '').replace(/:/g, ': ').replace(/,/g, ', ');
-        }
-      } catch (e) {
-        // Not valid JSON, return as is
-        return text;
-      }
-    }
-    
-    return text;
-  };
-  
   // Check for different types of content
   useEffect(() => {
     if (!message.content) {
@@ -70,11 +39,10 @@ export function useMessageContentTypes(message: Message, conditionType?: string)
       if (videoData) {
         try {
           const contentObj = JSON.parse(message.content);
+          // Set raw additionalText without cleaning - let TextMessageContent handle it
           if (contentObj.additionalText) {
-            // Process additionalText to extract clean text without JSON
-            const cleanedText = cleanTextContent(contentObj.additionalText);
-            setAdditionalText(cleanedText);
-            console.log("Found and processed additional text:", cleanedText);
+            setAdditionalText(contentObj.additionalText);
+            console.log("Found additional text:", contentObj.additionalText.substring(0, 50) + "...");
           }
         } catch (e) {
           console.error("Error parsing additional text from video content:", e);
@@ -102,7 +70,7 @@ export function useMessageContentTypes(message: Message, conditionType?: string)
     console.log("MessageContent: Message content:", message.content ? message.content.substring(0, 100) + "..." : null);
     console.log("MessageContent: Has video content:", hasVideoContent);
     console.log("MessageContent: Has text content:", hasTextContent);
-    console.log("MessageContent: Additional text:", additionalText);
+    console.log("MessageContent: Additional text:", additionalText ? additionalText.substring(0, 50) + "..." : null);
     console.log("MessageContent: Is deadman's switch:", isDeadmansSwitch);
     console.log("MessageContent: Is message detail page:", isMessageDetailPage);
     if (message.message_type === "video") {
