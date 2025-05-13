@@ -12,6 +12,7 @@ export function useCheckIn() {
     if (isChecking) return false;
     
     setIsChecking(true);
+    console.log("[useCheckIn] Starting check-in process...");
     
     try {
       if (!userId) {
@@ -23,14 +24,17 @@ export function useCheckIn() {
         return false;
       }
       
-      await performCheckIn(userId, "app");
+      console.log(`[useCheckIn] Performing check-in for user: ${userId}`);
+      const result = await performCheckIn(userId, "app");
+      console.log(`[useCheckIn] Check-in completed with result:`, result);
       
       // Directly dispatch event to notify all components
-      console.log("Dispatching conditions-updated event from useCheckIn");
+      console.log("[useCheckIn] Dispatching conditions-updated event with timestamp", Date.now());
       window.dispatchEvent(new CustomEvent('conditions-updated', { 
         detail: { 
           updatedAt: new Date().toISOString(),
-          triggerValue: Date.now() // Add unique timestamp to ensure events are distinct
+          triggerValue: Date.now(), // Add unique timestamp to ensure events are distinct
+          source: 'check-in-button' // Add source information for debugging
         }
       }));
       
@@ -41,7 +45,7 @@ export function useCheckIn() {
       
       return true;
     } catch (error: any) {
-      console.error("Check-in failed:", error);
+      console.error("[useCheckIn] Check-in failed:", error);
       toast({
         title: "Check-In Failed",
         description: error.message || "Unable to complete check-in",

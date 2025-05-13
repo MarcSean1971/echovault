@@ -30,7 +30,8 @@ export default function MessageDetail() {
     condition, 
     recipients,
     setIsArmed,
-    lastCheckIn
+    lastCheckIn,
+    refreshCount
   } = useMessageDetail(id, handleError);
   
   // Get message delivery status
@@ -80,6 +81,14 @@ export default function MessageDetail() {
       window.removeEventListener('deadline-reached', handleDeadlineReached);
     };
   }, [id, isArmed, condition]);
+
+  // Update the local refreshTrigger whenever refreshCount changes from the hook
+  useEffect(() => {
+    if (refreshCount > 0) {
+      console.log(`[MessageDetail] refreshCount changed to ${refreshCount}, updating refreshTrigger`);
+      setRefreshTrigger(refreshCount);
+    }
+  }, [refreshCount]);
 
   if (isLoading) {
     return <MessageLoading />;

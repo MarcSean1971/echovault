@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Clock, AlertCircle, TimerOff } from 'lucide-react';
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
@@ -18,6 +18,7 @@ export function MessageTimer({ deadline, isArmed, refreshTrigger }: MessageTimer
   const [isVeryUrgent, setIsVeryUrgent] = useState(false);
   const [lastDeadlineTime, setLastDeadlineTime] = useState<number | null>(null);
   const isMobile = useIsMobile();
+  const intervalRef = useRef<number | null>(null);
   
   useEffect(() => {
     // Log for debugging
@@ -32,6 +33,12 @@ export function MessageTimer({ deadline, isArmed, refreshTrigger }: MessageTimer
       setTimeLeft("--:--:--");
       setIsUrgent(false);
       setIsVeryUrgent(false);
+      
+      // Clear any existing interval
+      if (intervalRef.current !== null) {
+        window.clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
       return;
     }
     
@@ -102,13 +109,24 @@ export function MessageTimer({ deadline, isArmed, refreshTrigger }: MessageTimer
     setTimeLeft(calculateTimeLeft());
     setTimePercentage(calculatePercentage());
     
+    // Clear any existing interval before setting up a new one
+    if (intervalRef.current !== null) {
+      window.clearInterval(intervalRef.current);
+    }
+    
     // Set up interval to update every second
-    const interval = setInterval(() => {
+    intervalRef.current = window.setInterval(() => {
       setTimeLeft(calculateTimeLeft());
       setTimePercentage(calculatePercentage());
     }, 1000);
     
-    return () => clearInterval(interval);
+    // Cleanup function to clear the interval when component unmounts or deps change
+    return () => {
+      if (intervalRef.current !== null) {
+        window.clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
   }, [deadline, isArmed, refreshTrigger, lastDeadlineTime]);
   
   // Get timer color based on percentage and urgency
