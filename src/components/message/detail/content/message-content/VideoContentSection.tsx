@@ -36,10 +36,9 @@ export function VideoContentSection({
       {additionalText && (
         <div className="mt-6">
           <h3 className="text-sm font-medium mb-2">Additional Notes</h3>
-          <TextMessageContent 
-            message={{...message, content: additionalText}} 
-            content={additionalText} 
-          />
+          <div className="whitespace-pre-wrap prose dark:prose-invert max-w-none text-sm md:text-base">
+            {additionalText}
+          </div>
         </div>
       )}
     </>
