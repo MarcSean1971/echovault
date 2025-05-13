@@ -39,8 +39,9 @@ export function useMessageContentTypes(message: Message, conditionType?: string)
       if (videoData) {
         try {
           const contentObj = JSON.parse(message.content);
-          // Set raw additionalText without cleaning - let TextMessageContent handle it
-          if (contentObj.additionalText) {
+          // Only set additionalText if it actually exists and isn't empty
+          if (contentObj.additionalText && typeof contentObj.additionalText === 'string' && 
+              contentObj.additionalText.trim() !== '') {
             setAdditionalText(contentObj.additionalText);
             console.log("Found additional text:", contentObj.additionalText.substring(0, 50) + "...");
           }
@@ -63,26 +64,6 @@ export function useMessageContentTypes(message: Message, conditionType?: string)
       setHasTextContent(true);
     }
   }, [message.content, message.message_type]);
-  
-  // Debug logging for better understanding of content flow
-  useEffect(() => {
-    console.log(`MessageContent: Rendering message of type: ${message.message_type}`);
-    console.log("MessageContent: Message content:", message.content ? message.content.substring(0, 100) + "..." : null);
-    console.log("MessageContent: Has video content:", hasVideoContent);
-    console.log("MessageContent: Has text content:", hasTextContent);
-    console.log("MessageContent: Additional text:", additionalText ? additionalText.substring(0, 50) + "..." : null);
-    console.log("MessageContent: Is deadman's switch:", isDeadmansSwitch);
-    console.log("MessageContent: Is message detail page:", isMessageDetailPage);
-    if (message.message_type === "video") {
-      console.log("MessageContent: This is a video message");
-      try {
-        const { videoData } = parseVideoContent(message.content);
-        console.log("MessageContent: Video data available:", !!videoData);
-      } catch (e) {
-        console.error("Error parsing video data:", e);
-      }
-    }
-  }, [message, hasVideoContent, hasTextContent, additionalText, isDeadmansSwitch, isMessageDetailPage]);
 
   return {
     hasVideoContent,
