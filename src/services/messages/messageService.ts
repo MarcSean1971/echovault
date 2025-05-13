@@ -28,18 +28,22 @@ export async function fetchMessages(messageType: string | null = null) {
     
     console.log(`Successfully retrieved ${data?.length || 0} messages`);
     
-    // Transform the JSON attachments to match our Message type
+    // Transform the database response to match our Message type
     return (data || []).map(msg => ({
       ...msg,
+      // Type-safe transformations for fields that might not exist in the database
       attachments: msg.attachments as unknown as Array<{
         path: string;
         name: string;
         size: number;
         type: string;
       }> | null,
-      // Set defaults for missing fields to match Message type
-      expires_at: msg.expires_at || null,
-      sender_name: msg.sender_name || null
+      // Add default values for fields required by Message type but missing in DB
+      expires_at: null, // These fields don't exist in the DB schema
+      sender_name: null,
+      // Ensure panic_trigger_config and other optional fields are present
+      panic_trigger_config: msg.panic_trigger_config || null,
+      panic_config: msg.panic_config || null
     })) as Message[];
   } catch (error) {
     console.error("Error fetching messages:", error);
@@ -140,6 +144,7 @@ export async function createMessage(
 
     if (error) throw error;
     
+    // Add missing fields required by Message type but not in DB schema
     return {
       ...data?.[0],
       attachments: data?.[0]?.attachments as unknown as Array<{
@@ -148,9 +153,11 @@ export async function createMessage(
         size: number;
         type: string;
       }> | null,
-      // Set defaults for missing fields to match Message type
-      expires_at: data?.[0]?.expires_at || null,
-      sender_name: data?.[0]?.sender_name || null
+      // Set default values for fields required by Message type
+      expires_at: null, // These fields don't exist in the DB schema
+      sender_name: null,
+      panic_trigger_config: null,
+      panic_config: null
     } as Message;
   } catch (error) {
     console.error("Error creating message:", error);
