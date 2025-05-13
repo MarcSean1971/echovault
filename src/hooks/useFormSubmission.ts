@@ -8,11 +8,13 @@ import { useFormValidation } from "./useFormValidation";
 import { simulateUploadProgress } from "@/utils/uploadProgress";
 import { fetchRecipients } from "@/services/messages/recipientService";
 import { TriggerType } from "@/types/message";
+import { useTimeThresholdHandler } from "./message-edit/useTimeThresholdHandler";
 
 export function useFormSubmission() {
   const navigate = useNavigate();
   const { userId } = useAuth();
   const { isFormValid } = useFormValidation();
+  const { processTimeThreshold } = useTimeThresholdHandler();
   
   const {
     title,
@@ -97,20 +99,8 @@ export function useFormSubmission() {
             return;
           }
           
-          // Handle hours_threshold constraint by ensuring it's never 0 when minutes > 0
-          let finalHoursThreshold = hoursThreshold;
-          if (finalHoursThreshold === 0 && minutesThreshold > 0) {
-            console.log("Converting minutes to hours to satisfy database constraint");
-            // Convert minutes to hours with one decimal point precision
-            finalHoursThreshold = parseFloat((minutesThreshold / 60).toFixed(1));
-            
-            // If it's still 0 after rounding, set it to the minimum valid value (0.1)
-            if (finalHoursThreshold < 0.1) {
-              finalHoursThreshold = 0.1;
-            }
-            
-            console.log(`Converted ${minutesThreshold} minutes to ${finalHoursThreshold} hours`);
-          }
+          // Handle hours_threshold constraint by ensuring it's always an integer
+          const finalHoursThreshold = processTimeThreshold(hoursThreshold, minutesThreshold);
           
           // Create the message condition with all options
           await createMessageCondition(
@@ -118,7 +108,7 @@ export function useFormSubmission() {
             conditionType as TriggerType,
             {
               // Basic timing options
-              hoursThreshold: finalHoursThreshold,
+              hoursThreshold: finalHoursThreshold, // This is now guaranteed to be an integer
               minutesThreshold,
               triggerDate: triggerDate ? triggerDate.toISOString() : undefined,
               

@@ -15,25 +15,23 @@ export async function updateConditionInDb(
   // Filter out properties that don't exist in the database and map field names
   const { triggered, delivered, panic_trigger_config, hours_threshold, minutes_threshold, ...restUpdates } = updates;
   
-  // Handle the hours_threshold constraint
+  // Handle the hours_threshold constraint - ensuring it's always an integer
   let finalHoursThreshold = hours_threshold;
   
   if (finalHoursThreshold === 0 && minutes_threshold && minutes_threshold > 0) {
-    // Convert minutes to hours with one decimal point precision
-    finalHoursThreshold = parseFloat((minutes_threshold / 60).toFixed(1));
+    // Calculate raw hours value for logging
+    const rawHoursValue = parseFloat((minutes_threshold / 60).toFixed(1));
     
-    // If it's still 0 after rounding, set it to the minimum valid value (0.1)
-    if (finalHoursThreshold < 0.1) {
-      finalHoursThreshold = 0.1;
-    }
+    // For database storage, we need an integer - using Math.ceil to ensure we never round down to zero
+    finalHoursThreshold = Math.ceil(rawHoursValue);
     
-    console.log(`[updateConditionInDb] Converted ${minutes_threshold} minutes to ${finalHoursThreshold} hours`);
+    console.log(`[updateConditionInDb] Converted ${minutes_threshold} minutes to ${rawHoursValue} hours (stored as ${finalHoursThreshold})`);
   }
   
   // Map panic_trigger_config to panic_config for database updates
   const dbUpdates = {
     ...restUpdates,
-    // Only include hours_threshold if it was in the original updates
+    // Only include hours_threshold if it was in the original updates, ensuring it's always an integer
     ...(hours_threshold !== undefined && { hours_threshold: finalHoursThreshold }),
     // Add minutes_threshold back if it existed
     ...(minutes_threshold !== undefined && { minutes_threshold }),

@@ -5,15 +5,14 @@ export function useTimeThresholdHandler() {
     
     if (finalHoursThreshold === 0 && minutesThreshold > 0) {
       console.log("Converting minutes to hours to satisfy database constraint");
-      // Convert minutes to hours with one decimal point precision
-      finalHoursThreshold = parseFloat((minutesThreshold / 60).toFixed(1));
+      // Convert minutes to hours with one decimal point precision for display
+      const rawHoursValue = parseFloat((minutesThreshold / 60).toFixed(1));
       
-      // If it's still 0 after rounding, set it to the minimum valid value (0.1)
-      if (finalHoursThreshold < 0.1) {
-        finalHoursThreshold = 0.1;
-      }
+      // For database storage, we need an integer (minutes are stored separately)
+      // Using Math.ceil to ensure we don't round down to 0 which would violate constraints
+      finalHoursThreshold = Math.ceil(rawHoursValue);
       
-      console.log(`Converted ${minutesThreshold} minutes to ${finalHoursThreshold} hours`);
+      console.log(`Converted ${minutesThreshold} minutes to ${rawHoursValue} hours (stored as ${finalHoursThreshold})`);
     }
     
     return finalHoursThreshold;

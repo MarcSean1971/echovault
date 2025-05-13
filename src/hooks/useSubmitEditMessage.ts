@@ -1,4 +1,3 @@
-
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -97,7 +96,7 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
       // Get recipient data
       const selectedRecipientObjects = await fetchSelectedRecipients(selectedRecipients);
       
-      // Process time thresholds for database constraint
+      // Process time thresholds for database constraint - will now return integer values
       const finalHoursThreshold = processTimeThreshold(hoursThreshold, minutesThreshold);
       
       // Process recurring pattern based on delivery option
@@ -111,7 +110,7 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
         // Update existing condition
         await updateMessageCondition(existingCondition.id, {
           condition_type: conditionType,
-          hours_threshold: finalHoursThreshold,
+          hours_threshold: finalHoursThreshold, // This is now guaranteed to be an integer
           minutes_threshold: minutesThreshold,
           recurring_pattern: finalRecurringPattern,
           pin_code: pinCode || null,
@@ -132,7 +131,7 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
           message.id,
           conditionType as TriggerType,
           {
-            hoursThreshold: finalHoursThreshold,
+            hoursThreshold: finalHoursThreshold, // This is now guaranteed to be an integer
             minutesThreshold,
             triggerDate: triggerDate ? triggerDate.toISOString() : undefined,
             recurringPattern: finalRecurringPattern,

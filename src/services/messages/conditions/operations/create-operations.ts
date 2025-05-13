@@ -29,18 +29,16 @@ export async function createConditionInDb(
     checkInCode
   } = options;
 
-  // Ensure hours_threshold is never 0 when minutes are set
+  // Ensure hours_threshold is never 0 when minutes are set and is always an integer
   let finalHoursThreshold = hoursThreshold;
   if (finalHoursThreshold === 0 && minutesThreshold > 0) {
-    // Convert minutes to hours with one decimal point precision
-    finalHoursThreshold = parseFloat((minutesThreshold / 60).toFixed(1));
+    // Convert minutes to hours with one decimal point precision for calculation
+    const rawHoursValue = parseFloat((minutesThreshold / 60).toFixed(1));
     
-    // If it's still 0 after rounding, set it to the minimum valid value (0.1)
-    if (finalHoursThreshold < 0.1) {
-      finalHoursThreshold = 0.1;
-    }
+    // For database storage, we need an integer - using Math.ceil to ensure we never round down to zero
+    finalHoursThreshold = Math.ceil(rawHoursValue);
     
-    console.log(`[createConditionInDb] Converted ${minutesThreshold} minutes to ${finalHoursThreshold} hours`);
+    console.log(`[createConditionInDb] Converted ${minutesThreshold} minutes to ${rawHoursValue} hours (stored as ${finalHoursThreshold})`);
   }
 
   const client = await getAuthClient();
@@ -50,7 +48,7 @@ export async function createConditionInDb(
     .insert({
       message_id: messageId,
       condition_type: conditionType,
-      hours_threshold: finalHoursThreshold,
+      hours_threshold: finalHoursThreshold, // This is now guaranteed to be an integer
       minutes_threshold: minutesThreshold,
       trigger_date: triggerDate || null,
       recurring_pattern: recurringPattern || null,
