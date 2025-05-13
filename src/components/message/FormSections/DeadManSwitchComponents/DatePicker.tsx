@@ -17,14 +17,14 @@ interface DatePickerProps {
   selectedDate: Date | null | undefined;
   setSelectedDate: (date: Date | null) => void;
   label?: string;
-  className?: string; // Added className prop
+  className?: string;
 }
 
 export function DatePicker({ 
   selectedDate, 
   setSelectedDate, 
   label = "Date",
-  className // Accept className prop
+  className
 }: DatePickerProps) {
   const [time, setTime] = useState("12:00");
   
@@ -65,13 +65,13 @@ export function DatePicker({
   
   return (
     <div className={cn("space-y-2", className)}>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="flex gap-2 items-end">
         <Popover>
-          <PopoverTrigger asChild className="col-span-2">
+          <PopoverTrigger asChild>
             <Button
               variant={"outline"}
               className={cn(
-                "justify-start text-left font-normal hover:text-foreground hover:bg-muted/80",
+                "w-[200px] justify-start text-left font-normal hover:text-foreground hover:bg-muted/80",
                 !selectedDate && "text-muted-foreground",
                 HOVER_TRANSITION
               )}
@@ -95,7 +95,7 @@ export function DatePicker({
           type="time" 
           value={time}
           onChange={handleTimeChange}
-          className={`col-span-1 hover:border-primary/50 focus:border-primary ${HOVER_TRANSITION}`}
+          className={`w-24 hover:border-primary/50 focus:border-primary ${HOVER_TRANSITION}`}
         />
       </div>
     </div>
