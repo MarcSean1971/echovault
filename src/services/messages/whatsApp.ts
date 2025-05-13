@@ -61,3 +61,4 @@ export async function triggerManualReminder(messageId: string): Promise<{ succes
 
 // Re-export all needed WhatsApp functions from the core directory structure
 export { sendTestWhatsAppMessage } from './whatsApp/core/messageService';
+export { triggerDeadmanSwitch } from './whatsApp';
