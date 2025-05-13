@@ -133,7 +133,6 @@ export function MessageCardContent({
           <div className="text-xs flex items-center text-muted-foreground hover:text-foreground transition-colors">
             <Clock className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
             <span>Last check-in: {formatShortDate(rawCheckInTime)}</span>
-            <span className="ml-1 text-[10px] text-muted-foreground/70">({formatRelativeTime(rawCheckInTime)})</span>
           </div>
         )}
         
