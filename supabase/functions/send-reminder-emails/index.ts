@@ -2,138 +2,118 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getMessagesNeedingReminders } from "./db-service.ts";
 import { sendReminder } from "./reminder-service.ts";
+import { corsHeaders } from "./utils/env.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-interface ReminderRequest {
-  messageId?: string;
-  debug?: boolean;
-  forceSend?: boolean;
-}
-
-const handler = async (req: Request): Promise<Response> => {
+const handler = async (req: Request) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
-
+  
   try {
-    // Parse request body
-    let requestData: ReminderRequest = {};
+    // Parse the request body
+    let body: { messageId?: string; debug?: boolean; forceSend?: boolean } = {};
+    
     try {
-      requestData = await req.json();
-    } catch (error) {
-      // Default to empty object if parsing fails
-      console.log("Failed to parse request body, using default empty object");
+      body = await req.json();
+    } catch (e) {
+      // If parsing fails, use an empty object
+      console.log("No valid JSON body provided");
     }
     
-    const { messageId, debug = false, forceSend = false } = requestData;
+    const { messageId, debug = false, forceSend = false } = body;
     
-    console.log("===== SEND REMINDER EMAILS =====");
-    console.log(`Starting reminder process at ${new Date().toISOString()}`);
-    console.log(`DEBUG MODE: ${debug ? 'Enabled' : 'Disabled'}`);
-    console.log(`FORCE SEND: ${forceSend ? 'Enabled' : 'Disabled'}`);
+    console.log(`Processing reminders at ${new Date().toISOString()}`);
+    console.log(`Debug mode: ${debug ? "enabled" : "disabled"}`);
+    console.log(`Force send: ${forceSend ? "enabled" : "disabled"}`);
     
     if (messageId) {
-      console.log(`Processing reminders for specific message ID: ${messageId}`);
-    } else {
-      console.log("Processing reminders for all eligible messages");
+      console.log(`Processing specific message: ${messageId}`);
     }
     
     // Get messages that need reminders
     const messagesToRemind = await getMessagesNeedingReminders(messageId, forceSend);
-    
-    if (debug) {
-      console.log(`Found ${messagesToRemind.length} messages that need reminders`);
-      console.log("Messages:", JSON.stringify(messagesToRemind.map(m => ({
-        id: m.message.id,
-        title: m.message.title,
-        condition_id: m.condition.id,
-        hours_until_deadline: m.hoursUntilDeadline,
-        reminder_hours: m.reminderHours,
-        trigger_date: m.condition.trigger_date || 'null'
-      })), null, 2));
-    }
+    console.log(`Found ${messagesToRemind.length} messages that need reminders`);
     
     if (messagesToRemind.length === 0) {
       if (messageId) {
-        console.log(`No reminders needed for message ${messageId}`);
-        if (forceSend) {
-          console.log("Force send enabled but no eligible messages found. Check if message exists and has reminders configured.");
-        }
+        console.log(`No reminders needed for message ${messageId} at this time`);
       } else {
         console.log("No reminders needed at this time");
       }
       
       return new Response(
-        JSON.stringify({
-          success: false,
-          message: messageId ? 
-            `No reminders needed for message ${messageId}` : 
-            "No reminders needed at this time",
-          timestamp: new Date().toISOString()
+        JSON.stringify({ 
+          success: true, 
+          message: "No reminders needed at this time",
+          successful_reminders: 0
         }),
-        {
+        { 
           status: 200,
-          headers: {
-            "Content-Type": "application/json",
-            ...corsHeaders,
-          },
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
         }
       );
     }
-
-    // Send reminders
-    const results = await Promise.all(
-      messagesToRemind.map(message => sendReminder(message, debug))
-    );
     
-    // Count successes and failures
-    const successful = results.filter(r => r.success).length;
-    const failed = results.filter(r => !r.success).length;
+    // Process reminders
+    const results = [];
+    let successfulReminderCount = 0;
     
-    console.log(`===== REMINDER RESULTS =====`);
-    console.log(`Success: ${successful}, Failed: ${failed}`);
-    
-    if (debug) {
-      console.log("Detailed results:", JSON.stringify(results, null, 2));
+    for (const messageToRemind of messagesToRemind) {
+      try {
+        console.log(`Sending reminder for message ${messageToRemind.message.id}`);
+        
+        const reminderResult = await sendReminder(messageToRemind, debug);
+        
+        // Count successful reminders
+        if (reminderResult.success) {
+          successfulReminderCount += reminderResult.results.filter(r => r.success).length;
+        }
+        
+        results.push({
+          message_id: messageToRemind.message.id,
+          condition_id: messageToRemind.condition.id,
+          condition_type: messageToRemind.condition.condition_type,
+          success: reminderResult.success,
+          results: reminderResult.results
+        });
+      } catch (error) {
+        console.error(`Error sending reminder for message ${messageToRemind.message.id}:`, error);
+        results.push({
+          message_id: messageToRemind.message.id,
+          condition_id: messageToRemind.condition.id,
+          success: false,
+          error: error instanceof Error ? error.message : String(error)
+        });
+      }
     }
     
-    console.log(`===== END REMINDER PROCESS =====`);
-
+    console.log(`Reminder processing complete. Successful reminders: ${successfulReminderCount}`);
+    
     return new Response(
       JSON.stringify({
-        success: successful > 0,
-        messages_processed: messagesToRemind.length,
-        successful_reminders: successful,
-        failed_reminders: failed,
-        results: results,
-        timestamp: new Date().toISOString()
+        success: successfulReminderCount > 0,
+        successful_reminders: successfulReminderCount,
+        condition_type: messagesToRemind.length > 0 ? messagesToRemind[0].condition.condition_type : null,
+        results
       }),
       {
         status: 200,
-        headers: {
-          "Content-Type": "application/json",
-          ...corsHeaders,
-        },
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
       }
     );
-  } catch (error: any) {
-    console.error("Error in send-reminder-emails function:", error);
+    
+  } catch (error) {
+    console.error(`Error in send-reminder-emails function:`, error);
     
     return new Response(
       JSON.stringify({
         success: false,
-        error: error.message || "Unknown error occurred",
-        stack: error.stack || "No stack trace available",
-        timestamp: new Date().toISOString()
+        error: error instanceof Error ? error.message : String(error)
       }),
       {
         status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
       }
     );
   }

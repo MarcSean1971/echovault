@@ -42,14 +42,23 @@ export async function triggerManualReminder(messageId: string, forceSend: boolea
     }
 
     if (data && data.successful_reminders > 0) {
+      // Create a more specific success message based on the condition type
+      let successMessage = `Successfully sent ${data.successful_reminders} reminder(s).`;
+      
+      // If this was a check-in condition, clarify that the reminder was sent to the creator
+      if (data.condition_type && ['recurring_check_in', 'no_check_in', 'inactivity_to_date'].includes(data.condition_type)) {
+        successMessage = `Successfully sent check-in reminder to message creator.`;
+      }
+      
       toast({
         title: "Test Reminder Sent",
-        description: `Successfully sent ${data.successful_reminders} reminder(s).`,
+        description: successMessage,
         duration: 5000,
       });
+      
       return {
         success: true,
-        message: `Successfully sent ${data.successful_reminders} reminder(s)`,
+        message: successMessage,
         data
       };
     } else {

@@ -25,7 +25,7 @@ interface ReminderData {
     active: boolean;
     condition_type: string;
     recipients: Recipient[];
-    trigger_date?: string; // Changed from deadline to trigger_date
+    trigger_date?: string;
     reminder_hours?: number[];
   };
   hoursUntilDeadline: number;
@@ -54,93 +54,115 @@ export async function sendReminder(data: ReminderData, debug = false): Promise<{
       console.log(`No trigger_date set for condition ${condition.id}, but proceeding with test reminder`);
     }
     
-    if (!condition.recipients || !Array.isArray(condition.recipients) || condition.recipients.length === 0) {
-      console.error(`No recipients for message ${message.id}`);
-      return { success: false, results: [] };
-    }
-    
     // Get sender name
     let senderName = "Unknown Sender";
+    let senderEmail = "";
+    let senderPhone = "";
     try {
       const supabase = supabaseClient();
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select('first_name, last_name')
+        .select('first_name, last_name, backup_email, whatsapp_number')
         .eq('id', message.user_id)
         .single();
       
       if (!error && profile) {
         senderName = `${profile.first_name || ""} ${profile.last_name || ""}`.trim();
         if (!senderName) senderName = "EchoVault User";
+        senderEmail = profile.backup_email || ""; // Get sender email for check-in reminders
+        senderPhone = profile.whatsapp_number || ""; // Get sender phone for check-in reminders
       }
     } catch (error) {
-      console.error("Error fetching sender name:", error);
+      console.error("Error fetching sender info:", error);
     }
     
     if (debug) {
       console.log(`Sending reminders for message "${message.title}" from ${senderName}`);
       console.log(`Message user_id: ${message.user_id}`);
       console.log(`Deadline in ${condition.trigger_date ? hoursUntilDeadline.toFixed(1) : 'N/A'} hours`);
-      console.log(`Recipients: ${condition.recipients.length}`);
     }
     
     const reminderResults: ReminderResult[] = [];
     
-    // Send reminders to each recipient
-    for (const recipient of condition.recipients) {
+    // Check if this is a check-in related condition
+    // These condition types should only send reminders to the message creator
+    const isCheckInCondition = ['recurring_check_in', 'no_check_in', 'inactivity_to_date'].includes(condition.condition_type);
+    
+    if (debug) {
+      console.log(`Condition type: ${condition.condition_type}`);
+      console.log(`Is check-in condition: ${isCheckInCondition}`);
+    }
+    
+    if (isCheckInCondition) {
+      // For check-in conditions, only send reminder to the message creator
       if (debug) {
-        console.log(`Processing reminder for recipient ${recipient.name} (${recipient.email})`);
+        console.log(`This is a check-in condition, only sending reminder to creator (${senderEmail})`);
       }
       
-      // Send email reminder
+      // Only proceed if we have the sender's email
+      if (!senderEmail) {
+        console.warn(`No email found for message creator (user_id: ${message.user_id}), cannot send check-in reminder`);
+        return { 
+          success: false, 
+          results: [{
+            success: false,
+            error: "No email found for message creator"
+          }]
+        };
+      }
+      
+      // Send email reminder to creator
       try {
         const emailResult = await sendEmailReminder(
           message.id,
-          recipient.email,
-          recipient.name,
+          senderEmail,
           senderName,
+          senderName, // The sender name is the same as recipient name in this case
           message.title,
           hoursUntilDeadline,
-          condition.trigger_date || new Date().toISOString(), // Use current date as fallback
+          condition.trigger_date || new Date().toISOString(),
           debug
         );
         
         reminderResults.push({
           success: emailResult.success,
-          recipientId: recipient.id,
-          recipientEmail: recipient.email,
+          recipientEmail: senderEmail,
           method: "email",
           error: emailResult.error
         });
         
         if (debug) {
-          console.log(`Email reminder ${emailResult.success ? "sent" : "failed"} to ${recipient.email}`);
+          console.log(`Creator email reminder ${emailResult.success ? "sent" : "failed"} to ${senderEmail}`);
           if (!emailResult.success) {
-            console.error(`Email error: ${emailResult.error}`);
+            console.error(`Creator email error: ${emailResult.error}`);
           }
         }
       } catch (error: any) {
-        console.error(`Error sending email reminder to ${recipient.email}:`, error);
+        console.error(`Error sending email reminder to creator ${senderEmail}:`, error);
         reminderResults.push({
           success: false,
-          recipientId: recipient.id,
-          recipientEmail: recipient.email,
+          recipientEmail: senderEmail,
           method: "email",
           error: error.message || "Unknown error"
         });
       }
       
-      // Send WhatsApp reminder if phone is available
-      if (recipient.phone) {
+      // Send WhatsApp reminder to creator if phone is available
+      if (senderPhone) {
         try {
-          const whatsappMessage = `🔔 REMINDER: "${message.title}" will be delivered in about ${Math.round(hoursUntilDeadline)} hours if not disarmed.`;
+          const whatsappMessage = `🔔 CHECK-IN REMINDER: Your message "${message.title}" requires a check-in within about ${Math.round(hoursUntilDeadline)} hours to prevent delivery.`;
           
           const whatsappResult = await sendWhatsAppReminder(
-            recipient,
+            {
+              id: 'creator',
+              name: senderName,
+              email: senderEmail,
+              phone: senderPhone
+            },
             {
               id: message.id,
               title: message.title,
-              deadline: condition.trigger_date || new Date().toISOString(), // Use current date as fallback
+              deadline: condition.trigger_date || new Date().toISOString(),
               hoursUntil: Math.round(hoursUntilDeadline)
             },
             senderName,
@@ -149,27 +171,123 @@ export async function sendReminder(data: ReminderData, debug = false): Promise<{
           
           reminderResults.push({
             success: whatsappResult.success,
-            recipientId: recipient.id,
-            recipientPhone: recipient.phone,
+            recipientPhone: senderPhone,
             method: "whatsapp",
             error: whatsappResult.error
           });
           
           if (debug) {
-            console.log(`WhatsApp reminder ${whatsappResult.success ? "sent" : "failed"} to ${recipient.phone}`);
+            console.log(`Creator WhatsApp reminder ${whatsappResult.success ? "sent" : "failed"} to ${senderPhone}`);
             if (!whatsappResult.success) {
-              console.error(`WhatsApp error: ${whatsappResult.error}`);
+              console.error(`Creator WhatsApp error: ${whatsappResult.error}`);
             }
           }
         } catch (error: any) {
-          console.error(`Error sending WhatsApp reminder to ${recipient.phone}:`, error);
+          console.error(`Error sending WhatsApp reminder to creator ${senderPhone}:`, error);
           reminderResults.push({
             success: false,
-            recipientId: recipient.id,
-            recipientPhone: recipient.phone,
+            recipientPhone: senderPhone,
             method: "whatsapp",
             error: error.message || "Unknown error"
           });
+        }
+      }
+    } else {
+      // For non-check-in conditions (e.g., panic_trigger), send reminders to the recipients as before
+      if (!condition.recipients || !Array.isArray(condition.recipients) || condition.recipients.length === 0) {
+        console.error(`No recipients for message ${message.id}`);
+        return { success: false, results: [] };
+      }
+      
+      if (debug) {
+        console.log(`This is NOT a check-in condition, sending reminders to ${condition.recipients.length} recipients`);
+      }
+      
+      // Send reminders to each recipient
+      for (const recipient of condition.recipients) {
+        if (debug) {
+          console.log(`Processing reminder for recipient ${recipient.name} (${recipient.email})`);
+        }
+        
+        // Send email reminder
+        try {
+          const emailResult = await sendEmailReminder(
+            message.id,
+            recipient.email,
+            recipient.name,
+            senderName,
+            message.title,
+            hoursUntilDeadline,
+            condition.trigger_date || new Date().toISOString(),
+            debug
+          );
+          
+          reminderResults.push({
+            success: emailResult.success,
+            recipientId: recipient.id,
+            recipientEmail: recipient.email,
+            method: "email",
+            error: emailResult.error
+          });
+          
+          if (debug) {
+            console.log(`Email reminder ${emailResult.success ? "sent" : "failed"} to ${recipient.email}`);
+            if (!emailResult.success) {
+              console.error(`Email error: ${emailResult.error}`);
+            }
+          }
+        } catch (error: any) {
+          console.error(`Error sending email reminder to ${recipient.email}:`, error);
+          reminderResults.push({
+            success: false,
+            recipientId: recipient.id,
+            recipientEmail: recipient.email,
+            method: "email",
+            error: error.message || "Unknown error"
+          });
+        }
+        
+        // Send WhatsApp reminder if phone is available
+        if (recipient.phone) {
+          try {
+            const whatsappMessage = `🔔 REMINDER: "${message.title}" will be delivered in about ${Math.round(hoursUntilDeadline)} hours if not disarmed.`;
+            
+            const whatsappResult = await sendWhatsAppReminder(
+              recipient,
+              {
+                id: message.id,
+                title: message.title,
+                deadline: condition.trigger_date || new Date().toISOString(),
+                hoursUntil: Math.round(hoursUntilDeadline)
+              },
+              senderName,
+              debug
+            );
+            
+            reminderResults.push({
+              success: whatsappResult.success,
+              recipientId: recipient.id,
+              recipientPhone: recipient.phone,
+              method: "whatsapp",
+              error: whatsappResult.error
+            });
+            
+            if (debug) {
+              console.log(`WhatsApp reminder ${whatsappResult.success ? "sent" : "failed"} to ${recipient.phone}`);
+              if (!whatsappResult.success) {
+                console.error(`WhatsApp error: ${whatsappResult.error}`);
+              }
+            }
+          } catch (error: any) {
+            console.error(`Error sending WhatsApp reminder to ${recipient.phone}:`, error);
+            reminderResults.push({
+              success: false,
+              recipientId: recipient.id,
+              recipientPhone: recipient.phone,
+              method: "whatsapp",
+              error: error.message || "Unknown error"
+            });
+          }
         }
       }
     }
@@ -185,8 +303,8 @@ export async function sendReminder(data: ReminderData, debug = false): Promise<{
       const recordResult = await recordReminderSent(
         message.id, 
         condition.id, 
-        condition.trigger_date || new Date().toISOString(), // Use current date as fallback
-        message.user_id || 'unknown' // Use the user_id from the message
+        condition.trigger_date || new Date().toISOString(),
+        message.user_id || 'unknown'
       );
       
       if (!recordResult) {
