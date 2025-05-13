@@ -1,7 +1,15 @@
 
 /**
- * Check if the condition is a check-in related condition
+ * Helper to check if a condition type is a check-in related condition
  */
 export function isCheckInCondition(conditionType: string): boolean {
-  return ['recurring_check_in', 'no_check_in', 'inactivity_to_date'].includes(conditionType);
+  const checkInTypes = [
+    'recurring_check_in',
+    'no_check_in',
+    'inactivity_to_date',
+    'inactivity_to_recurring',
+    'group_confirmation'
+  ];
+  
+  return checkInTypes.includes(conditionType);
 }

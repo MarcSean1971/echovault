@@ -51,35 +51,34 @@ export async function sendReminder(data: ReminderData, debug = false): Promise<{
     const reminderResults: ReminderResult[] = [];
     
     // Check if this is a check-in related condition
-    // These condition types should only send reminders to the message creator
     const checkInCondition = isCheckInCondition(condition.condition_type);
     
     console.log(`Condition type: ${condition.condition_type}`);
     console.log(`Is check-in condition: ${checkInCondition}`);
     
-    if (checkInCondition) {
-      // For check-in conditions, only send reminder to the message creator
-      console.log(`This is a check-in condition, only sending reminder to creator (user_id: ${message.user_id})`);
-      
-      const creatorResults = await sendCreatorReminder(
-        message.id,
-        condition.id,
-        message.title,
-        message.user_id,
-        hoursUntilDeadline,
-        condition.trigger_date || new Date().toISOString(),
-        debug || true // Always debug for now to get more info
-      );
-      
-      reminderResults.push(...creatorResults);
-      
-      if (creatorResults.some(r => r.success)) {
-        console.log(`Successfully sent reminder to creator for check-in condition message ${message.id}`);
-      } else {
-        console.log(`Failed to send reminder to creator for check-in condition message ${message.id}`);
-      }
+    // ALWAYS send reminder to creator regardless of condition type
+    console.log(`Sending reminder to creator (user_id: ${message.user_id})`);
+    
+    const creatorResults = await sendCreatorReminder(
+      message.id,
+      condition.id,
+      message.title,
+      message.user_id,
+      hoursUntilDeadline,
+      condition.trigger_date || new Date().toISOString(),
+      true // Always enable debug to get more info
+    );
+    
+    reminderResults.push(...creatorResults);
+    
+    if (creatorResults.some(r => r.success)) {
+      console.log(`Successfully sent reminder to creator for message ${message.id}`);
     } else {
-      // For non-check-in conditions (e.g., panic_trigger), send reminders to the recipients
+      console.log(`Failed to send reminder to creator for message ${message.id}`);
+    }
+    
+    // For non-check-in conditions, also send reminders to the recipients
+    if (!checkInCondition) {
       if (condition.recipients && condition.recipients.length > 0) {
         console.log(`Sending reminders to ${condition.recipients.length} recipients for message ${message.id}`);
         
@@ -90,7 +89,7 @@ export async function sendReminder(data: ReminderData, debug = false): Promise<{
           condition.recipients,
           hoursUntilDeadline,
           condition.trigger_date || new Date().toISOString(),
-          debug || true // Always debug for now to get more info
+          true // Always enable debug to get more info
         );
         
         reminderResults.push(...recipientResults);
@@ -98,7 +97,7 @@ export async function sendReminder(data: ReminderData, debug = false): Promise<{
         const successCount = recipientResults.filter(r => r.success).length;
         console.log(`Successfully sent ${successCount} out of ${recipientResults.length} recipient reminders for message ${message.id}`);
       } else {
-        console.log(`No recipients found for message ${message.id}, skipping reminder`);
+        console.log(`No recipients found for message ${message.id}, skipping reminder to recipients`);
       }
     }
     

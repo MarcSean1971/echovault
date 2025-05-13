@@ -46,7 +46,7 @@ export async function sendMessageNotification(
       console.log("THIS IS AN EMERGENCY MESSAGE - Special handling activated");
     }
     
-    // Track the notifications in the database
+    // Track the notifications in the database - important to do this ONCE before sending any notifications
     try {
       await trackMessageNotification(message.id, condition.id);
       if (debug) console.log(`Successfully tracked notification for message ${message.id}`);
@@ -72,8 +72,25 @@ export async function sendMessageNotification(
       }
     }
     
-    // Send a notification to each recipient
+    // Create a Set to track recipients who have already been notified to prevent duplicates
+    const notifiedRecipients = new Set();
+    
+    // Send a notification to each recipient - ONCE only!
     const recipientResults = await Promise.all(condition.recipients.map(async recipient => {
+      // Skip if this recipient has already been processed
+      if (notifiedRecipients.has(recipient.id)) {
+        console.log(`Skipping duplicate notification for recipient ${recipient.id} (${recipient.email})`);
+        return { 
+          success: true, 
+          recipient: recipient.email, 
+          skipped: true, 
+          reason: "Duplicate recipient" 
+        };
+      }
+      
+      // Mark recipient as notified to prevent duplicates
+      notifiedRecipients.add(recipient.id);
+      
       // Create delivery record for each recipient BEFORE sending notification
       // This ensures the delivery record exists when the recipient clicks the link
       try {

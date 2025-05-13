@@ -85,6 +85,39 @@ export async function sendEmailNotification(
       `;
     }
 
+    // Parse messageContent to handle video content properly
+    let displayContent = messageContent;
+    if (messageContent) {
+      try {
+        // Try to parse as JSON to extract video content properly
+        const contentObj = JSON.parse(messageContent);
+        
+        // If this is video content, don't display raw JSON
+        if (contentObj.videoData || contentObj.transcription) {
+          // Just show transcription if available, skip raw video data
+          displayContent = contentObj.transcription ? 
+            `<p style="margin-top: 12px;">Video message with transcription:</p>
+             <div style="background-color: #f8fafc; padding: 16px; border-radius: 8px; margin: 12px 0; border-left: 4px solid #cbd5e1;">
+               <p style="color: #334155; font-style: italic;">${contentObj.transcription}</p>
+             </div>` : 
+            "<p style=\"margin-top: 12px;\">This message contains a video that you can view by clicking the button below.</p>";
+            
+          // If there's additional text with the video, include it
+          if (contentObj.additionalText) {
+            displayContent += `
+              <div style="margin-top: 16px;">
+                <p style="margin-bottom: 8px; font-weight: 500; color: #334155;">Additional message:</p>
+                <p style="color: #334155;">${contentObj.additionalText}</p>
+              </div>
+            `;
+          }
+        }
+      } catch (e) {
+        // Not JSON or parsing failed, use content as is
+        console.log("Not JSON content, using as plain text");
+      }
+    }
+
     // Set emergency styling if needed
     const subjectPrefix = isEmergency ? `⚠️ EMERGENCY: ` : "";
     const emergencyBanner = isEmergency 
@@ -166,9 +199,9 @@ export async function sendEmailNotification(
                 <strong>${senderName}</strong> has sent you a secure message.
               </p>
               
-              ${messageContent ? `
+              ${displayContent ? `
               <div style="background-color: #f8fafc; padding: 16px; border-radius: 8px; margin-bottom: 24px; border-left: 4px solid #cbd5e1;">
-                <p style="color: #334155; font-size: 16px;">${messageContent}</p>
+                ${displayContent}
               </div>
               ` : ''}
               
