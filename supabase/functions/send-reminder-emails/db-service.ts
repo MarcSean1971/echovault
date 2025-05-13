@@ -1,5 +1,6 @@
 
 import { supabaseClient } from "./supabase-client.ts";
+import { ReminderData } from "./types/reminder-types.ts";
 
 interface Message {
   id: string;
@@ -28,23 +29,16 @@ interface Condition {
   // Add other condition fields as needed
 }
 
-interface MessageToRemind {
-  message: Message;
-  condition: Condition;
-  hoursUntilDeadline: number;
-  reminderHours: number[];
-}
-
 /**
  * Get messages that need reminders
  */
 export async function getMessagesNeedingReminders(
   specificMessageId?: string, 
   forceSend: boolean = false
-): Promise<MessageToRemind[]> {
+): Promise<ReminderData[]> {
   try {
     const supabase = supabaseClient();
-    const messagesToRemind: MessageToRemind[] = [];
+    const messagesToRemind: ReminderData[] = [];
     
     // Query conditions that are active and have reminders configured
     let query = supabase
@@ -151,42 +145,5 @@ export async function getMessagesNeedingReminders(
   } catch (error) {
     console.error("Error in getMessagesNeedingReminders:", error);
     throw error;
-  }
-}
-
-/**
- * Record that a reminder was sent
- */
-export async function recordReminderSent(
-  messageId: string,
-  conditionId: string,
-  triggerDate: string, // Changed from deadline to triggerDate
-  userId: string
-): Promise<boolean> {
-  try {
-    const supabase = supabaseClient();
-    
-    // Log the params for debugging
-    console.log(`Recording reminder for message ${messageId}, condition ${conditionId}, userId ${userId}`);
-    
-    const { error } = await supabase
-      .from('sent_reminders')
-      .insert({
-        message_id: messageId,
-        condition_id: conditionId,
-        user_id: userId,
-        deadline: triggerDate || new Date().toISOString(), // Use current date if triggerDate is null
-        sent_at: new Date().toISOString()
-      });
-    
-    if (error) {
-      console.error("Error recording reminder:", error);
-      return false;
-    }
-    
-    return true;
-  } catch (error) {
-    console.error("Error in recordReminderSent:", error);
-    return false;
   }
 }
