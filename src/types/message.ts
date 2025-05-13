@@ -1,3 +1,4 @@
+
 export type Message = {
   id: string;
   user_id: string;
@@ -23,6 +24,9 @@ export type Message = {
   // Panic trigger configuration
   panic_config?: any;
   panic_trigger_config?: any;
+  // New content fields
+  text_content?: string | null;
+  video_content?: string | null;
 };
 
 export type Recipient = {

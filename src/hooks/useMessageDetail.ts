@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -37,7 +36,7 @@ export function useMessageDetail(messageId: string | undefined, onError: () => v
         
       if (error) throw error;
       
-      setMessage(data as Message);
+      setMessage(data as unknown as Message);
       
       // Check if message has a condition and if it's armed
       const conditionData = await getConditionByMessageId(messageId);

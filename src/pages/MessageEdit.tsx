@@ -49,7 +49,7 @@ export default function MessageEdit() {
           
         if (error) throw error;
         
-        setMessage(data as Message);
+        setMessage(data as unknown as Message);
       } catch (error: any) {
         console.error("Error fetching message:", error);
         toast({

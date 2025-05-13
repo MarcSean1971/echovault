@@ -76,7 +76,7 @@ export const useSecurityConstraints = ({
           }
           
           console.log("Message loaded in preview mode:", messageData);
-          setMessage(messageData as Message);
+          setMessage(messageData as unknown as Message);
           setIsLoading(false);
           return;
         } catch (err) {
@@ -152,7 +152,7 @@ export const useSecurityConstraints = ({
           }
           
           console.log("Message loaded:", messageData);
-          setMessage(messageData as Message);
+          setMessage(messageData as unknown as Message);
         } catch (err) {
           console.error("Error fetching message:", err);
         } finally {

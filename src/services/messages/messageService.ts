@@ -1,3 +1,4 @@
+
 import { getAuthClient } from "@/lib/supabaseClient";
 import { Message } from "@/types/message";
 import { FileAttachment } from "@/components/FileUploader";
@@ -35,7 +36,10 @@ export async function fetchMessages(messageType: string | null = null) {
         name: string;
         size: number;
         type: string;
-      }> | null
+      }> | null,
+      // Set defaults for missing fields to match Message type
+      expires_at: msg.expires_at || null,
+      sender_name: msg.sender_name || null
     })) as Message[];
   } catch (error) {
     console.error("Error fetching messages:", error);
@@ -143,7 +147,10 @@ export async function createMessage(
         name: string;
         size: number;
         type: string;
-      }> | null
+      }> | null,
+      // Set defaults for missing fields to match Message type
+      expires_at: data?.[0]?.expires_at || null,
+      sender_name: data?.[0]?.sender_name || null
     } as Message;
   } catch (error) {
     console.error("Error creating message:", error);
