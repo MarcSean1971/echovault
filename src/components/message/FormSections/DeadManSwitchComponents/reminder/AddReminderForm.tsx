@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,8 +10,9 @@ import {
   isValidMinuteInterval,
   getValidMinuteOptions
 } from "./TimeConversionUtils";
-import { HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { useHoverEffects } from "@/hooks/useHoverEffects";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface AddReminderFormProps {
   onAddReminder: (minutes: number) => void;
@@ -27,6 +29,7 @@ export function AddReminderForm({
   const [newMinute, setNewMinute] = useState<string>("0");
   const [validationError, setValidationError] = useState<string | null>(null);
   const [maxMinutesValue, setMaxMinutesValue] = useState<number>(45);
+  const { getIconHoverClasses } = useHoverEffects();
   
   // Available minute options (0, 15, 30, 45)
   const minuteOptions = getValidMinuteOptions();
@@ -194,16 +197,24 @@ export function AddReminderForm({
           </Select>
         </div>
         
-        <Button 
-          type="button" 
-          variant="outline" 
-          size="icon"
-          onClick={handleAddReminder}
-          disabled={(parseInt(newHour) === 0 && parseInt(newMinute) === 0)}
-          className={`hover:bg-muted/80 ${HOVER_TRANSITION}`}
-        >
-          <Plus className="h-4 w-4" />
-        </Button>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                type="button" 
+                variant="secondary" 
+                size="icon"
+                onClick={handleAddReminder}
+                disabled={(parseInt(newHour) === 0 && parseInt(newMinute) === 0)}
+              >
+                <Plus className={getIconHoverClasses("primary")} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Add reminder</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
       
       {validationError && (
