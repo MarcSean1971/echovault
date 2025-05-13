@@ -61,7 +61,8 @@ export function DeadmanSwitchControls({
         duration: 3000,
       });
       
-      const result = await triggerManualReminder(messageId, true);
+      // Fix: Removing the second argument, as triggerManualReminder expects only messageId
+      const result = await triggerManualReminder(messageId);
       
       if (result.success) {
         console.log(`Reminder triggered successfully for message ${messageId}`);
