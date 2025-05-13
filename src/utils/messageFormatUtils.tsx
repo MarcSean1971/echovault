@@ -1,6 +1,6 @@
-
 import React from 'react';
 import { MessageSquare, File, Video, Mic } from "lucide-react";
+import { formatDistanceToNow } from 'date-fns';
 
 /**
  * Returns the appropriate icon component based on message type
@@ -28,6 +28,36 @@ export const formatDate = (dateString: string) => {
     month: 'short',
     day: 'numeric',
   }).format(date);
+};
+
+/**
+ * Formats a date string into a concise format (e.g., "May 13, 2:30 PM")
+ */
+export const formatShortDate = (dateString: string | null): string => {
+  if (!dateString) return '';
+  
+  const date = new Date(dateString);
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(date);
+};
+
+/**
+ * Returns a relative time format (e.g., "2 hours ago")
+ */
+export const formatRelativeTime = (dateString: string | null): string => {
+  if (!dateString) return '';
+  
+  try {
+    const date = new Date(dateString);
+    return formatDistanceToNow(date, { addSuffix: true });
+  } catch (error) {
+    console.error("Error formatting relative time:", error);
+    return '';
+  }
 };
 
 /**

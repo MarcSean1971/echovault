@@ -3,12 +3,13 @@ import { useState, useEffect } from "react";
 import { Message, MessageCondition } from "@/types/message";
 import { MessageTimer } from "../MessageTimer";
 import { MessageTypeIcon } from "../detail/MessageTypeIcon";
-import { MapPin, AlertCircle, Calendar, MessageSquare, Video, Clock } from "lucide-react";
-import { HOVER_TRANSITION, ICON_HOVER_EFFECTS } from "@/utils/hoverEffects";
+import { MapPin, AlertCircle, Calendar, MessageSquare, Video, Clock, Calendar as CalendarIcon } from "lucide-react";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { parseVideoContent } from "@/services/messages/mediaService";
 import { useMessageAdditionalText } from "@/hooks/useMessageAdditionalText";
 import { useMessageLastCheckIn } from "@/hooks/useMessageLastCheckIn";
 import { useMessageDeliveryStatus } from "@/hooks/useMessageDeliveryStatus";
+import { formatShortDate, formatRelativeTime } from "@/utils/messageFormatUtils";
 
 interface MessageCardContentProps {
   message: Message;
@@ -51,7 +52,7 @@ export function MessageCardContent({
   const { additionalText } = useMessageAdditionalText(message);
   
   // Get last check-in time formatting
-  const { formattedCheckIn, isDeadmansSwitch: isDMS } = useMessageLastCheckIn(condition);
+  const { formattedCheckIn, rawCheckInTime, isDeadmansSwitch: isDMS } = useMessageLastCheckIn(condition);
 
   // Get delivered status info
   const { isDelivered: wasDelivered, lastDelivered } = useMessageDeliveryStatus(message.id);
@@ -119,35 +120,37 @@ export function MessageCardContent({
         </div>
       </div>
       
-      {/* Show last check-in time for deadman's switch messages */}
-      {isDMS && formattedCheckIn && (
-        <div className="text-xs flex items-center mt-1 text-muted-foreground">
-          <Clock className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
-          <span>Last check-in: {formattedCheckIn}</span>
+      {/* Timeline section with dates in logical order */}
+      <div className="mt-2 space-y-1.5 border-l-2 border-muted pl-3 py-1">
+        {/* Always show creation date */}
+        <div className="text-xs flex items-center text-muted-foreground hover:text-foreground transition-colors">
+          <CalendarIcon className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+          <span>Created: {formatShortDate(message.created_at)}</span>
         </div>
-      )}
-      
-      {/* Show last message sent date if delivered */}
-      {wasDelivered && lastDelivered && (
-        <div className="text-xs flex items-center mt-1 text-muted-foreground">
-          <Clock className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
-          <span>Last message sent: {new Date(lastDelivered).toLocaleDateString()}</span>
-        </div>
-      )}
+        
+        {/* Show last check-in time for deadman's switch messages */}
+        {isDMS && rawCheckInTime && (
+          <div className="text-xs flex items-center text-muted-foreground hover:text-foreground transition-colors">
+            <Clock className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+            <span>Last check-in: {formatShortDate(rawCheckInTime)}</span>
+            <span className="ml-1 text-[10px] text-muted-foreground/70">({formatRelativeTime(rawCheckInTime)})</span>
+          </div>
+        )}
+        
+        {/* Show last message sent date if delivered */}
+        {wasDelivered && lastDelivered && (
+          <div className="text-xs flex items-center text-muted-foreground hover:text-foreground transition-colors">
+            <MessageSquare className="h-3.5 w-3.5 mr-1 text-muted-foreground" />
+            <span>Last sent: {formatShortDate(lastDelivered)}</span>
+          </div>
+        )}
+      </div>
       
       {/* Show metadata badges in a flex row */}
       <div className="flex flex-wrap gap-2 mt-3">
-        {/* Date badge */}
-        <div className="inline-flex items-center text-xs text-muted-foreground bg-muted/50 rounded-full px-2 py-0.5">
-          <Calendar className="h-3 w-3 mr-1" />
-          <span className="truncate max-w-[150px]">
-            {new Date(message.created_at).toLocaleDateString()}
-          </span>
-        </div>
-        
         {/* Video content badge - show for all messages with video */}
         {hasVideo && (
-          <div className="inline-flex items-center text-xs text-muted-foreground bg-muted/50 rounded-full px-2 py-0.5">
+          <div className="inline-flex items-center text-xs text-muted-foreground bg-muted/50 rounded-full px-2 py-0.5 hover:bg-muted transition-colors">
             <Video className="h-3 w-3 mr-1" />
             <span>Video</span>
           </div>
@@ -155,7 +158,7 @@ export function MessageCardContent({
         
         {/* Location badge */}
         {hasLocation && (
-          <div className="inline-flex items-center text-xs text-muted-foreground bg-muted/50 rounded-full px-2 py-0.5">
+          <div className="inline-flex items-center text-xs text-muted-foreground bg-muted/50 rounded-full px-2 py-0.5 hover:bg-muted transition-colors">
             <MapPin className="h-3 w-3 mr-1" />
             <span className="truncate max-w-[150px]">
               {message.location_name || "Location"}
@@ -165,7 +168,7 @@ export function MessageCardContent({
         
         {/* Attachments badge */}
         {hasAttachments && (
-          <div className="inline-flex items-center text-xs text-muted-foreground bg-muted/50 rounded-full px-2 py-0.5">
+          <div className="inline-flex items-center text-xs text-muted-foreground bg-muted/50 rounded-full px-2 py-0.5 hover:bg-muted transition-colors">
             <MessageTypeIcon messageType="file" className="h-3 w-3 mr-1" />
             <span>{message.attachments.length} file{message.attachments.length !== 1 ? 's' : ''}</span>
           </div>
