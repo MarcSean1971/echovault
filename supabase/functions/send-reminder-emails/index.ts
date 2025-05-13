@@ -50,6 +50,7 @@ const handler = async (req: Request) => {
         console.log("2. Message is not armed/active")
         console.log("3. No reminder_hours configured")
         console.log("4. No trigger_date set and forceSend=false")
+        console.log("5. Message is a panic trigger (panic triggers don't get reminders)")
         
         // If forceSend was requested but still no reminders, that's strange
         if (forceSend) {
@@ -93,8 +94,8 @@ const handler = async (req: Request) => {
         console.log(`Hours until deadline: ${messageToRemind.hoursUntilDeadline.toFixed(1)}`);
         
         // IMPORTANT: Add debug log to show proper reminder time interpretation
-        if (messageToRemind.matchedReminderHour !== null) {
-          const reminderMinutes = messageToRemind.matchedReminderHour;
+        if (messageToRemind.matchedReminderMinute !== null) {
+          const reminderMinutes = messageToRemind.matchedReminderMinute;
           const reminderHours = reminderMinutes / 60;
           console.log(`Matched reminder time: ${reminderMinutes} minutes (${reminderHours.toFixed(2)} hours) before deadline`);
         } else if (forceSend) {

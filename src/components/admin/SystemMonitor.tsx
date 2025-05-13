@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Reminder } from "@/services/messages/reminderService";
 import { SystemTimelineChart } from "./system/SystemTimelineChart";
 import { SystemStatusCards } from "./system/SystemStatusCards";
-import { formatDistanceToNow, parseISO, addHours, subHours } from "date-fns";
+import { formatDistanceToNow, parseISO, addHours, subHours, differenceInMinutes } from "date-fns";
 import { formatReminderTime } from "@/components/message/FormSections/DeadManSwitchComponents/reminder/TimeConversionUtils";
 
 // Types for our monitoring data
@@ -23,6 +23,7 @@ interface UpcomingReminder {
   messageId: string;
   timestamp: string;
   title: string;
+  minutesUntil: number;
 }
 
 interface MonitoringData {
@@ -67,6 +68,7 @@ export default function SystemMonitor() {
         .from('message_conditions')
         .select('*, messages(id, title)')
         .eq('active', true)
+        .neq('condition_type', 'panic_trigger') // Filter out panic triggers
         .order('last_checked', { ascending: false })
         .limit(20);
 
@@ -104,6 +106,11 @@ export default function SystemMonitor() {
       // Create upcoming reminders predictions
       const upcomingReminders: UpcomingReminder[] = [];
       conditions?.forEach(condition => {
+        // Skip panic triggers - they don't have reminders
+        if (condition.condition_type === 'panic_trigger') {
+          return;
+        }
+        
         if (!condition.last_checked || !condition.hours_threshold) return;
         
         const lastChecked = new Date(condition.last_checked);
@@ -112,17 +119,19 @@ export default function SystemMonitor() {
         // CRITICAL FIX: reminder_hours contains minutes values, not hours!
         if (condition.reminder_hours && condition.reminder_hours.length > 0) {
           condition.reminder_hours.forEach(reminderMinutes => {
-            // Convert from minutes to hours for scheduling
-            const hoursBeforeDeadline = reminderMinutes / 60;
-            
-            const reminderTime = new Date(deadline.getTime() - (hoursBeforeDeadline * 60 * 60 * 1000));
+            // Calculate reminder time properly from minutes
+            const reminderTime = new Date(deadline.getTime() - (reminderMinutes * 60 * 1000));
             
             // Only include future reminders
             if (reminderTime > now) {
+              // Calculate minutes until reminder
+              const minutesUntil = differenceInMinutes(reminderTime, now);
+              
               upcomingReminders.push({
                 messageId: condition.message_id,
                 timestamp: reminderTime.toISOString(),
-                title: condition.messages?.title || 'Unknown Message'
+                title: condition.messages?.title || 'Unknown Message',
+                minutesUntil: minutesUntil
               });
             }
           });
@@ -142,6 +151,21 @@ export default function SystemMonitor() {
       console.error("Error fetching monitoring data:", err);
       setError(err.message || "Failed to load monitoring data");
       setIsLoading(false);
+    }
+  };
+
+  // Helper function to format reminder time in appropriate units
+  const formatTimeUntil = (minutes: number): string => {
+    if (minutes < 60) {
+      return `${minutes} minute${minutes !== 1 ? 's' : ''}`;
+    } else {
+      const hours = Math.floor(minutes / 60);
+      const remainingMinutes = minutes % 60;
+      if (remainingMinutes === 0) {
+        return `${hours} hour${hours !== 1 ? 's' : ''}`;
+      } else {
+        return `${hours}h ${remainingMinutes}m`;
+      }
     }
   };
 
@@ -268,14 +292,14 @@ export default function SystemMonitor() {
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Calendar className="h-5 w-5 mr-2 text-primary" />
-                  Upcoming Events
+                  Upcoming Reminders
                 </CardTitle>
-                <CardDescription>Scheduled reminder executions</CardDescription>
+                <CardDescription>Scheduled reminder notifications</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
                   {monitoringData.upcomingReminders
-                    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+                    .sort((a, b) => a.minutesUntil - b.minutesUntil)
                     .slice(0, 10)
                     .map((reminder, i) => (
                       <div key={i} className="flex justify-between items-center py-1 border-b">
@@ -284,14 +308,16 @@ export default function SystemMonitor() {
                           <p className="text-xs text-muted-foreground">ID: {reminder.messageId.slice(0, 8)}...</p>
                         </div>
                         <div>
-                          <span className="text-sm">{formatDistanceToNow(parseISO(reminder.timestamp), { addSuffix: true })}</span>
+                          <span className="text-sm font-medium text-blue-600">
+                            in {formatTimeUntil(reminder.minutesUntil)}
+                          </span>
                         </div>
                       </div>
                     ))}
 
                   {monitoringData.upcomingReminders.length === 0 && (
                     <div className="py-4 text-center text-muted-foreground">
-                      No upcoming scheduled events
+                      No upcoming scheduled reminders
                     </div>
                   )}
                 </div>

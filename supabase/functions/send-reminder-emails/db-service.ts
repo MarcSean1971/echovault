@@ -46,6 +46,7 @@ export async function getMessagesNeedingReminders(
     console.log(`Force send: ${forceSend}`);
     
     // Query conditions that are active and have reminders configured
+    // IMPORTANT: Exclude panic_trigger condition types as they should not have reminders
     let query = supabase
       .from('message_conditions')
       .select(`
@@ -68,7 +69,8 @@ export async function getMessagesNeedingReminders(
         )
       `)
       .eq('active', true)
-      .not('reminder_hours', 'is', null);
+      .not('reminder_hours', 'is', null)
+      .neq('condition_type', 'panic_trigger'); // Filter out panic trigger conditions
     
     // If specificMessageId is provided, add that filter
     if (specificMessageId) {
@@ -82,7 +84,7 @@ export async function getMessagesNeedingReminders(
       throw error;
     }
     
-    console.log(`DB: Found ${conditions?.length || 0} active conditions with reminder_hours defined`);
+    console.log(`DB: Found ${conditions?.length || 0} active conditions with reminder_hours defined (excluding panic triggers)`);
     
     const now = new Date();
     console.log(`DB: Current time: ${now.toISOString()}`);
@@ -92,6 +94,12 @@ export async function getMessagesNeedingReminders(
       console.log(`\n====== PROCESSING CONDITION ${condition.id} ======`);
       console.log(`Condition type: ${condition.condition_type}`);
       console.log(`Message ID: ${condition.message_id}`);
+      
+      // Skip panic trigger conditions (extra safety check)
+      if (condition.condition_type === 'panic_trigger') {
+        console.log(`DB: Skipping panic trigger condition ${condition.id}, panic buttons should not have reminders`);
+        continue;
+      }
       
       // Skip if no reminder hours (which contains minutes)
       if (!condition.reminder_hours || condition.reminder_hours.length === 0) {

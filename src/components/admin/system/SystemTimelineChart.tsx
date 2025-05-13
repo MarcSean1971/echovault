@@ -12,7 +12,7 @@ import {
   Legend,
   ZAxis
 } from 'recharts';
-import { parseISO, format, addHours, subHours } from 'date-fns';
+import { parseISO, format, addHours, subHours, differenceInMinutes } from 'date-fns';
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { Activity, Bell, Calendar } from 'lucide-react';
 import { Reminder } from '@/services/messages/reminderService';
@@ -28,6 +28,7 @@ interface UpcomingReminder {
   messageId: string;
   timestamp: string;
   title: string;
+  minutesUntil?: number;
 }
 
 interface SystemTimelineChartProps {
@@ -78,6 +79,22 @@ export function SystemTimelineChart({
     'upcoming': 3,
   };
 
+  // Helper function to format time until in appropriate units
+  const formatTimeUntil = (date: Date): string => {
+    const minutesUntil = differenceInMinutes(date, now);
+    if (minutesUntil < 60) {
+      return `in ${minutesUntil} minute${minutesUntil !== 1 ? 's' : ''}`;
+    } else {
+      const hours = Math.floor(minutesUntil / 60);
+      const remainingMinutes = minutesUntil % 60;
+      if (remainingMinutes === 0) {
+        return `in ${hours} hour${hours !== 1 ? 's' : ''}`;
+      } else {
+        return `in ${hours}h ${remainingMinutes}m`;
+      }
+    }
+  };
+
   // Format data for the chart
   const chartData = useMemo(() => {
     const data: any[] = [];
@@ -124,6 +141,7 @@ export function SystemTimelineChart({
           name: `Scheduled: ${reminder.title.substring(0, 30)}...`,
           details: `Message: ${reminder.messageId}`,
           timestamp: reminder.timestamp,
+          timeUntil: formatTimeUntil(time)
         });
       }
     });
@@ -142,6 +160,9 @@ export function SystemTimelineChart({
       <div className="p-2 bg-background border rounded-md shadow-md text-sm">
         <p className="font-medium">{data.name}</p>
         <p>{format(new Date(data.timestamp), 'MMM d, yyyy HH:mm:ss')}</p>
+        {data.timeUntil && (
+          <p className="text-blue-600 font-medium">{data.timeUntil}</p>
+        )}
         {data.details && <p className="text-muted-foreground text-xs">{data.details}</p>}
         {data.status && (
           <div className="flex items-center mt-1">
