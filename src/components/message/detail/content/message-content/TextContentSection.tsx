@@ -9,6 +9,7 @@ interface TextContentSectionProps {
 }
 
 export function TextContentSection({ message, content }: TextContentSectionProps) {
+  // If content is explicitly provided, use that. Otherwise, let TextMessageContent handle the fallbacks
   return (
     <div className="mb-4">
       <TextMessageContent message={message} content={content} />

@@ -40,13 +40,34 @@ export function MessageContent({
                          message.location_latitude && 
                          message.location_longitude;
 
+  // Determine which content to show - we'll make sure to only show one text component
+  const shouldShowTextContent = message.message_type === "text";
+  
+  // For deadman's switch with content but not text message type
+  const shouldShowDeadmansContent = isDeadmansSwitch && 
+                               message.content && 
+                               message.message_type !== "text" &&
+                               !hasVideoContent;
+  
+  // For other message types with text but no video
+  const shouldShowOtherTextContent = hasTextContent && 
+                                !message.message_type.includes("text") && 
+                                !message.message_type.includes("video") && 
+                                !hasVideoContent && 
+                                message.content &&
+                                !shouldShowTextContent &&  // Make sure we don't duplicate
+                                !shouldShowDeadmansContent; // Make sure we don't duplicate
+
   return (
     <div className="space-y-6">
-      {/* Message content sections */}
-      {message.message_type === "text" && (
+      {/* Message content sections - With mutually exclusive conditions */}
+      
+      {/* Case 1: Regular text message */}
+      {shouldShowTextContent && (
         <TextContentSection message={message} content={message.content} />
       )}
       
+      {/* Case 2: Video message */}
       {message.message_type === "video" && (
         <VideoContentSection 
           message={message} 
@@ -55,12 +76,12 @@ export function MessageContent({
         />
       )}
       
-      {/* For deadman's switch messages with content, show as text */}
-      {isDeadmansSwitch && message.content && message.message_type !== "text" && (
+      {/* Case 3: For deadman's switch messages with content, show as text */}
+      {shouldShowDeadmansContent && (
         <TextContentSection message={message} content={message.content} />
       )}
       
-      {/* For other message types with video content */}
+      {/* Case 4: For other message types with video content */}
       {!message.message_type.includes("text") && 
        !message.message_type.includes("video") && 
        hasVideoContent && (
@@ -71,12 +92,8 @@ export function MessageContent({
         />
       )}
       
-      {/* For other message types with text content but no video */}
-      {hasTextContent && 
-       !message.message_type.includes("text") && 
-       !message.message_type.includes("video") && 
-       !hasVideoContent && 
-       message.content && (
+      {/* Case 5: For other message types with text content but no video - more restricted now */}
+      {shouldShowOtherTextContent && (
         <TextContentSection message={message} content={message.content} />
       )}
       
