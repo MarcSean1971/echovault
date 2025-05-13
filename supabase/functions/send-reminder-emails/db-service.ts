@@ -106,7 +106,7 @@ export async function getMessagesNeedingReminders(
         continue;
       }
       
-      // Calculate hours until deadline or use a default for forced sends without deadline
+      // Calculate hours until deadline or use a default for forced sends
       let hoursUntilDeadline = 24; // Default to 24 hours if no trigger_date for forced sends
       
       if (condition.trigger_date) {
@@ -125,10 +125,11 @@ export async function getMessagesNeedingReminders(
         shouldSendReminder = true;
         console.log(`Force sending reminder for message ${message.id}, deadline in ${condition.trigger_date ? hoursUntilDeadline.toFixed(1) : 'N/A'} hours`);
       } else {
-        // Check if the current time matches any reminder window (within 5 minutes)
+        // Check if the current time matches any reminder window
+        // Updated to check within 7.5 minutes (0.125 hours) to catch reminders in a 15-minute interval
         for (const hour of reminderHours) {
-          // Reminder should be sent if current time is within 5 minutes (0.0833 hours) of the reminder time
-          if (Math.abs(hoursUntilDeadline - hour) < 0.0833) {
+          // Reminder should be sent if current time is within 7.5 minutes (0.125 hours) of the reminder time
+          if (Math.abs(hoursUntilDeadline - hour) < 0.125) {
             shouldSendReminder = true;
             console.log(`Reminder time match for message ${message.id}: ${hour} hours before deadline`);
             break;

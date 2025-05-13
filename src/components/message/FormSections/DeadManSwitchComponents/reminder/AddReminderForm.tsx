@@ -3,8 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AlertTriangle, Plus } from "lucide-react";
-import { hoursMinutesToMinutes } from "./TimeConversionUtils";
+import { 
+  hoursMinutesToMinutes, 
+  snapMinutesTo15MinInterval, 
+  isValidMinuteInterval,
+  getValidMinuteOptions
+} from "./TimeConversionUtils";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface AddReminderFormProps {
   onAddReminder: (minutes: number) => void;
@@ -18,9 +24,12 @@ export function AddReminderForm({
   maxMinutes 
 }: AddReminderFormProps) {
   const [newHour, setNewHour] = useState<string>("");
-  const [newMinute, setNewMinute] = useState<string>("");
+  const [newMinute, setNewMinute] = useState<string>("0");
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [maxMinutesValue, setMaxMinutesValue] = useState<number>(59);
+  const [maxMinutesValue, setMaxMinutesValue] = useState<number>(45);
+  
+  // Available minute options (0, 15, 30, 45)
+  const minuteOptions = getValidMinuteOptions();
 
   // Update maxMinutes when newHour or maxHours changes
   useEffect(() => {
@@ -28,13 +37,16 @@ export function AddReminderForm({
       const hourValue = parseInt(newHour) || 0;
       const hourInMinutes = hourValue * 60;
       
-      if (hourInMinutes + 59 > maxMinutes) {
-        // If adding 59 minutes would exceed maxMinutes, restrict max minutes value
+      // Calculate maximum allowed minute option based on maxMinutes
+      if (hourInMinutes + 45 > maxMinutes) {
+        // Find the highest valid minute option that doesn't exceed maxMinutes
         const remainingMinutes = Math.max(0, maxMinutes - hourInMinutes);
-        setMaxMinutesValue(remainingMinutes);
+        // Get the highest valid minute option that doesn't exceed remainingMinutes
+        const validOption = Math.floor(remainingMinutes / 15) * 15;
+        setMaxMinutesValue(validOption);
       } else {
         // Otherwise, full range of minutes
-        setMaxMinutesValue(59);
+        setMaxMinutesValue(45);
       }
     }
   }, [newHour, maxMinutes]);
@@ -48,6 +60,11 @@ export function AddReminderForm({
     
     // Convert to total minutes for comparison
     const totalMinutes = hoursMinutesToMinutes(hourValue, minuteValue);
+    
+    // Check if it's a valid 15-minute interval
+    if (minuteValue % 15 !== 0) {
+      return false;
+    }
     
     // Compare to maxMinutes
     return totalMinutes < maxMinutes;
@@ -63,10 +80,13 @@ export function AddReminderForm({
     if (maxMinutes) {
       const hourValue = parseInt(value) || 0;
       const hourInMinutes = hourValue * 60;
+      const currentMinuteValue = parseInt(newMinute) || 0;
       
-      if (hourInMinutes + parseInt(newMinute || "0") > maxMinutes) {
+      if (hourInMinutes + currentMinuteValue > maxMinutes) {
+        // Find the highest valid minute option that doesn't exceed maxMinutes
         const remainingMinutes = Math.max(0, maxMinutes - hourInMinutes);
-        setNewMinute(Math.min(parseInt(newMinute || "0"), remainingMinutes).toString());
+        const validOption = Math.floor(remainingMinutes / 15) * 15;
+        setNewMinute(validOption.toString());
       }
     }
     
@@ -76,10 +96,8 @@ export function AddReminderForm({
     }
   };
 
-  // Handle minute input change
-  const handleMinuteChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    
+  // Handle minute selection change
+  const handleMinuteChange = (value: string) => {
     // Validate the new minute value
     if (maxMinutes) {
       const hourValue = parseInt(newHour) || 0;
@@ -113,6 +131,12 @@ export function AddReminderForm({
       return;
     }
     
+    // Validate that minutes are on a 15-minute interval
+    if (!isValidMinuteInterval(minuteValue)) {
+      setValidationError("Minutes must be in 15-minute intervals (0, 15, 30, 45)");
+      return;
+    }
+    
     // Convert to minutes for storage
     const totalMinutes = hoursMinutesToMinutes(hourValue, minuteValue);
     
@@ -126,7 +150,7 @@ export function AddReminderForm({
     if (!existingReminders.includes(totalMinutes)) {
       onAddReminder(totalMinutes);
       setNewHour("");
-      setNewMinute("");
+      setNewMinute("0");
     } else {
       setValidationError("This reminder time already exists");
     }
@@ -151,16 +175,23 @@ export function AddReminderForm({
         
         <div>
           <Label htmlFor="reminder-minutes" className="text-xs">Minutes</Label>
-          <Input
-            id="reminder-minutes"
-            type="number"
-            min="0"
-            max={maxMinutesValue}
-            placeholder="0"
+          <Select
             value={newMinute}
-            onChange={handleMinuteChange}
-            className="w-20 hover:border-primary/50 focus:border-primary transition-colors"
-          />
+            onValueChange={handleMinuteChange}
+          >
+            <SelectTrigger id="reminder-minutes" className="w-24 hover:border-primary/50 focus:border-primary transition-colors">
+              <SelectValue placeholder="0" />
+            </SelectTrigger>
+            <SelectContent>
+              {minuteOptions
+                .filter(option => option <= maxMinutesValue)
+                .map((option) => (
+                  <SelectItem key={option} value={option.toString()}>
+                    {option}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
         </div>
         
         <Button 
@@ -181,6 +212,10 @@ export function AddReminderForm({
           <span>{validationError}</span>
         </div>
       )}
+      
+      <p className="text-xs text-muted-foreground mt-1">
+        Reminders must be set at 15-minute intervals to align with the system schedule.
+      </p>
     </div>
   );
 }

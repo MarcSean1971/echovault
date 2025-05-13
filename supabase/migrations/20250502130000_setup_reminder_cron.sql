@@ -7,10 +7,10 @@ CREATE EXTENSION IF NOT EXISTS pg_net;
 SELECT cron.unschedule('send-message-reminders-hourly')
 WHERE EXISTS (SELECT 1 FROM cron.job WHERE jobname = 'send-message-reminders-hourly');
 
--- Schedule the send-reminder-emails function to run every hour
+-- Schedule the send-reminder-emails function to run every 15 minutes
 SELECT cron.schedule(
-  'send-message-reminders-hourly',
-  '0 * * * *', -- Run at minute 0 of every hour (hourly)
+  'send-message-reminders-15min',
+  '*/15 * * * *', -- Run every 15 minutes (at 0, 15, 30, 45 minutes of each hour)
   $$
   SELECT
     net.http_post(
