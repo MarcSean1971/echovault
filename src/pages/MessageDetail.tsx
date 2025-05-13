@@ -10,6 +10,7 @@ import { useMessageDetail } from "@/hooks/useMessageDetail";
 import { MessageRecipientProvider } from "@/components/message/detail/MessageRecipientProvider";
 import { useMessageActions } from "@/hooks/useMessageActions";
 import { useMessageDeliveryStatus } from "@/hooks/useMessageDeliveryStatus";
+import { triggerDeadmanSwitch } from "@/services/messages/whatsApp";
 
 export default function MessageDetail() {
   const { id } = useParams<{ id: string }>();
@@ -58,10 +59,27 @@ export default function MessageDetail() {
     
     window.addEventListener('conditions-updated', handleConditionUpdated);
     
+    // Add listener for deadline reached event
+    const handleDeadlineReached = (event: Event) => {
+      if (!id || !isArmed || !condition || condition.condition_type !== 'no_check_in') return;
+      
+      // If this is a deadman's switch and the deadline has been reached,
+      // attempt to automatically trigger the message delivery
+      console.log('[MessageDetail] Deadline reached event received, attempting to trigger message delivery');
+      
+      // Attempt automatic delivery
+      triggerDeadmanSwitch(id).catch(error => {
+        console.error('[MessageDetail] Failed to auto-trigger deadman switch on deadline reached:', error);
+      });
+    };
+    
+    window.addEventListener('deadline-reached', handleDeadlineReached);
+    
     return () => {
       window.removeEventListener('conditions-updated', handleConditionUpdated);
+      window.removeEventListener('deadline-reached', handleDeadlineReached);
     };
-  }, []);
+  }, [id, isArmed, condition]);
 
   if (isLoading) {
     return <MessageLoading />;

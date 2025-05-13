@@ -1,10 +1,12 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Bell, Clock, AlertCircle } from "lucide-react";
+import { Bell, Clock, AlertCircle, SendHorizontal, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { triggerManualReminder } from "@/services/messages/whatsApp";
+import { triggerManualReminder, triggerDeadmanSwitch } from "@/services/messages/whatsApp";
 import { toast } from "@/components/ui/use-toast";
+import { cn } from "@/lib/utils";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface DeadmanSwitchControlsProps {
   messageId: string;
@@ -18,6 +20,7 @@ export function DeadmanSwitchControls({
   isArmed
 }: DeadmanSwitchControlsProps) {
   const [isSendingReminder, setIsSendingReminder] = useState(false);
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
   
   // Convert minutes to hours and minutes
   const minutesToHoursAndMinutes = (totalMinutes: number): { hours: number, minutes: number } => {
@@ -88,23 +91,75 @@ export function DeadmanSwitchControls({
     }
   };
 
+  // Added new handler for manual message delivery trigger
+  const handleForceDelivery = async () => {
+    try {
+      setIsSendingMessage(true);
+      console.log(`Force delivering message ${messageId}`);
+      
+      toast({
+        title: "Forcing message delivery",
+        description: "Manually triggering deadman's switch...",
+        duration: 3000,
+      });
+      
+      const result = await triggerDeadmanSwitch(messageId);
+      
+      if (result.success) {
+        console.log(`Message delivery triggered successfully for ${messageId}`);
+      } else {
+        console.error("Error triggering message delivery:", result.error);
+        toast({
+          title: "Error delivering message",
+          description: result.error || "An unknown error occurred",
+          variant: "destructive",
+          duration: 5000,
+        });
+      }
+    } catch (error: any) {
+      console.error("Error forcing message delivery:", error);
+      toast({
+        title: "Error",
+        description: "Failed to deliver message: " + (error.message || "Check the console for details"),
+        variant: "destructive",
+        duration: 5000,
+      });
+    } finally {
+      setIsSendingMessage(false);
+    }
+  };
+
   return (
     <div className="mt-4 p-4 bg-slate-50 rounded-lg border">
       <div className="flex items-center justify-between mb-2">
         <h3 className="text-sm font-medium flex items-center">
-          <Clock className="h-4 w-4 mr-2 hover:text-blue-500 transition-colors duration-200" />
+          <Clock className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} />
           Reminder Settings
         </h3>
-        <Button 
-          variant="outline"
-          size="sm"
-          disabled={!isArmed || isSendingReminder}
-          onClick={handleTestReminder}
-          className="flex items-center hover:bg-muted/80 transition-colors duration-200"
-        >
-          <Bell className="h-3 w-3 mr-1 hover:text-blue-500 transition-colors duration-200" />
-          {isSendingReminder ? "Sending..." : "Test Reminder"}
-        </Button>
+        <div className="flex space-x-2">
+          <Button 
+            variant="outline"
+            size="sm"
+            disabled={!isArmed || isSendingReminder}
+            onClick={handleTestReminder}
+            className={`flex items-center ${HOVER_TRANSITION}`}
+          >
+            <Bell className={`h-3 w-3 mr-1 ${HOVER_TRANSITION}`} />
+            {isSendingReminder ? "Sending..." : "Test Reminder"}
+          </Button>
+          
+          {/* Add a new button for manual delivery */}
+          <Button 
+            variant="outline"
+            size="sm"
+            disabled={!isArmed || isSendingMessage}
+            onClick={handleForceDelivery}
+            className={`flex items-center ${HOVER_TRANSITION}`}
+          >
+            <SendHorizontal className={`h-3 w-3 mr-1 ${HOVER_TRANSITION}`} />
+            {isSendingMessage ? "Sending..." : "Force Delivery"}
+          </Button>
+        </div>
       </div>
       
       <div className="text-xs text-muted-foreground">
@@ -123,7 +178,7 @@ export function DeadmanSwitchControls({
               <Badge 
                 key={minutes} 
                 variant="secondary" 
-                className="text-xs hover:bg-slate-200 transition-colors duration-200"
+                className={`text-xs ${HOVER_TRANSITION}`}
               >
                 {formatReminderTime(minutes)} before deadline
               </Badge>
@@ -138,6 +193,16 @@ export function DeadmanSwitchControls({
           </div>
         </div>
       )}
+      
+      {/* Add a notice for manual delivery */}
+      <div className="mt-3 border-t pt-3">
+        <div className="flex items-center text-xs">
+          <RefreshCw className="h-3 w-3 text-blue-500 mr-1" />
+          <p className="text-muted-foreground">
+            If the automatic delivery fails, use the "Force Delivery" button to manually deliver the message.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

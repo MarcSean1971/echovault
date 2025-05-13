@@ -49,9 +49,23 @@ export function MessageTimer({ deadline, isArmed, refreshTrigger }: MessageTimer
       const difference = deadline.getTime() - now.getTime();
       
       if (difference <= 0) {
-        // Time's up
+        // Time's up - ensure we flag this as urgent for UI updates
         setIsUrgent(true);
         setIsVeryUrgent(true);
+        
+        // Try to trigger the message if countdown has reached zero
+        if (difference >= -5000 && difference <= 0) {
+          // Dispatch an event when we're very close to or just past the deadline
+          // This will allow components to react to the deadline being reached
+          console.log('[MessageTimer] Dispatching deadline-reached event');
+          window.dispatchEvent(new CustomEvent('deadline-reached', { 
+            detail: { 
+              deadlineTime: deadline.getTime(),
+              currentTime: now.getTime()
+            }
+          }));
+        }
+        
         return "00:00:00";
       }
       
@@ -115,13 +129,23 @@ export function MessageTimer({ deadline, isArmed, refreshTrigger }: MessageTimer
   };
   
   return (
-    <div className={`space-y-2 ${isMobile ? 'px-1' : ''} p-2 rounded-lg ${isArmed ? (isVeryUrgent ? 'bg-destructive/5' : isUrgent ? 'bg-orange-50' : 'bg-green-50') : 'bg-muted/30'}`}>
+    <div className={cn(
+      "space-y-2 p-2 rounded-lg", 
+      isMobile ? 'px-1' : '',
+      isArmed ? (
+        isVeryUrgent ? 'bg-destructive/5' : 
+        isUrgent ? 'bg-orange-50' : 
+        'bg-green-50'
+      ) : 'bg-muted/30',
+      HOVER_TRANSITION
+    )}>
       <div className={cn(
         "flex items-center justify-between transition-colors duration-300",
         isArmed ? (
           isVeryUrgent ? 'text-destructive' : isUrgent ? 'text-orange-500' : 'text-destructive/80'
         ) : 'text-muted-foreground',
-        isArmed && isVeryUrgent ? getPulseClass() : ''
+        isArmed && isVeryUrgent ? getPulseClass() : '',
+        HOVER_TRANSITION
       )}>
         <div className="flex items-center">
           {isArmed ? (
@@ -137,7 +161,8 @@ export function MessageTimer({ deadline, isArmed, refreshTrigger }: MessageTimer
             "font-mono text-lg transition-all duration-300",
             isArmed ? (
               isVeryUrgent ? 'font-bold' : isUrgent ? 'font-semibold' : 'font-medium'
-            ) : 'font-normal'
+            ) : 'font-normal',
+            HOVER_TRANSITION
           )}>
             {timeLeft}
           </span>
@@ -148,7 +173,8 @@ export function MessageTimer({ deadline, isArmed, refreshTrigger }: MessageTimer
             "text-xs transition-colors duration-300",
             isArmed ? (
               isVeryUrgent ? 'text-destructive font-medium' : 'text-muted-foreground'
-            ) : 'text-muted-foreground'
+            ) : 'text-muted-foreground',
+            HOVER_TRANSITION
           )}>
             {isArmed ? (isVeryUrgent ? 'Critical' : isUrgent ? 'Urgent' : 'Countdown') : 'Disarmed'}
           </div>
@@ -160,7 +186,8 @@ export function MessageTimer({ deadline, isArmed, refreshTrigger }: MessageTimer
           className={cn(
             "h-2.5 rounded-full transition-all duration-500",
             getTimerColor(),
-            isArmed && isVeryUrgent ? 'animate-pulse' : ''
+            isArmed && isVeryUrgent ? 'animate-pulse' : '',
+            HOVER_TRANSITION
           )}
           style={{ width: isArmed ? `${timePercentage}%` : '100%' }}
         ></div>
