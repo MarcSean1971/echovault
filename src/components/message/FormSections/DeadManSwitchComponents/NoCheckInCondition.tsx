@@ -1,8 +1,8 @@
 
-import { CustomTimeInput } from "../CustomTimeInput";
-import { NoCheckInDeliveryOptions } from "../NoCheckInDeliveryOptions";
+import { CustomTimeInput } from "./CustomTimeInput";
+import { NoCheckInDeliveryOptions } from "./NoCheckInDelivery";
 import { DeliveryOption, RecurringPattern } from "@/types/message";
-import { ReminderSettings } from "../ReminderSettings";
+import { ReminderSettings } from "./ReminderSettings";
 
 interface NoCheckInConditionProps {
   hoursThreshold: number;
