@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 
@@ -58,6 +59,5 @@ export async function triggerManualReminder(messageId: string): Promise<{ succes
   }
 }
 
-/**
- * Functions to handle WhatsApp integration
- */
+// Re-export all needed WhatsApp functions from the core directory structure
+export { sendTestWhatsAppMessage } from './whatsApp/core/messageService';

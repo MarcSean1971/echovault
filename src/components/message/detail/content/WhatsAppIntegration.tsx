@@ -4,7 +4,7 @@ import { WhatsAppHeader } from "./whatsapp/WhatsAppHeader";
 import { WhatsAppButtons } from "./whatsapp/WhatsAppButtons";
 import { WhatsAppCheckIn } from "./whatsapp/WhatsAppCheckIn";
 import { supabase } from "@/integrations/supabase/client";
-import { sendTestWhatsAppMessage } from "@/services/messages/whatsApp";
+import { sendTestWhatsAppMessage } from "@/services/messages/whatsApp/core/messageService";
 
 interface WhatsAppIntegrationProps {
   messageId: string;
