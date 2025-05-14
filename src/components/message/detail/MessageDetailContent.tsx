@@ -14,6 +14,7 @@ import { Edit, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { MobileTimerAlert } from "./MobileTimerAlert";
 
 interface MessageDetailContentProps {
   message: Message;
@@ -41,6 +42,7 @@ interface MessageDetailContentProps {
   viewCount?: number | null;
   isLoadingDelivery?: boolean;
   refreshTrigger?: number;
+  handleForceDelivery?: () => Promise<void>;
 }
 
 export function MessageDetailContent({
@@ -68,7 +70,8 @@ export function MessageDetailContent({
   isDelivered,
   viewCount,
   isLoadingDelivery,
-  refreshTrigger
+  refreshTrigger,
+  handleForceDelivery
 }: MessageDetailContentProps) {
   // Add state for delete confirmation
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -87,9 +90,22 @@ export function MessageDetailContent({
     return <MessageNotFound />;
   }
 
+  // Check if this is a deadman switch condition
+  const isDeadmanSwitch = condition?.condition_type === 'no_check_in';
+
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
       <div className="space-y-6">
+        {/* Show alert for active deadman switch messages */}
+        {isDeadmanSwitch && isArmed && deadline && (
+          <MobileTimerAlert 
+            deadline={deadline} 
+            isArmed={isArmed} 
+            refreshTrigger={refreshTrigger}
+            onForceDelivery={handleForceDelivery}
+          />
+        )}
+      
         {/* Message Content */}
         <MainContentSection 
           message={message}
@@ -119,6 +135,7 @@ export function MessageDetailContent({
           viewCount={viewCount}
           isLoadingDelivery={isLoadingDelivery}
           refreshTrigger={refreshTrigger}
+          handleForceDelivery={handleForceDelivery}
         />
         
         {/* Recipients Section */}

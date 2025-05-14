@@ -4,6 +4,7 @@ import { getEffectiveDeadline, parseReminderMinutes } from '@/utils/reminderUtil
 import { MessageInfoSection } from './MessageInfoSection';
 import { DeliverySettingsSection } from './DeliverySettingsSection';
 import { ReminderSection } from './ReminderSection';
+import { DeadmanSwitchControls } from '../deadman/DeadmanSwitchControls';
 
 interface StatusDeliverySectionProps {
   message: any;
@@ -19,6 +20,7 @@ interface StatusDeliverySectionProps {
   isDelivered?: boolean;
   viewCount?: number | null;
   isLoadingDelivery?: boolean;
+  handleForceDelivery?: () => Promise<void>;
 }
 
 export function StatusDeliverySection({ 
@@ -34,7 +36,8 @@ export function StatusDeliverySection({
   lastDelivered,
   isDelivered,
   viewCount,
-  isLoadingDelivery
+  isLoadingDelivery,
+  handleForceDelivery
 }: StatusDeliverySectionProps) {
   const [effectiveDeadline, setEffectiveDeadline] = useState<Date | null>(null);
   
@@ -53,6 +56,9 @@ export function StatusDeliverySection({
   
   // Parse reminder minutes from the condition
   const reminderMinutes = parseReminderMinutes(condition?.reminder_hours);
+  
+  // Check if this is a deadman's switch condition
+  const isDeadmanSwitch = condition.condition_type === 'no_check_in';
 
   return (
     <div className="grid gap-4">
@@ -74,6 +80,16 @@ export function StatusDeliverySection({
         isArmed={isArmed}
         refreshTrigger={refreshTrigger}
       />
+      
+      {/* Add Deadman Switch Controls for no_check_in condition types */}
+      {isDeadmanSwitch && (
+        <DeadmanSwitchControls
+          messageId={message.id}
+          reminderMinutes={reminderMinutes}
+          isArmed={isArmed}
+          onForceDelivery={handleForceDelivery}
+        />
+      )}
       
       <ReminderSection
         condition={condition}

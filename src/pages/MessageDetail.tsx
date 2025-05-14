@@ -11,11 +11,13 @@ import { MessageRecipientProvider } from "@/components/message/detail/MessageRec
 import { useMessageActions } from "@/hooks/useMessageActions";
 import { useMessageDeliveryStatus } from "@/hooks/useMessageDeliveryStatus";
 import { triggerDeadmanSwitch } from "@/services/messages/whatsApp";
+import { toast } from "@/components/ui/use-toast";
 
 export default function MessageDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
+  const [deadlineMonitorActive, setDeadlineMonitorActive] = useState<boolean>(false);
 
   // Use memoized callback for error navigation to prevent recreation on each render
   const handleError = useCallback(() => navigate("/messages"), [navigate]);
@@ -52,6 +54,39 @@ export default function MessageDetail() {
   // Get the recipient rendering function
   const { renderRecipients } = MessageRecipientProvider({ recipients });
 
+  // Function to trigger the deadman switch manually as a fallback
+  const handleForceDelivery = useCallback(async () => {
+    if (!id) return;
+    
+    try {
+      console.log(`[MessageDetail] Forcing delivery of message ${id} manually at ${new Date().toISOString()}`);
+      
+      toast({
+        title: "Forcing message delivery",
+        description: "Manually triggering message delivery...",
+        duration: 3000,
+      });
+      
+      const result = await triggerDeadmanSwitch(id);
+      
+      if (result.success) {
+        console.log(`[MessageDetail] Force delivery successful for message ${id}`);
+        // Refresh data after successful delivery
+        setRefreshTrigger(prev => prev + 1);
+      } else {
+        console.error(`[MessageDetail] Force delivery failed for message ${id}:`, result.error);
+        toast({
+          title: "Delivery failed",
+          description: "Failed to deliver the message. Please try again.",
+          variant: "destructive",
+          duration: 5000,
+        });
+      }
+    } catch (error) {
+      console.error(`[MessageDetail] Error in force delivery for message ${id}:`, error);
+    }
+  }, [id]);
+
   // Listen for condition updates to refresh data
   useEffect(() => {
     const handleConditionUpdated = () => {
@@ -60,30 +95,67 @@ export default function MessageDetail() {
     
     window.addEventListener('conditions-updated', handleConditionUpdated);
     
-    // Add listener for deadline reached event
-    const handleDeadlineReached = (event: Event) => {
-      if (!id || !isArmed) return;
-      
-      // Check if this is a deadman's switch (no_check_in condition)
-      if (condition && condition.condition_type === 'no_check_in') {
-        // If this is a deadman's switch and the deadline has been reached,
-        // attempt to automatically trigger the message delivery
-        console.log('[MessageDetail] Deadline reached event received, attempting to trigger message delivery');
-        
-        // Attempt automatic delivery
-        triggerDeadmanSwitch(id).catch(error => {
-          console.error('[MessageDetail] Failed to auto-trigger deadman switch on deadline reached:', error);
-        });
-      }
+    // Add listener for message delivery events
+    const handleMessageDelivered = () => {
+      console.log('[MessageDetail] Message delivered event received, refreshing data');
+      setRefreshTrigger(prev => prev + 1);
     };
     
-    window.addEventListener('deadline-reached', handleDeadlineReached);
+    window.addEventListener('message-delivered', handleMessageDelivered);
     
     return () => {
       window.removeEventListener('conditions-updated', handleConditionUpdated);
-      window.removeEventListener('deadline-reached', handleDeadlineReached);
+      window.removeEventListener('message-delivered', handleMessageDelivered);
     };
-  }, [id, isArmed, condition]);
+  }, []);
+  
+  // Enhanced deadline monitoring with automatic delivery check
+  useEffect(() => {
+    if (!id || !isArmed || !deadline || isDelivered || !condition || condition.condition_type !== 'no_check_in') {
+      return;
+    }
+    
+    // Only setup the deadline monitor when we have all required data and it's not already active
+    if (!deadlineMonitorActive) {
+      console.log(`[MessageDetail] Setting up deadline monitor for message ${id}`);
+      setDeadlineMonitorActive(true);
+      
+      // Add dedicated deadline reached handler with direct trigger
+      const handleDeadlineReached = (event: Event) => {
+        if (!id || !isArmed) return;
+        
+        if (event instanceof CustomEvent && event.detail) {
+          console.log(`[MessageDetail] Deadline reached event received:`, event.detail);
+          
+          // Check if this event is for our current deadline
+          if (deadline && Math.abs(event.detail.deadlineTime - deadline.getTime()) < 10000) { // Within 10 seconds
+            console.log(`[MessageDetail] Deadline confirmed for message ${id}, triggering delivery`);
+            
+            // Automatic trigger for deadman's switch messages when deadline is reached
+            if (condition && condition.condition_type === 'no_check_in') {
+              triggerDeadmanSwitch(id).catch(error => {
+                console.error(`[MessageDetail] Failed to auto-trigger deadman switch:`, error);
+                
+                toast({
+                  title: "Automatic delivery failed",
+                  description: "Please use the 'Force Delivery' button to send the message manually",
+                  variant: "destructive",
+                  duration: 8000,
+                });
+              });
+            }
+          }
+        }
+      };
+      
+      window.addEventListener('deadline-reached', handleDeadlineReached);
+      
+      return () => {
+        window.removeEventListener('deadline-reached', handleDeadlineReached);
+        setDeadlineMonitorActive(false);
+      };
+    }
+  }, [id, isArmed, deadline, condition, isDelivered, deadlineMonitorActive]);
 
   // Update the local refreshTrigger whenever refreshCount changes from the hook
   useEffect(() => {
@@ -128,6 +200,7 @@ export default function MessageDetail() {
       viewCount={viewCount}
       isLoadingDelivery={isLoadingDelivery}
       refreshTrigger={refreshTrigger}
+      handleForceDelivery={handleForceDelivery}
     />
   );
 }
