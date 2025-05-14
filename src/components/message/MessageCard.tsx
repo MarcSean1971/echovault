@@ -12,6 +12,7 @@ import { useMessageCardActions } from "@/hooks/useMessageCardActions";
 import { useMessageLastCheckIn } from "@/hooks/useMessageLastCheckIn";
 import { useScheduledReminders } from "@/hooks/useScheduledReminders";
 import { useEffect, useState } from "react";
+import { intervalToDuration } from "date-fns";
 
 interface MessageCardProps {
   message: Message;
@@ -33,15 +34,33 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
   const { transcription } = useMessageTranscription(message);
   
   // Get last check-in information
-  const { formattedCheckIn, isDeadmansSwitch } = useMessageLastCheckIn(condition);
+  const { formattedCheckIn, rawCheckInTime, isDeadmansSwitch } = useMessageLastCheckIn(condition);
   
   // Get next scheduled reminder
-  const { formattedNextReminder } = useScheduledReminders(message.id, refreshCounter);
+  const { formattedNextReminder, nextReminder } = useScheduledReminders(message.id, refreshCounter);
   
   // Calculate deadline progress
   const [deadlineProgress, setDeadlineProgress] = useState(0);
   
-  // Update deadline progress
+  // Add state for countdown timer
+  const [timeLeft, setTimeLeft] = useState<string | null>(null);
+  
+  // Format time left as HH:MM:SS
+  const formatTimeLeft = (targetDate: Date): string => {
+    const now = new Date();
+    if (now >= targetDate) return "00:00:00";
+    
+    const duration = intervalToDuration({ start: now, end: targetDate });
+    
+    // Format with leading zeros
+    const hours = String(duration.hours || 0).padStart(2, '0');
+    const minutes = String(duration.minutes || 0).padStart(2, '0');
+    const seconds = String(duration.seconds || 0).padStart(2, '0');
+    
+    return `${hours}:${minutes}:${seconds}`;
+  };
+  
+  // Update deadline progress and countdown
   useEffect(() => {
     if (isArmed && deadline && condition?.last_checked) {
       const updateProgress = () => {
@@ -58,16 +77,20 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
         // Calculate progress (0-100)
         const progress = Math.min(100, Math.max(0, Math.round((elapsedTime / totalTimeWindow) * 100)));
         setDeadlineProgress(progress);
+        
+        // Update the time left countdown
+        setTimeLeft(formatTimeLeft(deadline));
       };
       
       // Initial update
       updateProgress();
       
-      // Update progress every minute
-      const timer = setInterval(updateProgress, 60000);
+      // Update progress and countdown timer every second for smoother countdown
+      const timer = setInterval(updateProgress, 1000);
       return () => clearInterval(timer);
     } else {
       setDeadlineProgress(0);
+      setTimeLeft(null);
     }
   }, [isArmed, deadline, condition]);
   
@@ -123,8 +146,11 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
           transcription={transcription}
           isPanicTrigger={isPanicTrigger}
           lastCheckIn={formattedCheckIn}
+          rawCheckInTime={rawCheckInTime}
           nextReminder={formattedNextReminder}
+          rawNextReminderTime={nextReminder}
           deadlineProgress={deadlineProgress}
+          timeLeft={timeLeft}
         />
       </CardContent>
       <CardFooter className="flex justify-between border-t pt-4 bg-gradient-to-t from-muted/20 to-transparent">

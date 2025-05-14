@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { MessageSquare, File, Video, Mic } from "lucide-react";
 import { formatDistanceToNow } from 'date-fns';
@@ -36,13 +37,18 @@ export const formatDate = (dateString: string) => {
 export const formatShortDate = (dateString: string | null): string => {
   if (!dateString) return '';
   
-  const date = new Date(dateString);
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(date);
+  try {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    }).format(date);
+  } catch (error) {
+    console.error("Error formatting short date:", error);
+    return '';
+  }
 };
 
 /**

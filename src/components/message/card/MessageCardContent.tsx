@@ -4,6 +4,7 @@ import { MessageCondition, Message } from "@/types/message";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { Clock, Bell } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { formatShortDate } from "@/utils/messageFormatUtils";
 
 interface MessageCardContentProps {
   message: Message;
@@ -13,8 +14,11 @@ interface MessageCardContentProps {
   transcription?: string | null;
   isPanicTrigger?: boolean;
   lastCheckIn?: string | null;
+  rawCheckInTime?: string | null; // Added raw timestamp for precise formatting
   nextReminder?: string | null;
+  rawNextReminderTime?: Date | null; // Added raw Date object for precise formatting
   deadlineProgress?: number;
+  timeLeft?: string | null; // Added formatted time left string (HH:MM:SS)
 }
 
 export function MessageCardContent({
@@ -25,8 +29,11 @@ export function MessageCardContent({
   transcription,
   isPanicTrigger = false,
   lastCheckIn = null,
+  rawCheckInTime = null,
   nextReminder = null,
-  deadlineProgress = 0
+  rawNextReminderTime = null,
+  deadlineProgress = 0,
+  timeLeft = null
 }: MessageCardContentProps) {
   // Get the content to display (use transcription if available for video content)
   const displayContent = 
@@ -38,6 +45,17 @@ export function MessageCardContent({
   const showDeadmanInfo = isArmed && condition && 
     (condition.condition_type === 'no_check_in' || 
      condition.condition_type === 'regular_check_in');
+  
+  // Format check-in and reminder times using the precise format
+  const formattedCheckInTime = rawCheckInTime ? formatShortDate(rawCheckInTime) : null;
+  const formattedNextReminderTime = rawNextReminderTime ? formatShortDate(rawNextReminderTime.toISOString()) : null;
+  
+  // Determine progress bar color based on deadline proximity
+  const getProgressBarColor = () => {
+    if (deadlineProgress > 75) return 'bg-red-200 border-red-300';
+    if (deadlineProgress > 50) return 'bg-amber-200 border-amber-300';
+    return 'bg-emerald-200 border-emerald-300';
+  };
   
   return (
     <div className="flex flex-col h-full">
@@ -51,32 +69,36 @@ export function MessageCardContent({
       {/* Deadman's switch info section */}
       {showDeadmanInfo && (
         <div className="mt-auto pt-2 border-t border-muted/40">
-          {/* Last check-in time */}
-          {lastCheckIn && (
+          {/* Last check-in time - now with precise formatting */}
+          {formattedCheckInTime && (
             <div className="flex items-center text-xs text-muted-foreground mb-1">
               <Clock className={`h-3.5 w-3.5 mr-1.5 ${HOVER_TRANSITION}`} />
-              <span>Last check-in: {lastCheckIn}</span>
+              <span>Last check-in: {formattedCheckInTime}</span>
             </div>
           )}
           
-          {/* Next reminder time */}
-          {nextReminder && (
+          {/* Next reminder time - now with precise formatting */}
+          {formattedNextReminderTime && (
             <div className="flex items-center text-xs text-muted-foreground mb-2">
               <Bell className={`h-3.5 w-3.5 mr-1.5 ${HOVER_TRANSITION}`} />
-              <span>Next reminder: {nextReminder}</span>
+              <span>Next reminder: {formattedNextReminderTime}</span>
             </div>
           )}
           
-          {/* Countdown progress bar */}
+          {/* Countdown display */}
           {isArmed && deadline && (
-            <div className="w-full mt-1">
+            <div className="w-full mt-1 space-y-1">
+              {/* Digital countdown */}
+              {timeLeft && (
+                <div className={`text-xs font-medium text-center ${deadlineProgress > 75 ? 'text-red-700' : deadlineProgress > 50 ? 'text-amber-700' : 'text-emerald-700'} ${deadlineProgress > 85 ? 'animate-pulse' : ''}`}>
+                  {timeLeft}
+                </div>
+              )}
+              
+              {/* Progress bar */}
               <Progress 
                 value={deadlineProgress} 
-                className={`h-1.5 ${
-                  deadlineProgress > 75 ? 'bg-red-200' : 
-                  deadlineProgress > 50 ? 'bg-amber-200' : 
-                  'bg-muted'
-                }`}
+                className={`h-1.5 border ${getProgressBarColor()}`}
               />
             </div>
           )}
