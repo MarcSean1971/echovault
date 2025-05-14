@@ -2,7 +2,7 @@
 import React from "react";
 import { MessageCondition, Message } from "@/types/message";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
-import { Clock, CheckCircle, AlertTriangle, BellRing } from "lucide-react";
+import { Clock, AlertTriangle } from "lucide-react";
 
 interface MessageCardContentProps {
   message: Message;
@@ -36,20 +36,8 @@ export function MessageCardContent({
         </div>
       </div>
       
-      {/* Status indicators */}
+      {/* Status indicators - removed armed/safe status and kept only deadline and panic trigger */}
       <div className="mt-auto flex flex-wrap gap-2 text-xs">
-        {isArmed ? (
-          <div className="flex items-center gap-1.5 bg-red-100 text-red-700 px-2 py-1 rounded-full">
-            <AlertTriangle className={`h-3 w-3 ${HOVER_TRANSITION}`} />
-            <span>Armed</span>
-          </div>
-        ) : (
-          <div className="flex items-center gap-1.5 bg-green-100 text-green-700 px-2 py-1 rounded-full">
-            <CheckCircle className={`h-3 w-3 ${HOVER_TRANSITION}`} />
-            <span>Safe</span>
-          </div>
-        )}
-        
         {/* Only show deadline if message is armed */}
         {deadline && isArmed && (
           <div className="flex items-center gap-1.5 bg-amber-100 text-amber-700 px-2 py-1 rounded-full">

@@ -1,6 +1,7 @@
 
 import React from "react";
 import { CardTitle } from "@/components/ui/card";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { getMessageIcon } from "@/utils/messageFormatUtils";
 import { Message } from "@/types/message";
 import { Shield } from "lucide-react";
@@ -33,7 +34,12 @@ export function MessageCardHeader({ message, isArmed, formatDate, isPanicTrigger
         </div>
       </div>
       
-      {/* Removed armed status badge */}
+      {/* Restored armed status badge in header */}
+      {isArmed && (
+        <StatusBadge status="armed" size="sm" className="animate-pulse">
+          Armed
+        </StatusBadge>
+      )}
     </div>
   );
 }
