@@ -1,4 +1,5 @@
 
+
 export const HOVER_TRANSITION = "transition-all duration-200";
 
 export const BUTTON_HOVER_EFFECTS = {
@@ -16,3 +17,10 @@ export const ICON_HOVER_EFFECTS = {
   alert: "hover:text-destructive transition-all duration-200",
   success: "hover:text-green-500 transition-all duration-200",
 };
+
+export const CONFIRMATION_ANIMATION = {
+  pulse: "animate-pulse",
+  shake: "animate-shake",
+  highlight: "animate-highlight",
+};
+

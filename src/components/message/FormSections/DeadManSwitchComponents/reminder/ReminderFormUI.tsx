@@ -1,4 +1,5 @@
 
+
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -80,7 +81,7 @@ export function ReminderFormUI({
                 onClick={handleAddReminder}
                 disabled={isDisabled}
               >
-                <Plus className={getIconHoverClasses("primary")} />
+                <Plus className={getIconHoverClasses("default")} />
               </Button>
             </TooltipTrigger>
             <TooltipContent>
@@ -103,3 +104,4 @@ export function ReminderFormUI({
     </div>
   );
 }
+

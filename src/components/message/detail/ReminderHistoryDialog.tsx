@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from "react";
 import {
   Dialog,
@@ -80,7 +81,7 @@ export function ReminderHistoryDialog({
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex space-x-2 items-center mb-2">
-                      <Mail className={`h-4 w-4 text-primary ${ICON_HOVER_EFFECTS.primary}`} />
+                      <Mail className={`h-4 w-4 text-primary ${ICON_HOVER_EFFECTS.default}`} />
                       <span className="text-sm font-medium">
                         Reminder Sent
                       </span>
@@ -109,3 +110,4 @@ export function ReminderHistoryDialog({
     </Dialog>
   );
 }
+
