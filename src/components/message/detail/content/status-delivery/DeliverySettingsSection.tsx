@@ -5,7 +5,8 @@ import { MessageDeliverySettings } from "../../MessageDeliverySettings";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { useNextReminders } from "@/hooks/useNextReminders"; 
 import { parseReminderMinutes } from "@/utils/reminderUtils";
-import { MessageTimer } from "@/components/message/MessageTimer";
+import { useCountdownTimer } from "@/hooks/useCountdownTimer";
+import { cn } from "@/lib/utils";
 
 interface DeliverySettingsSectionProps {
   condition: any | null;
@@ -27,6 +28,21 @@ export function DeliverySettingsSection({
   if (!condition) {
     return null;
   }
+  
+  // Get countdown timer data using the same hook as message cards
+  const { timeLeft, isUrgent, isVeryUrgent } = useCountdownTimer({
+    deadline,
+    isArmed,
+    refreshTrigger
+  });
+  
+  // Determine the color class for the countdown based on time remaining - same as in message cards
+  const getCountdownColorClass = () => {
+    if (!isArmed) return "text-muted-foreground";
+    if (isVeryUrgent) return "text-destructive font-medium";
+    if (isUrgent) return "text-orange-500";
+    return "text-destructive/80";
+  };
 
   return (
     <div className="space-y-3">
@@ -35,14 +51,11 @@ export function DeliverySettingsSection({
         Delivery Settings
       </h3>
       
-      {/* Add MessageTimer component when there's a deadline and the message is armed */}
-      {deadline && isArmed && (
-        <div className="mb-4">
-          <MessageTimer 
-            deadline={deadline} 
-            isArmed={isArmed} 
-            refreshTrigger={refreshTrigger} 
-          />
+      {/* Simple countdown display that matches the message cards */}
+      {isArmed && deadline && (
+        <div className={`flex items-center text-xs ${getCountdownColorClass()} mb-3 ${HOVER_TRANSITION}`}>
+          <Clock className={`h-3.5 w-3.5 mr-1.5 ${HOVER_TRANSITION}`} />
+          <span>Countdown: {timeLeft || "--:--:--"}</span>
         </div>
       )}
       
