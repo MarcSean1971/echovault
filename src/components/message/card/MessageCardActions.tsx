@@ -5,6 +5,7 @@ import { BellOff, Bell, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useMessageCardActions } from "@/hooks/useMessageCardActions";
 
 interface MessageCardActionsProps {
   messageId: string;
@@ -24,6 +25,9 @@ export function MessageCardActions({
   onDisarmMessage
 }: MessageCardActionsProps) {
   const navigate = useNavigate();
+  const { isLoading: isActionLoading } = useMessageCardActions();
+  
+  const buttonIsLoading = isLoading || isActionLoading;
 
   return (
     <div className="flex justify-between w-full">
@@ -37,7 +41,7 @@ export function MessageCardActions({
                     variant="outline"
                     size="sm"
                     onClick={onDisarmMessage}
-                    disabled={isLoading}
+                    disabled={buttonIsLoading}
                     className={`text-green-600 border-green-300 hover:border-green-500 hover:bg-green-50 hover:text-green-700 ${HOVER_TRANSITION}`}
                   >
                     <BellOff className="h-4 w-4 mr-1.5" /> 
@@ -48,7 +52,7 @@ export function MessageCardActions({
                     variant="outline"
                     size="sm"
                     onClick={onArmMessage}
-                    disabled={isLoading}
+                    disabled={buttonIsLoading}
                     className={`text-destructive border-destructive/30 hover:border-destructive hover:bg-destructive/10 hover:text-destructive ${HOVER_TRANSITION}`}
                   >
                     <Bell className="h-4 w-4 mr-1.5" /> 

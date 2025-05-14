@@ -1,46 +1,41 @@
 
 /**
- * Utility file for consistent hover effects throughout the application
- */
-
-/**
- * Transition classes for smooth hover effects
+ * Common transition class for consistent hover animations
  */
 export const HOVER_TRANSITION = "transition-all duration-200 ease-in-out";
 
 /**
- * Button hover effects for different states
+ * Common button hover effect classes
  */
 export const BUTTON_HOVER_EFFECTS = {
-  default: "hover:bg-primary/90 hover:shadow-md active:scale-95",
-  destructive: "hover:bg-destructive/90 hover:shadow-md active:scale-95",
-  outline: "hover:bg-accent hover:text-accent-foreground active:scale-95",
-  secondary: "hover:bg-secondary/80 active:scale-95",
-  ghost: "hover:bg-accent hover:text-accent-foreground active:scale-95",
-  link: "hover:underline underline-offset-4",
+  default: "hover:bg-primary/90 hover:shadow-inner active:scale-[0.98]",
+  danger: "hover:bg-destructive/90 hover:shadow-inner active:scale-[0.98]",
+  outline: "hover:bg-accent hover:text-accent-foreground hover:border-primary/30 active:scale-[0.98]",
+  ghost: "hover:bg-accent hover:text-accent-foreground active:scale-[0.98]",
+  link: "hover:underline",
+  secondary: "hover:bg-secondary/80 hover:shadow-inner active:scale-[0.98]",
 };
 
 /**
- * Icon hover effects for different states
- * Used for consistent hover effects on icons
+ * Icon hover effect classes for consistent styling
  */
 export const ICON_HOVER_EFFECTS = {
-  default: "hover:scale-110 cursor-pointer",
-  muted: "hover:text-foreground hover:scale-110 cursor-pointer",
-  primary: "hover:text-primary hover:scale-110 cursor-pointer",
-  accent: "hover:text-accent-foreground hover:scale-110 cursor-pointer",
-  destructive: "hover:text-destructive hover:scale-110 cursor-pointer",
-  success: "hover:text-green-700 hover:scale-110 cursor-pointer", // Added success
-  info: "hover:text-blue-700 hover:scale-110 cursor-pointer", // Added info
-  warning: "hover:text-amber-700 hover:scale-110 cursor-pointer", // Added warning
+  default: "group-hover:scale-110 transition-transform",
+  primary: "group-hover:scale-110 group-hover:text-primary transition-all",
+  destructive: "group-hover:scale-110 group-hover:text-destructive transition-all", 
+  success: "group-hover:scale-110 group-hover:text-green-600 transition-all",
+  warning: "group-hover:scale-110 group-hover:text-amber-600 transition-all",
+  info: "group-hover:scale-110 group-hover:text-blue-600 transition-all",
+  muted: "group-hover:scale-110 group-hover:text-muted-foreground transition-all",
+  large: "group-hover:scale-125 transition-transform",
 };
 
 /**
- * Card hover effects
+ * Card hover effect classes for consistent styling
  */
 export const CARD_HOVER_EFFECTS = {
-  default: "hover:shadow-md hover:border-primary/20",
-  subtle: "hover:shadow-sm hover:bg-accent/50",
+  default: "hover:shadow-md hover:border-primary/30 hover:-translate-y-0.5",
+  highlight: "hover:shadow-md hover:border-primary hover:bg-primary/5",
   interactive: "hover:shadow-md hover:bg-accent/50 hover:scale-[1.01] cursor-pointer",
 };
 

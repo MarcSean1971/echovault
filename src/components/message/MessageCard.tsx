@@ -7,10 +7,7 @@ import { MessageCardContent } from "./card/MessageCardContent";
 import { MessageCardActions } from "./card/MessageCardActions";
 import { useMessageCondition } from "@/hooks/useMessageCondition";
 import { useMessageTranscription } from "@/hooks/useMessageTranscription";
-import { usePanicSendingState } from "@/hooks/usePanicSendingState";
-import { useMessageCardActions } from "@/hooks/useMessageCardActions";
-import { useConditionRefresh } from "@/hooks/useConditionRefresh";
-import { useMessageDeliveryStatus } from "@/hooks/useMessageDeliveryStatus";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface MessageCardProps {
   message: Message;
@@ -23,25 +20,14 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
     isArmed, 
     deadline, 
     condition, 
+    isPanicTrigger,
     refreshCounter, 
     setRefreshCounter 
   } = useMessageCondition(message.id);
   
-  // Get panic sending state
-  const { isPanicSending, panicCountDown } = usePanicSendingState(message.id);
-  
   // Get transcription if available
   const { transcription } = useMessageTranscription(message);
   
-  // Get message delivery status
-  const { isDelivered } = useMessageDeliveryStatus(message.id);
-  
-  // Get message actions
-  const { isLoading, handleArmMessage, handleDisarmMessage } = useMessageCardActions();
-  
-  // Get the refresh function from our enhanced hook
-  const { isRefreshing } = useConditionRefresh();
-
   // Action handlers with refresh counter update
   const onArmMessage = async () => {
     if (!condition) return;
@@ -59,14 +45,9 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
     setRefreshCounter(prev => prev + 1);
   };
 
-  // Check if this is a panic trigger message
-  const isPanicTrigger = condition?.condition_type === 'panic_trigger';
-
   // Determine card color based on status
   const getCardClasses = () => {
-    if (isPanicSending) {
-      return 'border-red-500 shadow-red-100 border-2 animate-pulse bg-gradient-to-br from-red-50 to-white';
-    } else if (isArmed) {
+    if (isArmed) {
       return 'border-destructive/50 bg-gradient-to-br from-red-50 to-white';
     } else {
       // Ensure unarmed messages have a green border
@@ -77,13 +58,9 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
   return (
     <Card 
       key={message.id} 
-      className={`overflow-hidden group transition-all duration-300 hover:shadow-md ${getCardClasses()}`}
+      className={`overflow-hidden group transition-all duration-300 ${HOVER_TRANSITION} hover:shadow-md ${getCardClasses()}`}
     >
-      <CardHeader className={`pb-3 ${
-        isPanicSending ? 'bg-red-50/50' : 
-        isArmed ? 'bg-red-50/20' : 
-        'bg-green-50/20'
-      }`}>
+      <CardHeader className={`pb-3 ${isArmed ? 'bg-red-50/20' : 'bg-green-50/20'}`}>
         <MessageCardHeader 
           message={message} 
           isArmed={isArmed} 
@@ -98,10 +75,7 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
           deadline={deadline} 
           condition={condition}
           transcription={transcription}
-          refreshTrigger={refreshCounter}
-          isPanicSending={isPanicSending}
-          panicCountDown={panicCountDown}
-          isDelivered={isDelivered}
+          isPanicTrigger={isPanicTrigger}
         />
       </CardContent>
       <CardFooter className="flex justify-between border-t pt-4 bg-gradient-to-t from-muted/20 to-transparent">
@@ -109,7 +83,7 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
           messageId={message.id}
           condition={condition}
           isArmed={isArmed}
-          isLoading={isLoading || isRefreshing || isPanicSending}
+          isLoading={false}
           onArmMessage={onArmMessage}
           onDisarmMessage={onDisarmMessage}
         />
