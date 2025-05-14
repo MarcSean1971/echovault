@@ -199,11 +199,14 @@ export async function sendTestNotification(messageId: string) {
     
     if (messageError) throw messageError;
     
+    // Properly cast the first recipient to Recipient type
+    const recipient = recipients[0] as Recipient;
+    
     // Send test email to each recipient
     const { error } = await supabase.functions.invoke("send-test-email", {
       body: {
-        recipientName: recipients[0].name,
-        recipientEmail: recipients[0].email,
+        recipientName: recipient.name,
+        recipientEmail: recipient.email,
         senderName: "You",
         messageTitle: message?.title || "Your message",
         appName: "EchoVault"
@@ -214,7 +217,7 @@ export async function sendTestNotification(messageId: string) {
     
     toast({
       title: "Test notification sent",
-      description: `Sent to ${recipients[0].email}`,
+      description: `Sent to ${recipient.email}`,
     });
     
   } catch (error: any) {
