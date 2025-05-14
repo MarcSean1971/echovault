@@ -28,7 +28,7 @@ export function MessageGrid({ messages, isLoading, onDelete }: MessageGridProps)
   
   if (messages.length === 0) {
     return (
-      <Card className="text-center py-16 bg-gradient-to-b from-muted/30 to-background">
+      <Card className="text-center py-16 bg-gradient-to-b from-muted/30 to-background border border-border/50 shadow-sm rounded-lg">
         <CardContent className="flex flex-col items-center">
           <div className="mb-6 p-6 rounded-full bg-primary/5 text-primary">
             <FileText className={`h-12 w-12 ${HOVER_TRANSITION}`} />

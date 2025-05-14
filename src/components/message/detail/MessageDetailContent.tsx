@@ -88,7 +88,7 @@ export function MessageDetailContent({
   }
 
   return (
-    <div className="container mx-auto max-w-3xl px-4 py-8">
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
       <div className="space-y-6">
         {/* Message Content */}
         <MainContentSection 
@@ -104,7 +104,7 @@ export function MessageDetailContent({
           recipientEmail={recipientEmail}
         />
         
-        {/* Status and Delivery Settings - Now with refreshTrigger prop */}
+        {/* Status and Delivery Settings */}
         <StatusDeliverySection
           condition={condition}
           isArmed={isArmed}
@@ -129,15 +129,15 @@ export function MessageDetailContent({
           onSendTestMessage={onSendTestMessage}
         />
         
-        {/* Actions Card - Replacing the fixed footer */}
-        <Card className="overflow-hidden">
+        {/* Actions Card */}
+        <Card className="overflow-hidden border border-border/50 shadow-sm">
           <CardContent className="p-6">
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end gap-3">
               <Button
                 variant="outline"
                 onClick={() => navigate(`/message/${message.id}/edit`)}
                 disabled={isArmed || isActionLoading}
-                className={HOVER_TRANSITION}
+                className={`${HOVER_TRANSITION}`}
               >
                 <Edit className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} /> Edit
               </Button>
