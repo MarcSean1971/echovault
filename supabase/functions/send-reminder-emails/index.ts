@@ -17,7 +17,7 @@ const handler = async (req: Request) => {
   
   try {
     // Parse the request body
-    let body: { messageId?: string; debug?: boolean; forceSend?: boolean } = {};
+    let body: { messageId?: string; debug?: boolean; forceSend?: boolean; preventDuplicates?: boolean } = {};
     
     try {
       body = await req.json();
@@ -26,12 +26,13 @@ const handler = async (req: Request) => {
       console.log("No valid JSON body provided");
     }
     
-    const { messageId, debug = false, forceSend = false } = body;
+    const { messageId, debug = false, forceSend = false, preventDuplicates = true } = body;
     
     console.log(`====== REMINDER CHECK STARTED ======`);
     console.log(`Processing reminders at ${new Date().toISOString()}`);
     console.log(`Debug mode: ${debug ? "enabled" : "disabled"}`);
     console.log(`Force send: ${forceSend ? "enabled" : "disabled"}`);
+    console.log(`Prevent duplicates: ${preventDuplicates ? "enabled" : "disabled"}`);
     
     if (messageId) {
       console.log(`Processing specific message: ${messageId}`);
@@ -39,18 +40,19 @@ const handler = async (req: Request) => {
     
     // Get messages that need reminders
     console.log("Fetching messages that need reminders...");
-    const messagesToRemind = await getMessagesNeedingReminders(messageId, forceSend);
+    const messagesToRemind = await getMessagesNeedingReminders(messageId, forceSend, preventDuplicates);
     console.log(`Found ${messagesToRemind.length} messages that need reminders`);
     
     if (messagesToRemind.length === 0) {
       if (messageId) {
         console.log(`No reminders needed for message ${messageId} at this time`);
         console.log("Possible reasons:");
-        console.log("1. No reminder time matches the current time window (within 15 minutes)")
+        console.log("1. No reminder time matches the current time window (within 5 minutes)") // Updated window
         console.log("2. Message is not armed/active")
         console.log("3. No reminder_hours configured")
         console.log("4. No trigger_date set and forceSend=false")
         console.log("5. Message is a panic trigger (panic triggers don't get reminders)")
+        console.log("6. Duplicate prevention blocked the reminder (if preventDuplicates=true)") // Added reason
         
         // If forceSend was requested but still no reminders, that's strange
         if (forceSend) {

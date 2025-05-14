@@ -4,7 +4,15 @@
  */
 
 import { formatDistanceToNow, formatRelative, isAfter, addMinutes, addHours, isBefore, format } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import { formatThreshold, formatReminderTime } from "@/components/message/FormSections/DeadManSwitchComponents/reminder/TimeConversionUtils";
+
+/**
+ * Get the user's local timezone
+ */
+export function getUserTimeZone(): string {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone;
+}
 
 /**
  * Calculate all upcoming reminders based on a deadline and reminder configuration
@@ -48,12 +56,24 @@ export function formatReminderDate(reminderDate: Date): string {
 }
 
 /**
- * Format a reminder date in short format
+ * Format a reminder date in short format using the user's local time zone
  * @param reminderDate The reminder date to format
  * @returns Formatted string like "May 15, 4:30 PM"
  */
 export function formatReminderShortDate(reminderDate: Date): string {
-  return format(reminderDate, "MMM d, h:mm a");
+  const timeZone = getUserTimeZone();
+  return formatInTimeZone(reminderDate, timeZone, "MMM d, h:mm a");
+}
+
+/**
+ * Format a date with the user's timezone
+ * @param date The date to format
+ * @param formatStr The format string to use
+ * @returns Formatted date string in user's timezone
+ */
+export function formatDateWithTimeZone(date: Date, formatStr: string = "MMM d, yyyy h:mm a"): string {
+  const timeZone = getUserTimeZone();
+  return formatInTimeZone(date, timeZone, formatStr);
 }
 
 /**
@@ -143,4 +163,3 @@ export function getEffectiveDeadline(condition: any): Date | null {
   
   return null;
 }
-

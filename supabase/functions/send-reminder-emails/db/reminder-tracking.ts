@@ -71,3 +71,52 @@ export async function updateNextReminderTime(
     return false;
   }
 }
+
+/**
+ * Check if a reminder for this message/condition has been sent recently
+ * This helps prevent duplicate reminders within a short time window
+ */
+export async function hasSentReminderRecently(
+  messageId: string,
+  conditionId: string,
+  reminderMinute: number | null,
+  windowMinutes: number = 30 // Default to checking for reminders within the last 30 minutes
+): Promise<boolean> {
+  try {
+    const supabase = supabaseClient();
+    
+    // Calculate the cutoff time (default 30 minutes ago)
+    const cutoffTime = new Date();
+    cutoffTime.setMinutes(cutoffTime.getMinutes() - windowMinutes);
+    
+    // Query for any reminders sent for this message/condition within the window
+    const query = supabase
+      .from('sent_reminders')
+      .select('id, sent_at')
+      .eq('message_id', messageId)
+      .eq('condition_id', conditionId)
+      .gte('sent_at', cutoffTime.toISOString());
+      
+    const { data, error } = await query;
+    
+    if (error) {
+      console.error("Error checking for recent reminders:", error);
+      return false; // Assume no recent reminders on error (safer to send)
+    }
+    
+    // If we found any recent reminders, they exist
+    const hasRecent = data && data.length > 0;
+    
+    if (hasRecent) {
+      console.log(`Found ${data?.length} recent reminders sent within the last ${windowMinutes} minutes`);
+      console.log(`Most recent sent at: ${data?.[0].sent_at}`);
+    } else {
+      console.log(`No recent reminders found for message ${messageId} within the last ${windowMinutes} minutes`);
+    }
+    
+    return hasRecent;
+  } catch (error) {
+    console.error("Error in hasSentReminderRecently:", error);
+    return false; // Assume no recent reminders on error (safer to send)
+  }
+}

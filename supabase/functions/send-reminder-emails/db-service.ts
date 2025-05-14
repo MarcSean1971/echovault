@@ -3,13 +3,15 @@ import { supabaseClient } from "./supabase-client.ts";
 import { ReminderData } from "./types/reminder-types.ts";
 import { calculateNextReminderTime } from "./utils/reminder-calculator.ts";
 import { updateNextReminderTime } from "./db/reminder-tracking.ts";
+import { hasSentReminderRecently } from "./db/reminder-tracking.ts";
 
 /**
  * Get messages that need reminders
  */
 export async function getMessagesNeedingReminders(
   specificMessageId?: string, 
-  forceSend: boolean = false
+  forceSend: boolean = false,
+  preventDuplicates: boolean = true
 ): Promise<ReminderData[]> {
   try {
     const supabase = supabaseClient();
@@ -19,6 +21,7 @@ export async function getMessagesNeedingReminders(
     console.log(`Current time: ${new Date().toISOString()}`);
     console.log(`Looking for messages${specificMessageId ? ` with ID ${specificMessageId}` : ''}`);
     console.log(`Force send: ${forceSend}`);
+    console.log(`Prevent duplicates: ${preventDuplicates}`);
     
     // Query conditions that are active and have reminders configured
     // IMPORTANT: Exclude panic_trigger condition types as they should not have reminders
@@ -158,8 +161,30 @@ export async function getMessagesNeedingReminders(
         console.log(`DB: Next reminder scheduled for: ${nextReminderAt.toISOString()}`);
         console.log(`DB: Minutes until scheduled reminder: ${diffMinutes.toFixed(1)}`);
         
-        // If the scheduled reminder is due (within 15 minutes before or after the scheduled time)
-        if (Math.abs(diffMinutes) < 15) {
+        // If the scheduled reminder is due (within 5 minutes before or after the scheduled time)
+        // REDUCED WINDOW: Changed from 15 minutes to 5 minutes to avoid frequent reminders
+        if (Math.abs(diffMinutes) < 5) {
+          // Check if we've already sent this reminder recently
+          if (preventDuplicates) {
+            try {
+              const recentlySent = await hasSentReminderRecently(
+                message.id, 
+                condition.id, 
+                reminderMinutes.length > 0 ? reminderMinutes[0] : null
+              );
+              
+              if (recentlySent) {
+                console.log(`DB: Duplicate prevention: Already sent a reminder for this message/condition recently, skipping`);
+                continue; // Skip this reminder as it was sent recently
+              } else {
+                console.log(`DB: No recent reminder found for this message/condition combination, proceeding`);
+              }
+            } catch (error) {
+              console.error("Error checking for recent reminders:", error);
+              // If error checking, proceed with caution - better to potentially send duplicate than miss reminder
+            }
+          }
+          
           shouldSendReminder = true;
           
           // Find which reminder minute this corresponds to
@@ -193,14 +218,30 @@ export async function getMessagesNeedingReminders(
             // Convert reminder minutes to hours for proper comparison
             const reminderInHours = reminderMinute / 60;
             
-            // Reminder should be sent if current time is within 15 minutes (0.25 hours) of the reminder time
+            // Reminder should be sent if current time is within 5 minutes (0.08 hours) of the reminder time
+            // REDUCED WINDOW: Changed from 15 minutes (0.25 hours) to 5 minutes (0.08 hours)
             const difference = Math.abs(hoursUntilDeadline - reminderInHours);
             console.log(`DB: Checking reminder time ${reminderMinute} minutes (${reminderInHours.toFixed(2)} hours), difference: ${difference.toFixed(2)} hours`);
             
-            if (difference < 0.25) { // Within 15 minutes window
+            if (difference < 0.08) { // Within 5 minute window (was 0.25 for 15 minutes)
+              // Check for recently sent reminders if duplicate prevention is enabled
+              if (preventDuplicates) {
+                try {
+                  const recentlySent = await hasSentReminderRecently(message.id, condition.id, reminderMinute);
+                  
+                  if (recentlySent) {
+                    console.log(`DB: Duplicate prevention: Already sent a reminder for minute ${reminderMinute}, skipping`);
+                    continue; // Skip this reminder as it was sent recently
+                  }
+                } catch (error) {
+                  console.error("Error checking for recent reminders:", error);
+                  // If error checking, proceed with caution
+                }
+              }
+              
               shouldSendReminder = true;
               matchedReminderMinute = reminderMinute;
-              console.log(`DB: MATCH FOUND! Time difference ${difference.toFixed(2)} hours is within 15-minute window`);
+              console.log(`DB: MATCH FOUND! Time difference ${difference.toFixed(2)} hours is within 5-minute window`);
               console.log(`DB: Will send reminder for ${reminderMinute} minutes (${reminderInHours.toFixed(2)} hours) before deadline`);
               break;
             }
@@ -271,4 +312,3 @@ export async function getMessagesNeedingReminders(
     throw error;
   }
 }
-

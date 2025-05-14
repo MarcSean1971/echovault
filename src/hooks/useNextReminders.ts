@@ -1,59 +1,74 @@
 
-import { useState, useEffect } from "react";
-import { calculateUpcomingReminders, formatReminderDate, formatReminderShortDate } from "@/utils/reminderUtils";
+import { useState, useEffect, useCallback } from "react";
+import { 
+  calculateUpcomingReminders, 
+  formatReminderDate, 
+  formatReminderShortDate,
+  formatDateWithTimeZone
+} from "@/utils/reminderUtils";
 
-export interface ReminderInfo {
+export interface ReminderItem {
   date: Date;
   formattedText: string;
-  formattedShortDate: string; // Added short date format
+  formattedShortDate: string;
+}
+
+interface NextRemindersResult {
+  upcomingReminders: ReminderItem[];
+  hasReminders: boolean;
+  isLoading: boolean;
 }
 
 /**
  * Hook to get upcoming reminders for a message
- * @param deadline The message deadline
- * @param reminderMinutes Array of reminder times in minutes before deadline
- * @param refreshTrigger A value that when changed will cause reminders to recalculate
- * @returns Information about upcoming reminders
  */
 export function useNextReminders(
-  deadline: Date | null, 
+  deadline: Date | null,
   reminderMinutes: number[] = [],
   refreshTrigger: number = 0
-) {
-  const [upcomingReminders, setUpcomingReminders] = useState<ReminderInfo[]>([]);
-  const [nextReminder, setNextReminder] = useState<ReminderInfo | null>(null);
-  const [hasReminders, setHasReminders] = useState(false);
+): NextRemindersResult {
+  const [state, setState] = useState<NextRemindersResult>({
+    upcomingReminders: [],
+    hasReminders: false,
+    isLoading: true,
+  });
 
-  useEffect(() => {
-    // Calculate all upcoming reminders
-    const reminderDates = calculateUpcomingReminders(deadline, reminderMinutes);
+  // Use useCallback to memoize the calculation function
+  const calculateReminders = useCallback(() => {
+    if (!deadline || reminderMinutes.length === 0) {
+      setState({
+        upcomingReminders: [],
+        hasReminders: false,
+        isLoading: false,
+      });
+      return;
+    }
+
+    const reminders = calculateUpcomingReminders(deadline, reminderMinutes);
     
-    // Create formatted reminder info objects
-    const reminderInfos = reminderDates.map(date => ({
+    const formattedReminders = reminders.map(date => ({
       date,
       formattedText: formatReminderDate(date),
-      formattedShortDate: formatReminderShortDate(date), // Add short date format
+      formattedShortDate: formatReminderShortDate(date),
     }));
+
+    setState({
+      upcomingReminders: formattedReminders,
+      hasReminders: reminderMinutes.length > 0,
+      isLoading: false,
+    });
+  }, [deadline, reminderMinutes]);
+
+  useEffect(() => {
+    calculateReminders();
     
-    setUpcomingReminders(reminderInfos);
-    setNextReminder(reminderInfos.length > 0 ? reminderInfos[0] : null);
-    setHasReminders(reminderMinutes.length > 0);
-    
-    // Set up a timer to refresh the formatted times
+    // Set up a timer to refresh the formatted times periodically
     const timer = setInterval(() => {
-      setUpcomingReminders(prev => prev.map(reminder => ({
-        ...reminder,
-        formattedText: formatReminderDate(reminder.date),
-        // No need to update short date as it doesn't change with time passing
-      })));
+      calculateReminders();
     }, 60000); // Update every minute
     
     return () => clearInterval(timer);
-  }, [deadline, reminderMinutes, refreshTrigger]);
+  }, [calculateReminders, refreshTrigger]);
 
-  return {
-    upcomingReminders,
-    nextReminder,
-    hasReminders
-  };
+  return state;
 }
