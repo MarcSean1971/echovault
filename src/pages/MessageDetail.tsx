@@ -62,16 +62,19 @@ export default function MessageDetail() {
     
     // Add listener for deadline reached event
     const handleDeadlineReached = (event: Event) => {
-      if (!id || !isArmed || !condition || condition.condition_type !== 'no_check_in') return;
+      if (!id || !isArmed) return;
       
-      // If this is a deadman's switch and the deadline has been reached,
-      // attempt to automatically trigger the message delivery
-      console.log('[MessageDetail] Deadline reached event received, attempting to trigger message delivery');
-      
-      // Attempt automatic delivery
-      triggerDeadmanSwitch(id).catch(error => {
-        console.error('[MessageDetail] Failed to auto-trigger deadman switch on deadline reached:', error);
-      });
+      // Check if this is a deadman's switch (no_check_in condition)
+      if (condition && condition.condition_type === 'no_check_in') {
+        // If this is a deadman's switch and the deadline has been reached,
+        // attempt to automatically trigger the message delivery
+        console.log('[MessageDetail] Deadline reached event received, attempting to trigger message delivery');
+        
+        // Attempt automatic delivery
+        triggerDeadmanSwitch(id).catch(error => {
+          console.error('[MessageDetail] Failed to auto-trigger deadman switch on deadline reached:', error);
+        });
+      }
     };
     
     window.addEventListener('deadline-reached', handleDeadlineReached);
