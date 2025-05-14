@@ -8,6 +8,7 @@ import { MessageCardActions } from "./card/MessageCardActions";
 import { useMessageCondition } from "@/hooks/useMessageCondition";
 import { useMessageTranscription } from "@/hooks/useMessageTranscription";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { useMessageCardActions } from "@/hooks/useMessageCardActions";
 
 interface MessageCardProps {
   message: Message;
@@ -27,6 +28,9 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
   
   // Get transcription if available
   const { transcription } = useMessageTranscription(message);
+  
+  // Import the action handlers from the hook
+  const { handleArmMessage, handleDisarmMessage } = useMessageCardActions();
   
   // Action handlers with refresh counter update
   const onArmMessage = async () => {
