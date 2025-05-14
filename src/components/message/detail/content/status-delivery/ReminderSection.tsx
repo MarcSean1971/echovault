@@ -58,7 +58,7 @@ export function ReminderSection({
                   {upcomingReminders.map((reminder, index) => (
                     <span 
                       key={index} 
-                      className="inline-block px-2 py-1 bg-amber-50 border border-amber-200 text-amber-700 rounded-md text-xs"
+                      className="inline-block px-2 py-1 bg-amber-50 border border-amber-200 text-amber-700 rounded-md text-xs hover:bg-amber-100 ${HOVER_TRANSITION}"
                       title={reminder.formattedText}
                     >
                       {reminder.formattedShortDate}
