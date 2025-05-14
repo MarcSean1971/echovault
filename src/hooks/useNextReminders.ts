@@ -1,10 +1,11 @@
 
 import { useState, useEffect } from "react";
-import { calculateUpcomingReminders, formatReminderDate } from "@/utils/reminderUtils";
+import { calculateUpcomingReminders, formatReminderDate, formatReminderShortDate } from "@/utils/reminderUtils";
 
 export interface ReminderInfo {
   date: Date;
   formattedText: string;
+  formattedShortDate: string; // Added short date format
 }
 
 /**
@@ -31,6 +32,7 @@ export function useNextReminders(
     const reminderInfos = reminderDates.map(date => ({
       date,
       formattedText: formatReminderDate(date),
+      formattedShortDate: formatReminderShortDate(date), // Add short date format
     }));
     
     setUpcomingReminders(reminderInfos);
@@ -42,6 +44,7 @@ export function useNextReminders(
       setUpcomingReminders(prev => prev.map(reminder => ({
         ...reminder,
         formattedText: formatReminderDate(reminder.date),
+        // No need to update short date as it doesn't change with time passing
       })));
     }, 60000); // Update every minute
     

@@ -3,7 +3,7 @@
  * Utility functions for reminder calculations
  */
 
-import { formatDistanceToNow, formatRelative, isAfter, addMinutes, addHours, isBefore } from "date-fns";
+import { formatDistanceToNow, formatRelative, isAfter, addMinutes, addHours, isBefore, format } from "date-fns";
 import { formatThreshold, formatReminderTime } from "@/components/message/FormSections/DeadManSwitchComponents/reminder/TimeConversionUtils";
 
 /**
@@ -45,6 +45,15 @@ export function calculateUpcomingReminders(
  */
 export function formatReminderDate(reminderDate: Date): string {
   return formatDistanceToNow(reminderDate, { addSuffix: true });
+}
+
+/**
+ * Format a reminder date in short format
+ * @param reminderDate The reminder date to format
+ * @returns Formatted string like "May 15, 4:30 PM"
+ */
+export function formatReminderShortDate(reminderDate: Date): string {
+  return format(reminderDate, "MMM d, h:mm a");
 }
 
 /**

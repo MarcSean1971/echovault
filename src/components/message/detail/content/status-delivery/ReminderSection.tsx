@@ -2,7 +2,6 @@
 import React from "react";
 import { Bell } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
 import { parseReminderMinutes } from "@/utils/reminderUtils";
 import { useNextReminders } from "@/hooks/useNextReminders";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
@@ -57,13 +56,13 @@ export function ReminderSection({
                 <span className="font-medium">Next reminders:</span>
                 <div className="col-span-2 flex flex-wrap gap-1">
                   {upcomingReminders.map((reminder, index) => (
-                    <Badge 
+                    <span 
                       key={index} 
-                      variant="outline" 
-                      className="bg-amber-50 border-amber-200 text-amber-700"
+                      className="inline-block px-2 py-1 bg-amber-50 border border-amber-200 text-amber-700 rounded-md text-xs"
+                      title={reminder.formattedText}
                     >
-                      {reminder.formattedText}
-                    </Badge>
+                      {reminder.formattedShortDate}
+                    </span>
                   ))}
                 </div>
               </div>
