@@ -83,7 +83,7 @@ export async function triggerMessageNotification(messageId: string, options: {
         }
         
         // Check if there are recipients
-        if (!condition.recipients || condition.recipients.length === 0) {
+        if (!condition.recipients || !Array.isArray(condition.recipients) || condition.recipients.length === 0) {
           throw new Error("No recipients found for this message");
         }
         
@@ -99,7 +99,7 @@ export async function triggerMessageNotification(messageId: string, options: {
         }
         
         // Create delivery records directly
-        for (const recipient of condition.recipients) {
+        for (const recipient of (condition.recipients as Recipient[])) {
           const deliveryId = crypto.randomUUID();
           
           // Record the delivery
@@ -178,7 +178,10 @@ export async function sendTestNotification(messageId: string) {
       return;
     }
     
-    if (!condition.recipients || !Array.isArray(condition.recipients) || condition.recipients.length === 0) {
+    // Ensure recipients is an array and has entries
+    const recipients = Array.isArray(condition.recipients) ? condition.recipients : [];
+    
+    if (recipients.length === 0) {
       toast({
         title: "No recipients",
         description: "Please add recipients to this message first",
@@ -186,8 +189,6 @@ export async function sendTestNotification(messageId: string) {
       });
       return;
     }
-    
-    const recipients = condition.recipients as Recipient[];
     
     // Get the message details
     const { data: message, error: messageError } = await supabase
@@ -261,4 +262,3 @@ export async function testWhatsAppTemplate(
     throw error;
   }
 }
-
