@@ -35,8 +35,8 @@ export function ReminderSection({
 
   return (
     <>
-      <Separator className="my-3" />
-      <h3 className="text-sm font-medium text-muted-foreground mb-3 mt-3 flex items-center">
+      <Separator className="mb-3" />
+      <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center">
         <Bell className={`h-4 w-4 mr-1.5 ${HOVER_TRANSITION}`} />
         Reminder Information
       </h3>

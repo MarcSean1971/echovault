@@ -55,7 +55,7 @@ export function StatusDeliverySection({
   const reminderMinutes = parseReminderMinutes(condition?.reminder_hours);
 
   return (
-    <div className="grid gap-8">
+    <div className="grid gap-4">
       <MessageInfoSection
         message={message}
         formatDate={formatDate}
