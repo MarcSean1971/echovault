@@ -5,6 +5,7 @@ import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { Clock, Bell } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { formatShortDate } from "@/utils/messageFormatUtils";
+import { MessageTimer } from "@/components/message/MessageTimer";
 
 interface MessageCardContentProps {
   message: Message;
@@ -49,13 +50,6 @@ export function MessageCardContent({
   const formattedCheckInTime = rawCheckInTime ? formatShortDate(rawCheckInTime) : null;
   const formattedNextReminderTime = rawNextReminderTime ? formatShortDate(rawNextReminderTime.toISOString()) : null;
   
-  // Determine progress bar color based on deadline proximity
-  const getProgressBarColor = () => {
-    if (deadlineProgress > 75) return 'bg-red-200 border-red-300';
-    if (deadlineProgress > 50) return 'bg-amber-200 border-amber-300';
-    return 'bg-emerald-200 border-emerald-300';
-  };
-  
   return (
     <div className="flex flex-col h-full">
       {/* Message content excerpt */}
@@ -65,44 +59,35 @@ export function MessageCardContent({
         </div>
       </div>
       
-      {/* Check-in and Reminder info section - now shown whenever available */}
-      {(hasCheckInData || hasReminderData) && (
-        <div className="mt-auto pt-2 border-t border-muted/40">
-          {/* Last check-in time - now showing whenever available */}
-          {formattedCheckInTime && (
-            <div className="flex items-center text-xs text-muted-foreground mb-1">
-              <Clock className={`h-3.5 w-3.5 mr-1.5 ${HOVER_TRANSITION}`} />
-              <span>Last check-in: {formattedCheckInTime}</span>
-            </div>
-          )}
-          
-          {/* Next reminder time - now showing whenever available */}
-          {formattedNextReminderTime && (
-            <div className="flex items-center text-xs text-muted-foreground mb-2">
-              <Bell className={`h-3.5 w-3.5 mr-1.5 ${HOVER_TRANSITION}`} />
-              <span>Next reminder: {formattedNextReminderTime}</span>
-            </div>
-          )}
-          
-          {/* Countdown display - only for armed messages with deadline */}
-          {isArmed && deadline && (
-            <div className="w-full mt-1 space-y-1">
-              {/* Digital countdown */}
-              {timeLeft && (
-                <div className={`text-xs font-medium text-center ${deadlineProgress > 75 ? 'text-red-700' : deadlineProgress > 50 ? 'text-amber-700' : 'text-emerald-700'} ${deadlineProgress > 85 ? 'animate-pulse' : ''}`}>
-                  {timeLeft}
-                </div>
-              )}
-              
-              {/* Progress bar */}
-              <Progress 
-                value={deadlineProgress} 
-                className={`h-1.5 border ${getProgressBarColor()}`}
-              />
-            </div>
-          )}
-        </div>
-      )}
+      {/* Check-in, Reminder info and Countdown timer section */}
+      <div className="mt-auto pt-2 border-t border-muted/40">
+        {/* Last check-in time - showing whenever available */}
+        {formattedCheckInTime && (
+          <div className="flex items-center text-xs text-muted-foreground mb-1">
+            <Clock className={`h-3.5 w-3.5 mr-1.5 ${HOVER_TRANSITION}`} />
+            <span>Last check-in: {formattedCheckInTime}</span>
+          </div>
+        )}
+        
+        {/* Next reminder time - showing whenever available */}
+        {formattedNextReminderTime && (
+          <div className="flex items-center text-xs text-muted-foreground mb-2">
+            <Bell className={`h-3.5 w-3.5 mr-1.5 ${HOVER_TRANSITION}`} />
+            <span>Next reminder: {formattedNextReminderTime}</span>
+          </div>
+        )}
+        
+        {/* Countdown display - using MessageTimer component for consistency */}
+        {isArmed && deadline && (
+          <div className="w-full mt-2 scale-90 origin-top-left">
+            <MessageTimer 
+              deadline={deadline} 
+              isArmed={isArmed} 
+              refreshTrigger={deadlineProgress} // Using deadlineProgress as a refresh trigger
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 }
