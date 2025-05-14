@@ -1,3 +1,3 @@
 
-import { StatusDeliverySection } from './status-delivery';
+import { StatusDeliverySection } from './status-delivery/StatusDeliverySection';
 export { StatusDeliverySection };
