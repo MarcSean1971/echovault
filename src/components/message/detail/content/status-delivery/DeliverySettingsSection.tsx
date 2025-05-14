@@ -5,6 +5,7 @@ import { MessageDeliverySettings } from "../../MessageDeliverySettings";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { useNextReminders } from "@/hooks/useNextReminders"; 
 import { parseReminderMinutes } from "@/utils/reminderUtils";
+import { MessageTimer } from "@/components/message/MessageTimer";
 
 interface DeliverySettingsSectionProps {
   condition: any | null;
@@ -33,6 +34,18 @@ export function DeliverySettingsSection({
         <Clock className={`h-4 w-4 mr-1.5 ${HOVER_TRANSITION}`} />
         Delivery Settings
       </h3>
+      
+      {/* Add MessageTimer component when there's a deadline and the message is armed */}
+      {deadline && isArmed && (
+        <div className="mb-4">
+          <MessageTimer 
+            deadline={deadline} 
+            isArmed={isArmed} 
+            refreshTrigger={refreshTrigger} 
+          />
+        </div>
+      )}
+      
       <MessageDeliverySettings 
         condition={condition}
         formatDate={formatDate}
