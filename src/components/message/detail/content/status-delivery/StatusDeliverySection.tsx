@@ -12,6 +12,13 @@ interface StatusDeliverySectionProps {
   renderConditionType: () => string;
   isArmed?: boolean;
   refreshTrigger?: number;
+  deadline?: Date | null;
+  lastCheckIn?: string | null;
+  checkInCode?: string | null;
+  lastDelivered?: string | null;
+  isDelivered?: boolean;
+  viewCount?: number | null;
+  isLoadingDelivery?: boolean;
 }
 
 export function StatusDeliverySection({ 
@@ -20,18 +27,27 @@ export function StatusDeliverySection({
   formatDate, 
   renderConditionType,
   isArmed = false,
-  refreshTrigger
+  refreshTrigger,
+  deadline: externalDeadline,
+  lastCheckIn,
+  checkInCode,
+  lastDelivered,
+  isDelivered,
+  viewCount,
+  isLoadingDelivery
 }: StatusDeliverySectionProps) {
   const [effectiveDeadline, setEffectiveDeadline] = useState<Date | null>(null);
   
   // Calculate effective deadline for both regular and check-in conditions
   useEffect(() => {
-    if (condition) {
+    if (externalDeadline) {
+      setEffectiveDeadline(externalDeadline);
+    } else if (condition) {
       setEffectiveDeadline(getEffectiveDeadline(condition));
     } else {
       setEffectiveDeadline(null);
     }
-  }, [condition, refreshTrigger]);
+  }, [condition, externalDeadline, refreshTrigger]);
   
   if (!condition) return null;
   
@@ -43,6 +59,11 @@ export function StatusDeliverySection({
       <MessageInfoSection
         message={message}
         formatDate={formatDate}
+        lastDelivered={lastDelivered}
+        viewCount={viewCount}
+        lastCheckIn={lastCheckIn}
+        checkInCode={checkInCode}
+        condition={condition}
       />
       
       <DeliverySettingsSection

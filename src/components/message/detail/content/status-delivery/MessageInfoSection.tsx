@@ -54,7 +54,7 @@ export function MessageInfoSection({
         )}
         
         {/* Viewed Count Information */}
-        {viewCount && viewCount > 0 && (
+        {viewCount !== undefined && viewCount !== null && viewCount > 0 && (
           <div className="grid grid-cols-3 gap-1">
             <span className="font-medium">View count:</span>
             <span className="col-span-2">{viewCount}</span>
