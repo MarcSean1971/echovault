@@ -43,3 +43,12 @@ export const CARD_HOVER_EFFECTS = {
   subtle: "hover:shadow-sm hover:bg-accent/50",
   interactive: "hover:shadow-md hover:bg-accent/50 hover:scale-[1.01] cursor-pointer",
 };
+
+/**
+ * Animation classes for confirmation/feedback animations
+ */
+export const CONFIRMATION_ANIMATION = {
+  pulse: "animate-pulse",
+  shake: "animate-[shake_0.5s_ease-in-out]",
+  highlight: "animate-[highlight_1s_ease-in-out] bg-green-100 dark:bg-green-900/30"
+};
