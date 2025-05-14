@@ -3,9 +3,7 @@ import React from "react";
 import { MessageCondition, Message } from "@/types/message";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { Clock, Bell } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
 import { formatShortDate } from "@/utils/messageFormatUtils";
-import { MessageTimer } from "@/components/message/MessageTimer";
 
 interface MessageCardContentProps {
   message: Message;
@@ -50,6 +48,23 @@ export function MessageCardContent({
   const formattedCheckInTime = rawCheckInTime ? formatShortDate(rawCheckInTime) : null;
   const formattedNextReminderTime = rawNextReminderTime ? formatShortDate(rawNextReminderTime.toISOString()) : null;
   
+  // Determine the color class for the countdown based on time remaining
+  const getCountdownColorClass = () => {
+    if (!isArmed) return "text-muted-foreground";
+    
+    // If we have access to the deadline, calculate urgency
+    if (deadline) {
+      const now = new Date();
+      const diff = deadline.getTime() - now.getTime();
+      const hoursRemaining = Math.max(0, diff / (1000 * 60 * 60));
+      
+      if (hoursRemaining < 3) return "text-destructive font-medium";
+      if (hoursRemaining < 12) return "text-orange-500";
+    }
+    
+    return "text-destructive/80";
+  };
+  
   return (
     <div className="flex flex-col h-full">
       {/* Message content excerpt */}
@@ -59,7 +74,7 @@ export function MessageCardContent({
         </div>
       </div>
       
-      {/* Check-in, Reminder info and Countdown timer section */}
+      {/* Check-in, Reminder info and simplified Countdown timer section */}
       <div className="mt-auto pt-2 border-t border-muted/40">
         {/* Last check-in time - showing whenever available */}
         {formattedCheckInTime && (
@@ -71,20 +86,17 @@ export function MessageCardContent({
         
         {/* Next reminder time - showing whenever available */}
         {formattedNextReminderTime && (
-          <div className="flex items-center text-xs text-muted-foreground mb-2">
+          <div className="flex items-center text-xs text-muted-foreground mb-1">
             <Bell className={`h-3.5 w-3.5 mr-1.5 ${HOVER_TRANSITION}`} />
             <span>Next reminder: {formattedNextReminderTime}</span>
           </div>
         )}
         
-        {/* Countdown display - using MessageTimer component for consistency */}
+        {/* Simple countdown display - matches the style of check-in and reminder info */}
         {isArmed && deadline && (
-          <div className="w-full mt-2 scale-90 origin-top-left">
-            <MessageTimer 
-              deadline={deadline} 
-              isArmed={isArmed} 
-              refreshTrigger={deadlineProgress} // Using deadlineProgress as a refresh trigger
-            />
+          <div className={`flex items-center text-xs ${getCountdownColorClass()} mb-1 ${HOVER_TRANSITION}`}>
+            <Clock className={`h-3.5 w-3.5 mr-1.5 ${HOVER_TRANSITION}`} />
+            <span>Countdown: {timeLeft || "--:--:--"}</span>
           </div>
         )}
       </div>
