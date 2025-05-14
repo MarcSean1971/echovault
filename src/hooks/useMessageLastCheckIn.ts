@@ -16,8 +16,8 @@ export function useMessageLastCheckIn(condition: MessageCondition | null) {
                  condition.condition_type === 'regular_check_in';
     setIsDeadmansSwitch(isDMS);
     
-    // If it's a deadman's switch and has a last_checked timestamp
-    if (isDMS && condition.last_checked) {
+    // If condition has a last_checked timestamp, use it regardless of condition type
+    if (condition.last_checked) {
       setRawCheckInTime(condition.last_checked);
       
       try {

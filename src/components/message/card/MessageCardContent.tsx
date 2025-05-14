@@ -41,10 +41,9 @@ export function MessageCardContent({
     transcription : 
     (message.text_content || message.content);
   
-  // Only show check-in and reminder info for deadman's switch messages
-  const showDeadmanInfo = isArmed && condition && 
-    (condition.condition_type === 'no_check_in' || 
-     condition.condition_type === 'regular_check_in');
+  // Check if we have check-in or reminder data to show
+  const hasCheckInData = rawCheckInTime !== null;
+  const hasReminderData = rawNextReminderTime !== null || nextReminder !== null;
   
   // Format check-in and reminder times using the precise format
   const formattedCheckInTime = rawCheckInTime ? formatShortDate(rawCheckInTime) : null;
@@ -66,10 +65,10 @@ export function MessageCardContent({
         </div>
       </div>
       
-      {/* Deadman's switch info section */}
-      {showDeadmanInfo && (
+      {/* Check-in and Reminder info section - now shown whenever available */}
+      {(hasCheckInData || hasReminderData) && (
         <div className="mt-auto pt-2 border-t border-muted/40">
-          {/* Last check-in time - now with precise formatting */}
+          {/* Last check-in time - now showing whenever available */}
           {formattedCheckInTime && (
             <div className="flex items-center text-xs text-muted-foreground mb-1">
               <Clock className={`h-3.5 w-3.5 mr-1.5 ${HOVER_TRANSITION}`} />
@@ -77,7 +76,7 @@ export function MessageCardContent({
             </div>
           )}
           
-          {/* Next reminder time - now with precise formatting */}
+          {/* Next reminder time - now showing whenever available */}
           {formattedNextReminderTime && (
             <div className="flex items-center text-xs text-muted-foreground mb-2">
               <Bell className={`h-3.5 w-3.5 mr-1.5 ${HOVER_TRANSITION}`} />
@@ -85,7 +84,7 @@ export function MessageCardContent({
             </div>
           )}
           
-          {/* Countdown display */}
+          {/* Countdown display - only for armed messages with deadline */}
           {isArmed && deadline && (
             <div className="w-full mt-1 space-y-1">
               {/* Digital countdown */}
