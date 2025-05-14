@@ -1,94 +1,65 @@
 
-import React from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { DesktopTimerAlert } from "../../DesktopTimerAlert";
-import { MessageInfoSection } from "./MessageInfoSection";
-import { ReminderSection } from "./ReminderSection";
-import { DeliverySettingsSection } from "./DeliverySettingsSection";
+import { useEffect, useState } from 'react';
+import { getEffectiveDeadline, parseReminderMinutes } from '@/utils/reminderUtils';
+import { MessageInfoSection } from './MessageInfoSection';
+import { DeliverySettingsSection } from './DeliverySettingsSection';
+import { ReminderSection } from './ReminderSection';
 
 interface StatusDeliverySectionProps {
+  message: any;
   condition: any | null;
-  isArmed: boolean;
   formatDate: (dateString: string) => string;
   renderConditionType: () => string;
-  message: any;
-  deadline?: Date | null;
-  lastCheckIn?: string | null;
-  checkInCode?: string | null;
-  lastDelivered?: string | null;
-  isDelivered?: boolean;
-  viewCount?: number | null;
-  isLoadingDelivery?: boolean;
+  isArmed?: boolean;
   refreshTrigger?: number;
 }
 
-export function StatusDeliverySection({
-  condition,
-  isArmed,
-  formatDate,
+export function StatusDeliverySection({ 
+  message, 
+  condition, 
+  formatDate, 
   renderConditionType,
-  message,
-  deadline,
-  lastCheckIn,
-  checkInCode,
-  lastDelivered,
-  isDelivered,
-  viewCount,
-  isLoadingDelivery,
+  isArmed = false,
   refreshTrigger
 }: StatusDeliverySectionProps) {
-  const isMobile = useIsMobile();
+  const [effectiveDeadline, setEffectiveDeadline] = useState<Date | null>(null);
   
+  // Calculate effective deadline for both regular and check-in conditions
+  useEffect(() => {
+    if (condition) {
+      setEffectiveDeadline(getEffectiveDeadline(condition));
+    } else {
+      setEffectiveDeadline(null);
+    }
+  }, [condition, refreshTrigger]);
+  
+  if (!condition) return null;
+  
+  // Parse reminder minutes from the condition
+  const reminderMinutes = parseReminderMinutes(condition?.reminder_hours);
+
   return (
-    <Card className="overflow-hidden">
-      <CardContent className={`${isMobile ? 'p-4' : 'p-6'} space-y-6`}>
-        <div className="flex items-start justify-between">
-          <h2 className="text-lg font-medium">Status & Delivery</h2>
-          <div className={`px-2 py-1 text-xs rounded-full ${isArmed ? 'bg-destructive/10 text-destructive' : 'bg-green-100 text-green-700'}`}>
-            {isArmed ? "Armed" : "Disarmed"}
-          </div>
-        </div>
-        
-        {/* Countdown Timer - now passing refreshTrigger prop */}
-        {isArmed && deadline && (
-          <div className="mb-2">
-            <DesktopTimerAlert deadline={deadline} isArmed={isArmed} refreshTrigger={refreshTrigger} />
-          </div>
-        )}
-        
-        <div className={`grid grid-cols-1 ${isMobile ? 'gap-6' : 'md:grid-cols-2 gap-6'}`}>
-          <div>
-            {/* Message Information Section */}
-            <MessageInfoSection
-              message={message}
-              formatDate={formatDate}
-              lastDelivered={lastDelivered}
-              viewCount={viewCount}
-              lastCheckIn={lastCheckIn}
-              checkInCode={checkInCode}
-              condition={condition}
-            />
-            
-            {/* Reminder Information */}
-            <ReminderSection
-              condition={condition}
-              deadline={deadline}
-              isArmed={isArmed}
-              refreshTrigger={refreshTrigger}
-            />
-          </div>
-          
-          <div className={isMobile ? 'mt-2' : ''}>
-            {/* Delivery Settings */}
-            <DeliverySettingsSection
-              condition={condition}
-              formatDate={formatDate}
-              renderConditionType={renderConditionType}
-            />
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="grid gap-8">
+      <MessageInfoSection
+        message={message}
+        formatDate={formatDate}
+      />
+      
+      <DeliverySettingsSection
+        condition={condition}
+        formatDate={formatDate}
+        renderConditionType={renderConditionType}
+        deadline={effectiveDeadline}
+        isArmed={isArmed}
+        refreshTrigger={refreshTrigger}
+      />
+      
+      <ReminderSection
+        condition={condition}
+        deadline={effectiveDeadline}
+        isArmed={isArmed}
+        refreshTrigger={refreshTrigger}
+      />
+    </div>
   );
 }

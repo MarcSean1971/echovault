@@ -112,3 +112,35 @@ export function formatScheduledReminderTime(scheduledFor: string | null | undefi
     return "Invalid date";
   }
 }
+
+/**
+ * Get effective deadline for a condition, handling check-in conditions specially
+ * @param condition The message condition object
+ * @returns Calculated deadline as a Date object, or null if it can't be determined
+ */
+export function getEffectiveDeadline(condition: any): Date | null {
+  if (!condition) return null;
+
+  // For regular conditions with a trigger_date, use that
+  if (condition.trigger_date) {
+    return new Date(condition.trigger_date);
+  }
+  
+  // For check-in type conditions, calculate based on last_checked + threshold
+  if (['no_check_in', 'recurring_check_in', 'inactivity_to_date'].includes(condition.condition_type)) {
+    if (condition.last_checked && (condition.hours_threshold || condition.minutes_threshold)) {
+      const lastChecked = new Date(condition.last_checked);
+      const hoursToAdd = condition.hours_threshold || 0;
+      const minutesToAdd = condition.minutes_threshold || 0;
+      
+      const deadline = new Date(lastChecked);
+      deadline.setHours(deadline.getHours() + hoursToAdd);
+      deadline.setMinutes(deadline.getMinutes() + minutesToAdd);
+      
+      return deadline;
+    }
+  }
+  
+  return null;
+}
+

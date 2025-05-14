@@ -34,6 +34,9 @@ export async function getMessagesNeedingReminders(
         reminder_hours,
         next_reminder_at,
         panic_config,
+        hours_threshold,
+        minutes_threshold,
+        last_checked,
         messages (
           id,
           title,
@@ -83,9 +86,38 @@ export async function getMessagesNeedingReminders(
         continue;
       }
       
-      // Skip if no trigger_date AND NOT forceSend
-      if (!condition.trigger_date && !forceSend) {
-        console.log(`DB: No trigger_date for condition ${condition.id} and forceSend is not enabled, skipping`);
+      // For check-in conditions (no_check_in, recurring_check_in, inactivity_to_date),
+      // create a virtual trigger_date based on last_checked + hours_threshold
+      let effectiveTriggerDate = condition.trigger_date;
+      let isCheckInCondition = false;
+      
+      if (['no_check_in', 'recurring_check_in', 'inactivity_to_date'].includes(condition.condition_type)) {
+        isCheckInCondition = true;
+        
+        if (condition.last_checked && condition.hours_threshold) {
+          // Calculate virtual trigger_date as last_checked + threshold
+          const lastChecked = new Date(condition.last_checked);
+          const hoursToAdd = condition.hours_threshold || 0;
+          const minutesToAdd = condition.minutes_threshold || 0;
+          
+          const virtualDeadline = new Date(lastChecked);
+          virtualDeadline.setHours(virtualDeadline.getHours() + hoursToAdd);
+          virtualDeadline.setMinutes(virtualDeadline.getMinutes() + minutesToAdd);
+          
+          effectiveTriggerDate = virtualDeadline.toISOString();
+          
+          console.log(`DB: Check-in condition detected (${condition.condition_type})`);
+          console.log(`DB: Last checked: ${lastChecked.toISOString()}`);
+          console.log(`DB: Threshold: ${hoursToAdd} hours, ${minutesToAdd} minutes`);
+          console.log(`DB: Virtual deadline calculated: ${effectiveTriggerDate}`);
+        } else {
+          console.log(`DB: Check-in condition missing last_checked or hours_threshold, cannot calculate virtual deadline`);
+        }
+      }
+      
+      // Skip if no trigger_date (actual or virtual) AND NOT forceSend
+      if (!effectiveTriggerDate && !forceSend) {
+        console.log(`DB: No effective trigger_date for condition ${condition.id} and forceSend is not enabled, skipping`);
         continue;
       }
       
@@ -102,10 +134,10 @@ export async function getMessagesNeedingReminders(
       // Calculate hours until deadline or use a default for forced sends
       let hoursUntilDeadline = 24; // Default to 24 hours if no trigger_date for forced sends
       
-      if (condition.trigger_date) {
-        const deadline = new Date(condition.trigger_date);
+      if (effectiveTriggerDate) {
+        const deadline = new Date(effectiveTriggerDate);
         hoursUntilDeadline = (deadline.getTime() - now.getTime()) / (1000 * 60 * 60);
-        console.log(`DB: Message ${message.id} has trigger_date ${condition.trigger_date}`);
+        console.log(`DB: Message ${message.id} has effective trigger_date ${effectiveTriggerDate}`);
         console.log(`DB: Hours until deadline: ${hoursUntilDeadline.toFixed(2)} hours (${hoursUntilDeadline * 60} minutes)`);
       } else if (forceSend) {
         console.log(`DB: Force sending reminder for message ${message.id} with no trigger_date, using default ${hoursUntilDeadline} hours`);
@@ -132,8 +164,8 @@ export async function getMessagesNeedingReminders(
           
           // Find which reminder minute this corresponds to
           for (const minute of reminderMinutes) {
-            if (condition.trigger_date) {
-              const deadline = new Date(condition.trigger_date);
+            if (effectiveTriggerDate) {
+              const deadline = new Date(effectiveTriggerDate);
               const reminderTime = new Date(deadline.getTime() - (minute * 60 * 1000));
               const diffToScheduled = Math.abs((reminderTime.getTime() - nextReminderAt.getTime()) / (60 * 1000));
               
@@ -154,8 +186,8 @@ export async function getMessagesNeedingReminders(
         if (forceSend) {
           // If forceSend is true, always send a reminder
           shouldSendReminder = true;
-          console.log(`DB: Force sending reminder for message ${message.id}, deadline in ${condition.trigger_date ? hoursUntilDeadline.toFixed(1) : 'N/A'} hours`);
-        } else if (condition.trigger_date) {
+          console.log(`DB: Force sending reminder for message ${message.id}, deadline in ${effectiveTriggerDate ? hoursUntilDeadline.toFixed(1) : 'N/A'} hours`);
+        } else if (effectiveTriggerDate) {
           // Check if the current time matches any reminder window
           for (const reminderMinute of reminderMinutes) {
             // Convert reminder minutes to hours for proper comparison
@@ -181,8 +213,8 @@ export async function getMessagesNeedingReminders(
         console.log(`DB: Will send reminder for message ${message.id} "${message.title}"`);
         
         // Calculate when the next reminder would be after this one
-        if (condition.trigger_date) {
-          const deadline = new Date(condition.trigger_date);
+        if (effectiveTriggerDate) {
+          const deadline = new Date(effectiveTriggerDate);
           const nextReminderTime = calculateNextReminderTime(deadline, reminderMinutes, matchedReminderMinute);
           
           if (nextReminderTime) {
@@ -197,9 +229,7 @@ export async function getMessagesNeedingReminders(
         }
         
         // Handle check-in conditions specifically
-        if (condition.condition_type === 'recurring_check_in' || 
-            condition.condition_type === 'no_check_in' ||
-            condition.condition_type === 'inactivity_to_date') {
+        if (isCheckInCondition) {
           console.log(`DB: This is a check-in type condition (${condition.condition_type})`);
           console.log(`DB: For check-in conditions, reminder goes to creator (${message.user_id})`);
         } else if (condition.recipients) {
@@ -208,7 +238,10 @@ export async function getMessagesNeedingReminders(
         
         messagesToRemind.push({
           message: message as any,
-          condition: condition as any,
+          condition: {
+            ...condition,
+            trigger_date: effectiveTriggerDate || condition.trigger_date // Use effective trigger date for further processing
+          } as any,
           hoursUntilDeadline: hoursUntilDeadline,
           reminderMinutes: reminderMinutes,
           matchedReminderMinute: matchedReminderMinute
@@ -217,8 +250,8 @@ export async function getMessagesNeedingReminders(
         console.log(`DB: No reminder needed for message ${message.id} at this time. No matching reminder time.`);
         
         // If there's no next_reminder_at set, calculate and set it
-        if (!condition.next_reminder_at && condition.trigger_date) {
-          const deadline = new Date(condition.trigger_date);
+        if (!condition.next_reminder_at && effectiveTriggerDate) {
+          const deadline = new Date(effectiveTriggerDate);
           const nextReminderTime = calculateNextReminderTime(deadline, reminderMinutes, null);
           
           if (nextReminderTime) {
@@ -238,3 +271,4 @@ export async function getMessagesNeedingReminders(
     throw error;
   }
 }
+
