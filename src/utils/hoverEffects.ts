@@ -1,39 +1,45 @@
 
 /**
- * Standard transition effects for hover interactions
- * Apply to elements that should have consistent hover behavior
+ * Utility file for consistent hover effects throughout the application
+ */
+
+/**
+ * Transition classes for smooth hover effects
  */
 export const HOVER_TRANSITION = "transition-all duration-200 ease-in-out";
 
 /**
- * Hover effect configurations for different button variants
+ * Button hover effects for different states
  */
 export const BUTTON_HOVER_EFFECTS = {
-  default: "hover:shadow-md hover:translate-y-[-2px]",
-  outline: "hover:bg-accent hover:text-accent-foreground hover:border-primary",
-  primary: "hover:bg-primary/90",
-  secondary: "hover:bg-secondary/80",
-  destructive: "hover:bg-destructive/90",
-  ghost: "hover:bg-accent hover:text-accent-foreground",
-  link: "hover:underline"
+  default: "hover:bg-primary/90 hover:shadow-md active:scale-95",
+  destructive: "hover:bg-destructive/90 hover:shadow-md active:scale-95",
+  outline: "hover:bg-accent hover:text-accent-foreground active:scale-95",
+  secondary: "hover:bg-secondary/80 active:scale-95",
+  ghost: "hover:bg-accent hover:text-accent-foreground active:scale-95",
+  link: "hover:underline underline-offset-4",
 };
 
 /**
- * Hover effect configurations for different icon types
+ * Icon hover effects for different states
+ * Used for consistent hover effects on icons
  */
 export const ICON_HOVER_EFFECTS = {
-  default: "transition-all duration-200 ease-in-out hover:scale-110",
-  muted: "transition-all duration-200 ease-in-out text-muted-foreground hover:text-foreground",
-  primary: "transition-all duration-200 ease-in-out text-primary hover:text-primary-dark",
-  accent: "transition-all duration-200 ease-in-out text-accent-foreground hover:text-accent-foreground/80",
-  destructive: "transition-all duration-200 ease-in-out text-destructive hover:text-destructive/80"
+  default: "hover:scale-110 cursor-pointer",
+  muted: "hover:text-foreground hover:scale-110 cursor-pointer",
+  primary: "hover:text-primary hover:scale-110 cursor-pointer",
+  accent: "hover:text-accent-foreground hover:scale-110 cursor-pointer",
+  destructive: "hover:text-destructive hover:scale-110 cursor-pointer",
+  success: "hover:text-green-700 hover:scale-110 cursor-pointer", // Added success
+  info: "hover:text-blue-700 hover:scale-110 cursor-pointer", // Added info
+  warning: "hover:text-amber-700 hover:scale-110 cursor-pointer", // Added warning
 };
 
 /**
- * Animation classes for confirmation/feedback animations
+ * Card hover effects
  */
-export const CONFIRMATION_ANIMATION = {
-  pulse: "animate-pulse",
-  shake: "animate-shake",
-  highlight: "animate-highlight bg-green-100 dark:bg-green-900/30"
+export const CARD_HOVER_EFFECTS = {
+  default: "hover:shadow-md hover:border-primary/20",
+  subtle: "hover:shadow-sm hover:bg-accent/50",
+  interactive: "hover:shadow-md hover:bg-accent/50 hover:scale-[1.01] cursor-pointer",
 };
