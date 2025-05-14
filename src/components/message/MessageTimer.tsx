@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { Clock, AlertCircle, TimerOff } from 'lucide-react';
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -194,7 +193,7 @@ export function MessageTimer({ deadline, isArmed, refreshTrigger }: MessageTimer
             ) : 'text-muted-foreground',
             HOVER_TRANSITION
           )}>
-            {isArmed ? (isVeryUrgent ? 'Critical' : isUrgent ? 'Urgent' : 'Countdown') : 'Disarmed'}
+            {isArmed ? (isVeryUrgent ? 'Critical' : isUrgent ? 'Urgent' : '') : 'Disarmed'}
           </div>
         )}
       </div>
