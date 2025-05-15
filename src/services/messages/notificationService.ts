@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { Recipient } from "@/types/message";
@@ -11,13 +10,14 @@ import { sendTestWhatsAppMessage } from "./whatsApp/core/messageService";
 export async function triggerMessageNotification(messageId: string, options: { 
   isEmergency?: boolean,
   forceDelivery?: boolean,
-  debug?: boolean
+  debug?: boolean,
+  keepArmed?: boolean
 } = {}) {
-  const { isEmergency = false, forceDelivery = true, debug = true } = options;
+  const { isEmergency = false, forceDelivery = true, debug = true, keepArmed = false } = options;
   
   try {
     console.log(`[CRITICAL] Triggering message notification for message ${messageId} with options:`, 
-      { isEmergency, forceDelivery, debug });
+      { isEmergency, forceDelivery, debug, keepArmed });
     
     // First try: Use the dedicated edge function
     try {
@@ -26,7 +26,10 @@ export async function triggerMessageNotification(messageId: string, options: {
           messageId, 
           isEmergency,
           forceDelivery,
-          debug
+          keepArmed,
+          debug,
+          timestamp: new Date().toISOString(),
+          triggeredBy: "manual_trigger"
         }
       });
       
@@ -113,8 +116,9 @@ export async function triggerMessageNotification(messageId: string, options: {
           console.log(`[CRITICAL] Created direct delivery record for recipient ${recipient.email}`);
         }
         
-        // Mark condition as inactive after successful delivery
-        if (condition.condition_type !== 'panic_trigger' && 
+        // Mark condition as inactive after successful delivery unless keepArmed is true
+        if (!keepArmed && 
+            condition.condition_type !== 'panic_trigger' && 
             condition.condition_type !== 'recurring_check_in') {
           await supabase
             .from("message_conditions")

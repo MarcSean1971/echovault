@@ -114,6 +114,9 @@ export async function getMessagesToNotify(messageId?: string) {
     const now = new Date();
     const messagesToTrigger = [];
     
+    // Add a buffer time (in ms) to ensure we catch deadlines that are very close
+    const bufferTimeMs = 30 * 1000; // 30 seconds buffer
+    
     for (const condition of conditions) {
       let shouldTrigger = false;
       
@@ -127,8 +130,15 @@ export async function getMessagesToNotify(messageId?: string) {
         console.log(`[getMessagesToNotify] Checking no_check_in condition ${condition.id} - deadline: ${deadline.toISOString()}, now: ${now.toISOString()}`);
         console.log(`[getMessagesToNotify] Time until deadline: ${(deadline.getTime() - now.getTime()) / (60 * 1000)} minutes`);
         
-        if (now.getTime() >= deadline.getTime()) {
-          console.log(`[getMessagesToNotify] ALERT: Deadman's switch condition ${condition.id} has passed its threshold! Triggering notification.`);
+        // Check if deadline has passed OR if we're very close to the deadline (within buffer time)
+        if (now.getTime() >= deadline.getTime() || 
+            (deadline.getTime() - now.getTime() <= bufferTimeMs)) {
+          
+          if (now.getTime() >= deadline.getTime()) {
+            console.log(`[getMessagesToNotify] ALERT: Deadman's switch condition ${condition.id} has passed its threshold! Triggering notification.`);
+          } else {
+            console.log(`[getMessagesToNotify] ALERT: Deadman's switch condition ${condition.id} is within buffer time (${bufferTimeMs/1000}s) of deadline! Preemptively triggering notification.`);
+          }
           shouldTrigger = true;
         }
       }

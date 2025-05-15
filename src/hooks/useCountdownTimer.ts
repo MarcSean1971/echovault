@@ -20,6 +20,7 @@ export function useCountdownTimer({
   const [isUrgent, setIsUrgent] = useState(false);
   const [isVeryUrgent, setIsVeryUrgent] = useState(false);
   const [lastDeadlineTime, setLastDeadlineTime] = useState<number | null>(null);
+  const [hasTriggeredDeadlineEvent, setHasTriggeredDeadlineEvent] = useState<boolean>(false);
   const intervalRef = useRef<number | null>(null);
   
   useEffect(() => {
@@ -35,6 +36,7 @@ export function useCountdownTimer({
       setTimeLeft("--:--:--");
       setIsUrgent(false);
       setIsVeryUrgent(false);
+      setHasTriggeredDeadlineEvent(false);
       
       // Clear any existing interval
       if (intervalRef.current !== null) {
@@ -51,6 +53,24 @@ export function useCountdownTimer({
     if (lastDeadlineTime !== currentDeadlineTime) {
       console.log(`[useCountdownTimer] Deadline changed from ${lastDeadlineTime} to ${currentDeadlineTime}`);
       setLastDeadlineTime(currentDeadlineTime);
+      setHasTriggeredDeadlineEvent(false);
+    }
+    
+    // Check immediately if deadline is already passed
+    const now = new Date();
+    const initialDifference = deadline.getTime() - now.getTime();
+    
+    // If already passed, trigger the deadline reached event immediately
+    if (initialDifference <= 0 && !hasTriggeredDeadlineEvent) {
+      console.log('[useCountdownTimer] Deadline already passed on load, triggering event immediately');
+      window.dispatchEvent(new CustomEvent('deadline-reached', { 
+        detail: { 
+          deadlineTime: deadline.getTime(),
+          currentTime: now.getTime(),
+          source: 'immediate-check'
+        }
+      }));
+      setHasTriggeredDeadlineEvent(true);
     }
     
     const calculateTimeLeft = () => {
@@ -62,17 +82,33 @@ export function useCountdownTimer({
         setIsUrgent(true);
         setIsVeryUrgent(true);
         
-        // Try to trigger the message if countdown has reached zero
-        if (difference >= -5000 && difference <= 0) {
+        // Try to trigger the message if countdown has reached zero and we haven't triggered yet
+        if (difference >= -5000 && !hasTriggeredDeadlineEvent) {
           // Dispatch an event when we're very close to or just past the deadline
           // This will allow components to react to the deadline being reached
           console.log('[useCountdownTimer] Dispatching deadline-reached event');
           window.dispatchEvent(new CustomEvent('deadline-reached', { 
             detail: { 
               deadlineTime: deadline.getTime(),
-              currentTime: now.getTime()
+              currentTime: now.getTime(),
+              source: 'timer'
             }
           }));
+          
+          // Mark as triggered to avoid multiple events
+          setHasTriggeredDeadlineEvent(true);
+          
+          // Set up a backup trigger in case the first one didn't work
+          setTimeout(() => {
+            console.log('[useCountdownTimer] Sending backup deadline-reached event');
+            window.dispatchEvent(new CustomEvent('deadline-reached', { 
+              detail: { 
+                deadlineTime: deadline.getTime(),
+                currentTime: now.getTime(),
+                source: 'timer-backup'
+              }
+            }));
+          }, 2000); // 2 second backup
         }
         
         return "00:00:00";
@@ -129,7 +165,7 @@ export function useCountdownTimer({
         intervalRef.current = null;
       }
     };
-  }, [deadline, isArmed, refreshTrigger, lastDeadlineTime]);
+  }, [deadline, isArmed, refreshTrigger, lastDeadlineTime, hasTriggeredDeadlineEvent]);
 
   return {
     timeLeft,

@@ -74,24 +74,35 @@ export async function triggerDeadmanSwitch(messageId: string) {
       duration: 5000,
     });
     
+    // Track the start time for performance monitoring
+    const startTime = Date.now();
+    
     // Attempt to call the edge function with debug mode ON for more detailed logs
     const { data, error } = await supabase.functions.invoke("send-message-notifications", {
       body: { 
         messageId,
         debug: true,
         forceDelivery: true, // Add a force delivery flag
-        triggeredBy: "deadman_switch" // Add source of trigger for logging
+        keepArmed: false, // Ensure the message is disarmed after delivery
+        triggeredBy: "deadman_switch", // Add source of trigger for logging
+        timestamp: new Date().toISOString() // Add timestamp for logging
       }
     });
     
-    console.log(`[CRITICAL] Response from send-message-notifications:`, data);
+    // Log performance metrics
+    const responseTime = Date.now() - startTime;
+    console.log(`[CRITICAL] Response from send-message-notifications in ${responseTime}ms:`, data);
     
     if (error) {
       console.error(`[CRITICAL] Error triggering deadman switch for message ${messageId}:`, error);
       
       // FALLBACK: If the edge function call fails, attempt direct notification via API
       console.log(`[CRITICAL] Attempting fallback notification mechanism for message ${messageId}`);
-      await triggerMessageNotification(messageId);
+      await triggerMessageNotification(messageId, {
+        isEmergency: true,
+        forceDelivery: true,
+        debug: true
+      });
       
       toast({
         title: "Error in primary delivery",
@@ -116,7 +127,11 @@ export async function triggerDeadmanSwitch(messageId: string) {
       
       // FALLBACK: If the edge function returns failure, try direct notification
       console.log(`[CRITICAL] Attempting fallback notification for failed delivery of message ${messageId}`);
-      return await triggerMessageNotification(messageId);
+      return await triggerMessageNotification(messageId, {
+        isEmergency: true,
+        forceDelivery: true,
+        debug: true
+      });
     }
     
     // Show success toast
@@ -152,4 +167,3 @@ export async function triggerDeadmanSwitch(messageId: string) {
 
 // Re-export the notification trigger function
 export { triggerMessageNotification } from '../notificationService';
-

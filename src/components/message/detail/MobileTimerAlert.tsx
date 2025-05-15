@@ -23,6 +23,7 @@ export function MobileTimerAlert({
 }: MobileTimerAlertProps) {
   const [isExpired, setIsExpired] = useState<boolean>(false);
   const [showRetryButton, setShowRetryButton] = useState<boolean>(false);
+  const [retryCount, setRetryCount] = useState<number>(0);
 
   if (!isArmed || !deadline) return null;
   
@@ -42,8 +43,8 @@ export function MobileTimerAlert({
         
         setIsExpired(hasExpired);
         
-        // If expired for more than 30 seconds without delivery, show retry button
-        if (hasExpired && (now - deadlineTime) > 30000) {
+        // If expired for more than 5 seconds without delivery, show retry button
+        if (hasExpired && (now - deadlineTime) > 5000) {
           setShowRetryButton(true);
         }
       }
@@ -57,6 +58,32 @@ export function MobileTimerAlert({
     
     return () => clearInterval(interval);
   }, [deadline, refreshTrigger]);
+
+  // Auto-retry if deadline has been passed for more than 15 seconds
+  useEffect(() => {
+    if (isExpired && onForceDelivery && retryCount < 3) {
+      const now = new Date().getTime();
+      const deadlineTime = deadline.getTime();
+      
+      // If expired for more than 15 seconds, auto-retry
+      if ((now - deadlineTime) > 15000) {
+        console.log('[MobileTimerAlert] Deadline passed for > 15 seconds, auto-retrying delivery');
+        
+        // Add a small delay staggered by retry count
+        setTimeout(() => {
+          onForceDelivery().catch(err => {
+            console.error("Auto delivery retry failed:", err);
+          });
+          setRetryCount(prev => prev + 1);
+        }, retryCount * 1000);
+      }
+    }
+  }, [isExpired, onForceDelivery, deadline, retryCount]);
+  
+  // Reset retry count when refreshTrigger changes
+  useEffect(() => {
+    setRetryCount(0);
+  }, [refreshTrigger]);
   
   // Determine status for our badge
   const status = isExpired ? "critical" : isVeryUrgent ? "critical" : isUrgent ? "warning" : "armed";
