@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { MessageDelete } from "@/components/message/MessageDelete";
 import { TestMessage } from "@/components/message/TestMessage";
+import { MessageDetailContent } from "@/components/message/detail/MessageDetailContent";
 
 export default function MessageDetail() {
   const { id } = useParams<{ id: string }>();
@@ -150,85 +151,34 @@ export default function MessageDetail() {
 
   return (
     <div className="container mx-auto py-6 px-4">
-      {/* Main content layout - 2 columns on large screens */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main content area - Left side */}
-        <div className="lg:col-span-2 order-2 lg:order-1 space-y-6">
-          <MainContentSection 
-            message={message}
-            isArmed={isArmed}
-            isActionLoading={isActionLoading}
-            condition={condition}
-            formatDate={formatDate}
-            renderConditionType={() => getConditionType(condition)}
-            handleDisarmMessage={onDisarmMessage}
-            handleArmMessage={onArmMessage}
-            deliveryId={null}
-            recipientEmail={null}
-          />
-          
-          {/* Status Delivery Section now goes here in the main content area */}
-          <div className="mt-6">
-            <StatusDeliverySection 
-              message={message}
-              condition={condition}
-              formatDate={formatDate}
-              renderConditionType={() => getConditionType(condition)}
-              isArmed={isArmed}
-              deadline={deadline}
-              lastCheckIn={lastCheckIn}
-              checkInCode={condition?.check_in_code || null}
-              lastDelivered={lastDelivered}
-              isDelivered={isDelivered}
-              viewCount={viewCount}
-              isLoadingDelivery={isLoadingDelivery}
-              refreshTrigger={refreshTrigger}
-              handleForceDelivery={handleForceDelivery}
-            />
-          </div>
-        </div>
-        
-        {/* Sidebar - Right side */}
-        <MessageSidebar 
-          message={message}
-          isArmed={isArmed}
-          conditionId={conditionId}
-          isActionLoading={isActionLoading}
-          formatDate={formatDate}
-          renderConditionType={() => getConditionType(condition)}
-          renderRecipients={renderRecipients}
-          handleDisarmMessage={onDisarmMessage}
-          handleArmMessage={onArmMessage}
-          showDeleteConfirm={showDeleteConfirm}
-          setShowDeleteConfirm={setShowDeleteConfirm}
-          handleDelete={handleMessageDelete}
-          recipients={recipients}
-          onSendTestMessage={onSendTestMessage}
-          condition={condition}
-        />
-      </div>
-      
-      {/* Modals/Dialogs */}
-      {handleMessageDelete && (
-        <MessageDelete
-          isOpen={showDeleteConfirm} 
-          onOpenChange={setShowDeleteConfirm}
-          onDelete={handleMessageDelete}
-          isLoading={isActionLoading}
-          messageTitle={message.title}
-        />
-      )}
-      
-      {handleSendTestMessages && showSendTestDialog !== undefined && setShowSendTestDialog && (
-        <TestMessage 
-          isOpen={showSendTestDialog}
-          onOpenChange={setShowSendTestDialog}
-          onSendTest={handleSendTestMessages}
-          isLoading={isActionLoading}
-          messageTitle={message.title}
-          recipientCount={recipients?.length || 0}
-        />
-      )}
+      <MessageDetailContent
+        message={message}
+        isLoading={isLoading}
+        isArmed={isArmed}
+        isActionLoading={isActionLoading}
+        deadline={deadline}
+        conditionId={conditionId}
+        condition={condition}
+        handleDisarmMessage={onDisarmMessage}
+        handleArmMessage={onArmMessage}
+        handleDelete={handleMessageDelete}
+        formatDate={formatDate}
+        renderConditionType={() => getConditionType(condition)}
+        renderRecipients={renderRecipients}
+        recipients={recipients}
+        onSendTestMessage={onSendTestMessage}
+        showSendTestDialog={showSendTestDialog}
+        setShowSendTestDialog={setShowSendTestDialog}
+        handleSendTestMessages={handleSendTestMessages}
+        lastCheckIn={lastCheckIn}
+        checkInCode={condition?.check_in_code || null}
+        lastDelivered={lastDelivered}
+        isDelivered={isDelivered}
+        viewCount={viewCount}
+        isLoadingDelivery={isLoadingDelivery}
+        refreshTrigger={refreshTrigger}
+        handleForceDelivery={handleForceDelivery}
+      />
     </div>
   );
 }
