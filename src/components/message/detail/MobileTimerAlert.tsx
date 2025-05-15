@@ -12,6 +12,7 @@ interface MobileTimerAlertProps {
   deadline: Date | null;
   isArmed: boolean;
   refreshTrigger?: number;
+  messageId?: string; // Add messageId
   onForceDelivery?: () => Promise<void>;
 }
 
@@ -19,6 +20,7 @@ export function MobileTimerAlert({
   deadline, 
   isArmed, 
   refreshTrigger,
+  messageId,
   onForceDelivery
 }: MobileTimerAlertProps) {
   const [isExpired, setIsExpired] = useState<boolean>(false);
@@ -32,6 +34,15 @@ export function MobileTimerAlert({
     setDeliverySuccess(false);
   }, [refreshTrigger]);
   
+  // Check local storage on mount to see if delivery was already attempted
+  useEffect(() => {
+    if (messageId && deadline) {
+      const storageKey = `deadman_delivery_${messageId}_${deadline.getTime()}`;
+      const wasAttempted = localStorage.getItem(storageKey) === 'true';
+      setDeliveryAttempted(wasAttempted);
+    }
+  }, [messageId, deadline]);
+  
   // Don't render anything if not armed or no deadline
   if (!isArmed || !deadline) return null;
   
@@ -40,26 +51,6 @@ export function MobileTimerAlert({
   const hours = Math.floor(timeLeft / (1000 * 60 * 60));
   const isUrgent = hours < 1 && timeLeft > 0;
   const isVeryUrgent = timeLeft < 10 * 60 * 1000 && timeLeft > 0; // Less than 10 minutes
-  
-  // Handle when deadline is reached directly
-  const handleDeadlineReached = async () => {
-    if (deliveryAttempted || !onForceDelivery) return;
-    
-    console.log('[MobileTimerAlert] Deadline reached callback triggered!');
-    setIsExpired(true);
-    setDeliveryAttempted(true);
-    setIsDelivering(true);
-    
-    try {
-      await onForceDelivery();
-      console.log('[MobileTimerAlert] Message delivery successful');
-      setDeliverySuccess(true);
-    } catch (error) {
-      console.error('[MobileTimerAlert] Message delivery failed:', error);
-    } finally {
-      setIsDelivering(false);
-    }
-  };
   
   // Handle force delivery button click
   const handleForceDeliveryClick = async () => {
@@ -135,8 +126,8 @@ export function MobileTimerAlert({
           <MessageTimer 
             deadline={deadline} 
             isArmed={isArmed} 
+            messageId={messageId}
             refreshTrigger={refreshTrigger}
-            onDeadlineReached={handleDeadlineReached}
           />
           
           {isExpired && (

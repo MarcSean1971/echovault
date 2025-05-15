@@ -77,12 +77,12 @@ export function StatusDeliverySection({
       
       <DeliverySettingsSection
         condition={condition}
+        messageId={message.id}
         formatDate={formatDate}
         renderConditionType={renderConditionType}
         deadline={effectiveDeadline}
         isArmed={isArmed}
         refreshTrigger={refreshTrigger}
-        onDeadlineReached={isDeadmanSwitch && handleForceDelivery ? handleForceDelivery : undefined}
       />
       
       {/* Add Deadman Switch Controls for no_check_in condition types */}
