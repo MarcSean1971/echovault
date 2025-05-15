@@ -44,9 +44,12 @@ export function StatusDeliverySection({
   // Calculate effective deadline for both regular and check-in conditions
   useEffect(() => {
     if (externalDeadline) {
+      console.log(`[StatusDeliverySection] Using external deadline: ${externalDeadline.toISOString()}`);
       setEffectiveDeadline(externalDeadline);
     } else if (condition) {
-      setEffectiveDeadline(getEffectiveDeadline(condition));
+      const calculatedDeadline = getEffectiveDeadline(condition);
+      console.log(`[StatusDeliverySection] Calculated deadline: ${calculatedDeadline ? calculatedDeadline.toISOString() : 'null'}`);
+      setEffectiveDeadline(calculatedDeadline);
     } else {
       setEffectiveDeadline(null);
     }
@@ -79,6 +82,7 @@ export function StatusDeliverySection({
         deadline={effectiveDeadline}
         isArmed={isArmed}
         refreshTrigger={refreshTrigger}
+        onDeadlineReached={isDeadmanSwitch && handleForceDelivery ? handleForceDelivery : undefined}
       />
       
       {/* Add Deadman Switch Controls for no_check_in condition types */}

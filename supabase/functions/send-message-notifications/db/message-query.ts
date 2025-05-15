@@ -114,8 +114,8 @@ export async function getMessagesToNotify(messageId?: string) {
     const now = new Date();
     const messagesToTrigger = [];
     
-    // Add a buffer time (in ms) to ensure we catch deadlines that are very close
-    const bufferTimeMs = 30 * 1000; // 30 seconds buffer
+    // Add a larger buffer time (in ms) to ensure we catch deadlines that are very close
+    const bufferTimeMs = 60 * 1000; // 60 seconds buffer - more aggressive
     
     for (const condition of conditions) {
       let shouldTrigger = false;

@@ -5,6 +5,7 @@ interface CountdownTimerOptions {
   deadline: Date | null;
   isArmed: boolean;
   refreshTrigger?: number;
+  onDeadlineReached?: () => void; // Add callback for direct delivery trigger
 }
 
 /**
@@ -13,15 +14,27 @@ interface CountdownTimerOptions {
 export function useCountdownTimer({
   deadline,
   isArmed,
-  refreshTrigger
+  refreshTrigger,
+  onDeadlineReached
 }: CountdownTimerOptions) {
   const [timeLeft, setTimeLeft] = useState<string>("--:--:--");
   const [timePercentage, setTimePercentage] = useState(100);
   const [isUrgent, setIsUrgent] = useState(false);
   const [isVeryUrgent, setIsVeryUrgent] = useState(false);
-  const [lastDeadlineTime, setLastDeadlineTime] = useState<number | null>(null);
-  const [hasTriggeredDeadlineEvent, setHasTriggeredDeadlineEvent] = useState<boolean>(false);
+  const [hasReachedZero, setHasReachedZero] = useState(false);
   const intervalRef = useRef<number | null>(null);
+  const deadlineReachedRef = useRef(false);
+  const retryCount = useRef(0);
+  
+  useEffect(() => {
+    // Reset state when deadline changes
+    if (deadline) {
+      console.log(`[useCountdownTimer] New deadline set: ${deadline.toISOString()}`);
+      deadlineReachedRef.current = false;
+      retryCount.current = 0;
+      setHasReachedZero(false);
+    }
+  }, [deadline]);
   
   useEffect(() => {
     // Log for debugging
@@ -29,14 +42,14 @@ export function useCountdownTimer({
       - deadline: ${deadline ? deadline.toISOString() : 'null'}
       - isArmed: ${isArmed}
       - refreshTrigger: ${refreshTrigger}
-      - lastDeadlineTime: ${lastDeadlineTime}`);
+      - hasCallback: ${!!onDeadlineReached}`);
     
     if (!deadline || !isArmed) {
       console.log('[useCountdownTimer] No deadline or not armed, resetting timer');
       setTimeLeft("--:--:--");
       setIsUrgent(false);
       setIsVeryUrgent(false);
-      setHasTriggeredDeadlineEvent(false);
+      setHasReachedZero(false);
       
       // Clear any existing interval
       if (intervalRef.current !== null) {
@@ -46,31 +59,16 @@ export function useCountdownTimer({
       return;
     }
     
-    // Store the deadline time for comparison
-    const currentDeadlineTime = deadline.getTime();
-    
-    // Check if the deadline has actually changed
-    if (lastDeadlineTime !== currentDeadlineTime) {
-      console.log(`[useCountdownTimer] Deadline changed from ${lastDeadlineTime} to ${currentDeadlineTime}`);
-      setLastDeadlineTime(currentDeadlineTime);
-      setHasTriggeredDeadlineEvent(false);
-    }
-    
     // Check immediately if deadline is already passed
     const now = new Date();
     const initialDifference = deadline.getTime() - now.getTime();
     
-    // If already passed, trigger the deadline reached event immediately
-    if (initialDifference <= 0 && !hasTriggeredDeadlineEvent) {
-      console.log('[useCountdownTimer] Deadline already passed on load, triggering event immediately');
-      window.dispatchEvent(new CustomEvent('deadline-reached', { 
-        detail: { 
-          deadlineTime: deadline.getTime(),
-          currentTime: now.getTime(),
-          source: 'immediate-check'
-        }
-      }));
-      setHasTriggeredDeadlineEvent(true);
+    // If deadline is already passed, trigger immediately
+    if (initialDifference <= 0 && !deadlineReachedRef.current && onDeadlineReached) {
+      console.log('[useCountdownTimer] Deadline already passed on load, triggering callback immediately');
+      deadlineReachedRef.current = true;
+      setHasReachedZero(true);
+      onDeadlineReached();
     }
     
     const calculateTimeLeft = () => {
@@ -81,34 +79,32 @@ export function useCountdownTimer({
         // Time's up - ensure we flag this as urgent for UI updates
         setIsUrgent(true);
         setIsVeryUrgent(true);
+        setHasReachedZero(true);
         
-        // Try to trigger the message if countdown has reached zero and we haven't triggered yet
-        if (difference >= -5000 && !hasTriggeredDeadlineEvent) {
-          // Dispatch an event when we're very close to or just past the deadline
-          // This will allow components to react to the deadline being reached
-          console.log('[useCountdownTimer] Dispatching deadline-reached event');
-          window.dispatchEvent(new CustomEvent('deadline-reached', { 
-            detail: { 
-              deadlineTime: deadline.getTime(),
-              currentTime: now.getTime(),
-              source: 'timer'
+        // Direct callback when deadline is reached - this is the CRUCIAL part
+        if (!deadlineReachedRef.current && onDeadlineReached) {
+          console.log('[useCountdownTimer] COUNTDOWN REACHED ZERO! Triggering callback directly');
+          deadlineReachedRef.current = true;
+          
+          try {
+            onDeadlineReached();
+          } catch (error) {
+            console.error('[useCountdownTimer] Error in deadline reached callback:', error);
+            
+            // Retry logic
+            if (retryCount.current < 3) {
+              retryCount.current++;
+              console.log(`[useCountdownTimer] Retrying callback (attempt ${retryCount.current})...`);
+              
+              setTimeout(() => {
+                try {
+                  if (onDeadlineReached) onDeadlineReached();
+                } catch (retryError) {
+                  console.error('[useCountdownTimer] Retry failed:', retryError);
+                }
+              }, 2000 * retryCount.current); // Increasing delay
             }
-          }));
-          
-          // Mark as triggered to avoid multiple events
-          setHasTriggeredDeadlineEvent(true);
-          
-          // Set up a backup trigger in case the first one didn't work
-          setTimeout(() => {
-            console.log('[useCountdownTimer] Sending backup deadline-reached event');
-            window.dispatchEvent(new CustomEvent('deadline-reached', { 
-              detail: { 
-                deadlineTime: deadline.getTime(),
-                currentTime: now.getTime(),
-                source: 'timer-backup'
-              }
-            }));
-          }, 2000); // 2 second backup
+          }
         }
         
         return "00:00:00";
@@ -165,12 +161,13 @@ export function useCountdownTimer({
         intervalRef.current = null;
       }
     };
-  }, [deadline, isArmed, refreshTrigger, lastDeadlineTime, hasTriggeredDeadlineEvent]);
+  }, [deadline, isArmed, refreshTrigger, onDeadlineReached]);
 
   return {
     timeLeft,
     timePercentage,
     isUrgent,
-    isVeryUrgent
+    isVeryUrgent,
+    hasReachedZero
   };
 }

@@ -1,20 +1,20 @@
 
-import React from "react";
-import { Clock } from "lucide-react";
-import { MessageDeliverySettings } from "../../MessageDeliverySettings";
-import { HOVER_TRANSITION } from "@/utils/hoverEffects";
-import { useNextReminders } from "@/hooks/useNextReminders"; 
-import { parseReminderMinutes } from "@/utils/reminderUtils";
-import { useCountdownTimer } from "@/hooks/useCountdownTimer";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { Alarm, Clock } from "lucide-react";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { MessageTimer } from "@/components/message/MessageTimer";
 
 interface DeliverySettingsSectionProps {
-  condition: any | null;
+  condition: any;
   formatDate: (dateString: string) => string;
   renderConditionType: () => string;
-  deadline?: Date | null;
+  deadline: Date | null;
   isArmed?: boolean;
   refreshTrigger?: number;
+  onDeadlineReached?: () => void; // Add callback for direct delivery trigger
 }
 
 export function DeliverySettingsSection({
@@ -23,48 +23,90 @@ export function DeliverySettingsSection({
   renderConditionType,
   deadline,
   isArmed = false,
-  refreshTrigger
+  refreshTrigger,
+  onDeadlineReached
 }: DeliverySettingsSectionProps) {
-  if (!condition) {
-    return null;
-  }
+  const isMobile = useIsMobile();
+  const isDeadmanSwitch = condition?.condition_type === 'no_check_in';
   
-  // Get countdown timer data using the same hook as message cards
-  const { timeLeft, isUrgent, isVeryUrgent } = useCountdownTimer({
-    deadline,
-    isArmed,
-    refreshTrigger
-  });
-  
-  // Determine the color class for the countdown based on time remaining - same as in message cards
-  const getCountdownColorClass = () => {
-    if (!isArmed) return "text-muted-foreground";
-    if (isVeryUrgent) return "text-destructive font-medium";
-    if (isUrgent) return "text-orange-500";
-    return "text-destructive/80";
-  };
+  if (!condition) return null;
 
   return (
-    <div className="space-y-3">
-      <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center">
-        <Clock className={`h-4 w-4 mr-1.5 ${HOVER_TRANSITION}`} />
-        Delivery Settings
-      </h3>
-      
-      {/* Simple countdown display that matches the message cards */}
-      {isArmed && deadline && (
-        <div className={`flex items-center text-xs ${getCountdownColorClass()} mb-3 ${HOVER_TRANSITION}`}>
-          <Clock className={`h-3.5 w-3.5 mr-1.5 ${HOVER_TRANSITION}`} />
-          <span>Countdown: {timeLeft || "--:--:--"}</span>
+    <Card className="overflow-hidden border border-border/50 shadow-sm">
+      <CardHeader className="bg-muted/30 px-4 py-3 flex flex-row items-center justify-between space-y-0">
+        <CardTitle className="text-base flex items-center">
+          <Clock className="w-4 h-4 mr-2 text-muted-foreground" />
+          <span>Delivery Settings</span>
+        </CardTitle>
+        <Badge 
+          variant="outline" 
+          className={cn(
+            "font-normal text-xs",
+            isArmed ? "bg-amber-400/10 border-amber-400 text-amber-700" : "bg-muted"
+          )}
+        >
+          {renderConditionType()}
+        </Badge>
+      </CardHeader>
+      <CardContent className="p-4 space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Left column */}
+          <div className="space-y-3">
+            <div>
+              <div className="text-sm font-medium mb-1">Condition Type</div>
+              <div className="text-sm text-muted-foreground">
+                {condition.condition_type === 'no_check_in' ? (
+                  <div className="flex items-center">
+                    <Alarm className="h-3.5 w-3.5 mr-1.5 text-amber-500" />
+                    <span>Deadman's Switch</span>
+                  </div>
+                ) : (
+                  renderConditionType()
+                )}
+              </div>
+            </div>
+            
+            <div>
+              <div className="text-sm font-medium mb-1">Status</div>
+              <div className="text-sm">
+                <Badge 
+                  variant="outline" 
+                  className={cn(
+                    "font-normal",
+                    isArmed ? "bg-amber-400/10 text-amber-700" : "bg-muted"
+                  )}
+                >
+                  {isArmed ? 'ARMED' : 'DISARMED'}
+                </Badge>
+              </div>
+            </div>
+            
+            {/* Show threshold for no_check_in conditions */}
+            {condition.condition_type === 'no_check_in' && (
+              <div>
+                <div className="text-sm font-medium mb-1">Check-in Threshold</div>
+                <div className="text-sm text-muted-foreground">
+                  {condition.hours_threshold || 0} hours {condition.minutes_threshold || 0} minutes
+                </div>
+              </div>
+            )}
+          </div>
+          
+          {/* Right column - Timer */}
+          <div className={cn(
+            "space-y-3",
+            isMobile ? "order-first" : ""
+          )}>
+            <div className="text-sm font-medium mb-1">Countdown Timer</div>
+            <MessageTimer 
+              deadline={deadline} 
+              isArmed={isArmed} 
+              refreshTrigger={refreshTrigger}
+              onDeadlineReached={onDeadlineReached}
+            />
+          </div>
         </div>
-      )}
-      
-      <MessageDeliverySettings 
-        condition={condition}
-        formatDate={formatDate}
-        renderConditionType={renderConditionType}
-        showInTabs={true}
-      />
-    </div>
+      </CardContent>
+    </Card>
   );
 }

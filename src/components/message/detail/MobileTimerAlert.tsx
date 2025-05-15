@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, AlertTriangle } from "lucide-react";
+import { RefreshCw, AlertTriangle, CheckCircle } from "lucide-react";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface MobileTimerAlertProps {
@@ -22,9 +22,17 @@ export function MobileTimerAlert({
   onForceDelivery
 }: MobileTimerAlertProps) {
   const [isExpired, setIsExpired] = useState<boolean>(false);
-  const [showRetryButton, setShowRetryButton] = useState<boolean>(false);
-  const [retryCount, setRetryCount] = useState<number>(0);
+  const [deliveryAttempted, setDeliveryAttempted] = useState<boolean>(false);
+  const [deliverySuccess, setDeliverySuccess] = useState<boolean>(false);
+  const [isDelivering, setIsDelivering] = useState<boolean>(false);
 
+  // Reset state when refreshTrigger changes
+  useEffect(() => {
+    setDeliveryAttempted(false);
+    setDeliverySuccess(false);
+  }, [refreshTrigger]);
+  
+  // Don't render anything if not armed or no deadline
   if (!isArmed || !deadline) return null;
   
   // Calculate time left to determine urgency for styling
@@ -33,57 +41,42 @@ export function MobileTimerAlert({
   const isUrgent = hours < 1 && timeLeft > 0;
   const isVeryUrgent = timeLeft < 10 * 60 * 1000 && timeLeft > 0; // Less than 10 minutes
   
-  // Check for expired status
-  useEffect(() => {
-    const checkExpiration = () => {
-      if (deadline) {
-        const now = new Date().getTime();
-        const deadlineTime = deadline.getTime();
-        const hasExpired = now > deadlineTime;
-        
-        setIsExpired(hasExpired);
-        
-        // If expired for more than 5 seconds without delivery, show retry button
-        if (hasExpired && (now - deadlineTime) > 5000) {
-          setShowRetryButton(true);
-        }
-      }
-    };
+  // Handle when deadline is reached directly
+  const handleDeadlineReached = async () => {
+    if (deliveryAttempted || !onForceDelivery) return;
     
-    // Check immediately
-    checkExpiration();
+    console.log('[MobileTimerAlert] Deadline reached callback triggered!');
+    setIsExpired(true);
+    setDeliveryAttempted(true);
+    setIsDelivering(true);
     
-    // Set up interval to check every second
-    const interval = setInterval(checkExpiration, 1000);
-    
-    return () => clearInterval(interval);
-  }, [deadline, refreshTrigger]);
-
-  // Auto-retry if deadline has been passed for more than 15 seconds
-  useEffect(() => {
-    if (isExpired && onForceDelivery && retryCount < 3) {
-      const now = new Date().getTime();
-      const deadlineTime = deadline.getTime();
-      
-      // If expired for more than 15 seconds, auto-retry
-      if ((now - deadlineTime) > 15000) {
-        console.log('[MobileTimerAlert] Deadline passed for > 15 seconds, auto-retrying delivery');
-        
-        // Add a small delay staggered by retry count
-        setTimeout(() => {
-          onForceDelivery().catch(err => {
-            console.error("Auto delivery retry failed:", err);
-          });
-          setRetryCount(prev => prev + 1);
-        }, retryCount * 1000);
-      }
+    try {
+      await onForceDelivery();
+      console.log('[MobileTimerAlert] Message delivery successful');
+      setDeliverySuccess(true);
+    } catch (error) {
+      console.error('[MobileTimerAlert] Message delivery failed:', error);
+    } finally {
+      setIsDelivering(false);
     }
-  }, [isExpired, onForceDelivery, deadline, retryCount]);
+  };
   
-  // Reset retry count when refreshTrigger changes
-  useEffect(() => {
-    setRetryCount(0);
-  }, [refreshTrigger]);
+  // Handle force delivery button click
+  const handleForceDeliveryClick = async () => {
+    if (!onForceDelivery || isDelivering) return;
+    
+    setIsDelivering(true);
+    setDeliveryAttempted(true);
+    
+    try {
+      await onForceDelivery();
+      setDeliverySuccess(true);
+    } catch (error) {
+      console.error('[MobileTimerAlert] Force delivery failed:', error);
+    } finally {
+      setIsDelivering(false);
+    }
+  };
   
   // Determine status for our badge
   const status = isExpired ? "critical" : isVeryUrgent ? "critical" : isUrgent ? "warning" : "armed";
@@ -110,23 +103,31 @@ export function MobileTimerAlert({
               pulseAnimation={isVeryUrgent || isExpired}
               className="font-medium"
             >
-              {title}
+              {deliveryAttempted ? (deliverySuccess ? "Delivery successful" : "Delivery attempted") : title}
             </StatusBadge>
           </div>
           
-          {showRetryButton && onForceDelivery && (
+          {!deliveryAttempted && onForceDelivery && (
             <Button 
               variant="outline" 
               size="sm"
-              onClick={onForceDelivery}
+              onClick={handleForceDeliveryClick}
+              disabled={isDelivering}
               className={cn(
                 "text-xs bg-destructive/10 border-destructive/50 hover:bg-destructive/20",
                 HOVER_TRANSITION
               )}
             >
-              <RefreshCw className={`h-3 w-3 mr-1 ${HOVER_TRANSITION}`} />
+              <RefreshCw className={`h-3 w-3 mr-1 ${isDelivering ? "animate-spin" : ""} ${HOVER_TRANSITION}`} />
               Force Delivery
             </Button>
+          )}
+          
+          {deliveryAttempted && deliverySuccess && (
+            <div className="flex items-center text-xs text-green-600">
+              <CheckCircle className="h-3 w-3 mr-1" />
+              <span>Delivered</span>
+            </div>
           )}
         </div>
         
@@ -135,14 +136,18 @@ export function MobileTimerAlert({
             deadline={deadline} 
             isArmed={isArmed} 
             refreshTrigger={refreshTrigger}
+            onDeadlineReached={handleDeadlineReached}
           />
           
           {isExpired && (
             <div className="mt-2 flex items-center text-xs text-destructive">
               <AlertTriangle className="h-3 w-3 mr-1" />
               <span>
-                Deadline has passed. Message delivery should occur shortly.
-                {showRetryButton && " If not received, use the Force Delivery button."}
+                {deliveryAttempted 
+                  ? deliverySuccess 
+                    ? "Message has been delivered successfully." 
+                    : "Delivery has been attempted. Checking status..." 
+                  : "Deadline has passed. Delivering message..."}
               </span>
             </div>
           )}
