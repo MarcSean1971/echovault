@@ -22,10 +22,11 @@ export async function getAuthClient() {
  */
 export async function checkSupabaseConnectivity(): Promise<boolean> {
   try {
-    // Perform a lightweight query to verify connectivity
-    const { error } = await supabase.from('_realtime').select('subscription_id').limit(1).maybeSingle();
+    // Use a lightweight RPC call or a simple query to check connectivity
+    // instead of querying a non-existent table
+    const { data, error } = await supabase.from('profiles').select('count').limit(1);
     
-    // We don't care about data, just if there's a network error
+    // We're just checking if we can reach Supabase, not interested in the actual data
     return !error || !error.message.includes('network');
   } catch (error) {
     console.error("Error checking Supabase connectivity:", error);
