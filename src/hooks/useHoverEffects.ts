@@ -1,87 +1,65 @@
 
 import { useCallback, useEffect } from 'react';
+import { HOVER_TRANSITION } from '@/utils/hoverEffects';
 
 export function useHoverEffects() {
-  // Apply hover effect to specified elements
+  // Apply hover effects to elements matched by selector
   const applyHoverEffect = useCallback((selector: string) => {
-    const applyEffects = () => {
+    useEffect(() => {
       const elements = document.querySelectorAll(selector);
       
-      elements.forEach(element => {
-        // Add hover class for tracking
-        element.classList.add('hover-effect-applied');
-        
-        // Add event listeners
-        element.addEventListener('mouseenter', handleMouseEnter);
-        element.addEventListener('mouseleave', handleMouseLeave);
-        element.addEventListener('focus', handleFocus);
-        element.addEventListener('blur', handleBlur);
-      });
-    };
-    
-    const handleMouseEnter = (e: Event) => {
-      const el = e.currentTarget as HTMLElement;
-      el.style.transform = 'translateY(-1px)';
-      el.style.transition = 'all 0.2s ease';
-      
-      // Add subtle shadow effect
-      if (el.tagName === 'BUTTON' || el.classList.contains('clickable-icon')) {
-        el.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
-      }
-    };
-    
-    const handleMouseLeave = (e: Event) => {
-      const el = e.currentTarget as HTMLElement;
-      el.style.transform = 'translateY(0)';
-      el.style.boxShadow = '';
-    };
-    
-    const handleFocus = (e: Event) => {
-      const el = e.currentTarget as HTMLElement;
-      el.style.transform = 'translateY(-1px)';
-      el.style.boxShadow = '0 0 0 2px rgba(66, 153, 225, 0.5)';
-    };
-    
-    const handleBlur = (e: Event) => {
-      const el = e.currentTarget as HTMLElement;
-      el.style.transform = 'translateY(0)';
-      el.style.boxShadow = '';
-    };
-    
-    // Clean up function to remove event listeners
-    const cleanupEffects = () => {
-      const elements = document.querySelectorAll(selector + '.hover-effect-applied');
-      
-      elements.forEach(element => {
-        element.removeEventListener('mouseenter', handleMouseEnter);
-        element.removeEventListener('mouseleave', handleMouseLeave);
-        element.removeEventListener('focus', handleFocus);
-        element.removeEventListener('blur', handleBlur);
-        element.classList.remove('hover-effect-applied');
-      });
-    };
-    
-    // Apply effects immediately
-    applyEffects();
-    
-    // Set up a mutation observer to apply effects to new elements
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach(mutation => {
-        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-          applyEffects();
+      elements.forEach(el => {
+        if (el instanceof HTMLElement) {
+          el.classList.add(HOVER_TRANSITION);
+          
+          // Store original opacity/transform if needed
+          const originalOpacity = el.style.opacity || '1';
+          const originalTransform = el.style.transform || '';
+          
+          el.addEventListener('mouseenter', () => {
+            el.style.opacity = '0.8';
+            if (!el.style.transform.includes('scale')) {
+              el.style.transform = `${originalTransform} scale(1.02)`;
+            }
+          });
+          
+          el.addEventListener('mouseleave', () => {
+            el.style.opacity = originalOpacity;
+            el.style.transform = originalTransform;
+          });
         }
       });
-    });
-    
-    // Start observing the document with configured parameters
-    observer.observe(document.body, { childList: true, subtree: true });
-    
-    // Return cleanup function
-    return () => {
-      observer.disconnect();
-      cleanupEffects();
-    };
+      
+      // Cleanup event listeners on unmount
+      return () => {
+        elements.forEach(el => {
+          if (el instanceof HTMLElement) {
+            el.classList.remove(HOVER_TRANSITION);
+            el.removeEventListener('mouseenter', () => {});
+            el.removeEventListener('mouseleave', () => {});
+          }
+        });
+      };
+    }, [selector]);
   }, []);
   
-  return { applyHoverEffect };
+  // Get classes for specific hover effect types
+  const getIconHoverClasses = (type: 'default' | 'danger' | 'success' | 'warning' = 'default') => {
+    switch(type) {
+      case 'danger':
+        return `${HOVER_TRANSITION} group-hover:text-red-500 transition-colors`;
+      case 'success':
+        return `${HOVER_TRANSITION} group-hover:text-green-500 transition-colors`;
+      case 'warning':
+        return `${HOVER_TRANSITION} group-hover:text-amber-500 transition-colors`;
+      case 'default':
+      default:
+        return `${HOVER_TRANSITION} group-hover:text-primary transition-colors`;
+    }
+  };
+
+  return {
+    applyHoverEffect,
+    getIconHoverClasses
+  };
 }
