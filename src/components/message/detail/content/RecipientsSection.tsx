@@ -5,7 +5,7 @@ import { Recipient } from "@/types/message";
 
 interface RecipientsSectionProps {
   recipients: Recipient[];
-  renderRecipients?: () => React.ReactNode;
+  renderRecipients?: () => React.ReactNode; // Changed from expecting a function with parameters to no-param function
 }
 
 export function RecipientsSection({ recipients, renderRecipients }: RecipientsSectionProps) {

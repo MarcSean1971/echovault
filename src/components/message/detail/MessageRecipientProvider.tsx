@@ -8,7 +8,7 @@ interface MessageRecipientProviderProps {
 }
 
 export function MessageRecipientProvider({ recipients }: MessageRecipientProviderProps) {
-  // Change the function to return a no-argument function that returns ReactNode
+  // Function with no parameters that returns a React node
   const renderRecipients = () => {
     return <MessageRecipientsList recipients={recipients} />;
   };
