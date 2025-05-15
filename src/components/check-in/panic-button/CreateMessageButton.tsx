@@ -13,7 +13,7 @@ export function CreateMessageButton({ onClick, disabled }: CreateMessageButtonPr
       variant="outline"
       onClick={onClick}
       disabled={disabled}
-      className={`w-full ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.outline}`}
+      className={`w-full ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.outline || BUTTON_HOVER_EFFECTS.default}`}
     >
       Create Emergency Message
     </Button>

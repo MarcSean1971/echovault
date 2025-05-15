@@ -1,14 +1,13 @@
 
 import React from 'react';
 import { MessageRecipientsList } from "@/components/message/detail/MessageRecipientsList";
-import { Recipient } from "@/types/message";
 
 interface MessageRecipientProviderProps {
-  recipients: Recipient[];
+  recipients: any[];
 }
 
 export function MessageRecipientProvider({ recipients }: MessageRecipientProviderProps) {
-  // Function with no parameters that returns a React node
+  // Custom function to render recipients list with React components
   const renderRecipients = () => {
     return <MessageRecipientsList recipients={recipients} />;
   };

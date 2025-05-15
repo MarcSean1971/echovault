@@ -9,22 +9,22 @@ import { MessageTimer } from "@/components/message/MessageTimer";
 
 interface DeliverySettingsSectionProps {
   condition: any;
-  messageId?: string; // Add messageId
   formatDate: (dateString: string) => string;
   renderConditionType: () => string;
   deadline: Date | null;
   isArmed?: boolean;
   refreshTrigger?: number;
+  onDeadlineReached?: () => void; // Add callback for direct delivery trigger
 }
 
 export function DeliverySettingsSection({
   condition,
-  messageId,
   formatDate,
   renderConditionType,
   deadline,
   isArmed = false,
   refreshTrigger,
+  onDeadlineReached
 }: DeliverySettingsSectionProps) {
   const isMobile = useIsMobile();
   const isDeadmanSwitch = condition?.condition_type === 'no_check_in';
@@ -101,8 +101,8 @@ export function DeliverySettingsSection({
             <MessageTimer 
               deadline={deadline} 
               isArmed={isArmed} 
-              messageId={messageId} 
               refreshTrigger={refreshTrigger}
+              onDeadlineReached={onDeadlineReached}
             />
           </div>
         </div>

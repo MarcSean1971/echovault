@@ -5,7 +5,6 @@ import { toast } from "@/components/ui/use-toast";
 import { deleteMessage, handleArmMessage, handleDisarmMessage } from "@/services/messages/messageDetailService";
 import { sendTestNotification } from "@/services/messages/notificationService";
 import { useConditionRefresh } from "@/hooks/useConditionRefresh";
-import { Recipient } from "@/types/message";
 
 /**
  * Hook for handling message actions like arming, disarming, deleting, and sending test messages
@@ -63,28 +62,20 @@ export function useMessageActions(
     setShowSendTestDialog(true);
   }, []);
   
-  // Change to no-argument function that returns a Promise
-  const handleSendTestMessages = useCallback(async () => {
-    if (!messageId) return;
+  // Handle sending test messages to selected recipients
+  const handleSendTestMessages = useCallback(async (selectedRecipients: { id: string; name: string; email: string }[]) => {
+    if (!messageId || selectedRecipients.length === 0) return;
     
     try {
       setIsActionLoading(true);
       
+      // For now we'll use the existing function, but in production we'd
+      // want to modify the backend to accept an array of recipients
       await sendTestNotification(messageId);
       
       setShowSendTestDialog(false);
-      
-      toast({
-        title: "Test message sent",
-        description: "Your test message has been sent to selected recipients.",
-      });
     } catch (error) {
       console.error("Error sending test messages:", error);
-      toast({
-        title: "Error",
-        description: "Failed to send test message",
-        variant: "destructive",
-      });
     } finally {
       setIsActionLoading(false);
     }

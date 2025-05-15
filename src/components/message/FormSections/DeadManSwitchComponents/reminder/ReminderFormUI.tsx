@@ -1,4 +1,5 @@
 
+
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,7 +32,7 @@ export function ReminderFormUI({
   handleAddReminder,
   isDisabled
 }: ReminderFormUIProps) {
-  const { getIconHoverClasses, applyHoverEffect } = useHoverEffects();
+  const { getIconHoverClasses } = useHoverEffects();
   
   return (
     <div className="flex flex-col gap-2">
@@ -103,3 +104,4 @@ export function ReminderFormUI({
     </div>
   );
 }
+
