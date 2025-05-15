@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Alarm, Clock } from "lucide-react";
+import { Clock, Bell } from "lucide-react";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { MessageTimer } from "@/components/message/MessageTimer";
 
@@ -57,7 +57,7 @@ export function DeliverySettingsSection({
               <div className="text-sm text-muted-foreground">
                 {condition.condition_type === 'no_check_in' ? (
                   <div className="flex items-center">
-                    <Alarm className="h-3.5 w-3.5 mr-1.5 text-amber-500" />
+                    <Bell className="h-3.5 w-3.5 mr-1.5 text-amber-500" />
                     <span>Deadman's Switch</span>
                   </div>
                 ) : (
