@@ -1,3 +1,4 @@
+
 import { useParams } from "react-router-dom";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -49,7 +50,7 @@ export default function MessageDetail() {
     handleSendTestMessages
   } = useMessageActions(id, conditionId, setIsArmed);
 
-  // Get the recipient rendering function that takes no arguments
+  // Get the recipient rendering function
   const { renderRecipients } = MessageRecipientProvider({ recipients });
 
   // Function to manually trigger the deadman's switch
@@ -173,3 +174,4 @@ export default function MessageDetail() {
     />
   );
 }
+

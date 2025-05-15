@@ -1,4 +1,3 @@
-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, ChevronLeft, Clock, ClipboardCheck, Mail, PanelRight, Trash2 } from "lucide-react";
@@ -30,7 +29,7 @@ interface MessageDetailContentProps {
   handleDelete?: () => Promise<void>;
   formatDate: (dateString: string) => string;
   renderConditionType: () => string;
-  renderRecipients?: (recipients: Recipient[]) => JSX.Element[];
+  renderRecipients?: () => React.ReactNode;
   recipients?: Recipient[];
   onSendTestMessage?: () => void;
   showSendTestDialog?: boolean;
