@@ -1,48 +1,45 @@
 
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Mail } from "lucide-react";
-import { MessageRecipientsList } from "../MessageRecipientsList";
-import { HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { Recipient } from "@/types/message";
 
 interface RecipientsSectionProps {
-  recipients: any[];
-  isArmed: boolean;
-  isActionLoading: boolean;
-  onSendTestMessage: () => void;
+  recipients: Recipient[];
+  renderRecipients?: () => React.ReactNode;
 }
 
-export function RecipientsSection({
-  recipients,
-  isArmed,
-  isActionLoading,
-  onSendTestMessage
-}: RecipientsSectionProps) {
+export function RecipientsSection({ recipients, renderRecipients }: RecipientsSectionProps) {
   if (!recipients || recipients.length === 0) {
-    return null;
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <p className="text-muted-foreground">No recipients selected</p>
+        </CardContent>
+      </Card>
+    );
   }
   
   return (
-    <Card className="overflow-hidden">
-      <CardContent className="p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-medium">Recipients</h2>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onSendTestMessage}
-            disabled={isArmed || isActionLoading}
-            className="whitespace-nowrap"
-          >
-            <Mail className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} />
-            Send Test Message
-          </Button>
-        </div>
-        
-        <div className="mt-2">
-          <MessageRecipientsList recipients={recipients} />
-        </div>
+    <Card>
+      <CardContent className="p-6">
+        <h3 className="font-medium text-lg mb-4">Recipients</h3>
+        {renderRecipients ? (
+          renderRecipients()
+        ) : (
+          <div className="space-y-2">
+            {recipients.map((recipient) => (
+              <div key={recipient.id} className="flex items-center py-2 border-b last:border-0">
+                <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center mr-3">
+                  {recipient.name.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <span className="font-medium block">{recipient.name}</span>
+                  <span className="text-muted-foreground text-xs">{recipient.email}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
