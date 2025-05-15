@@ -63,7 +63,6 @@ export function useMessageActions(
     setShowSendTestDialog(true);
   }, []);
   
-  // Update signature to match what's expected in MessageDetail.tsx
   // Change to no-argument function that returns a Promise
   const handleSendTestMessages = useCallback(async () => {
     if (!messageId) return;
