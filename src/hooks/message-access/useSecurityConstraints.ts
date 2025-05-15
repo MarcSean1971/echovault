@@ -60,32 +60,38 @@ export function useSecurityConstraints({
           
           // Load message data if verified
           if (!needsPin || (needsPin && isVerified)) {
-            // Simulate loading the message
+            // Simulate loading the message with all required fields
             setMessage({
               id: messageId,
+              user_id: "test-user", // Required field
               title: "Test Message",
               content: "This is a test message content",
+              message_type: "text", // Required field
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
-              sender_id: "test-user",
               sender_name: "Test User",
               expires_at: null,
-              condition_id: "test-condition"
-            } as Message);
+              attachments: [], // Required field
+              share_location: false,
+              text_content: "This is a test message content"
+            });
           }
         } else if (isPreviewMode) {
-          // In preview mode, load a sample message
+          // In preview mode, load a sample message with all required fields
           setMessage({
             id: messageId,
+            user_id: "preview-user", // Required field
             title: "Preview Message",
             content: "This is a preview message content",
+            message_type: "text", // Required field
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
-            sender_id: "preview-user",
             sender_name: "Preview User",
             expires_at: null,
-            condition_id: "preview-condition"
-          } as Message);
+            attachments: [], // Required field
+            share_location: false,
+            text_content: "This is a preview message content"
+          });
         }
         
       } catch (error) {
