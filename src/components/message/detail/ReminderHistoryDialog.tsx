@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from "react";
 import {
   Dialog,
@@ -110,4 +108,3 @@ export function ReminderHistoryDialog({
     </Dialog>
   );
 }
-
