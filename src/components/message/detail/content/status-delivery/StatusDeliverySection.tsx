@@ -1,10 +1,16 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, memo, Suspense } from 'react';
 import { getEffectiveDeadline, parseReminderMinutes } from '@/utils/reminderUtils';
 import { MessageInfoSection } from './MessageInfoSection';
 import { DeliverySettingsSection } from './DeliverySettingsSection';
 import { ReminderSection } from './ReminderSection';
-import { DeadmanSwitchControls } from '../deadman/DeadmanSwitchControls';
+import { lazy } from 'react';
+import { Skeleton } from '@/components/ui/skeleton';
+
+// Lazy load the DeadmanSwitchControls component
+const DeadmanSwitchControls = lazy(() => import('../deadman/DeadmanSwitchControls').then(mod => ({
+  default: mod.DeadmanSwitchControls
+})));
 
 interface StatusDeliverySectionProps {
   message: any;
@@ -23,7 +29,8 @@ interface StatusDeliverySectionProps {
   handleForceDelivery?: () => Promise<void>;
 }
 
-export function StatusDeliverySection({ 
+// Use memo to prevent unnecessary re-renders
+export const StatusDeliverySection = memo(function StatusDeliverySection({ 
   message, 
   condition, 
   formatDate, 
@@ -40,18 +47,24 @@ export function StatusDeliverySection({
   handleForceDelivery
 }: StatusDeliverySectionProps) {
   const [effectiveDeadline, setEffectiveDeadline] = useState<Date | null>(null);
+  const [isDeadmanSwitch, setIsDeadmanSwitch] = useState(false);
   
   // Calculate effective deadline for both regular and check-in conditions
   useEffect(() => {
     if (externalDeadline) {
-      console.log(`[StatusDeliverySection] Using external deadline: ${externalDeadline.toISOString()}`);
       setEffectiveDeadline(externalDeadline);
     } else if (condition) {
       const calculatedDeadline = getEffectiveDeadline(condition);
-      console.log(`[StatusDeliverySection] Calculated deadline: ${calculatedDeadline ? calculatedDeadline.toISOString() : 'null'}`);
       setEffectiveDeadline(calculatedDeadline);
     } else {
       setEffectiveDeadline(null);
+    }
+    
+    // Check if this is a deadman switch condition
+    if (condition?.condition_type === 'no_check_in') {
+      setIsDeadmanSwitch(true);
+    } else {
+      setIsDeadmanSwitch(false);
     }
   }, [condition, externalDeadline, refreshTrigger]);
   
@@ -59,12 +72,10 @@ export function StatusDeliverySection({
   
   // Parse reminder minutes from the condition
   const reminderMinutes = parseReminderMinutes(condition?.reminder_hours);
-  
-  // Check if this is a deadman's switch condition
-  const isDeadmanSwitch = condition.condition_type === 'no_check_in';
 
   return (
     <div className="grid gap-4">
+      {/* Message Info Section - always load this first */}
       <MessageInfoSection
         message={message}
         formatDate={formatDate}
@@ -75,6 +86,7 @@ export function StatusDeliverySection({
         condition={condition}
       />
       
+      {/* Delivery Settings Section - always load this next */}
       <DeliverySettingsSection
         condition={condition}
         formatDate={formatDate}
@@ -85,22 +97,38 @@ export function StatusDeliverySection({
         onDeadlineReached={isDeadmanSwitch && handleForceDelivery ? handleForceDelivery : undefined}
       />
       
-      {/* Add Deadman Switch Controls for no_check_in condition types */}
+      {/* Lazy load Deadman Switch Controls for better performance */}
       {isDeadmanSwitch && (
-        <DeadmanSwitchControls
-          messageId={message.id}
-          reminderMinutes={reminderMinutes}
-          isArmed={isArmed}
-          onForceDelivery={handleForceDelivery}
-        />
+        <Suspense fallback={
+          <div className="animate-pulse">
+            <Skeleton className="h-[120px] w-full rounded-md" />
+          </div>
+        }>
+          <DeadmanSwitchControls
+            messageId={message.id}
+            reminderMinutes={reminderMinutes}
+            isArmed={isArmed}
+            onForceDelivery={handleForceDelivery}
+          />
+        </Suspense>
       )}
       
-      <ReminderSection
-        condition={condition}
-        deadline={effectiveDeadline}
-        isArmed={isArmed}
-        refreshTrigger={refreshTrigger}
-      />
+      {/* Lazy load Reminder Section as it's less critical */}
+      <Suspense fallback={
+        <div className="animate-pulse">
+          <Skeleton className="h-[80px] w-full rounded-md" />
+        </div>
+      }>
+        <ReminderSection
+          condition={condition}
+          deadline={effectiveDeadline}
+          isArmed={isArmed}
+          refreshTrigger={refreshTrigger}
+        />
+      </Suspense>
     </div>
   );
-}
+});
+
+// Export for simplified import
+export default StatusDeliverySection;
