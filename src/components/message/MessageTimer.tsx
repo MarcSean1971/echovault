@@ -10,16 +10,14 @@ interface MessageTimerProps {
   deadline: Date | null;
   isArmed: boolean;
   refreshTrigger?: number;
-  onDeadlineReached?: () => void; // Add callback for direct delivery trigger
 }
 
-export function MessageTimer({ deadline, isArmed, refreshTrigger, onDeadlineReached }: MessageTimerProps) {
+export function MessageTimer({ deadline, isArmed, refreshTrigger }: MessageTimerProps) {
   const isMobile = useIsMobile();
-  const { timeLeft, timePercentage, isUrgent, isVeryUrgent, hasReachedZero } = useCountdownTimer({
+  const { timeLeft, timePercentage, isUrgent, isVeryUrgent } = useCountdownTimer({
     deadline,
     isArmed,
-    refreshTrigger,
-    onDeadlineReached // Pass the callback to the hook
+    refreshTrigger
   });
   
   return (

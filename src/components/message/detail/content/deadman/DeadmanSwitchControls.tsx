@@ -1,26 +1,23 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Bell, Clock, AlertCircle, SendHorizontal, RefreshCw, AlertTriangle } from "lucide-react";
+import { Bell, Clock, AlertCircle, SendHorizontal, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { triggerManualReminder, triggerDeadmanSwitch } from "@/services/messages/whatsApp";
 import { toast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
-import { useCountdownTimer } from "@/hooks/useCountdownTimer";
 
 interface DeadmanSwitchControlsProps {
   messageId: string;
-  reminderMinutes?: number[]; 
+  reminderMinutes?: number[]; // Renamed from reminderHours to reminderMinutes for clarity
   isArmed: boolean;
-  onForceDelivery?: () => Promise<void>;
 }
 
 export function DeadmanSwitchControls({ 
   messageId, 
-  reminderMinutes = [],
-  isArmed,
-  onForceDelivery
+  reminderMinutes = [], // Variable renamed for clarity
+  isArmed
 }: DeadmanSwitchControlsProps) {
   const [isSendingReminder, setIsSendingReminder] = useState(false);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
@@ -67,6 +64,7 @@ export function DeadmanSwitchControls({
         duration: 3000,
       });
       
+      // Fix: Removing the second argument, as triggerManualReminder expects only messageId
       const result = await triggerManualReminder(messageId);
       
       if (result.success) {
@@ -93,40 +91,33 @@ export function DeadmanSwitchControls({
     }
   };
 
-  // Handler for force delivery - use provided handler if available, otherwise use default
+  // Added new handler for manual message delivery trigger
   const handleForceDelivery = async () => {
     try {
       setIsSendingMessage(true);
+      console.log(`Force delivering message ${messageId}`);
       
-      if (onForceDelivery) {
-        // Use the provided handler from parent component
-        await onForceDelivery();
+      toast({
+        title: "Forcing message delivery",
+        description: "Manually triggering deadman's switch...",
+        duration: 3000,
+      });
+      
+      const result = await triggerDeadmanSwitch(messageId);
+      
+      if (result.success) {
+        console.log(`Message delivery triggered successfully for ${messageId}`);
       } else {
-        // Default implementation if no handler provided
-        console.log(`[DeadmanSwitchControls] Force delivering message ${messageId}`);
-        
+        console.error("Error triggering message delivery:", result.error);
         toast({
-          title: "Forcing message delivery",
-          description: "Manually triggering deadman's switch...",
-          duration: 3000,
+          title: "Error delivering message",
+          description: result.error || "An unknown error occurred",
+          variant: "destructive",
+          duration: 5000,
         });
-        
-        const result = await triggerDeadmanSwitch(messageId);
-        
-        if (result.success) {
-          console.log(`[DeadmanSwitchControls] Message delivery triggered successfully for ${messageId}`);
-        } else {
-          console.error("[DeadmanSwitchControls] Error triggering message delivery:", result.error);
-          toast({
-            title: "Error delivering message",
-            description: result.error || "An unknown error occurred",
-            variant: "destructive",
-            duration: 5000,
-          });
-        }
       }
     } catch (error: any) {
-      console.error("[DeadmanSwitchControls] Error forcing message delivery:", error);
+      console.error("Error forcing message delivery:", error);
       toast({
         title: "Error",
         description: "Failed to deliver message: " + (error.message || "Check the console for details"),
@@ -139,50 +130,48 @@ export function DeadmanSwitchControls({
   };
 
   return (
-    <div className="mt-2 p-4 bg-slate-50 rounded-lg border">
-      <div className="flex items-center justify-between mb-3">
+    <div className="mt-4 p-4 bg-slate-50 rounded-lg border">
+      <div className="flex items-center justify-between mb-2">
         <h3 className="text-sm font-medium flex items-center">
           <Clock className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} />
-          Deadman's Switch Controls
+          Reminder Settings
         </h3>
-      </div>
-      
-      <p className="text-xs text-muted-foreground mb-3">
-        {isArmed ? 
-          "This message will be delivered automatically when the deadline is reached." : 
-          "Message must be armed before countdown starts and delivery can occur."}
-      </p>
-      
-      <div className="flex items-center justify-between mt-4 gap-2">
-        <div className="flex-1">
-          <div className="flex gap-2 flex-col sm:flex-row">
-            <Button 
-              variant="outline"
-              size="sm"
-              disabled={!isArmed || isSendingReminder}
-              onClick={handleTestReminder}
-              className={`flex items-center ${HOVER_TRANSITION}`}
-            >
-              <Bell className={`h-3.5 w-3.5 mr-1.5 ${HOVER_TRANSITION}`} />
-              {isSendingReminder ? "Sending..." : "Test Reminder"}
-            </Button>
-            
-            <Button 
-              variant={isSendingMessage ? "outline" : "destructive"}
-              size="sm"
-              disabled={!isArmed || isSendingMessage}
-              onClick={handleForceDelivery}
-              className={`flex items-center ${HOVER_TRANSITION}`}
-            >
-              <SendHorizontal className={`h-3.5 w-3.5 mr-1.5 ${HOVER_TRANSITION}`} />
-              {isSendingMessage ? "Sending..." : "Force Delivery Now"}
-            </Button>
-          </div>
+        <div className="flex space-x-2">
+          <Button 
+            variant="outline"
+            size="sm"
+            disabled={!isArmed || isSendingReminder}
+            onClick={handleTestReminder}
+            className={`flex items-center ${HOVER_TRANSITION}`}
+          >
+            <Bell className={`h-3 w-3 mr-1 ${HOVER_TRANSITION}`} />
+            {isSendingReminder ? "Sending..." : "Test Reminder"}
+          </Button>
+          
+          {/* Add a new button for manual delivery */}
+          <Button 
+            variant="outline"
+            size="sm"
+            disabled={!isArmed || isSendingMessage}
+            onClick={handleForceDelivery}
+            className={`flex items-center ${HOVER_TRANSITION}`}
+          >
+            <SendHorizontal className={`h-3 w-3 mr-1 ${HOVER_TRANSITION}`} />
+            {isSendingMessage ? "Sending..." : "Force Delivery"}
+          </Button>
         </div>
       </div>
       
+      <div className="text-xs text-muted-foreground">
+        {isArmed ? (
+          <p>Reminders will be sent to recipients before the message triggers.</p>
+        ) : (
+          <p className="text-amber-600 font-medium">Message must be armed before reminders can be sent.</p>
+        )}
+      </div>
+      
       {reminderMinutes.length > 0 ? (
-        <div className="mt-4">
+        <div className="mt-2">
           <p className="text-xs font-medium mb-1">Reminders scheduled at:</p>
           <div className="flex flex-wrap gap-1">
             {reminderMinutes.sort((a, b) => b - a).map((minutes) => (
@@ -205,14 +194,13 @@ export function DeadmanSwitchControls({
         </div>
       )}
       
-      <div className="mt-4 border-t pt-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center text-xs">
-            <AlertTriangle className="h-3.5 w-3.5 text-amber-500 mr-1" />
-            <p className="text-muted-foreground">
-              If the automatic delivery fails, use the "Force Delivery" button to manually deliver the message.
-            </p>
-          </div>
+      {/* Add a notice for manual delivery */}
+      <div className="mt-3 border-t pt-3">
+        <div className="flex items-center text-xs">
+          <RefreshCw className="h-3 w-3 text-blue-500 mr-1" />
+          <p className="text-muted-foreground">
+            If the automatic delivery fails, use the "Force Delivery" button to manually deliver the message.
+          </p>
         </div>
       </div>
     </div>

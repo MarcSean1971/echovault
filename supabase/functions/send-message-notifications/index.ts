@@ -29,21 +29,11 @@ const handler = async (req: Request): Promise<Response> => {
       requestData = {};
     }
     
-    const { 
-      messageId, 
-      isEmergency = false, 
-      debug = false, 
-      keepArmed = undefined,
-      forceDelivery = false,
-      timestamp = new Date().toISOString(),
-      triggeredBy = 'api'
-    } = requestData;
+    const { messageId, isEmergency = false, debug = false, keepArmed = undefined } = requestData;
     
     console.log(`===== SEND MESSAGE NOTIFICATIONS =====`);
-    console.log(`Starting notification process at ${timestamp}`);
-    console.log(`Triggered by: ${triggeredBy}`);
+    console.log(`Starting notification process at ${new Date().toISOString()}`);
     console.log(`DEBUG MODE: ${debug ? 'Enabled' : 'Disabled'}`);
-    console.log(`FORCE DELIVERY: ${forceDelivery ? 'Enabled' : 'Disabled'}`);
     console.log(`Processing message notifications${messageId ? ` for message ID: ${messageId}` : ''}`);
     console.log(`Is emergency notification: ${isEmergency ? 'YES' : 'No'}`);
     if (keepArmed !== undefined) {
@@ -64,8 +54,7 @@ const handler = async (req: Request): Promise<Response> => {
           success: false, 
           error: "No messages found to notify",
           requestedMessageId: messageId || null,
-          timestamp: timestamp,
-          triggeredBy
+          timestamp: new Date().toISOString()
         }),
         {
           status: 404,
@@ -94,9 +83,7 @@ const handler = async (req: Request): Promise<Response> => {
       messagesToNotify.map(message => 
         sendMessageNotification(message, {
           isEmergency,
-          forceDelivery,
-          debug: debug || isEmergency, // Always enable debug mode for emergency messages
-          keepArmed
+          debug: debug || isEmergency // Always enable debug mode for emergency messages
         })
       )
     );
@@ -118,8 +105,7 @@ const handler = async (req: Request): Promise<Response> => {
         successful_notifications: successful,
         failed_notifications: failed,
         results: results,
-        timestamp: timestamp,
-        triggeredBy
+        timestamp: new Date().toISOString()
       }),
       {
         status: 200,

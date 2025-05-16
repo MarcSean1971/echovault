@@ -4,7 +4,6 @@ import { getEffectiveDeadline, parseReminderMinutes } from '@/utils/reminderUtil
 import { MessageInfoSection } from './MessageInfoSection';
 import { DeliverySettingsSection } from './DeliverySettingsSection';
 import { ReminderSection } from './ReminderSection';
-import { DeadmanSwitchControls } from '../deadman/DeadmanSwitchControls';
 
 interface StatusDeliverySectionProps {
   message: any;
@@ -20,7 +19,6 @@ interface StatusDeliverySectionProps {
   isDelivered?: boolean;
   viewCount?: number | null;
   isLoadingDelivery?: boolean;
-  handleForceDelivery?: () => Promise<void>;
 }
 
 export function StatusDeliverySection({ 
@@ -36,20 +34,16 @@ export function StatusDeliverySection({
   lastDelivered,
   isDelivered,
   viewCount,
-  isLoadingDelivery,
-  handleForceDelivery
+  isLoadingDelivery
 }: StatusDeliverySectionProps) {
   const [effectiveDeadline, setEffectiveDeadline] = useState<Date | null>(null);
   
   // Calculate effective deadline for both regular and check-in conditions
   useEffect(() => {
     if (externalDeadline) {
-      console.log(`[StatusDeliverySection] Using external deadline: ${externalDeadline.toISOString()}`);
       setEffectiveDeadline(externalDeadline);
     } else if (condition) {
-      const calculatedDeadline = getEffectiveDeadline(condition);
-      console.log(`[StatusDeliverySection] Calculated deadline: ${calculatedDeadline ? calculatedDeadline.toISOString() : 'null'}`);
-      setEffectiveDeadline(calculatedDeadline);
+      setEffectiveDeadline(getEffectiveDeadline(condition));
     } else {
       setEffectiveDeadline(null);
     }
@@ -59,9 +53,6 @@ export function StatusDeliverySection({
   
   // Parse reminder minutes from the condition
   const reminderMinutes = parseReminderMinutes(condition?.reminder_hours);
-  
-  // Check if this is a deadman's switch condition
-  const isDeadmanSwitch = condition.condition_type === 'no_check_in';
 
   return (
     <div className="grid gap-4">
@@ -82,18 +73,7 @@ export function StatusDeliverySection({
         deadline={effectiveDeadline}
         isArmed={isArmed}
         refreshTrigger={refreshTrigger}
-        onDeadlineReached={isDeadmanSwitch && handleForceDelivery ? handleForceDelivery : undefined}
       />
-      
-      {/* Add Deadman Switch Controls for no_check_in condition types */}
-      {isDeadmanSwitch && (
-        <DeadmanSwitchControls
-          messageId={message.id}
-          reminderMinutes={reminderMinutes}
-          isArmed={isArmed}
-          onForceDelivery={handleForceDelivery}
-        />
-      )}
       
       <ReminderSection
         condition={condition}
