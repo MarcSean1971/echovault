@@ -48,12 +48,14 @@ export async function createConditionInDb(conditionData: any) {
           });
         } else {
           // For date-based conditions, use trigger_date
+          // FIX: Add lastChecked parameter which was missing
           await createOrUpdateReminderSchedule({
             messageId: newCondition.message_id,
             conditionId: newCondition.id,
             conditionType: newCondition.condition_type,
             triggerDate: newCondition.trigger_date,
-            reminderMinutes
+            reminderMinutes,
+            lastChecked: newCondition.last_checked // Add the missing parameter
           });
         }
       } catch (scheduleError) {

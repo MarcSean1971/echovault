@@ -1,7 +1,17 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
-import { getReminderSchedule } from "@/utils/reminderScheduler";
+import { generateReminderSchedule } from "@/utils/reminderScheduler";
+
+// Define the Reminder type that needs to be exported
+export interface Reminder {
+  id: string;
+  message_id: string;
+  condition_id: string;
+  sent_at: string;
+  deadline: string;
+  scheduled_for?: string | null;
+  user_id?: string;
+}
 
 interface ReminderScheduleParams {
   messageId: string;
@@ -163,6 +173,29 @@ export async function getReminderScheduleForMessage(messageId: string): Promise<
     return data || [];
   } catch (error) {
     console.error("[REMINDER-SERVICE] Error in getReminderScheduleForMessage:", error);
+    return [];
+  }
+}
+
+/**
+ * Get reminder history for a specific message
+ */
+export async function getReminderHistory(messageId: string): Promise<Reminder[]> {
+  try {
+    const { data, error } = await supabase
+      .from('sent_reminders')
+      .select('*')
+      .eq('message_id', messageId)
+      .order('sent_at', { ascending: false });
+      
+    if (error) {
+      console.error("[REMINDER-SERVICE] Error fetching reminder history:", error);
+      return [];
+    }
+    
+    return data as Reminder[] || [];
+  } catch (error) {
+    console.error("[REMINDER-SERVICE] Error in getReminderHistory:", error);
     return [];
   }
 }
