@@ -2,6 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { createOrUpdateReminderSchedule } from "../../reminderService";
 import { parseReminderMinutes } from "@/utils/reminderUtils";
+import { isCheckInCondition } from "../../../../../supabase/functions/send-reminder-emails/utils/condition-type";
 
 /**
  * Creates a new condition in the database
@@ -32,16 +33,29 @@ export async function createConditionInDb(conditionData: any) {
       try {
         const reminderMinutes = parseReminderMinutes(newCondition.reminder_hours);
         
-        await createOrUpdateReminderSchedule(
-          newCondition.message_id,
-          newCondition.id,
-          newCondition.condition_type,
-          newCondition.trigger_date,
-          reminderMinutes,
-          newCondition.last_checked,
-          newCondition.hours_threshold,
-          newCondition.minutes_threshold
-        );
+        // Check condition type to determine the correct parameters
+        if (isCheckInCondition(newCondition.condition_type)) {
+          // For check-in conditions, use last_checked and threshold
+          await createOrUpdateReminderSchedule({
+            messageId: newCondition.message_id,
+            conditionId: newCondition.id,
+            conditionType: newCondition.condition_type,
+            triggerDate: null,
+            reminderMinutes,
+            lastChecked: newCondition.last_checked,
+            hoursThreshold: newCondition.hours_threshold,
+            minutesThreshold: newCondition.minutes_threshold
+          });
+        } else {
+          // For date-based conditions, use trigger_date
+          await createOrUpdateReminderSchedule({
+            messageId: newCondition.message_id,
+            conditionId: newCondition.id,
+            conditionType: newCondition.condition_type,
+            triggerDate: newCondition.trigger_date,
+            reminderMinutes
+          });
+        }
       } catch (scheduleError) {
         console.error("Error creating reminder schedule:", scheduleError);
         // Don't throw, just log - we don't want to fail the condition creation

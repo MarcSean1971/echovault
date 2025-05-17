@@ -22,7 +22,7 @@ export function ReminderSection({
   // Parse reminder minutes from the condition
   const reminderMinutes = parseReminderMinutes(condition?.reminder_hours);
   
-  // Get upcoming reminder information
+  // Get upcoming reminder information - pass only 2 arguments as expected
   const { upcomingReminders, hasReminders } = useNextReminders(
     deadline,
     reminderMinutes,
@@ -58,7 +58,7 @@ export function ReminderSection({
                   {upcomingReminders.map((reminder, index) => (
                     <span 
                       key={index} 
-                      className="inline-block px-2 py-1 bg-amber-50 border border-amber-200 text-amber-700 rounded-md text-xs hover:bg-amber-100 ${HOVER_TRANSITION}"
+                      className="inline-block px-2 py-1 bg-amber-50 border border-amber-200 text-amber-700 rounded-md text-xs hover:bg-amber-100 transition-colors"
                       title={reminder.formattedText}
                     >
                       {reminder.formattedShortDate}

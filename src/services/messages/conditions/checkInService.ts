@@ -1,7 +1,9 @@
+
 import { getAuthClient } from "@/lib/supabaseClient";
 import { CheckInResult, CheckInDeadlineResult } from "./types";
 import { updateConditionsLastChecked } from "./dbOperations";
 import { MessageCondition, Recipient, TriggerType } from "@/types/message";
+import { createOrUpdateReminderSchedule } from "../reminderService";
 
 export async function performCheckIn(userId: string, method: string): Promise<CheckInResult> {
   const client = await getAuthClient();
@@ -12,7 +14,7 @@ export async function performCheckIn(userId: string, method: string): Promise<Ch
     // we'll update the last_checked timestamp on all active conditions
     const { data: conditionsData, error: conditionsError } = await client
       .from("message_conditions")
-      .select("id, message_id, messages!inner(user_id)")
+      .select("id, message_id, condition_type, hours_threshold, minutes_threshold, reminder_hours, messages!inner(user_id)")
       .eq("messages.user_id", userId)
       .eq("active", true);
       
@@ -24,6 +26,27 @@ export async function performCheckIn(userId: string, method: string): Promise<Ch
     if (conditionsData && conditionsData.length > 0) {
       const conditionIds = conditionsData.map(c => c.id);
       await updateConditionsLastChecked(conditionIds, now);
+      
+      // Also update all reminder schedules for check-in conditions
+      // This is a best-effort approach, so we don't await these
+      conditionsData.forEach(condition => {
+        if (['no_check_in', 'recurring_check_in', 'inactivity_to_date'].includes(condition.condition_type)) {
+          const reminderMinutes = condition.reminder_hours || [1440, 720, 360, 180, 60]; // Default reminder times
+          
+          createOrUpdateReminderSchedule({
+            messageId: condition.message_id,
+            conditionId: condition.id,
+            conditionType: condition.condition_type,
+            triggerDate: null,
+            reminderMinutes,
+            lastChecked: now,
+            hoursThreshold: condition.hours_threshold,
+            minutesThreshold: condition.minutes_threshold
+          }).catch(err => {
+            console.error(`Failed to update reminder schedule for condition ${condition.id}:`, err);
+          });
+        }
+      });
     }
     
     // Log the check-in in the messages table for now (since we don't have check_ins yet)

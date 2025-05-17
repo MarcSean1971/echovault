@@ -3,6 +3,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { generateReminderSchedule, generateCheckInReminderSchedule } from "@/utils/reminderScheduler";
 
+// Define a type for the reminder schedule options
+interface ReminderScheduleOptions {
+  messageId: string;
+  conditionId: string;
+  conditionType: string;
+  triggerDate: string | null;
+  reminderMinutes: number[];
+  lastChecked?: string | null;
+  hoursThreshold?: number;
+  minutesThreshold?: number;
+}
+
 /**
  * Trigger reminder check with the new schedule-based system
  */
@@ -54,47 +66,38 @@ export async function triggerReminderCheck(messageId: string, forceSend: boolean
 /**
  * Create or update reminder schedule based on message condition
  */
-export async function createOrUpdateReminderSchedule(
-  messageId: string,
-  conditionId: string,
-  conditionType: string,
-  triggerDate: string | null,
-  reminderMinutes: number[] = [1440, 720, 360, 180, 60], // Default reminder times
-  lastChecked?: string | null,
-  hoursThreshold?: number,
-  minutesThreshold?: number
-): Promise<boolean> {
+export async function createOrUpdateReminderSchedule(options: ReminderScheduleOptions): Promise<boolean> {
   try {
-    console.log(`Creating/updating reminder schedule for message ${messageId}`);
-    console.log(`Condition type: ${conditionType}`);
+    console.log(`Creating/updating reminder schedule for message ${options.messageId}`);
+    console.log(`Condition type: ${options.conditionType}`);
     
-    if (['no_check_in', 'recurring_check_in', 'inactivity_to_date'].includes(conditionType)) {
+    if (['no_check_in', 'recurring_check_in', 'inactivity_to_date'].includes(options.conditionType)) {
       // For check-in type conditions, use last checked date + threshold
-      if (!lastChecked) {
+      if (!options.lastChecked) {
         console.warn("No last checked date for check-in condition, can't create schedule");
         return false;
       }
       
-      if (hoursThreshold === undefined) {
+      if (options.hoursThreshold === undefined) {
         console.warn("No hours threshold for check-in condition, can't create schedule");
         return false;
       }
       
       return await generateCheckInReminderSchedule(
-        messageId,
-        conditionId,
-        lastChecked ? new Date(lastChecked) : null,
-        hoursThreshold || 0,
-        minutesThreshold || 0,
-        reminderMinutes
+        options.messageId,
+        options.conditionId,
+        options.lastChecked ? new Date(options.lastChecked) : null,
+        options.hoursThreshold || 0,
+        options.minutesThreshold || 0,
+        options.reminderMinutes
       );
     } else {
       // For normal conditions with trigger date
       return await generateReminderSchedule(
-        messageId,
-        conditionId,
-        triggerDate ? new Date(triggerDate) : null,
-        reminderMinutes
+        options.messageId,
+        options.conditionId,
+        options.triggerDate ? new Date(options.triggerDate) : null,
+        options.reminderMinutes
       );
     }
   } catch (error) {
