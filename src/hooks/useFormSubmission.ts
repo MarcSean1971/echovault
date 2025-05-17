@@ -100,11 +100,11 @@ export function useFormSubmission() {
             return;
           }
           
-          // Get the directly processed hours threshold - no special handling needed now
+          // Get the directly processed hours threshold
           const finalHoursThreshold = processTimeThreshold(hoursThreshold, minutesThreshold);
           
-          // Create the message condition with all options
-          // Note: createMessageCondition now properly maps panicTriggerConfig to panic_config
+          // Create the message condition
+          // Note: Mapping is now handled consistently in createMessageCondition
           await createMessageCondition(
             message.id,
             conditionType as TriggerType,
@@ -125,7 +125,7 @@ export function useFormSubmission() {
               // Reminders - values already in minutes
               reminderHours: reminderMinutes,
               
-              // Panic trigger settings - will be mapped to panic_config
+              // Panic trigger settings
               panicTriggerConfig,
               
               // Custom check-in code
@@ -155,7 +155,7 @@ export function useFormSubmission() {
         description: "Your message and trigger settings have been saved"
       });
       
-      // Navigate back to messages list instead of dashboard
+      // Navigate back to messages list
       setTimeout(() => {
         navigate("/messages");
       }, 1500);

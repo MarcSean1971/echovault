@@ -5,13 +5,13 @@ import {
   createConditionInDb,
   fetchConditionsFromDb,
   updateConditionInDb,
-  deleteConditionFromDb,
-  mapDbConditionToMessageCondition
+  deleteConditionFromDb
 } from "./conditions/dbOperations";
 import { performCheckIn, getNextCheckInDeadline } from "./conditions/checkInService";
 import { triggerPanicMessage } from "./conditions/panicTriggerService";
 import { getMessageStatus } from "./conditions/messageStatusService";
 import { armMessage, disarmMessage, getMessageDeadline } from "./conditions/messageArmingService";
+import { mapDbConditionToMessageCondition, mapMessageConditionToDb } from "./conditions/helpers/map-helpers";
 
 // Create a message condition
 export async function createMessageCondition(
@@ -50,13 +50,8 @@ export async function updateMessageCondition(
   conditionId: string,
   updates: Partial<MessageCondition>
 ): Promise<MessageCondition> {
-  // Map panic_trigger_config to panic_config for database storage
-  const dbUpdates = { ...updates };
-  
-  if ('panic_trigger_config' in updates) {
-    dbUpdates.panic_config = updates.panic_trigger_config;
-    delete dbUpdates.panic_trigger_config;
-  }
+  // Use the centralized mapping function to ensure consistency
+  const dbUpdates = mapMessageConditionToDb(updates);
   
   const data = await updateConditionInDb(conditionId, dbUpdates);
   return mapDbConditionToMessageCondition(data);

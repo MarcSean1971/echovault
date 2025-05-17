@@ -2,11 +2,8 @@
 import { MessageCondition } from "@/types/message";
 
 /**
- * Utilities for handling message configuration
- */
-
-/**
  * Get message config from the selected message or default message
+ * Unified approach that simplifies accessing panic trigger config
  */
 export const getMessageConfig = (
   selectedMessageId: string | null, 
@@ -19,18 +16,9 @@ export const getMessageConfig = (
   
   if (!message) return null;
   
-  // First check panic_trigger_config (which comes from mapping panic_config)
-  if (message.panic_trigger_config) {
-    return message.panic_trigger_config;
-  }
-  
-  // Fall back to panic_config if panic_trigger_config is not available
-  // This is for backward compatibility
-  if (message.panic_config) {
-    return message.panic_config;
-  }
-  
-  return null;
+  // Simply use panic_trigger_config which is now consistently mapped
+  // from the database's panic_config in our mapDbConditionToMessageCondition function
+  return message.panic_trigger_config;
 };
 
 /**

@@ -4,7 +4,6 @@
  */
 
 import { formatDistanceToNow, formatRelative, isAfter, addMinutes, addHours, isBefore, format } from "date-fns";
-import { formatThreshold, formatReminderTime } from "@/components/message/FormSections/DeadManSwitchComponents/reminder/TimeConversionUtils";
 
 /**
  * Calculate all upcoming reminders based on a deadline and reminder configuration
@@ -81,6 +80,7 @@ export function getAllUpcomingReminderTexts(deadline: Date | null, reminderMinut
 
 /**
  * Convert reminder_hours from database (actually in minutes) to an array of minutes
+ * This function helps with the misleading column name in the database
  */
 export function parseReminderMinutes(reminderHours: number[] | null | undefined): number[] {
   if (!reminderHours || !Array.isArray(reminderHours)) {
@@ -143,4 +143,3 @@ export function getEffectiveDeadline(condition: any): Date | null {
   
   return null;
 }
-

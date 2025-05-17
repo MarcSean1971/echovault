@@ -1,8 +1,8 @@
 
-// Re-export db operations
+// Re-export db operations with consistent mapping
 export * from "./operations/create-operations";
 export * from "./operations/update-operations";
-export * from "./operations/fetch-operations";
+export * from "./operations/fetch-operations"; 
 export * from "./operations/delete-operations";
 export * from "./operations/get-operations";
 export * from "./helpers/map-helpers";

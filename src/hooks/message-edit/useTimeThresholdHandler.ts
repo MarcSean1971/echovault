@@ -1,8 +1,18 @@
 
+/**
+ * Hook for handling time threshold conversion 
+ * Provides a clean way to process hours and minutes thresholds
+ */
 export function useTimeThresholdHandler() {
+  /**
+   * Process time threshold values for database storage
+   * @param hoursThreshold Hours component of the threshold
+   * @param minutesThreshold Minutes component of the threshold
+   * @returns The processed hours value for the database
+   */
   const processTimeThreshold = (hoursThreshold: number, minutesThreshold: number) => {
-    // For database storage, when hours is 0, we no longer need to artificially inflate it
-    // We can now store a 0 for hours when there are minutes
+    // Simply return the hours value - we don't need special handling anymore
+    // as we now store minutes explicitly in the minutes_threshold column
     return hoursThreshold;
   };
 

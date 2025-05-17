@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { getReminderHistory } from "@/services/messages/reminderService";
-import { migrateMessageSchedule } from "@/services/messages/reminderMigration";
 import { getUpcomingReminders, formatReminderSchedule } from "@/utils/reminderScheduler";
 
 export interface ScheduledReminderInfo {
@@ -40,24 +39,11 @@ export function useScheduledReminders(messageId: string, refreshTrigger: number 
   useEffect(() => {
     const fetchReminderData = async () => {
       try {
-        // First, try to get upcoming reminders from the schedule system
+        setScheduledInfo(prev => ({ ...prev, isLoading: true }));
+        
+        // Get upcoming reminders from the schedule
         const upcomingReminders = await getUpcomingReminders(messageId);
         const hasSchedule = upcomingReminders.length > 0;
-        
-        // If no schedule exists, try to migrate this message
-        if (!hasSchedule) {
-          console.log(`No reminder schedule found for message ${messageId}, attempting migration`);
-          const migrationSuccess = await migrateMessageSchedule(messageId);
-          
-          if (migrationSuccess) {
-            console.log(`Successfully migrated reminder schedule for message ${messageId}`);
-            // Fetch again after migration
-            const migratedReminders = await getUpcomingReminders(messageId);
-            if (migratedReminders.length > 0) {
-              console.log(`Found ${migratedReminders.length} reminders after migration`);
-            }
-          }
-        }
         
         // Get reminder history for last reminders
         const reminderHistory = await getReminderHistory(messageId);
