@@ -31,10 +31,27 @@ export async function performCheckIn(userId: string, method: string): Promise<Ch
       // Also update all reminder schedules for check-in conditions
       for (const condition of conditionsData) {
         if (['no_check_in', 'recurring_check_in', 'inactivity_to_date'].includes(condition.condition_type)) {
-          console.log(`Generating new reminder schedule for condition ${condition.id} after check-in`);
+          console.log(`[CHECK-IN] Generating new reminder schedule for condition ${condition.id}, message ${condition.message_id} after check-in`);
           const reminderMinutes = condition.reminder_hours || [1440, 720, 360, 180, 60]; // Default reminder times
           
           try {
+            // First explicitly mark all old reminders as obsolete for this message
+            // This is critical to fix the issue!
+            const { createOrUpdateReminderSchedule } = await import("../reminderService");
+            const { supabase } = await import("@/integrations/supabase/client");
+            
+            // Mark all pending reminders for this message as obsolete
+            console.log(`[CHECK-IN] Explicitly marking all reminders as obsolete for message ${condition.message_id} before creating new ones`);
+            const { error: obsoleteError } = await supabase
+              .from('reminder_schedule')
+              .update({ status: 'obsolete' })
+              .eq('message_id', condition.message_id)
+              .eq('status', 'pending');
+            
+            if (obsoleteError) {
+              console.error(`[CHECK-IN] Error marking reminders as obsolete: ${obsoleteError.message}`);
+            }
+            
             // Make this awaited so we ensure reminders are properly updated
             await createOrUpdateReminderSchedule({
               messageId: condition.message_id,
@@ -49,16 +66,18 @@ export async function performCheckIn(userId: string, method: string): Promise<Ch
             
             // Dispatch event to notify UI of condition update
             if (typeof window !== 'undefined') {
+              console.log(`[CHECK-IN] Dispatching conditions-updated event for condition ${condition.id}, message ${condition.message_id}`);
               window.dispatchEvent(new CustomEvent('conditions-updated', { 
                 detail: { 
                   conditionId: condition.id,
                   messageId: condition.message_id, 
-                  type: 'check-in'
+                  type: 'check-in',
+                  timestamp: Date.now() // Add unique timestamp to ensure events are distinct
                 }
               }));
             }
           } catch (err) {
-            console.error(`Failed to update reminder schedule for condition ${condition.id}:`, err);
+            console.error(`[CHECK-IN] Failed to update reminder schedule for condition ${condition.id}:`, err);
           }
         }
       }
@@ -71,7 +90,7 @@ export async function performCheckIn(userId: string, method: string): Promise<Ch
       conditions_updated: conditionsData?.length || 0
     };
   } catch (error: any) {
-    console.error("Error performing check-in:", error);
+    console.error("[CHECK-IN] Error performing check-in:", error);
     throw new Error(error.message || "Failed to perform check-in");
   }
 }

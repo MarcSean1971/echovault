@@ -74,6 +74,7 @@ export async function updateNextReminderTime(
 
 /**
  * Mark reminders as obsolete when creating a new schedule
+ * Now supports marking all reminders for a message as obsolete
  */
 export async function markRemindersObsolete(
   conditionId: string,
@@ -81,6 +82,9 @@ export async function markRemindersObsolete(
 ): Promise<boolean> {
   try {
     const supabase = supabaseClient();
+    
+    // Enhanced logging to track usage
+    console.log(`[REMINDER-TRACKING] Marking reminders as obsolete for condition ${conditionId}${messageId ? `, message ${messageId}` : ''}`);
     
     let query = supabase
       .from('reminder_schedule')
@@ -92,21 +96,22 @@ export async function markRemindersObsolete(
       query = query.eq('condition_id', conditionId);
     }
     
-    // Filter by message ID if provided
+    // Filter by message ID if provided - THIS IS KEY FOR FIXING THE ISSUE
     if (messageId) {
       query = query.eq('message_id', messageId);
     }
     
-    const { error } = await query;
+    const { error, count } = await query;
     
     if (error) {
-      console.error("Error marking reminders obsolete:", error);
+      console.error("[REMINDER-TRACKING] Error marking reminders obsolete:", error);
       return false;
     }
     
+    console.log(`[REMINDER-TRACKING] Successfully marked ${count || 'unknown number of'} reminders as obsolete`);
     return true;
   } catch (error) {
-    console.error("Error in markRemindersObsolete:", error);
+    console.error("[REMINDER-TRACKING] Error in markRemindersObsolete:", error);
     return false;
   }
 }

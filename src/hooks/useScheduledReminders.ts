@@ -16,6 +16,7 @@ export interface ScheduledReminderInfo {
   isLoading: boolean;
   upcomingReminders: string[];
   hasSchedule: boolean;
+  lastRefreshed?: number;
 }
 
 /**
@@ -33,17 +34,21 @@ export function useScheduledReminders(messageId: string, refreshTrigger: number 
     },
     isLoading: true,
     upcomingReminders: [],
-    hasSchedule: false
+    hasSchedule: false,
+    lastRefreshed: Date.now()
   });
 
   useEffect(() => {
     const fetchReminderData = async () => {
       try {
+        console.log(`[useScheduledReminders] Fetching reminder data for message ${messageId} (refreshTrigger: ${refreshTrigger})`);
         setScheduledInfo(prev => ({ ...prev, isLoading: true }));
         
         // Get upcoming reminders from the schedule
         const upcomingReminders = await getUpcomingReminders(messageId);
         const hasSchedule = upcomingReminders.length > 0;
+        
+        console.log(`[useScheduledReminders] Found ${upcomingReminders.length} upcoming reminders`);
         
         // Get reminder history for last reminders
         const reminderHistory = await getReminderHistory(messageId);
@@ -89,7 +94,7 @@ export function useScheduledReminders(messageId: string, refreshTrigger: number 
           ? formatDistanceToNow(lastScheduledFor, { addSuffix: false }) + " ago"
           : null;
         
-        // Update state with all information
+        // Update state with all information and current timestamp
         setScheduledInfo({
           nextReminder: nextReminderDate,
           formattedNextReminder,
@@ -101,10 +106,11 @@ export function useScheduledReminders(messageId: string, refreshTrigger: number 
           },
           isLoading: false,
           upcomingReminders: formattedReminders,
-          hasSchedule
+          hasSchedule,
+          lastRefreshed: Date.now()
         });
       } catch (error) {
-        console.error("Error in useScheduledReminders:", error);
+        console.error("[useScheduledReminders] Error fetching reminder data:", error);
         setScheduledInfo(prev => ({ ...prev, isLoading: false }));
       }
     };

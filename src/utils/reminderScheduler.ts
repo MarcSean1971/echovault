@@ -22,8 +22,9 @@ export async function generateReminderSchedule(
       return false;
     }
     
-    // First, mark existing reminder schedules as obsolete
-    await markExistingRemindersObsolete(conditionId);
+    // First, mark existing reminder schedules as obsolete - PASS BOTH IDS!
+    console.log(`[REMINDER-SCHEDULER] Marking existing reminders obsolete for message ${messageId}, condition ${conditionId}`);
+    await markExistingRemindersObsolete(conditionId, messageId);
     
     // Generate reminder timestamps
     const scheduleEntries = reminderMinutes.map(minutes => {
@@ -50,7 +51,7 @@ export async function generateReminderSchedule(
       retry_strategy: 'aggressive' // Use aggressive retry strategy
     });
     
-    console.log(`Generated ${scheduleEntries.length} schedule entries for message ${messageId}`);
+    console.log(`[REMINDER-SCHEDULER] Generated ${scheduleEntries.length} schedule entries for message ${messageId}`);
     
     // Insert schedule entries with conflict handling for idempotency
     const { error } = await supabase
@@ -61,38 +62,41 @@ export async function generateReminderSchedule(
       });
     
     if (error) {
-      console.error("Error storing reminder schedule:", error);
+      console.error("[REMINDER-SCHEDULER] Error storing reminder schedule:", error);
       return false;
     }
     
+    console.log(`[REMINDER-SCHEDULER] Successfully stored reminder schedule for message ${messageId}`);
     return true;
   } catch (error) {
-    console.error("Error in generateReminderSchedule:", error);
+    console.error("[REMINDER-SCHEDULER] Error in generateReminderSchedule:", error);
     return false;
   }
 }
 
 /**
  * Mark existing reminders as obsolete when creating new schedule
+ * Now ensures both condition ID and message ID are used properly
  */
-async function markExistingRemindersObsolete(conditionId: string): Promise<boolean> {
+async function markExistingRemindersObsolete(conditionId: string, messageId: string): Promise<boolean> {
   try {
-    console.log(`Marking existing reminders as obsolete for condition ${conditionId}`);
+    console.log(`[REMINDER-SCHEDULER] Marking existing reminders as obsolete for condition ${conditionId}, message ${messageId}`);
     
-    const { error } = await supabase
+    const { error, count } = await supabase
       .from('reminder_schedule')
       .update({ status: 'obsolete' })
-      .eq('condition_id', conditionId)
-      .eq('status', 'pending');
+      .eq('status', 'pending')
+      .eq('message_id', messageId);
     
     if (error) {
-      console.error("Error marking reminders as obsolete:", error);
+      console.error("[REMINDER-SCHEDULER] Error marking reminders as obsolete:", error);
       return false;
     }
     
+    console.log(`[REMINDER-SCHEDULER] Marked ${count || 'unknown number of'} reminders as obsolete for message ${messageId}`);
     return true;
   } catch (error) {
-    console.error("Error in markExistingRemindersObsolete:", error);
+    console.error("[REMINDER-SCHEDULER] Error in markExistingRemindersObsolete:", error);
     return false;
   }
 }
@@ -110,7 +114,7 @@ export async function generateCheckInReminderSchedule(
 ): Promise<boolean> {
   try {
     if (!lastCheckedDate) {
-      console.warn(`Cannot generate check-in reminder schedule for message ${messageId} - no last checked date`);
+      console.warn(`[REMINDER-SCHEDULER] Cannot generate check-in reminder schedule for message ${messageId} - no last checked date`);
       return false;
     }
     
@@ -119,15 +123,17 @@ export async function generateCheckInReminderSchedule(
     virtualDeadline.setHours(virtualDeadline.getHours() + hoursThreshold);
     virtualDeadline.setMinutes(virtualDeadline.getMinutes() + minutesThreshold);
     
+    console.log(`[REMINDER-SCHEDULER] Generating reminder schedule for message ${messageId} with virtual deadline ${virtualDeadline.toISOString()}`);
     return generateReminderSchedule(messageId, conditionId, virtualDeadline, reminderMinutes);
   } catch (error) {
-    console.error("Error in generateCheckInReminderSchedule:", error);
+    console.error("[REMINDER-SCHEDULER] Error in generateCheckInReminderSchedule:", error);
     return false;
   }
 }
 
 /**
  * Get upcoming reminders for a message
+ * Updated to only return non-obsolete reminders
  */
 export async function getUpcomingReminders(messageId: string): Promise<{ 
   scheduledAt: Date, 
@@ -138,13 +144,13 @@ export async function getUpcomingReminders(messageId: string): Promise<{
     // Only get non-obsolete reminders
     const { data, error } = await supabase
       .from('reminder_schedule')
-      .select('scheduled_at, reminder_type, delivery_priority')
+      .select('scheduled_at, reminder_type, delivery_priority, status')
       .eq('message_id', messageId)
       .eq('status', 'pending')
       .order('scheduled_at', { ascending: true });
     
     if (error) {
-      console.error("Error fetching upcoming reminders:", error);
+      console.error("[REMINDER-SCHEDULER] Error fetching upcoming reminders:", error);
       return [];
     }
     
@@ -152,13 +158,20 @@ export async function getUpcomingReminders(messageId: string): Promise<{
       return [];
     }
     
+    console.log(`[REMINDER-SCHEDULER] Found ${data.length} pending reminders for message ${messageId}`);
+    
+    // For debugging, log the reminders
+    data.forEach((reminder, idx) => {
+      console.log(`[REMINDER-SCHEDULER] Reminder ${idx+1}: ${reminder.reminder_type} at ${reminder.scheduled_at} (status: ${reminder.status})`);
+    });
+    
     return data.map(item => ({
       scheduledAt: new Date(item.scheduled_at),
       reminderType: item.reminder_type,
       priority: item.delivery_priority || 'normal'
     }));
   } catch (error) {
-    console.error("Error in getUpcomingReminders:", error);
+    console.error("[REMINDER-SCHEDULER] Error in getUpcomingReminders:", error);
     return [];
   }
 }

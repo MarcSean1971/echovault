@@ -49,6 +49,12 @@ export function DeliverySettingsSection({
     };
   }, [condition]);
   
+  // Force refresh when component mounts to ensure we have the latest data
+  useEffect(() => {
+    console.log('[DeliverySettingsSection] Component mounted, setting initial refresh');
+    setLocalRefresh(prev => prev + 1);
+  }, []);
+  
   // Combine external and local refresh triggers
   const combinedRefreshTrigger = refreshTrigger ? refreshTrigger + localRefresh : localRefresh;
 
@@ -60,7 +66,8 @@ export function DeliverySettingsSection({
   const {
     isLoading,
     upcomingReminders: formattedAllReminders,
-    hasSchedule
+    hasSchedule,
+    lastRefreshed
   } = useScheduledReminders(condition.message_id, combinedRefreshTrigger);
 
   return (
