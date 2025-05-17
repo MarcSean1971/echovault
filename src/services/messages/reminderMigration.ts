@@ -45,16 +45,16 @@ export async function migrateAllMessageSchedules(): Promise<{
       try {
         const reminderMinutes = parseReminderMinutes(condition.reminder_hours);
         
-        const result = await createOrUpdateReminderSchedule(
-          condition.message_id,
-          condition.id,
-          condition.condition_type,
-          condition.trigger_date,
+        const result = await createOrUpdateReminderSchedule({
+          messageId: condition.message_id,
+          conditionId: condition.id,
+          conditionType: condition.condition_type,
+          triggerDate: condition.trigger_date,
           reminderMinutes,
-          condition.last_checked,
-          condition.hours_threshold,
-          condition.minutes_threshold
-        );
+          lastChecked: condition.last_checked,
+          hoursThreshold: condition.hours_threshold,
+          minutesThreshold: condition.minutes_threshold
+        });
         
         if (result) {
           successCount++;
@@ -116,16 +116,16 @@ export async function migrateMessageSchedule(messageId: string): Promise<boolean
     
     const reminderMinutes = parseReminderMinutes(condition.reminder_hours);
     
-    return await createOrUpdateReminderSchedule(
+    return await createOrUpdateReminderSchedule({
       messageId,
-      condition.id,
-      condition.condition_type,
-      condition.trigger_date,
+      conditionId: condition.id,
+      conditionType: condition.condition_type,
+      triggerDate: condition.trigger_date,
       reminderMinutes,
-      condition.last_checked,
-      condition.hours_threshold,
-      condition.minutes_threshold
-    );
+      lastChecked: condition.last_checked,
+      hoursThreshold: condition.hours_threshold,
+      minutesThreshold: condition.minutes_threshold
+    });
   } catch (error) {
     console.error(`Error migrating reminder schedule for message ${messageId}:`, error);
     return false;

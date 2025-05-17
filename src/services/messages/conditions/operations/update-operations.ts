@@ -25,16 +25,16 @@ export async function updateConditionInDb(conditionId: string, updateData: any) 
       try {
         const reminderMinutes = parseReminderMinutes(data.reminder_hours);
         
-        await createOrUpdateReminderSchedule(
-          data.message_id,
-          data.id,
-          data.condition_type,
-          data.trigger_date,
+        await createOrUpdateReminderSchedule({
+          messageId: data.message_id,
+          conditionId: data.id,
+          conditionType: data.condition_type,
+          triggerDate: data.trigger_date,
           reminderMinutes,
-          data.last_checked,
-          data.hours_threshold,
-          data.minutes_threshold
-        );
+          lastChecked: data.last_checked,
+          hoursThreshold: data.hours_threshold,
+          minutesThreshold: data.minutes_threshold
+        });
       } catch (scheduleError) {
         console.error("Error updating reminder schedule:", scheduleError);
         // Don't throw, just log - we don't want to fail the condition update
@@ -74,16 +74,16 @@ export async function updateConditionsLastChecked(userId: string) {
         try {
           const reminderMinutes = parseReminderMinutes(condition.reminder_hours);
           
-          await createOrUpdateReminderSchedule(
-            condition.message_id,
-            condition.id,
-            condition.condition_type,
-            condition.trigger_date,
+          await createOrUpdateReminderSchedule({
+            messageId: condition.message_id,
+            conditionId: condition.id,
+            conditionType: condition.condition_type,
+            triggerDate: condition.trigger_date,
             reminderMinutes,
-            now, // Use the just-updated timestamp
-            condition.hours_threshold,
-            condition.minutes_threshold
-          );
+            lastChecked: now, // Use the just-updated timestamp
+            hoursThreshold: condition.hours_threshold,
+            minutesThreshold: condition.minutes_threshold
+          });
         } catch (scheduleError) {
           console.error(`Error updating reminder schedule for condition ${condition.id}:`, scheduleError);
         }

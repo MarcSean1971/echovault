@@ -28,12 +28,13 @@ export function DeliverySettingsSection({
   }
 
   // Use the updated next reminders hook to get all scheduled reminders
+  // Fix: Pass condition.message_id as a string, and refreshTrigger separately
   const {
     loading,
     nextReminder,
     formattedNextReminder,
     formattedAllReminders
-  } = useNextReminders(condition.message_id, refreshTrigger);
+  } = useNextReminders(deadline, parseReminderMinutes(condition.reminder_hours), refreshTrigger);
 
   return (
     <div className="space-y-3">

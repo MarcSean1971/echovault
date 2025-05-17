@@ -19,8 +19,24 @@ export async function createMessageCondition(
   conditionType: TriggerType,
   options: CreateConditionOptions
 ): Promise<MessageCondition> {
-  const data = await createConditionInDb(messageId, conditionType, options);
-  return mapDbConditionToMessageCondition(data);
+  const data = {
+    message_id: messageId,
+    condition_type: conditionType,
+    hours_threshold: options.hoursThreshold,
+    minutes_threshold: options.minutesThreshold,
+    trigger_date: options.triggerDate,
+    recurring_pattern: options.recurringPattern,
+    recipients: options.recipients,
+    pin_code: options.pinCode,
+    unlock_delay_hours: options.unlockDelayHours,
+    expiry_hours: options.expiryHours,
+    panic_trigger_config: options.panicTriggerConfig,
+    reminder_hours: options.reminderHours,
+    check_in_code: options.checkInCode
+  };
+  
+  const createdCondition = await createConditionInDb(data);
+  return mapDbConditionToMessageCondition(createdCondition);
 }
 
 // Fetch message conditions for a user
