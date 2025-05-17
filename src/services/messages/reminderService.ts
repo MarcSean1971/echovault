@@ -1,202 +1,168 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
-import { generateReminderSchedule, generateCheckInReminderSchedule } from "@/utils/reminderScheduler";
+import { getReminderSchedule } from "@/utils/reminderScheduler";
 
-// Define a type for the reminder schedule options
-interface ReminderScheduleOptions {
+interface ReminderScheduleParams {
   messageId: string;
   conditionId: string;
   conditionType: string;
   triggerDate: string | null;
   reminderMinutes: number[];
-  lastChecked?: string | null;
+  lastChecked: string | null;
   hoursThreshold?: number;
   minutesThreshold?: number;
 }
 
 /**
- * Trigger reminder check with the new schedule-based system
+ * Create or update reminder schedule - uses upsert with the unique constraint
  */
-export async function triggerReminderCheck(messageId: string, forceSend: boolean = true) {
+export async function createOrUpdateReminderSchedule(params: ReminderScheduleParams): Promise<boolean> {
   try {
-    console.log(`Triggering reminder check for message ${messageId}, forceSend: ${forceSend}`);
+    console.log("[REMINDER-SERVICE] Creating or updating reminder schedule for:", params);
     
-    // Call the updated edge function
-    const { data, error } = await supabase.functions.invoke("send-reminder-emails", {
-      body: { 
-        messageId,
-        debug: true,
-        forceSend,
-        action: 'process'
-      }
-    });
+    // Mark existing reminders as obsolete first (safety measure)
+    await markExistingRemindersObsolete(params.messageId, params.conditionId);
     
-    if (error) throw error;
+    // Calculate scheduled times
+    const scheduleTimes = calculateScheduleTimes(params);
     
-    if (data && data.results && data.results.successful > 0) {
-      toast({
-        title: "Reminders sent",
-        description: `Successfully sent ${data.results.successful} reminder(s) for this message`,
-        duration: 5000,
-      });
-    } else {
-      toast({
-        title: "No reminders sent",
-        description: data?.results?.skipped > 0 
-          ? "Reminders were queued for retry" 
-          : (data?.message || "No reminders needed at this time"),
-        duration: 5000,
-      });
-    }
-    
-    return data;
-  } catch (error: any) {
-    console.error("Error triggering reminder check:", error);
-    toast({
-      title: "Error",
-      description: "Failed to trigger reminder check: " + (error.message || "Unknown error"),
-      variant: "destructive",
-      duration: 5000
-    });
-    throw error;
-  }
-}
-
-/**
- * Create or update reminder schedule based on message condition
- */
-export async function createOrUpdateReminderSchedule(options: ReminderScheduleOptions): Promise<boolean> {
-  try {
-    console.log(`[createOrUpdateReminderSchedule] Creating/updating reminder schedule for message ${options.messageId}`);
-    console.log(`[createOrUpdateReminderSchedule] Condition type: ${options.conditionType}`);
-    
-    // Validate that we have required parameters
-    if (!options.messageId || !options.conditionId) {
-      console.error("[createOrUpdateReminderSchedule] Missing required message or condition ID");
+    if (scheduleTimes.length === 0) {
+      console.warn("[REMINDER-SERVICE] No schedule times generated");
       return false;
     }
     
-    if (['no_check_in', 'regular_check_in', 'inactivity_to_date'].includes(options.conditionType)) {
-      // For check-in type conditions, use last checked date + threshold
-      if (!options.lastChecked) {
-        console.error("[createOrUpdateReminderSchedule] No last checked date for check-in condition, can't create schedule");
-        return false;
-      }
+    console.log(`[REMINDER-SERVICE] Generated ${scheduleTimes.length} schedule entries`);
+    
+    // Create reminder entries with proper conflict handling using our unique constraint
+    const { data, error } = await supabase
+      .from('reminder_schedule')
+      .upsert(scheduleTimes, {
+        onConflict: 'message_id,condition_id,scheduled_at,reminder_type',
+        ignoreDuplicates: false
+      });
       
-      if (options.hoursThreshold === undefined) {
-        console.error("[createOrUpdateReminderSchedule] No hours threshold for check-in condition, can't create schedule");
-        return false;
-      }
-      
-      console.log(`[createOrUpdateReminderSchedule] Using check-in schedule method with last_checked: ${options.lastChecked}`);
-      
-      const result = await generateCheckInReminderSchedule(
-        options.messageId,
-        options.conditionId,
-        options.lastChecked ? new Date(options.lastChecked) : null,
-        options.hoursThreshold || 0,
-        options.minutesThreshold || 0,
-        options.reminderMinutes
-      );
-      
-      // Invalidate condition cache to force refresh
-      if (result) {
-        try {
-          const { data: userData } = await supabase.auth.getUser();
-          if (userData && userData.user) {
-            // Import dynamically to avoid circular dependencies
-            const { invalidateConditionsCache } = await import('./conditions/operations/fetch-operations');
-            invalidateConditionsCache(userData.user.id);
-          }
-        } catch (err) {
-          console.error("[createOrUpdateReminderSchedule] Failed to invalidate conditions cache:", err);
-        }
-      }
-      
-      return result;
-    } else {
-      // For normal conditions with trigger date
-      console.log(`[createOrUpdateReminderSchedule] Using standard schedule method with trigger date: ${options.triggerDate}`);
-      
-      return await generateReminderSchedule(
-        options.messageId,
-        options.conditionId,
-        options.triggerDate ? new Date(options.triggerDate) : null,
-        options.reminderMinutes
-      );
+    if (error) {
+      console.error("[REMINDER-SERVICE] Error creating reminder schedule:", error);
+      return false;
     }
+    
+    console.log(`[REMINDER-SERVICE] Successfully created ${scheduleTimes.length} reminder schedule entries`);
+    return true;
   } catch (error) {
-    console.error("[createOrUpdateReminderSchedule] Error creating reminder schedule:", error);
+    console.error("[REMINDER-SERVICE] Error in createOrUpdateReminderSchedule:", error);
     return false;
   }
 }
 
 /**
- * Get reminder history for a specific message (keeping original function)
+ * Mark existing reminders as obsolete
  */
-export interface Reminder {
-  id: string;
-  condition_id: string;
-  message_id: string;
-  user_id: string;
-  sent_at: string;
-  deadline: string;
-  created_at: string;
-  scheduled_for?: string;
-}
-
-export async function getReminderHistory(messageId: string): Promise<Reminder[]> {
+async function markExistingRemindersObsolete(messageId: string, conditionId: string): Promise<boolean> {
   try {
-    // Use direct fetch to bypass TypeScript's table type checking
-    const response = await supabase.auth.getSession();
-    const authToken = response.data.session?.access_token;
+    console.log(`[REMINDER-SERVICE] Marking existing reminders as obsolete for message ${messageId}, condition ${conditionId}`);
     
-    // Get the URL from the Supabase instance without accessing protected properties
-    const projectRef = 'onwthrpgcnfydxzzmyot';
-    const url = `https://${projectRef}.supabase.co/rest/v1/sent_reminders?message_id=eq.${messageId}&order=sent_at.desc`;
-    
-    // The anon key is in supabase/config.toml
-    const apiKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ud3RocnBnY25meWR4enpteW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYxMDQzOTUsImV4cCI6MjA2MTY4MDM5NX0.v4tYEDukTlMERZ6GHqvnoDbyH-g9KQd8s3-UlIOPkDs';
-    
-    const fetchResponse = await fetch(url, {
-      headers: {
-        'apikey': apiKey,
-        'Authorization': `Bearer ${authToken}`,
-        'Content-Type': 'application/json'
-      }
-    });
-    
-    if (!fetchResponse.ok) {
-      throw new Error(`HTTP error: ${fetchResponse.status}`);
+    const { error } = await supabase
+      .from('reminder_schedule')
+      .update({ status: 'obsolete' })
+      .eq('status', 'pending')
+      .eq('message_id', messageId)
+      .eq('condition_id', conditionId);
+      
+    if (error) {
+      console.error("[REMINDER-SERVICE] Error marking reminders as obsolete:", error);
+      return false;
     }
     
-    const fetchData = await fetchResponse.json();
-    return fetchData as Reminder[];
-  } catch (error: any) {
-    console.error("Error fetching reminder history:", error);
-    throw error;
+    return true;
+  } catch (error) {
+    console.error("[REMINDER-SERVICE] Error in markExistingRemindersObsolete:", error);
+    return false;
   }
 }
 
 /**
- * Get monitoring status for the reminder service
+ * Calculate reminder schedule times based on params
  */
-export async function getReminderServiceStatus(): Promise<{
-  dueReminders: number;
-  sentLastFiveMin: number;
-  failedLastFiveMin: number;
-}> {
+function calculateScheduleTimes(params: ReminderScheduleParams): any[] {
+  const { messageId, conditionId, conditionType, triggerDate, reminderMinutes, lastChecked, hoursThreshold, minutesThreshold } = params;
+  
+  // For check-in conditions, we need to create a virtual deadline
+  let effectiveDeadline: Date | null = null;
+  if (['no_check_in', 'regular_check_in', 'inactivity_to_date'].includes(conditionType) && lastChecked && (hoursThreshold || minutesThreshold)) {
+    const lastCheckedDate = new Date(lastChecked);
+    effectiveDeadline = new Date(lastCheckedDate);
+    
+    if (hoursThreshold) {
+      effectiveDeadline.setHours(effectiveDeadline.getHours() + hoursThreshold);
+    }
+    
+    if (minutesThreshold) {
+      effectiveDeadline.setMinutes(effectiveDeadline.getMinutes() + minutesThreshold);
+    }
+    
+    console.log(`[REMINDER-SERVICE] Calculated virtual deadline for ${conditionType}: ${effectiveDeadline.toISOString()}`);
+  } else if (triggerDate) {
+    effectiveDeadline = new Date(triggerDate);
+    console.log(`[REMINDER-SERVICE] Using explicit trigger date: ${effectiveDeadline.toISOString()}`);
+  } else {
+    console.warn("[REMINDER-SERVICE] No deadline could be determined");
+    return [];
+  }
+  
+  if (!effectiveDeadline) {
+    return [];
+  }
+  
+  // Generate schedule entries
+  const scheduleEntries = reminderMinutes.map(minutes => {
+    const scheduledAt = new Date(effectiveDeadline!.getTime() - (minutes * 60 * 1000));
+    
+    return {
+      message_id: messageId,
+      condition_id: conditionId,
+      scheduled_at: scheduledAt.toISOString(),
+      reminder_type: 'reminder',
+      status: 'pending',
+      delivery_priority: minutes < 60 ? 'high' : 'normal', // High priority for reminders less than an hour before deadline
+      retry_strategy: 'standard'
+    };
+  });
+  
+  // Add final delivery entry
+  scheduleEntries.push({
+    message_id: messageId,
+    condition_id: conditionId,
+    scheduled_at: effectiveDeadline.toISOString(),
+    reminder_type: 'final_delivery',
+    status: 'pending',
+    delivery_priority: 'critical',
+    retry_strategy: 'aggressive'
+  });
+  
+  return scheduleEntries;
+}
+
+/**
+ * Get reminder schedule for a message
+ */
+export async function getReminderScheduleForMessage(messageId: string): Promise<any[]> {
   try {
-    const { data, error } = await supabase.functions.invoke("send-reminder-emails", {
-      body: { action: 'status' }
-    });
+    const { data, error } = await supabase
+      .from('reminder_schedule')
+      .select('*')
+      .eq('message_id', messageId)
+      .eq('status', 'pending')
+      .order('scheduled_at', { ascending: true });
+      
+    if (error) {
+      console.error("[REMINDER-SERVICE] Error fetching reminder schedule:", error);
+      return [];
+    }
     
-    if (error) throw error;
-    
-    return data?.status || { dueReminders: 0, sentLastFiveMin: 0, failedLastFiveMin: 0 };
+    return data || [];
   } catch (error) {
-    console.error("Error getting reminder service status:", error);
-    return { dueReminders: 0, sentLastFiveMin: 0, failedLastFiveMin: 0 };
+    console.error("[REMINDER-SERVICE] Error in getReminderScheduleForMessage:", error);
+    return [];
   }
 }
