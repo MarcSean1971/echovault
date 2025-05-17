@@ -1,4 +1,3 @@
-
 /**
  * Utility functions for reminder calculations
  */
@@ -79,15 +78,16 @@ export function getAllUpcomingReminderTexts(deadline: Date | null, reminderMinut
 }
 
 /**
- * Convert reminder_hours from database (actually in minutes) to an array of minutes
- * This function helps with the misleading column name in the database
+ * Convert reminder_hours from database to an array of minutes
+ * IMPORTANT: Despite the misleading column name 'reminder_hours',
+ * values are actually stored in minutes in the database
  */
 export function parseReminderMinutes(reminderHours: number[] | null | undefined): number[] {
   if (!reminderHours || !Array.isArray(reminderHours)) {
     return [];
   }
   
-  // The database field is called reminder_hours but actually contains minutes
+  // Values are already in minutes, return directly
   return reminderHours;
 }
 

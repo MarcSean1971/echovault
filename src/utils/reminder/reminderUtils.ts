@@ -1,8 +1,11 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Convert reminder hours to minutes for storage consistency
  * This is important since our database stores reminder times in minutes
+ * NOTE: This function name is misleading - the database column is called 'reminder_hours'
+ * but actually stores values in minutes
  */
 export function convertReminderHoursToMinutes(reminderHours: number[]): number[] {
   if (!reminderHours || reminderHours.length === 0) return [];
@@ -11,20 +14,17 @@ export function convertReminderHoursToMinutes(reminderHours: number[]): number[]
 }
 
 /**
- * Parse reminder hours from condition to normalized minutes
- * Handles both array of hours and array of minutes formats
+ * Parse reminder values from condition to normalized minutes
+ * IMPORTANT: The database column is called 'reminder_hours' but actually stores values in minutes
+ * This function now correctly preserves the original values without any conversion
  */
 export function parseReminderMinutes(reminderHours: any): number[] {
   if (!reminderHours || !Array.isArray(reminderHours) || reminderHours.length === 0) {
     return [];
   }
   
-  // If the values are small (< 24), they're likely already in hours and need conversion
-  if (reminderHours.some(value => value < 24)) {
-    return reminderHours.map(hour => hour * 60);
-  }
-  
-  // Otherwise, they're already in minutes
+  // All values in the reminder_hours array are already in minutes
+  // Return them directly without any conversion
   return reminderHours;
 }
 

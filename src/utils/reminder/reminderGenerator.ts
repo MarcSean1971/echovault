@@ -8,6 +8,7 @@ import { markExistingRemindersObsolete } from './reminderUtils';
 
 /**
  * Generate schedule for check-in type conditions
+ * @param reminderMinutes Array of minutes before deadline when reminders should be sent
  */
 export async function generateCheckInReminderSchedule(
   messageId: string,
@@ -26,7 +27,7 @@ export async function generateCheckInReminderSchedule(
     // Make sure we have at least one reminder
     if (reminderMinutes.length === 0) {
       console.warn(`[REMINDER-GENERATOR] No reminder minutes provided for message ${messageId}, using default`);
-      reminderMinutes = [24 * 60]; // Default to 24 hours before deadline if none specified
+      reminderMinutes = [24 * 60]; // Default to 24 hours (1440 minutes) before deadline if none specified
     }
     
     // Calculate virtual deadline based on last check-in + threshold
