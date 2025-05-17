@@ -30,7 +30,8 @@ export async function createMessageCondition(
     pin_code: options.pinCode,
     unlock_delay_hours: options.unlockDelayHours,
     expiry_hours: options.expiryHours,
-    panic_trigger_config: options.panicTriggerConfig,
+    // Map panicTriggerConfig to panic_config for DB storage
+    panic_config: options.panicTriggerConfig,
     reminder_hours: options.reminderHours,
     check_in_code: options.checkInCode
   };
@@ -49,7 +50,15 @@ export async function updateMessageCondition(
   conditionId: string,
   updates: Partial<MessageCondition>
 ): Promise<MessageCondition> {
-  const data = await updateConditionInDb(conditionId, updates);
+  // Map panic_trigger_config to panic_config for database storage
+  const dbUpdates = { ...updates };
+  
+  if ('panic_trigger_config' in updates) {
+    dbUpdates.panic_config = updates.panic_trigger_config;
+    delete dbUpdates.panic_trigger_config;
+  }
+  
+  const data = await updateConditionInDb(conditionId, dbUpdates);
   return mapDbConditionToMessageCondition(data);
 }
 

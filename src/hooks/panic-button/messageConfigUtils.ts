@@ -19,12 +19,13 @@ export const getMessageConfig = (
   
   if (!message) return null;
   
-  // First check panic_trigger_config
+  // First check panic_trigger_config (which comes from mapping panic_config)
   if (message.panic_trigger_config) {
     return message.panic_trigger_config;
   }
   
   // Fall back to panic_config if panic_trigger_config is not available
+  // This is for backward compatibility
   if (message.panic_config) {
     return message.panic_config;
   }

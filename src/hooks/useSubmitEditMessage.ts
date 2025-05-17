@@ -1,3 +1,4 @@
+
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -108,6 +109,7 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
         console.log("Using hours_threshold:", finalHoursThreshold, "minutes_threshold:", minutesThreshold);
         
         // Update existing condition
+        // Note that the updateMessageCondition function will handle mapping panic_trigger_config to panic_config
         await updateMessageCondition(existingCondition.id, {
           condition_type: conditionType,
           hours_threshold: finalHoursThreshold,
@@ -115,7 +117,7 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
           recurring_pattern: finalRecurringPattern,
           pin_code: pinCode || null,
           trigger_date: triggerDate ? triggerDate.toISOString() : null,
-          panic_trigger_config: panicTriggerConfig,
+          panic_trigger_config: panicTriggerConfig,  // This will be mapped to panic_config in the service
           reminder_hours: reminderMinutes, // Values already in minutes
           unlock_delay_hours: unlockDelay,
           expiry_hours: expiryHours,
@@ -127,6 +129,7 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
         console.log("Using hours_threshold:", finalHoursThreshold, "minutes_threshold:", minutesThreshold);
         
         // Create new condition
+        // Note that the createMessageCondition function will handle mapping panicTriggerConfig to panic_config
         await createMessageCondition(
           message.id,
           conditionType as TriggerType,
@@ -139,7 +142,7 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
             pinCode,
             unlockDelayHours: unlockDelay,
             expiryHours,
-            panicTriggerConfig,
+            panicTriggerConfig,  // This will be mapped to panic_config in the service
             reminderHours: reminderMinutes, // Values already in minutes
             checkInCode: checkInCode || undefined
           }

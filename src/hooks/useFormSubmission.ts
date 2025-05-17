@@ -104,6 +104,7 @@ export function useFormSubmission() {
           const finalHoursThreshold = processTimeThreshold(hoursThreshold, minutesThreshold);
           
           // Create the message condition with all options
+          // Note: createMessageCondition now properly maps panicTriggerConfig to panic_config
           await createMessageCondition(
             message.id,
             conditionType as TriggerType,
@@ -124,7 +125,7 @@ export function useFormSubmission() {
               // Reminders - values already in minutes
               reminderHours: reminderMinutes,
               
-              // Panic trigger settings
+              // Panic trigger settings - will be mapped to panic_config
               panicTriggerConfig,
               
               // Custom check-in code
