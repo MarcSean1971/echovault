@@ -3,23 +3,21 @@ import { supabaseClient } from "./supabase-client.ts";
 
 /**
  * Get monitoring status with optimized queries to reduce database load
- * Updated to handle secure view access
+ * Updated to use the security definer function for system monitoring
  */
 export async function getMonitoringStatus() {
   const supabase = supabaseClient();
   
   try {
-    // Use a single query to get the monitoring status information
-    // This is much more efficient than separate queries
+    // Use the secure system-level function for admin/edge function monitoring
     const { data, error } = await supabase
-      .from('reminder_schedule_status')
-      .select('*')
+      .rpc('get_system_reminder_stats')
       .single();
     
     if (error) {
       console.error("Error getting monitoring status:", error);
       
-      // Fallback - use separate queries if the status view doesn't work
+      // Fallback - use separate queries if the function doesn't work
       return getFallbackMonitoringStatus();
     }
     
@@ -39,7 +37,7 @@ export async function getMonitoringStatus() {
 
 /**
  * Fallback monitoring status using separate queries
- * Only used if the optimized view query fails
+ * Only used if the optimized function query fails
  * Updated to use service role client
  */
 async function getFallbackMonitoringStatus() {

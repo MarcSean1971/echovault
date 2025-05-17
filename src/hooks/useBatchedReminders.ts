@@ -1,135 +1,88 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { getUpcomingRemindersForMultipleMessages } from "@/utils/reminderScheduler";
-
-interface ReminderInfo {
-  messageId: string;
-  nextReminder: Date | null;
-  formattedNextReminder: string | null;
-  hasSchedule: boolean;
-  upcomingReminders: string[];
-}
-
-interface BatchedReminderResult {
-  reminders: Record<string, ReminderInfo>;
-  isLoading: boolean;
-  lastRefreshed?: number;
-  forceRefresh: () => void;
-}
+import { toast } from "@/components/ui/use-toast";
 
 /**
- * Hook to efficiently get scheduled reminders for multiple messages in a single query
- * Solves the N+1 query problem by batching reminder fetches
+ * Hook that fetches reminders for multiple messages in a single batch query
+ * This eliminates the N+1 query issue where we'd otherwise make a separate query for each message
  */
-export function useBatchedReminders(
-  messageIds: string[],
-  refreshTrigger: number = 0
-): BatchedReminderResult {
-  const [reminderData, setReminderData] = useState<Record<string, ReminderInfo>>({});
-  const [isLoading, setIsLoading] = useState(true);
-  const [localRefreshCounter, setLocalRefreshCounter] = useState(0);
-  const [lastRefreshed, setLastRefreshed] = useState<number>(Date.now());
-
-  // Function to force refresh
-  const forceRefresh = () => {
-    setLocalRefreshCounter(prev => prev + 1);
-  };
-
+export function useBatchedReminders(messageIds: string[], refreshTrigger: number = 0) {
+  const [reminders, setReminders] = useState<Record<string, { scheduledAt: Date, reminderType: string, priority?: string }[]>>({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [permissionError, setPermissionError] = useState(false);
+  const [lastRefreshed, setLastRefreshed] = useState(0);
+  
+  // Function to force a refresh of the data
+  const forceRefresh = useCallback(() => {
+    console.log('[useBatchedReminders] Force refreshing reminder data');
+    setLastRefreshed(Date.now());
+  }, []);
+  
+  // Fetch reminders when messageIds or refreshTrigger changes
   useEffect(() => {
-    // Skip if no message IDs provided
-    if (!messageIds.length) {
-      setIsLoading(false);
+    if (!messageIds || messageIds.length === 0) {
+      setReminders({});
       return;
     }
-
-    const fetchRemindersForMessages = async () => {
+    
+    const fetchReminders = async () => {
+      setIsLoading(true);
+      setPermissionError(false);
+      
       try {
-        setIsLoading(true);
+        console.log(`[useBatchedReminders] Fetching reminders for ${messageIds.length} messages`);
+        const reminderData = await getUpcomingRemindersForMultipleMessages(messageIds);
         
-        console.log(`[useBatchedReminders] Fetching reminders for ${messageIds.length} messages in batch`);
-        const remindersByMessage = await getUpcomingRemindersForMultipleMessages(messageIds);
-        
-        // Build reminder info map
-        const reminderMap: Record<string, ReminderInfo> = {};
-        
-        messageIds.forEach(messageId => {
-          const messageReminders = remindersByMessage[messageId] || [];
-          
-          // Process the reminders for this message
-          let nextReminderDate: Date | null = null;
-          if (messageReminders.length > 0) {
-            const sortedReminders = [...messageReminders].sort(
-              (a, b) => a.scheduledAt.getTime() - b.scheduledAt.getTime()
-            );
-            nextReminderDate = sortedReminders[0].scheduledAt;
-          }
-          
-          // Format the reminders for display
-          const formattedReminders = messageReminders.map(reminder => {
-            const date = new Date(reminder.scheduledAt);
-            const formattedDate = date.toLocaleDateString(undefined, { 
-              month: 'short', 
-              day: 'numeric', 
-              hour: '2-digit', 
-              minute: '2-digit' 
-            });
-            
-            const typeName = reminder.reminderType === 'reminder' ? 'Reminder' : 
-                          (reminder.reminderType === 'final_delivery' ? 'Final Delivery' : reminder.reminderType);
-            
-            const priorityFlag = reminder.priority === 'critical' ? ' (Critical)' : '';
-            
-            return `${formattedDate} (${typeName}${priorityFlag})`;
-          });
-          
-          // Format next reminder time
-          let formattedNextReminder: string | null = null;
-          if (nextReminderDate) {
-            const now = new Date();
-            const diff = nextReminderDate.getTime() - now.getTime();
-            
-            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-            
-            if (days > 0) {
-              formattedNextReminder = `in ${days}d ${hours}h`;
-            } else if (hours > 0) {
-              formattedNextReminder = `in ${hours}h ${minutes}m`;
-            } else if (minutes > 0) {
-              formattedNextReminder = `in ${minutes}m`;
-            } else {
-              formattedNextReminder = 'very soon';
-            }
-          }
-          
-          // Store the processed reminder info for this message
-          reminderMap[messageId] = {
-            messageId,
-            nextReminder: nextReminderDate,
-            formattedNextReminder,
-            hasSchedule: messageReminders.length > 0,
-            upcomingReminders: formattedReminders
-          };
-        });
-        
-        console.log(`[useBatchedReminders] Processed reminders for ${Object.keys(reminderMap).length} messages`);
-        setReminderData(reminderMap);
+        setReminders(reminderData);
         setLastRefreshed(Date.now());
-      } catch (error) {
-        console.error("[useBatchedReminders] Error fetching batched reminders:", error);
+      } catch (error: any) {
+        console.error('[useBatchedReminders] Error fetching reminders:', error);
+        
+        // Check if this is an RLS permission error
+        const isPermissionError = error?.code === "42501" || 
+                                error?.message?.includes("permission denied") ||
+                                error?.message?.includes("access denied");
+        
+        if (isPermissionError && !permissionError) {
+          setPermissionError(true);
+          
+          // Only show toast once
+          toast({
+            title: "Permission Error",
+            description: "You don't have permission to view some reminder data.",
+            variant: "destructive",
+            duration: 3000
+          });
+        }
+        
+        // Return empty object on error
+        setReminders({});
       } finally {
         setIsLoading(false);
       }
     };
     
-    fetchRemindersForMessages();
-  }, [messageIds, refreshTrigger, localRefreshCounter]);
+    fetchReminders();
+  }, [messageIds, refreshTrigger, lastRefreshed, permissionError]);
   
-  return { 
-    reminders: reminderData, 
+  // Listen for global condition updates to refresh data
+  useEffect(() => {
+    const handleConditionsUpdated = () => {
+      forceRefresh();
+    };
+    
+    window.addEventListener('conditions-updated', handleConditionsUpdated);
+    
+    return () => {
+      window.removeEventListener('conditions-updated', handleConditionsUpdated);
+    };
+  }, [forceRefresh]);
+  
+  return {
+    reminders,
     isLoading,
-    lastRefreshed,
-    forceRefresh
+    forceRefresh,
+    permissionError
   };
 }
