@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { useMessageList } from "@/hooks/useMessageList";
 import { useBatchedReminders } from "@/hooks/useBatchedReminders";
-import { useMessageActions } from "@/hooks/useMessageActions";
+import { useMessageActions } from "@/hooks/useMessageActions.tsx"; // Explicitly import from .tsx file
 import { MessagesHeader } from "@/components/message/MessagesHeader";
 import { MessageCategories } from "@/components/message/MessageCategories";
 
