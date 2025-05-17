@@ -37,10 +37,10 @@ export async function performCheckIn(userId: string, method: string): Promise<Ch
           try {
             // First explicitly mark all old reminders as obsolete for this message
             // This is critical to fix the issue!
-            const { createOrUpdateReminderSchedule } = await import("../reminderService");
             const { supabase } = await import("@/integrations/supabase/client");
             
-            // Mark all pending reminders for this message as obsolete
+            // CRITICAL FIX: Mark all pending reminders for this message as obsolete
+            // This must happen before creating new reminders
             console.log(`[CHECK-IN] Explicitly marking all reminders as obsolete for message ${condition.message_id} before creating new ones`);
             const { error: obsoleteError } = await supabase
               .from('reminder_schedule')

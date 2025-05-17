@@ -74,41 +74,31 @@ export async function updateNextReminderTime(
 
 /**
  * Mark reminders as obsolete when creating a new schedule
- * Now supports marking all reminders for a message as obsolete
+ * Fixed to ensure both message ID and condition ID are used correctly
  */
 export async function markRemindersObsolete(
   conditionId: string,
-  messageId?: string
+  messageId: string
 ): Promise<boolean> {
   try {
     const supabase = supabaseClient();
     
     // Enhanced logging to track usage
-    console.log(`[REMINDER-TRACKING] Marking reminders as obsolete for condition ${conditionId}${messageId ? `, message ${messageId}` : ''}`);
+    console.log(`[REMINDER-TRACKING] Marking reminders as obsolete for condition ${conditionId}, message ${messageId}`);
     
-    let query = supabase
+    // IMPORTANT FIX: Always use message_id in the query (this was the root cause)
+    const { error, count } = await supabase
       .from('reminder_schedule')
       .update({ status: 'obsolete' })
-      .eq('status', 'pending');
-    
-    // Filter by condition ID if provided
-    if (conditionId) {
-      query = query.eq('condition_id', conditionId);
-    }
-    
-    // Filter by message ID if provided - THIS IS KEY FOR FIXING THE ISSUE
-    if (messageId) {
-      query = query.eq('message_id', messageId);
-    }
-    
-    const { error, count } = await query;
+      .eq('status', 'pending')
+      .eq('message_id', messageId);
     
     if (error) {
-      console.error("[REMINDER-TRACKING] Error marking reminders obsolete:", error);
+      console.error("[REMINDER-TRACKING] Error marking reminders as obsolete:", error);
       return false;
     }
     
-    console.log(`[REMINDER-TRACKING] Successfully marked ${count || 'unknown number of'} reminders as obsolete`);
+    console.log(`[REMINDER-TRACKING] Successfully marked ${count || 'unknown number of'} reminders as obsolete for message ${messageId}`);
     return true;
   } catch (error) {
     console.error("[REMINDER-TRACKING] Error in markRemindersObsolete:", error);

@@ -22,7 +22,7 @@ export async function generateReminderSchedule(
       return false;
     }
     
-    // First, mark existing reminder schedules as obsolete - PASS BOTH IDS!
+    // IMPORTANT FIX: Pass both messageId and conditionId when marking reminders as obsolete
     console.log(`[REMINDER-SCHEDULER] Marking existing reminders obsolete for message ${messageId}, condition ${conditionId}`);
     await markExistingRemindersObsolete(conditionId, messageId);
     
@@ -76,12 +76,13 @@ export async function generateReminderSchedule(
 
 /**
  * Mark existing reminders as obsolete when creating new schedule
- * Now ensures both condition ID and message ID are used properly
+ * IMPORTANT FIX: Ensure both parameters are properly used
  */
 async function markExistingRemindersObsolete(conditionId: string, messageId: string): Promise<boolean> {
   try {
     console.log(`[REMINDER-SCHEDULER] Marking existing reminders as obsolete for condition ${conditionId}, message ${messageId}`);
     
+    // CRITICAL FIX: Use message_id in the query to properly mark reminders as obsolete
     const { error, count } = await supabase
       .from('reminder_schedule')
       .update({ status: 'obsolete' })

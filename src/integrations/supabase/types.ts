@@ -404,6 +404,40 @@ export type Database = {
       }
     }
     Functions: {
+      acquire_due_reminders: {
+        Args: { max_reminders?: number; message_filter?: string }
+        Returns: {
+          condition_id: string
+          created_at: string
+          delivery_priority: string | null
+          id: string
+          last_attempt_at: string | null
+          message_id: string
+          reminder_type: string
+          retry_count: number | null
+          retry_strategy: string | null
+          scheduled_at: string
+          status: string
+          updated_at: string
+        }[]
+      }
+      acquire_message_reminders: {
+        Args: { target_message_id: string; max_reminders?: number }
+        Returns: {
+          condition_id: string
+          created_at: string
+          delivery_priority: string | null
+          id: string
+          last_attempt_at: string | null
+          message_id: string
+          reminder_type: string
+          retry_count: number | null
+          retry_strategy: string | null
+          scheduled_at: string
+          status: string
+          updated_at: string
+        }[]
+      }
       message_has_delivery: {
         Args: { msg_id: string }
         Returns: boolean
