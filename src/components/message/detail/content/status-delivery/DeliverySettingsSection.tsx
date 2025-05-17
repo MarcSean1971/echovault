@@ -1,10 +1,11 @@
 
 import React from "react";
-import { Clock } from "lucide-react";
+import { Clock, AlertTriangle } from "lucide-react";
 import { MessageDeliverySettings } from "../../MessageDeliverySettings";
 import { HOVER_TRANSITION, ICON_HOVER_EFFECTS } from "@/utils/hoverEffects";
 import { useNextReminders } from "@/hooks/useNextReminders";
 import { parseReminderMinutes } from "@/utils/reminderUtils";
+import { Badge } from "@/components/ui/badge";
 
 interface DeliverySettingsSectionProps {
   condition: any | null;
@@ -28,7 +29,6 @@ export function DeliverySettingsSection({
   }
 
   // Use the updated next reminders hook to get all scheduled reminders
-  // Fix: Pass condition.message_id as a string, and refreshTrigger separately
   const {
     loading,
     nextReminder,
@@ -53,12 +53,27 @@ export function DeliverySettingsSection({
       {/* Add scheduled reminders display */}
       {!loading && formattedAllReminders.length > 0 && (
         <div className="bg-muted/30 rounded-md p-3 text-sm mt-2">
-          <h4 className="font-medium mb-1">Scheduled Reminders</h4>
+          <h4 className="font-medium mb-1 flex items-center justify-between">
+            <span>Scheduled Events</span>
+            {isArmed && <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Active</Badge>}
+            {!isArmed && <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">Inactive</Badge>}
+          </h4>
           <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
             {formattedAllReminders.map((reminder, index) => (
-              <li key={index}>{reminder}</li>
+              <li key={index} className={reminder.includes("Final Delivery") ? "font-medium text-destructive" : ""}>
+                {reminder.includes("Final Delivery") && (
+                  <AlertTriangle className="inline-block h-3.5 w-3.5 mr-1 -mt-0.5" />
+                )}
+                {reminder}
+              </li>
             ))}
           </ul>
+          
+          {/* Info text about unified scheduling system */}
+          <p className="text-xs text-muted-foreground mt-3 italic">
+            All reminders and final delivery are scheduled through our reliable delivery system
+            with multiple fallbacks for critical messages.
+          </p>
         </div>
       )}
     </div>

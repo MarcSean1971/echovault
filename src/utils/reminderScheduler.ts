@@ -30,17 +30,21 @@ export async function generateReminderSchedule(
         condition_id: conditionId,
         scheduled_at: scheduledAt.toISOString(),
         reminder_type: 'reminder',
-        status: 'pending'
+        status: 'pending',
+        delivery_priority: 'normal',
+        retry_strategy: 'standard'
       };
     });
     
-    // Add final delivery timestamp
+    // Add final delivery timestamp with higher priority and robust retry settings
     scheduleEntries.push({
       message_id: messageId,
       condition_id: conditionId,
       scheduled_at: triggerDate.toISOString(),
       reminder_type: 'final_delivery',
-      status: 'pending'
+      status: 'pending',
+      delivery_priority: 'critical', // Mark as critical priority
+      retry_strategy: 'aggressive' // Use aggressive retry strategy
     });
     
     console.log(`Generated ${scheduleEntries.length} schedule entries for message ${messageId}`);
@@ -49,7 +53,7 @@ export async function generateReminderSchedule(
     const { error } = await supabase
       .from('reminder_schedule')
       .upsert(scheduleEntries, {
-        onConflict: 'message_id,scheduled_at,reminder_type',
+        onConflict: 'message_id,condition_id,scheduled_at,reminder_type',
         ignoreDuplicates: true
       });
     
@@ -99,12 +103,13 @@ export async function generateCheckInReminderSchedule(
  */
 export async function getUpcomingReminders(messageId: string): Promise<{ 
   scheduledAt: Date, 
-  reminderType: string 
+  reminderType: string,
+  priority?: string 
 }[]> {
   try {
     const { data, error } = await supabase
       .from('reminder_schedule')
-      .select('scheduled_at, reminder_type')
+      .select('scheduled_at, reminder_type, delivery_priority')
       .eq('message_id', messageId)
       .eq('status', 'pending')
       .order('scheduled_at', { ascending: true });
@@ -116,7 +121,8 @@ export async function getUpcomingReminders(messageId: string): Promise<{
     
     return (data || []).map(item => ({
       scheduledAt: new Date(item.scheduled_at),
-      reminderType: item.reminder_type
+      reminderType: item.reminder_type,
+      priority: item.delivery_priority || 'normal'
     }));
   } catch (error) {
     console.error("Error in getUpcomingReminders:", error);
@@ -127,9 +133,13 @@ export async function getUpcomingReminders(messageId: string): Promise<{
 /**
  * Format reminder schedule for display
  */
-export function formatReminderSchedule(schedule: { scheduledAt: Date, reminderType: string }[]): string[] {
+export function formatReminderSchedule(schedule: { scheduledAt: Date, reminderType: string, priority?: string }[]): string[] {
   return schedule.map(item => {
     const formattedTime = format(item.scheduledAt, "MMM d, yyyy h:mm a");
-    return `${formattedTime} (${item.reminderType === 'reminder' ? 'Reminder' : 'Final Delivery'})`;
+    const typeName = item.reminderType === 'reminder' ? 'Reminder' : 
+                    (item.reminderType === 'final_delivery' ? 'Final Delivery' : item.reminderType);
+    const priorityFlag = item.priority === 'critical' ? ' (Critical)' : '';
+    
+    return `${formattedTime} (${typeName}${priorityFlag})`;
   });
 }

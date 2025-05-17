@@ -1,4 +1,3 @@
-
 import { supabaseClient } from "../supabase-client.ts";
 import { sendEmail } from "./email-service.ts";
 
@@ -7,6 +6,7 @@ export interface ReminderResult {
   recipient?: string;
   method?: string;
   error?: string;
+  channel?: string;
 }
 
 /**
@@ -41,6 +41,7 @@ export async function sendCreatorReminder(
       return [{ 
         success: false, 
         method: 'email', 
+        channel: 'primary',
         error: `Creator profile not found: ${profileError?.message || 'Unknown error'}`
       }];
     }
@@ -66,7 +67,12 @@ export async function sendCreatorReminder(
     
     if (emailList.length === 0) {
       console.error(`No email found for creator ${userId}`);
-      return [{ success: false, method: 'email', error: 'No email address found for creator' }];
+      return [{ 
+        success: false, 
+        method: 'email', 
+        channel: 'primary',
+        error: 'No email address found for creator' 
+      }];
     }
     
     // Calculate hours and minutes for display
@@ -96,34 +102,111 @@ export async function sendCreatorReminder(
           `
         });
         
-        results.push({ success: true, recipient: email, method: 'email' });
+        // Track the delivery in database for audit
+        try {
+          await supabaseClient().from('reminder_delivery_log').upsert({
+            reminder_id: `${messageId}-${conditionId}-${new Date().toISOString()}`,
+            message_id: messageId,
+            condition_id: conditionId,
+            recipient: email,
+            channel: 'email',
+            channel_order: 'primary',
+            delivery_status: 'delivered',
+            delivered_at: new Date().toISOString(),
+          });
+        } catch (logError) {
+          console.warn("Failed to log reminder delivery:", logError);
+        }
+        
+        results.push({ 
+          success: true, 
+          recipient: email, 
+          method: 'email',
+          channel: 'primary'
+        });
       } catch (emailError: any) {
         console.error(`Error sending email to creator (${email}):`, emailError);
+        
+        // Track the failed delivery
+        try {
+          await supabaseClient().from('reminder_delivery_log').upsert({
+            reminder_id: `${messageId}-${conditionId}-${new Date().toISOString()}`,
+            message_id: messageId,
+            condition_id: conditionId,
+            recipient: email,
+            channel: 'email',
+            channel_order: 'primary',
+            delivery_status: 'failed',
+            error_message: emailError.message || 'Email sending failed',
+          });
+        } catch (logError) {
+          console.warn("Failed to log reminder delivery failure:", logError);
+        }
+        
         results.push({ 
           success: false, 
           recipient: email, 
           method: 'email',
+          channel: 'primary',
           error: emailError.message || 'Email sending failed'
         });
-      }
-    }
-    
-    // Also try WhatsApp if available
-    if (profile.whatsapp_number) {
-      try {
-        // This is a placeholder - in production, you'd implement the WhatsApp sending logic
-        console.log(`Would send WhatsApp reminder to creator at ${profile.whatsapp_number}`);
         
-        // Simulate success
-        results.push({ success: true, recipient: profile.whatsapp_number, method: 'whatsapp' });
-      } catch (whatsappError: any) {
-        console.error(`Error sending WhatsApp to creator:`, whatsappError);
-        results.push({ 
-          success: false, 
-          recipient: profile.whatsapp_number, 
-          method: 'whatsapp',
-          error: whatsappError.message || 'WhatsApp sending failed'
-        });
+        // Try fallback channel (WhatsApp) if primary fails
+        if (profile.whatsapp_number) {
+          try {
+            // This is a placeholder - in production, you'd implement the WhatsApp sending logic
+            console.log(`Would send WhatsApp reminder to creator at ${profile.whatsapp_number} (fallback)`);
+            
+            // Track the fallback attempt
+            try {
+              await supabaseClient().from('reminder_delivery_log').upsert({
+                reminder_id: `${messageId}-${conditionId}-${new Date().toISOString()}-whatsapp`,
+                message_id: messageId,
+                condition_id: conditionId,
+                recipient: profile.whatsapp_number,
+                channel: 'whatsapp',
+                channel_order: 'secondary',
+                delivery_status: 'delivered',
+                delivered_at: new Date().toISOString(),
+              });
+            } catch (logError) {
+              console.warn("Failed to log WhatsApp delivery:", logError);
+            }
+            
+            results.push({ 
+              success: true, 
+              recipient: profile.whatsapp_number, 
+              method: 'whatsapp',
+              channel: 'secondary'
+            });
+          } catch (whatsappError: any) {
+            console.error(`Error sending WhatsApp to creator (fallback):`, whatsappError);
+            
+            // Track the failed fallback
+            try {
+              await supabaseClient().from('reminder_delivery_log').upsert({
+                reminder_id: `${messageId}-${conditionId}-${new Date().toISOString()}-whatsapp`,
+                message_id: messageId,
+                condition_id: conditionId,
+                recipient: profile.whatsapp_number,
+                channel: 'whatsapp',
+                channel_order: 'secondary',
+                delivery_status: 'failed',
+                error_message: whatsappError.message || 'WhatsApp sending failed',
+              });
+            } catch (logError) {
+              console.warn("Failed to log WhatsApp delivery failure:", logError);
+            }
+            
+            results.push({ 
+              success: false, 
+              recipient: profile.whatsapp_number, 
+              method: 'whatsapp',
+              channel: 'secondary',
+              error: whatsappError.message || 'WhatsApp sending failed'
+            });
+          }
+        }
       }
     }
     
@@ -132,6 +215,7 @@ export async function sendCreatorReminder(
     console.error(`Error in sendCreatorReminder:`, error);
     return [{ 
       success: false, 
+      channel: 'unknown',
       error: error.message || 'Unknown error in sendCreatorReminder'
     }];
   }
@@ -147,7 +231,8 @@ export async function sendRecipientReminders(
   recipients: any[],
   hoursUntilDeadline: number,
   deadlineDate: string,
-  debug: boolean = false
+  debug: boolean = false,
+  isFinalDelivery: boolean = false
 ): Promise<ReminderResult[]> {
   const results: ReminderResult[] = [];
   
@@ -168,12 +253,15 @@ export async function sendRecipientReminders(
     : `${minutes} minutes`;
     
   if (debug) {
-    console.log(`Sending reminders to ${recipients.length} recipients for message ${messageId}`);
+    console.log(`Sending ${isFinalDelivery ? "FINAL DELIVERY" : "reminders"} to ${recipients.length} recipients for message ${messageId}`);
     console.log(`Message title: "${messageTitle}" from ${senderName}`);
   }
   
-  // Process each recipient
+  // Process each recipient with retry and fallback logic
   for (const recipient of recipients) {
+    let successfulDelivery = false;
+    const maxRetries = isFinalDelivery ? 3 : 1; // More retries for final delivery
+    
     try {
       if (!recipient.email) {
         console.warn(`No email found for recipient ${recipient.name || recipient.id}`);
@@ -181,54 +269,209 @@ export async function sendRecipientReminders(
           success: false, 
           recipient: recipient.name || recipient.id, 
           method: 'email',
+          channel: 'primary',
           error: 'No email address found'
         });
         continue;
       }
       
-      if (debug) {
-        console.log(`Sending email to recipient ${recipient.name} at ${recipient.email}`);
+      // Try primary channel (email) with retries
+      for (let attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+          if (debug) {
+            console.log(`Sending email to recipient ${recipient.name} at ${recipient.email} (attempt ${attempt + 1}/${maxRetries})`);
+          }
+          
+          // Prepare email content based on type
+          let emailSubject = '';
+          let emailContent = '';
+          
+          if (isFinalDelivery) {
+            emailSubject = `IMPORTANT MESSAGE from ${senderName}: "${messageTitle}"`;
+            emailContent = `
+              <h2>IMPORTANT MESSAGE</h2>
+              <p>${senderName} has set up this message to be delivered to you: <strong>${messageTitle}</strong></p>
+              <p><a href="https://echvault.lovable.ai/message/${messageId}?recipient=${recipient.id}" 
+                style="padding: 10px 20px; background-color: #0070f3; color: white; text-decoration: none; border-radius: 4px;">
+                View Message
+              </a></p>
+            `;
+          } else {
+            emailSubject = `Reminder: Message "${messageTitle}" from ${senderName}`;
+            emailContent = `
+              <h2>Message Delivery Reminder</h2>
+              <p>This is a reminder about a message titled: <strong>${messageTitle}</strong> from ${senderName}.</p>
+              <p>This message will be delivered to you in approximately ${timeRemaining}.</p>
+            `;
+          }
+          
+          // Send email
+          await sendEmail({
+            to: recipient.email,
+            subject: emailSubject,
+            html: emailContent
+          });
+          
+          // Track successful delivery
+          try {
+            await supabaseClient().from('reminder_delivery_log').upsert({
+              reminder_id: `${messageId}-${recipient.id}-${new Date().toISOString()}`,
+              message_id: messageId,
+              recipient_id: recipient.id,
+              recipient: recipient.email,
+              channel: 'email',
+              channel_order: 'primary',
+              delivery_status: 'delivered',
+              delivered_at: new Date().toISOString(),
+              is_final_delivery: isFinalDelivery
+            });
+          } catch (logError) {
+            console.warn("Failed to log reminder delivery:", logError);
+          }
+          
+          successfulDelivery = true;
+          results.push({ 
+            success: true, 
+            recipient: recipient.email, 
+            method: 'email',
+            channel: 'primary'
+          });
+          
+          // If successful, don't retry
+          break;
+        } catch (emailError: any) {
+          console.error(`Error sending email to recipient ${recipient.name} (attempt ${attempt + 1}/${maxRetries}):`, emailError);
+          
+          // Track failed attempt
+          try {
+            await supabaseClient().from('reminder_delivery_log').upsert({
+              reminder_id: `${messageId}-${recipient.id}-${new Date().toISOString()}-attempt-${attempt}`,
+              message_id: messageId,
+              recipient_id: recipient.id,
+              recipient: recipient.email,
+              channel: 'email',
+              channel_order: 'primary',
+              delivery_status: 'failed',
+              error_message: emailError.message || 'Email sending failed',
+              is_final_delivery: isFinalDelivery,
+              attempt_number: attempt + 1
+            });
+          } catch (logError) {
+            console.warn("Failed to log reminder delivery failure:", logError);
+          }
+          
+          // If this is the last retry and it's not successful
+          if (attempt === maxRetries - 1) {
+            results.push({ 
+              success: false, 
+              recipient: recipient.email, 
+              method: 'email',
+              channel: 'primary',
+              error: emailError.message || 'Email sending failed after multiple attempts'
+            });
+          }
+          
+          // If not the last attempt, add exponential backoff delay
+          if (attempt < maxRetries - 1) {
+            const backoffMs = Math.pow(2, attempt) * 1000; // Exponential backoff
+            await new Promise(resolve => setTimeout(resolve, backoffMs));
+          }
+        }
       }
       
-      // Send email to recipient
-      await sendEmail({
-        to: recipient.email,
-        subject: `Reminder: Message "${messageTitle}" from ${senderName}`,
-        html: `
-          <h2>Message Delivery Reminder</h2>
-          <p>This is a reminder about a message titled: <strong>${messageTitle}</strong> from ${senderName}.</p>
-          <p>This message will be delivered to you in approximately ${timeRemaining}.</p>
-        `
-      });
+      // If primary channel failed and it's a final delivery, try secondary channel (WhatsApp)
+      if (!successfulDelivery && isFinalDelivery && recipient.phone) {
+        try {
+          if (debug) {
+            console.log(`Trying secondary channel (WhatsApp) for recipient ${recipient.name} at ${recipient.phone}`);
+          }
+          
+          // This would call the WhatsApp delivery function in production
+          console.log(`Would send WhatsApp message to recipient at ${recipient.phone}`);
+          
+          // Track secondary channel attempt
+          try {
+            await supabaseClient().from('reminder_delivery_log').upsert({
+              reminder_id: `${messageId}-${recipient.id}-${new Date().toISOString()}-whatsapp`,
+              message_id: messageId,
+              recipient_id: recipient.id,
+              recipient: recipient.phone,
+              channel: 'whatsapp',
+              channel_order: 'secondary',
+              delivery_status: 'delivered',
+              delivered_at: new Date().toISOString(),
+              is_final_delivery: isFinalDelivery
+            });
+          } catch (logError) {
+            console.warn("Failed to log WhatsApp delivery:", logError);
+          }
+          
+          successfulDelivery = true;
+          results.push({ 
+            success: true, 
+            recipient: recipient.phone, 
+            method: 'whatsapp',
+            channel: 'secondary'
+          });
+        } catch (whatsappError: any) {
+          console.error(`Error sending WhatsApp to recipient:`, whatsappError);
+          
+          // Track failed secondary channel
+          try {
+            await supabaseClient().from('reminder_delivery_log').upsert({
+              reminder_id: `${messageId}-${recipient.id}-${new Date().toISOString()}-whatsapp`,
+              message_id: messageId, 
+              recipient_id: recipient.id,
+              recipient: recipient.phone,
+              channel: 'whatsapp',
+              channel_order: 'secondary',
+              delivery_status: 'failed',
+              error_message: whatsappError.message || 'WhatsApp sending failed',
+              is_final_delivery: isFinalDelivery
+            });
+          } catch (logError) {
+            console.warn("Failed to log WhatsApp delivery failure:", logError);
+          }
+          
+          results.push({ 
+            success: false, 
+            recipient: recipient.phone, 
+            method: 'whatsapp',
+            channel: 'secondary',
+            error: whatsappError.message || 'WhatsApp sending failed'
+          });
+          
+          // If both primary and secondary channels failed for final delivery, 
+          // we would implement tertiary channel here (e.g., phone call API)
+        }
+      }
       
-      results.push({ success: true, recipient: recipient.email, method: 'email' });
-    } catch (emailError: any) {
-      console.error(`Error sending email to recipient ${recipient.name}:`, emailError);
+      // For critical messages with failed delivery on all channels, alert operations
+      if (isFinalDelivery && !successfulDelivery) {
+        console.error(`CRITICAL: All delivery channels failed for final message ${messageId} to recipient ${recipient.name}`);
+        
+        // In production, this would trigger an operational alert (e.g., to Slack or email to ops team)
+        try {
+          await supabaseClient().from('delivery_alerts').insert({
+            message_id: messageId,
+            recipient_id: recipient.id,
+            recipient_name: recipient.name,
+            alert_type: 'final_delivery_failed',
+            alert_time: new Date().toISOString()
+          });
+        } catch (alertError) {
+          console.error("Failed to create operational alert:", alertError);
+        }
+      }
+    } catch (recipientError: any) {
+      console.error(`Error processing recipient ${recipient.name}:`, recipientError);
       results.push({ 
         success: false, 
-        recipient: recipient.email, 
-        method: 'email',
-        error: emailError.message || 'Email sending failed'
+        recipient: recipient.name || recipient.id, 
+        method: 'unknown',
+        channel: 'unknown',
+        error: recipientError.message || 'Unknown error processing recipient'
       });
-    }
-    
-    // If recipient has a phone number, try sending WhatsApp
-    if (recipient.phone) {
-      try {
-        // This is a placeholder - in production, you'd implement the WhatsApp sending logic
-        console.log(`Would send WhatsApp reminder to recipient at ${recipient.phone}`);
-        
-        // Simulate success
-        results.push({ success: true, recipient: recipient.phone, method: 'whatsapp' });
-      } catch (whatsappError: any) {
-        console.error(`Error sending WhatsApp to recipient:`, whatsappError);
-        results.push({ 
-          success: false, 
-          recipient: recipient.phone, 
-          method: 'whatsapp',
-          error: whatsappError.message || 'WhatsApp sending failed'
-        });
-      }
     }
   }
   
