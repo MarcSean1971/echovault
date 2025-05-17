@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { createOrUpdateReminderSchedule } from "@/services/messages/reminderService";
+import { toast } from "@/components/ui/use-toast";
 
 /**
  * Perform a check-in for a message condition
@@ -36,6 +37,8 @@ export async function performCheckIn(userId: string, source: string = "app") {
     const updates = [];
     const reminderSchedules = [];
     const reminderResults = [];
+    let schedulesCreated = 0;
+    let scheduleErrors = 0;
     
     for (const condition of conditions) {
       console.log(`[performCheckIn] Processing condition ${condition.id} for message ${condition.message_id}`);
@@ -48,6 +51,7 @@ export async function performCheckIn(userId: string, source: string = "app") {
         
       if (updateError) {
         console.error(`[performCheckIn] Error updating condition ${condition.id}:`, updateError);
+        scheduleErrors++;
         continue; // Continue with other conditions even if one fails
       }
       
@@ -95,9 +99,16 @@ export async function performCheckIn(userId: string, source: string = "app") {
           success: result
         });
         
+        if (result) {
+          schedulesCreated++;
+        } else {
+          scheduleErrors++;
+        }
+        
         console.log(`[performCheckIn] Reminder schedule ${result ? 'created' : 'failed'} for message ${condition.message_id}`);
       } catch (scheduleError) {
         console.error(`[performCheckIn] Error creating reminder schedule for message ${condition.message_id}:`, scheduleError);
+        scheduleErrors++;
         reminderResults.push({
           messageId: condition.message_id,
           conditionId: condition.id,
@@ -108,16 +119,46 @@ export async function performCheckIn(userId: string, source: string = "app") {
     }
     
     console.log(`[performCheckIn] Successfully updated ${conditions.length} conditions`);
+    console.log(`[performCheckIn] Created ${schedulesCreated} reminder schedules with ${scheduleErrors} errors`);
+    
+    // If all schedules failed, show a warning
+    if (scheduleErrors > 0 && schedulesCreated === 0) {
+      toast({
+        title: "Check-in Warning",
+        description: "Your check-in was recorded but the reminder schedule could not be updated.",
+        variant: "warning",
+        duration: 5000
+      });
+    }
     
     // Dispatch a global event to notify any listeners about the condition update
     try {
       if (typeof window !== 'undefined') {
+        const eventDetails = {
+          updatedAt: now,
+          reminderResults: reminderResults,
+          schedulesCreated,
+          scheduleErrors,
+          triggerValue: Date.now() // Add unique value to ensure events are distinct
+        };
+        
+        console.log('[performCheckIn] Dispatching conditions-updated event with details:', eventDetails);
+        
         window.dispatchEvent(new CustomEvent('conditions-updated', {
-          detail: {
-            updatedAt: now,
-            reminderResults: reminderResults
-          }
+          detail: eventDetails
         }));
+        
+        // Dispatch a second event after a short delay to ensure listeners have time to register
+        setTimeout(() => {
+          console.log('[performCheckIn] Dispatching delayed conditions-updated event');
+          window.dispatchEvent(new CustomEvent('conditions-updated', {
+            detail: {
+              ...eventDetails,
+              triggerValue: Date.now() + 1, // Different value to ensure it's treated as a new event
+              delayed: true
+            }
+          }));
+        }, 1000);
       }
     } catch (eventError) {
       console.warn('[performCheckIn] Failed to dispatch conditions-updated event:', eventError);
@@ -127,6 +168,8 @@ export async function performCheckIn(userId: string, source: string = "app") {
       success: true,
       message: `Successfully checked in for ${conditions.length} conditions.`,
       updatedConditions: conditions.length,
+      schedulesCreated,
+      scheduleErrors,
       reminderResults: reminderResults
     };
   } catch (error: any) {

@@ -26,9 +26,10 @@ export function ReminderSection({
   
   // State to track when the last force refresh happened
   const [lastForceRefresh, setLastForceRefresh] = useState<number>(0);
+  const [refreshCount, setRefreshCount] = useState<number>(0);
   
   // Get upcoming reminder information with ability to force refresh
-  const { upcomingReminders, hasReminders, forceRefresh, lastRefreshed } = useNextReminders(
+  const { upcomingReminders, hasReminders, isLoading, forceRefresh, lastRefreshed } = useNextReminders(
     condition?.message_id,
     refreshTrigger || lastForceRefresh
   );
@@ -37,6 +38,7 @@ export function ReminderSection({
   const handleForceRefresh = () => {
     forceRefresh();
     setLastForceRefresh(Date.now());
+    setRefreshCount(prev => prev + 1);
     toast({
       title: "Refreshing reminders data",
       description: "The reminders list is being updated...",
@@ -47,15 +49,40 @@ export function ReminderSection({
   // Listen for condition-updated events to automatically refresh
   useEffect(() => {
     const handleConditionUpdated = (event: Event) => {
-      if (event instanceof CustomEvent && event.detail?.reminderResults) {
-        console.log(`[ReminderSection] Received conditions-updated event with reminder results:`, event.detail.reminderResults);
+      console.log(`[ReminderSection] Received conditions-updated event:`, event);
+      
+      if (event instanceof CustomEvent) {
+        console.log(`[ReminderSection] Event details:`, event.detail);
+        
+        // Schedule multiple refresh attempts
+        // First refresh immediately
         handleForceRefresh();
+        
+        // Second refresh after a delay
+        setTimeout(() => {
+          console.log(`[ReminderSection] Performing delayed refresh`);
+          handleForceRefresh();
+        }, 2000);
+        
+        // Third refresh after a longer delay 
+        setTimeout(() => {
+          console.log(`[ReminderSection] Performing final delayed refresh`);
+          handleForceRefresh();
+        }, 5000);
       }
     };
     
     window.addEventListener('conditions-updated', handleConditionUpdated);
     return () => window.removeEventListener('conditions-updated', handleConditionUpdated);
   }, []);
+  
+  // Listen for external refresh trigger changes
+  useEffect(() => {
+    if (refreshTrigger && refreshTrigger > 0) {
+      console.log(`[ReminderSection] External refresh trigger changed: ${refreshTrigger}`);
+      handleForceRefresh();
+    }
+  }, [refreshTrigger]);
   
   if (!isArmed) {
     return null;
@@ -73,14 +100,19 @@ export function ReminderSection({
           variant="ghost" 
           size="sm" 
           onClick={handleForceRefresh} 
-          className="h-6 px-2"
+          className={`h-6 px-2 transition-all ${HOVER_TRANSITION}`}
           title="Refresh reminder data"
         >
-          <RefreshCw className="h-3 w-3" />
+          <RefreshCw className={`h-3 w-3 ${isLoading ? 'animate-spin' : ''}`} />
         </Button>
       </h3>
       <div className="space-y-3 text-sm">
-        {hasReminders ? (
+        {isLoading ? (
+          <div className="grid grid-cols-3 gap-1">
+            <span className="font-medium">Status:</span>
+            <span className="col-span-2 text-muted-foreground italic">Loading reminder information...</span>
+          </div>
+        ) : hasReminders ? (
           <>
             <div className="grid grid-cols-3 gap-1">
               <span className="font-medium">Status:</span>
@@ -114,7 +146,11 @@ export function ReminderSection({
         ) : (
           <div className="grid grid-cols-3 gap-1">
             <span className="font-medium">Status:</span>
-            <span className="col-span-2 text-muted-foreground italic">No reminders configured</span>
+            <span className="col-span-2 text-muted-foreground italic">
+              {refreshCount > 3 
+                ? "No reminders found. Try checking in again."
+                : "No reminders configured"}
+            </span>
           </div>
         )}
         {/* Show debug info in dev environment */}
@@ -123,6 +159,7 @@ export function ReminderSection({
             <div>Message ID: {condition?.message_id}</div>
             <div>Condition ID: {condition?.id}</div>
             <div>Last refreshed: {new Date(lastRefreshed || 0).toLocaleTimeString()}</div>
+            <div>Refresh count: {refreshCount}</div>
           </div>
         )}
       </div>

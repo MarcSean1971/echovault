@@ -1,6 +1,6 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { toast } from "@/components/ui/use-toast";
 
 /**
  * Generate and store reminder schedule for a message
@@ -27,7 +27,11 @@ export async function generateReminderSchedule(
     console.log(`[REMINDER-SCHEDULER] Reminder minutes: ${JSON.stringify(reminderMinutes)}`);
     
     // Mark existing reminders as obsolete first
-    await markExistingRemindersObsolete(messageId);
+    const markResult = await markExistingRemindersObsolete(messageId);
+    if (!markResult) {
+      console.warn(`[REMINDER-SCHEDULER] Warning: Failed to mark existing reminders as obsolete for message ${messageId}`);
+      // Continue despite warning, as we still want to try creating new reminders
+    }
     
     // Generate reminder timestamps
     const scheduleEntries = reminderMinutes.map(minutes => {
@@ -57,22 +61,63 @@ export async function generateReminderSchedule(
     console.log(`[REMINDER-SCHEDULER] Generated ${scheduleEntries.length} schedule entries for message ${messageId}`);
     
     // Insert schedule entries with conflict handling for idempotency
+    // IMPORTANT: This relies on a unique constraint for these columns in the database!
     const { data, error } = await supabase
       .from('reminder_schedule')
       .upsert(scheduleEntries, {
         onConflict: 'message_id,condition_id,scheduled_at,reminder_type',
-        ignoreDuplicates: true
+        ignoreDuplicates: false // Change to false to get error feedback if insert fails
       });
     
     if (error) {
       console.error("[REMINDER-SCHEDULER] Error storing reminder schedule:", error);
+      toast({
+        title: "Reminder Schedule Error",
+        description: "Failed to create reminder schedule. Please try again or contact support.",
+        variant: "destructive",
+        duration: 5000
+      });
       return false;
     }
     
     console.log(`[REMINDER-SCHEDULER] Successfully stored reminder schedule for message ${messageId}`);
+    
+    // Verify that reminders were actually created by checking the database
+    try {
+      const { count, error: countError } = await supabase
+        .from('reminder_schedule')
+        .select('*', { count: 'exact', head: true })
+        .eq('message_id', messageId)
+        .eq('status', 'pending');
+        
+      if (countError) {
+        console.error("[REMINDER-SCHEDULER] Error verifying reminder count:", countError);
+      } else {
+        console.log(`[REMINDER-SCHEDULER] Verified ${count} pending reminders exist for message ${messageId}`);
+        
+        if (count === 0) {
+          console.error("[REMINDER-SCHEDULER] No reminders were created despite no error! This might indicate a constraint issue.");
+          toast({
+            title: "Reminder Warning",
+            description: "No reminders were created. Please check system settings.",
+            variant: "destructive",
+            duration: 5000
+          });
+        }
+      }
+    } catch (verifyError) {
+      console.error("[REMINDER-SCHEDULER] Error during verification:", verifyError);
+    }
+    
     return true;
   } catch (error) {
     console.error("[REMINDER-SCHEDULER] Error in generateReminderSchedule:", error);
+    toast({
+      title: "Reminder Schedule Error",
+      description: "An unexpected error occurred setting up reminders.",
+      variant: "destructive",
+      duration: 5000
+    });
     return false;
   }
 }
