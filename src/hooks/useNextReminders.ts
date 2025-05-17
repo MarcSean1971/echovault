@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { getUpcomingReminders } from '@/utils/reminderScheduler';
+import { getUpcomingReminders } from '@/utils/reminder'; // Updated import path
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from '@/components/ui/use-toast';
 

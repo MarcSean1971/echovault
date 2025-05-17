@@ -1,7 +1,6 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
-import { generateReminderSchedule } from "@/utils/reminderScheduler";
+import { generateReminderSchedule } from "@/utils/reminder"; // Updated import path
 
 // Define the Reminder type that needs to be exported
 export interface Reminder {

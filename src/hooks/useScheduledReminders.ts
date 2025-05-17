@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { getReminderHistory } from "@/services/messages/reminderService";
-import { getUpcomingReminders, formatReminderSchedule } from "@/utils/reminderScheduler";
+import { getUpcomingReminders, formatReminderSchedule } from "@/utils/reminder"; // Updated import path
 import { toast } from "@/components/ui/use-toast";
 
 export interface ScheduledReminderInfo {
