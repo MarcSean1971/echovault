@@ -126,7 +126,7 @@ export async function performCheckIn(userId: string, source: string = "app") {
       toast({
         title: "Check-in Warning",
         description: "Your check-in was recorded but the reminder schedule could not be updated.",
-        variant: "warning",
+        variant: "destructive", // Changed from "warning" to "destructive" as it's one of the allowed variants
         duration: 5000
       });
     }
