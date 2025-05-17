@@ -93,6 +93,15 @@ export async function performCheckIn(userId: string, source: string = "app") {
     
     console.log(`[performCheckIn] Successfully updated ${conditions.length} conditions`);
     
+    // Dispatch a global event to notify any listeners about the condition update
+    try {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('conditions-updated'));
+      }
+    } catch (eventError) {
+      console.warn('[performCheckIn] Failed to dispatch conditions-updated event:', eventError);
+    }
+    
     return {
       success: true,
       message: `Successfully checked in for ${conditions.length} conditions.`,
@@ -101,5 +110,31 @@ export async function performCheckIn(userId: string, source: string = "app") {
   } catch (error: any) {
     console.error("[performCheckIn] Error during check-in:", error);
     throw new Error(`Check-in failed: ${error.message}`);
+  }
+}
+
+/**
+ * Calculate the next check-in deadline for a condition
+ * This is needed for the conditionService re-export
+ */
+export function getNextCheckInDeadline(condition: any): Date | null {
+  if (!condition || !condition.last_checked) return null;
+  
+  try {
+    // Calculate deadline based on hours and minutes threshold
+    const lastChecked = new Date(condition.last_checked);
+    const hoursThreshold = condition.hours_threshold || 0;
+    const minutesThreshold = condition.minutes_threshold || 0;
+    
+    // Calculate total milliseconds for threshold
+    const thresholdMs = (hoursThreshold * 60 * 60 + minutesThreshold * 60) * 1000;
+    
+    // Calculate deadline by adding threshold to last checked time
+    const deadline = new Date(lastChecked.getTime() + thresholdMs);
+    
+    return deadline;
+  } catch (error) {
+    console.error('[getNextCheckInDeadline] Error calculating deadline:', error);
+    return null;
   }
 }

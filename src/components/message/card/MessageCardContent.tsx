@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { cn } from "@/lib/utils";
 
 interface MessageCardContentProps {
   message: Message;
@@ -128,8 +129,7 @@ export function MessageCardContent({
           </div>
           <Progress 
             value={deadlineProgress} 
-            className={`h-2 ${deadlineProgress > 75 ? 'bg-red-200' : 'bg-muted'}`}
-            indicatorClassName={deadlineProgress > 75 ? 'bg-red-500' : 'bg-blue-500'}
+            className={cn("h-2", deadlineProgress > 75 ? "bg-red-200" : "bg-muted")}
           />
         </div>
       )}
