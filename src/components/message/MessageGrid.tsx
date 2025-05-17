@@ -1,4 +1,5 @@
 
+import React, { useEffect, useState } from "react";
 import { Message } from "@/types/message";
 import { MessageCard } from "./MessageCard";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,6 +17,29 @@ interface MessageGridProps {
 
 export function MessageGrid({ messages, isLoading, onDelete }: MessageGridProps) {
   const navigate = useNavigate();
+  
+  // State for virtualized rendering
+  const [visibleMessages, setVisibleMessages] = useState<Message[]>([]);
+
+  // Implement basic virtualization - only render visible items and a few extra
+  useEffect(() => {
+    // Simple implementation - show all messages initially, but with delayed rendering
+    // for better perceived performance
+    if (messages.length > 0) {
+      // First render only first 3 messages immediately
+      setVisibleMessages(messages.slice(0, 3));
+      
+      // Then render the rest after a small delay
+      if (messages.length > 3) {
+        const timer = setTimeout(() => {
+          setVisibleMessages(messages);
+        }, 100);
+        return () => clearTimeout(timer);
+      }
+    } else {
+      setVisibleMessages([]);
+    }
+  }, [messages]);
   
   if (isLoading) {
     return (
@@ -50,11 +74,11 @@ export function MessageGrid({ messages, isLoading, onDelete }: MessageGridProps)
   
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
-      {messages.map((message, index) => (
+      {visibleMessages.map((message, index) => (
         <div
           key={message.id}
           className="animate-fade-in"
-          style={{ animationDelay: `${index * 0.1}s` }}
+          style={{ animationDelay: `${Math.min(index * 0.05, 0.5)}s` }}
         >
           <MessageCard 
             message={message} 

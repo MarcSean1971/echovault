@@ -1,7 +1,16 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { MessageCondition } from "@/types/message";
 import { getConditionByMessageId, getMessageDeadline } from "@/services/messages/conditionService";
+
+// Cache for conditions to reduce redundant API calls
+const conditionCache = new Map<string, {
+  condition: MessageCondition | null,
+  timestamp: number
+}>();
+
+// Cache TTL in milliseconds (10 seconds)
+const CACHE_TTL = 10000;
 
 export function useMessageCondition(messageId: string) {
   const [isArmed, setIsArmed] = useState(false);
@@ -10,13 +19,52 @@ export function useMessageCondition(messageId: string) {
   const [isPanicTrigger, setIsPanicTrigger] = useState(false);
   const [transcription, setTranscription] = useState<string | null>(null);
   const [refreshCounter, setRefreshCounter] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Load message condition status
+  // Load message condition status with caching
   useEffect(() => {
+    // Check if we have a recent cached version first
+    const cachedData = conditionCache.get(messageId);
+    const now = Date.now();
+    
+    if (cachedData && (now - cachedData.timestamp < CACHE_TTL)) {
+      const cachedCondition = cachedData.condition;
+      if (cachedCondition) {
+        console.log(`[MessageCondition] Using cached condition for message ${messageId}`);
+        setCondition(cachedCondition);
+        setIsArmed(cachedCondition.active);
+        setIsPanicTrigger(cachedCondition.condition_type === 'panic_trigger');
+        setIsLoading(false);
+        
+        // Even with cache hit, get deadline if needed
+        if (cachedCondition.active) {
+          getMessageDeadline(cachedCondition.id)
+            .then(deadlineDate => {
+              if (deadlineDate) {
+                setDeadline(new Date(deadlineDate.getTime()));
+              } else {
+                setDeadline(null);
+              }
+            })
+            .catch(err => console.error("Error getting deadline:", err));
+        }
+        
+        return;
+      }
+    }
+    
+    // If no valid cache, load from API
+    setIsLoading(true);
     const loadConditionStatus = async () => {
       try {
         console.log(`[MessageCard] Loading condition for message ID: ${messageId}`);
         const messageCondition = await getConditionByMessageId(messageId);
+        
+        // Cache the result
+        conditionCache.set(messageId, {
+          condition: messageCondition,
+          timestamp: Date.now()
+        });
         
         if (messageCondition) {
           console.log(`[MessageCard] Got condition ID: ${messageCondition.id}, active: ${messageCondition.active}`);
@@ -38,6 +86,8 @@ export function useMessageCondition(messageId: string) {
         }
       } catch (error) {
         console.error("Error loading message condition:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
     
@@ -46,7 +96,11 @@ export function useMessageCondition(messageId: string) {
     // Also reload when conditions-updated event is received
     const handleConditionsUpdated = (event: Event) => {
       if (event instanceof CustomEvent) {
-        console.log(`[MessageCard ${messageId}] Received conditions-updated event, reloading with trigger: ${event.detail?.triggerValue || 'unknown'}`);
+        console.log(`[MessageCard ${messageId}] Received conditions-updated event, reloading`);
+        
+        // Clear cache for this message
+        conditionCache.delete(messageId);
+        
         loadConditionStatus();
         // Increment refresh counter to force re-render of timer
         setRefreshCounter(prev => prev + 1);
@@ -57,7 +111,7 @@ export function useMessageCondition(messageId: string) {
     return () => {
       window.removeEventListener('conditions-updated', handleConditionsUpdated);
     };
-  }, [messageId]);
+  }, [messageId, refreshCounter]);
   
   return { 
     isArmed, 
@@ -66,6 +120,7 @@ export function useMessageCondition(messageId: string) {
     isPanicTrigger,
     transcription,
     refreshCounter,
+    isLoading,
     setRefreshCounter
   };
 }

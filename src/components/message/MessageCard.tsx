@@ -1,4 +1,5 @@
 
+import React, { memo, useEffect, useState } from "react";
 import { Card, CardHeader, CardContent, CardFooter } from "@/components/ui/card";
 import { Message } from "@/types/message";
 import { formatDate } from "@/utils/messageFormatUtils";
@@ -11,7 +12,6 @@ import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { useMessageCardActions } from "@/hooks/useMessageCardActions";
 import { useMessageLastCheckIn } from "@/hooks/useMessageLastCheckIn";
 import { useScheduledReminders } from "@/hooks/useScheduledReminders";
-import { useEffect, useState } from "react";
 import { intervalToDuration } from "date-fns";
 
 interface MessageCardProps {
@@ -19,7 +19,8 @@ interface MessageCardProps {
   onDelete: (id: string) => void;
 }
 
-export function MessageCard({ message, onDelete }: MessageCardProps) {
+// The non-memoized inner component
+function MessageCardInner({ message, onDelete }: MessageCardProps) {
   // Get condition status and data
   const { 
     isArmed, 
@@ -30,7 +31,7 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
     setRefreshCounter 
   } = useMessageCondition(message.id);
   
-  // Get transcription if available
+  // Get transcription if available (with lazy loading)
   const { transcription } = useMessageTranscription(message);
   
   // Get last check-in information
@@ -60,7 +61,7 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
     return `${hours}:${minutes}:${seconds}`;
   };
   
-  // Update deadline progress and countdown
+  // Update deadline progress and countdown - optimize to update every 5 seconds instead of every second
   useEffect(() => {
     if (isArmed && deadline && condition?.last_checked) {
       const updateProgress = () => {
@@ -85,8 +86,8 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
       // Initial update
       updateProgress();
       
-      // Update progress and countdown timer every second for smoother countdown
-      const timer = setInterval(updateProgress, 1000);
+      // Update progress and countdown timer every 5 seconds for better performance
+      const timer = setInterval(updateProgress, 5000);
       return () => clearInterval(timer);
     } else {
       setDeadlineProgress(0);
@@ -166,3 +167,6 @@ export function MessageCard({ message, onDelete }: MessageCardProps) {
     </Card>
   );
 }
+
+// Memoize the component to prevent unnecessary re-renders
+export const MessageCard = memo(MessageCardInner);

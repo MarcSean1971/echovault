@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/components/ui/use-toast";
@@ -9,7 +8,7 @@ import { MessageGrid } from "@/components/message/MessageGrid";
 import { fetchMessages, deleteMessage } from "@/services/messages/messageService";
 import { Message, MessageCondition } from "@/types/message";
 import { BUTTON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
-import { fetchMessageConditions } from "@/services/messages/conditionService";
+import { fetchMessageConditions, invalidateConditionsCache } from "@/services/messages/conditionService";
 import { PlusCircle } from "lucide-react";
 
 export default function Messages() {
@@ -22,83 +21,86 @@ export default function Messages() {
   const [panicMessages, setPanicMessages] = useState<Message[]>([]);
   const [regularMessages, setRegularMessages] = useState<Message[]>([]);
 
-  useEffect(() => {
+  // Optimized data loading function
+  const loadData = useCallback(async () => {
     if (!userId) return;
     
-    const loadMessages = async () => {
-      setIsLoading(true);
+    setIsLoading(true);
+    
+    try {
+      console.log("Fetching messages and conditions for user:", userId);
       
-      try {
-        console.log("Fetching messages and conditions for user:", userId);
+      // Fetch messages and conditions in parallel
+      const [messageData, conditionsData] = await Promise.all([
+        fetchMessages(messageType),
+        fetchMessageConditions(userId)
+      ]);
+      
+      console.log("Messages fetched:", messageData?.length || 0);
+      console.log("Conditions fetched:", conditionsData?.length || 0);
+      
+      // Update state with fetched data
+      setMessages(messageData);
+      setConditions(conditionsData);
+      
+      // Categorize messages
+      const panic: Message[] = [];
+      const regular: Message[] = [];
+      
+      messageData.forEach(message => {
+        // Find the condition for this message
+        const condition = conditionsData.find(c => c.message_id === message.id);
         
-        // Try to fetch messages first, then conditions if successful
-        try {
-          const messageData = await fetchMessages(messageType);
-          console.log("Messages fetched:", messageData?.length || 0);
-          setMessages(messageData);
-          
-          // Once messages are fetched successfully, get conditions
-          try {
-            const conditionsData = await fetchMessageConditions(userId);
-            console.log("Conditions fetched:", conditionsData?.length || 0);
-            setConditions(conditionsData);
-            
-            // Categorize messages based on their condition types
-            const panic: Message[] = [];
-            const regular: Message[] = [];
-            
-            messageData.forEach(message => {
-              // Find the condition for this message
-              const condition = conditionsData.find(c => c.message_id === message.id);
-              
-              if (condition && condition.condition_type === 'panic_trigger') {
-                panic.push(message);
-              } else {
-                regular.push(message);
-              }
-            });
-            
-            console.log("Panic messages:", panic.length);
-            console.log("Regular messages:", regular.length);
-            
-            setPanicMessages(panic);
-            setRegularMessages(regular);
-          } catch (conditionsError: any) {
-            console.error("Error fetching conditions:", conditionsError);
-            // Still show messages even if conditions fail
-            toast({
-              title: "Warning",
-              description: "Failed to load message conditions, some features may be limited",
-              variant: "destructive" // Changed from "warning" to "destructive" as it's one of the allowed variants
-            });
-            
-            // If conditions fail, show all messages as regular
-            setPanicMessages([]);
-            setRegularMessages(messageData);
-          }
-        } catch (messagesError: any) {
-          console.error("Error fetching messages:", messagesError);
-          throw messagesError; // Re-throw to the outer catch
+        if (condition && condition.condition_type === 'panic_trigger') {
+          panic.push(message);
+        } else {
+          regular.push(message);
         }
-      } catch (error: any) {
-        console.error("Error in loadMessages:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load your messages: " + (error?.message || "Unknown error"),
-          variant: "destructive"
-        });
-        
-        // Clear all message states on error
-        setMessages([]);
-        setPanicMessages([]);
-        setRegularMessages([]);
-      } finally {
-        setIsLoading(false);
+      });
+      
+      console.log("Panic messages:", panic.length);
+      console.log("Regular messages:", regular.length);
+      
+      setPanicMessages(panic);
+      setRegularMessages(regular);
+      
+    } catch (error: any) {
+      console.error("Error loading data:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load your messages: " + (error?.message || "Unknown error"),
+        variant: "destructive"
+      });
+      
+      // Clear message states on error
+      setMessages([]);
+      setPanicMessages([]);
+      setRegularMessages([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [userId, messageType]);
+  
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+  
+  // Listen for conditions-updated event
+  useEffect(() => {
+    const handleConditionsUpdated = () => {
+      console.log("Messages page received conditions-updated event, refreshing data");
+      // Invalidate cache and reload data
+      if (userId) {
+        invalidateConditionsCache(userId);
       }
+      loadData();
     };
     
-    loadMessages();
-  }, [userId, messageType]);
+    window.addEventListener('conditions-updated', handleConditionsUpdated);
+    return () => {
+      window.removeEventListener('conditions-updated', handleConditionsUpdated);
+    };
+  }, [userId, loadData]);
   
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this message?")) return;

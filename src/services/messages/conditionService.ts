@@ -5,7 +5,8 @@ import {
   createConditionInDb,
   fetchConditionsFromDb,
   updateConditionInDb,
-  deleteConditionFromDb
+  deleteConditionFromDb,
+  invalidateConditionsCache
 } from "./conditions/dbOperations";
 import { performCheckIn, getNextCheckInDeadline } from "./conditions/checkInService";
 import { triggerPanicMessage } from "./conditions/panicTriggerService";
@@ -76,3 +77,6 @@ export { getMessageStatus };
 
 // Re-export arming/disarming functions
 export { armMessage, disarmMessage, getMessageDeadline };
+
+// Re-export cache invalidation function
+export { invalidateConditionsCache };
