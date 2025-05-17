@@ -1,4 +1,3 @@
-
 import { MessageCondition, TriggerType } from "@/types/message";
 import { CreateConditionOptions } from "./conditions/types";
 import { 
@@ -13,6 +12,7 @@ import { triggerPanicMessage } from "./conditions/panicTriggerService";
 import { getMessageStatus } from "./conditions/messageStatusService";
 import { armMessage, disarmMessage, getMessageDeadline } from "./conditions/messageArmingService";
 import { mapDbConditionToMessageCondition, mapMessageConditionToDb } from "./conditions/helpers/map-helpers";
+import { supabase } from "@/integrations/supabase/client";
 
 // Create a message condition
 export async function createMessageCondition(
@@ -67,7 +67,7 @@ export async function deleteMessageCondition(conditionId: string): Promise<void>
 export { getConditionByMessageId } from './conditions/messageConditionService';
 
 // Re-export check-in functions
-export { performCheckIn, getNextCheckInDeadline };
+export { performCheckIn, getNextCheckInDeadline as getConditionDeadline };
 
 // Re-export panic trigger functions
 export { triggerPanicMessage };
@@ -80,3 +80,41 @@ export { armMessage, disarmMessage, getMessageDeadline };
 
 // Re-export cache invalidation function
 export { invalidateConditionsCache };
+
+/**
+ * Re-export getNextCheckInDeadline with userId handling logic
+ */
+export async function getNextCheckInDeadline(userId: string) {
+  if (!userId) return null;
+  
+  try {
+    // Get active conditions for user
+    const { data: conditions, error } = await supabase
+      .from("message_conditions")
+      .select("*")
+      .eq("active", true)
+      .in("condition_type", ["no_check_in", "recurring_check_in", "inactivity_to_date"]);
+    
+    if (error) throw error;
+    
+    if (!conditions || conditions.length === 0) {
+      return null;
+    }
+    
+    // Calculate the earliest deadline from all active conditions
+    let earliestDeadline: Date | null = null;
+    
+    for (const condition of conditions) {
+      const deadline = getConditionDeadline(condition);
+      
+      if (deadline && (!earliestDeadline || deadline < earliestDeadline)) {
+        earliestDeadline = deadline;
+      }
+    }
+    
+    return earliestDeadline;
+  } catch (error) {
+    console.error("Error getting next check-in deadline:", error);
+    return null;
+  }
+}

@@ -38,8 +38,8 @@ export function useDashboardData() {
         setConditions(conditionsData);
         
         // Get next check-in deadline
-        const { deadline } = await getNextCheckInDeadline(userId);
-        setNextDeadline(deadline);
+        const deadlineResult = await getNextCheckInDeadline(userId);
+        setNextDeadline(deadlineResult ? deadlineResult : null);
         
         // Use the most recent last_checked date from conditions as the last check-in
         if (conditionsData && conditionsData.length > 0) {
@@ -87,8 +87,8 @@ export function useDashboardData() {
       setConditions(updatedConditions);
       
       // Also refresh the next deadline
-      const { deadline } = await getNextCheckInDeadline(userId);
-      setNextDeadline(deadline);
+      const deadlineResult = await getNextCheckInDeadline(userId);
+      setNextDeadline(deadlineResult ? deadlineResult : null);
       
       return updatedConditions;
     } catch (error) {

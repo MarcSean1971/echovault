@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock, MessageSquare, Users, Shield, AlertCircle } from "lucide-react";
@@ -22,7 +21,7 @@ export default function Dashboard() {
     
     const loadCheckInData = async () => {
       try {
-        const { deadline } = await getNextCheckInDeadline(userId);
+        const deadline = await getNextCheckInDeadline(userId);
         
         if (deadline) {
           const now = new Date();
