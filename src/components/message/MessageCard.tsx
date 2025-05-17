@@ -157,7 +157,7 @@ function MessageCardInner({ message, onDelete, reminderInfo }: MessageCardProps)
           lastCheckIn={formattedCheckIn}
           rawCheckInTime={rawCheckInTime}
           nextReminder={formattedNextReminder}
-          rawNextReminderTime={nextReminder}
+          rawNextReminderTime={nextReminder ? nextReminder : null}
           deadlineProgress={deadlineProgress}
           timeLeft={timeLeft}
           upcomingReminders={upcomingReminders}

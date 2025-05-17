@@ -115,7 +115,6 @@ export async function performCheckIn(userId: string, source: string = "app") {
 
 /**
  * Calculate the next check-in deadline for a condition
- * This is needed for the conditionService re-export
  */
 export function getNextCheckInDeadline(condition: any): Date | null {
   if (!condition || !condition.last_checked) return null;

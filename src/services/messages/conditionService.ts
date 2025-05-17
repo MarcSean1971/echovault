@@ -1,3 +1,4 @@
+
 import { MessageCondition, TriggerType } from "@/types/message";
 import { CreateConditionOptions } from "./conditions/types";
 import { 
@@ -7,7 +8,7 @@ import {
   deleteConditionFromDb,
   invalidateConditionsCache
 } from "./conditions/dbOperations";
-import { performCheckIn, getNextCheckInDeadline } from "./conditions/checkInService";
+import { performCheckIn, getNextCheckInDeadline as getCheckInDeadlineFromService } from "./conditions/checkInService";
 import { triggerPanicMessage } from "./conditions/panicTriggerService";
 import { getMessageStatus } from "./conditions/messageStatusService";
 import { armMessage, disarmMessage, getMessageDeadline } from "./conditions/messageArmingService";
@@ -67,7 +68,10 @@ export async function deleteMessageCondition(conditionId: string): Promise<void>
 export { getConditionByMessageId } from './conditions/messageConditionService';
 
 // Re-export check-in functions
-export { performCheckIn, getNextCheckInDeadline as getConditionDeadline };
+export { performCheckIn };
+
+// Re-export the deadline calculation function from checkInService with a more specific name
+export { getCheckInDeadlineFromService as getConditionDeadline };
 
 // Re-export panic trigger functions
 export { triggerPanicMessage };
@@ -82,7 +86,7 @@ export { armMessage, disarmMessage, getMessageDeadline };
 export { invalidateConditionsCache };
 
 /**
- * Re-export getNextCheckInDeadline with userId handling logic
+ * Enhanced version of getNextCheckInDeadline with user-specific deadline calculation
  */
 export async function getNextCheckInDeadline(userId: string) {
   if (!userId) return null;
@@ -105,7 +109,8 @@ export async function getNextCheckInDeadline(userId: string) {
     let earliestDeadline: Date | null = null;
     
     for (const condition of conditions) {
-      const deadline = getConditionDeadline(condition);
+      // Use the imported function from checkInService
+      const deadline = getCheckInDeadlineFromService(condition);
       
       if (deadline && (!earliestDeadline || deadline < earliestDeadline)) {
         earliestDeadline = deadline;
