@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { toast } from "@/components/ui/use-toast";
@@ -62,7 +61,6 @@ export async function generateReminderSchedule(
     console.log(`[REMINDER-SCHEDULER] Generated ${scheduleEntries.length} schedule entries for message ${messageId}`);
     
     // Insert schedule entries with conflict handling for idempotency
-    // IMPORTANT: This relies on a unique constraint for these columns in the database!
     const { data, error } = await supabase
       .from('reminder_schedule')
       .upsert(scheduleEntries, {
@@ -150,6 +148,12 @@ async function markExistingRemindersObsolete(messageId: string): Promise<boolean
       .eq('message_id', messageId);
     
     if (error) {
+      // Check if this is an RLS permission error
+      if (error.code === "42501" || error.message?.includes("permission denied")) {
+        console.warn("[REMINDER-SCHEDULER] Permission denied marking reminders as obsolete - user likely doesn't own this message");
+        return false;
+      }
+      
       console.error("[REMINDER-SCHEDULER] Error marking reminders as obsolete:", error);
       return false;
     }
@@ -224,10 +228,11 @@ export async function getUpcomingReminders(messageId: string): Promise<{
       // Handle RLS specific errors
       if (error.code === "42501" || error.message?.includes("permission denied")) {
         console.warn("[REMINDER-SCHEDULER] Permission denied accessing reminders - user likely doesn't own this message");
+        throw new Error(`Permission denied: ${error.message}`);
       } else {
         console.error("[REMINDER-SCHEDULER] Error fetching upcoming reminders:", error);
+        throw error;
       }
-      return [];
     }
     
     if (!data) {
@@ -248,7 +253,7 @@ export async function getUpcomingReminders(messageId: string): Promise<{
     }));
   } catch (error) {
     console.error("[REMINDER-SCHEDULER] Error in getUpcomingReminders:", error);
-    return [];
+    throw error; // Re-throw to allow proper handling by callers
   }
 }
 

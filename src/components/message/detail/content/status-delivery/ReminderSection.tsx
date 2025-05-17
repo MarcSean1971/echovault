@@ -29,7 +29,7 @@ export function ReminderSection({
   const [refreshCount, setRefreshCount] = useState<number>(0);
   
   // Get upcoming reminder information with ability to force refresh
-  const { upcomingReminders, hasReminders, isLoading, forceRefresh, lastRefreshed } = useNextReminders(
+  const { upcomingReminders, hasReminders, isLoading, forceRefresh, lastRefreshed, permissionError } = useNextReminders(
     condition?.message_id,
     refreshTrigger || lastForceRefresh
   );
@@ -112,6 +112,13 @@ export function ReminderSection({
             <span className="font-medium">Status:</span>
             <span className="col-span-2 text-muted-foreground italic">Loading reminder information...</span>
           </div>
+        ) : permissionError ? (
+          <div className="grid grid-cols-3 gap-1">
+            <span className="font-medium">Status:</span>
+            <span className="col-span-2 text-amber-600 italic">
+              You don't have permission to view reminders for this message.
+            </span>
+          </div>
         ) : hasReminders ? (
           <>
             <div className="grid grid-cols-3 gap-1">
@@ -160,6 +167,7 @@ export function ReminderSection({
             <div>Condition ID: {condition?.id}</div>
             <div>Last refreshed: {new Date(lastRefreshed || 0).toLocaleTimeString()}</div>
             <div>Refresh count: {refreshCount}</div>
+            {permissionError && <div className="text-amber-600">Permission error detected</div>}
           </div>
         )}
       </div>
