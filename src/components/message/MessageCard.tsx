@@ -179,4 +179,3 @@ function MessageCardInner({ message, onDelete, reminderInfo }: MessageCardProps)
 
 // Memoize the component to prevent unnecessary re-renders
 export const MessageCard = memo(MessageCardInner);
-

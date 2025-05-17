@@ -1,152 +1,131 @@
 
 import React from "react";
-import { Message, MessageCondition } from "@/types/message";
-import { Clock, CheckCircle2, X, AlertTriangle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
+import { MessageCondition, Message } from "@/types/message";
+import { extractTranscription } from "@/utils/messageFormatUtils";
+import { Clock, AlertTriangle, Bell } from "lucide-react";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { cn } from "@/lib/utils";
 
 interface MessageCardContentProps {
   message: Message;
   isArmed: boolean;
-  isPanicTrigger: boolean;
-  condition: MessageCondition | null;
   deadline: Date | null;
+  condition: MessageCondition | null;
   transcription: string | null;
+  isPanicTrigger: boolean;
   lastCheckIn: string | null;
-  rawCheckInTime: Date | null;
+  rawCheckInTime: string | null;
   nextReminder: string | null;
-  rawNextReminderTime: Date | null;
+  rawNextReminderTime: Date | null; // This expects Date | null
   deadlineProgress: number;
   timeLeft: string | null;
-  upcomingReminders?: string[];
+  upcomingReminders: string[];
 }
 
 export function MessageCardContent({
   message,
   isArmed,
-  isPanicTrigger,
-  condition,
   deadline,
+  condition,
   transcription,
+  isPanicTrigger,
   lastCheckIn,
   rawCheckInTime,
   nextReminder,
   rawNextReminderTime,
   deadlineProgress,
   timeLeft,
-  upcomingReminders = []
+  upcomingReminders
 }: MessageCardContentProps) {
-  // Display a snippet of the content
-  const getContentSnippet = () => {
-    if (message.message_type === 'video') {
-      if (transcription) {
-        return `${transcription.substring(0, 100)}${transcription.length > 100 ? '...' : ''}`;
-      } else {
-        try {
-          const videoData = JSON.parse(message.content || '{}');
-          if (videoData?.additionalText) {
-            return `${videoData.additionalText.substring(0, 100)}${videoData.additionalText.length > 100 ? '...' : ''}`;
-          }
-        } catch (e) {
-          // Not JSON
-        }
-        return 'Video message';
-      }
-    }
-    
-    // Default to text content
-    const displayContent = message.text_content || message.content;
-    if (!displayContent) return 'No content';
-    return `${displayContent.substring(0, 100)}${displayContent.length > 100 ? '...' : ''}`;
-  };
+  // Determine if this is a check-in type condition
+  const isCheckInCondition = condition?.condition_type === 'no_check_in' || 
+                          condition?.condition_type === 'recurring_check_in' ||
+                          condition?.condition_type === 'inactivity_to_date';
   
-  // Get status badge
-  const getStatusBadge = () => {
-    if (!condition) return null;
-    
-    if (isPanicTrigger) {
-      return (
-        <Badge 
-          variant="outline" 
-          className="bg-red-50 text-red-600 border-red-200 hover:border-red-300 mt-2"
-        >
-          {isArmed ? 'Emergency Ready' : 'Emergency Standby'}
-        </Badge>
-      );
-    }
-    
-    if (isArmed) {
-      return (
-        <Badge 
-          variant="outline" 
-          className="bg-red-50 text-red-600 border-red-200 hover:border-red-300 mt-2"
-        >
-          Armed
-        </Badge>
-      );
-    }
-    
-    return (
-      <Badge 
-        variant="outline" 
-        className="bg-green-50 text-green-600 border-green-200 hover:border-green-300 mt-2"
-      >
-        Disarmed
-      </Badge>
-    );
-  };
+  // Extract the content from the message
+  const content = message.content || "";
+  const messagePreview = message.message_type === 'text' 
+    ? content.substring(0, 120) + (content.length > 120 ? '...' : '')
+    : transcription 
+      ? transcription.substring(0, 100) + (transcription.length > 100 ? '...' : '') 
+      : 'No preview available';
+
+  const showDeadline = isArmed && deadline && isCheckInCondition;
+  const hasReminders = upcomingReminders && upcomingReminders.length > 0;
 
   return (
     <div className="space-y-3">
-      {/* Content Preview */}
-      <p className="text-sm text-gray-600 line-clamp-2">
-        {getContentSnippet()}
+      {/* Message preview text */}
+      <p className="text-sm line-clamp-2 leading-relaxed text-gray-600">
+        {messagePreview}
       </p>
-      
-      {/* Status Badge */}
-      <div className="flex flex-wrap gap-2 items-center">
-        {getStatusBadge()}
-        
-        {message.attachments && message.attachments.length > 0 && (
-          <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 mt-2">
-            {message.attachments.length} {message.attachments.length === 1 ? 'Attachment' : 'Attachments'}
-          </Badge>
-        )}
-      </div>
-      
-      {/* Progress Bar - Only for armed deadman's switch */}
-      {isArmed && !isPanicTrigger && deadline && (
-        <div className="mt-4 space-y-2">
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <div className="flex items-center">
-              <Clock className="h-3 w-3 mr-1 text-muted-foreground" />
-              <span>{lastCheckIn || 'Never'}</span>
-            </div>
-            <span>{timeLeft}</span>
+
+      {/* Show deadline and countdown if armed */}
+      {showDeadline && timeLeft && (
+        <div className="space-y-1">
+          <div className="flex items-center justify-between text-xs">
+            <span className="flex items-center text-muted-foreground">
+              <Clock className="h-3 w-3 mr-1" /> 
+              Time remaining
+            </span>
+            <span className={cn(
+              "font-mono font-semibold",
+              timeLeft === "00:00:00" ? "text-destructive" : 
+              deadlineProgress > 75 ? "text-amber-600" : "text-primary"
+            )}>
+              {timeLeft}
+            </span>
           </div>
           <Progress 
-            value={deadlineProgress} 
-            className={cn("h-2", deadlineProgress > 75 ? "bg-red-200" : "bg-muted")}
+            value={100 - deadlineProgress} 
+            className={cn(
+              "h-1.5 transition-all",
+              deadlineProgress > 90 ? "bg-destructive/20" : 
+              deadlineProgress > 75 ? "bg-amber-200/50" : "bg-green-200/50"
+            )}
+            indicatorClassName={cn(
+              deadlineProgress > 90 ? "bg-destructive" : 
+              deadlineProgress > 75 ? "bg-amber-500" : "bg-green-500"
+            )}
           />
         </div>
       )}
-      
-      {/* Next reminder - Only show if we have reminder data */}
-      {nextReminder && (
-        <div className="text-xs text-muted-foreground flex items-center mt-2">
-          <AlertTriangle className={`h-3 w-3 mr-1 ${HOVER_TRANSITION}`} />
-          Next reminder: {nextReminder}
+
+      {/* Panic trigger warning if applicable */}
+      {isPanicTrigger && (
+        <div className="flex items-center mt-2 text-amber-600 text-xs">
+          <AlertTriangle className={`h-3.5 w-3.5 mr-1.5 ${HOVER_TRANSITION}`} />
+          <span>Panic trigger message</span>
+        </div>
+      )}
+
+      {/* Last check-in information if available */}
+      {lastCheckIn && condition?.condition_type === 'no_check_in' && (
+        <div className="flex items-center justify-between text-xs text-muted-foreground mt-1">
+          <span>Last check-in:</span>
+          <span>{lastCheckIn}</span>
         </div>
       )}
       
-      {/* Show up to 1 upcoming reminder if we have them */}
-      {!nextReminder && upcomingReminders && upcomingReminders.length > 0 && (
-        <div className="text-xs text-muted-foreground flex items-center mt-2">
-          <Clock className={`h-3 w-3 mr-1 ${HOVER_TRANSITION}`} />
-          Next: {upcomingReminders[0]}
+      {/* Next reminder information if available */}
+      {nextReminder && (
+        <div className="flex items-center justify-between text-xs text-muted-foreground mt-1">
+          <span className="flex items-center">
+            <Bell className="h-3 w-3 mr-1" /> 
+            Next reminder:
+          </span>
+          <span>{nextReminder}</span>
+        </div>
+      )}
+      
+      {/* Additional reminders indicator */}
+      {hasReminders && upcomingReminders.length > 1 && (
+        <div className="flex flex-wrap gap-1 mt-1">
+          <Badge variant="outline" className="text-[10px] py-0 h-5">
+            +{upcomingReminders.length - 1} more reminders
+          </Badge>
         </div>
       )}
     </div>
