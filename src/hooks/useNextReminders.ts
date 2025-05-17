@@ -15,10 +15,30 @@ export function useNextReminders(messageId?: string, refreshTrigger: number = 0)
   const [isLoading, setIsLoading] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState(0);
   const [permissionError, setPermissionError] = useState(false);
+  const [reminderData, setReminderData] = useState<{
+    messageId: string | undefined;
+    nextReminder: Date | null;
+    formattedNextReminder: string | null;
+    hasSchedule: boolean;
+    upcomingReminders: string[];
+  }>({
+    messageId: undefined,
+    nextReminder: null,
+    formattedNextReminder: null,
+    hasSchedule: false,
+    upcomingReminders: []
+  });
 
   const fetchReminders = useCallback(async () => {
     if (!messageId) {
       setUpcomingReminders([]);
+      setReminderData({
+        messageId: undefined,
+        nextReminder: null,
+        formattedNextReminder: null,
+        hasSchedule: false,
+        upcomingReminders: []
+      });
       return;
     }
 
@@ -26,9 +46,9 @@ export function useNextReminders(messageId?: string, refreshTrigger: number = 0)
     setPermissionError(false);
     
     try {
-      const reminderData = await getUpcomingReminders(messageId);
+      const reminderItems = await getUpcomingReminders(messageId);
       
-      const formattedReminders = reminderData
+      const formattedReminders = reminderItems
         .map(reminder => {
           const now = new Date();
           const scheduledAt = reminder.scheduledAt;
@@ -53,6 +73,29 @@ export function useNextReminders(messageId?: string, refreshTrigger: number = 0)
         });
         
       setUpcomingReminders(formattedReminders);
+      
+      // Also set the reminderData in the new format for consistency
+      const hasSchedule = reminderItems.length > 0;
+      const nextReminder = hasSchedule ? reminderItems[0]?.scheduledAt : null;
+      const formattedNextReminder = nextReminder 
+        ? formatDistanceToNow(nextReminder, { addSuffix: true }) 
+        : null;
+      
+      // Format all reminders as strings for the new interface
+      const upcomingReminderTexts = reminderItems.map(r => {
+        const typeLabel = r.reminderType === 'final_delivery' ? 'Final Delivery' : 'Reminder';
+        const priorityLabel = r.priority === 'critical' ? ' (Critical)' : '';
+        return `${formatDistanceToNow(r.scheduledAt, { addSuffix: true })} - ${typeLabel}${priorityLabel}`;
+      });
+      
+      setReminderData({
+        messageId,
+        nextReminder,
+        formattedNextReminder,
+        hasSchedule,
+        upcomingReminders: upcomingReminderTexts
+      });
+      
       setLastRefreshed(Date.now());
     } catch (error: any) {
       console.error('Error fetching reminders:', error);
@@ -84,6 +127,16 @@ export function useNextReminders(messageId?: string, refreshTrigger: number = 0)
           duration: 3000
         });
       }
+      
+      // Clear the data on error
+      setUpcomingReminders([]);
+      setReminderData({
+        messageId,
+        nextReminder: null,
+        formattedNextReminder: null,
+        hasSchedule: false,
+        upcomingReminders: []
+      });
     } finally {
       setIsLoading(false);
     }
@@ -108,6 +161,7 @@ export function useNextReminders(messageId?: string, refreshTrigger: number = 0)
     hasReminders,
     forceRefresh,
     lastRefreshed,
-    permissionError
+    permissionError,
+    reminderData
   };
 }

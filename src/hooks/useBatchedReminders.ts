@@ -2,13 +2,20 @@
 import { useState, useEffect, useCallback } from "react";
 import { getUpcomingRemindersForMultipleMessages } from "@/utils/reminderScheduler";
 import { toast } from "@/components/ui/use-toast";
+import { formatDistanceToNow } from "date-fns";
 
 /**
  * Hook that fetches reminders for multiple messages in a single batch query
  * This eliminates the N+1 query issue where we'd otherwise make a separate query for each message
  */
 export function useBatchedReminders(messageIds: string[], refreshTrigger: number = 0) {
-  const [reminders, setReminders] = useState<Record<string, { scheduledAt: Date, reminderType: string, priority?: string }[]>>({});
+  const [reminders, setReminders] = useState<Record<string, {
+    messageId: string;
+    nextReminder: Date | null;
+    formattedNextReminder: string | null;
+    hasSchedule: boolean;
+    upcomingReminders: string[];
+  }>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [permissionError, setPermissionError] = useState(false);
   const [lastRefreshed, setLastRefreshed] = useState(0);
@@ -34,7 +41,41 @@ export function useBatchedReminders(messageIds: string[], refreshTrigger: number
         console.log(`[useBatchedReminders] Fetching reminders for ${messageIds.length} messages`);
         const reminderData = await getUpcomingRemindersForMultipleMessages(messageIds);
         
-        setReminders(reminderData);
+        // Transform the data to match the expected format
+        const transformedData: Record<string, {
+          messageId: string;
+          nextReminder: Date | null;
+          formattedNextReminder: string | null;
+          hasSchedule: boolean;
+          upcomingReminders: string[];
+        }> = {};
+        
+        // Process each message ID
+        messageIds.forEach(messageId => {
+          const messageReminders = reminderData[messageId] || [];
+          const hasSchedule = messageReminders.length > 0;
+          const nextReminder = hasSchedule ? messageReminders[0]?.scheduledAt : null;
+          const formattedNextReminder = nextReminder 
+            ? formatDistanceToNow(nextReminder, { addSuffix: true }) 
+            : null;
+          
+          // Format all reminders as strings
+          const upcomingReminders = messageReminders.map(r => {
+            const typeLabel = r.reminderType === 'final_delivery' ? 'Final Delivery' : 'Reminder';
+            const priorityLabel = r.priority === 'critical' ? ' (Critical)' : '';
+            return `${formatDistanceToNow(r.scheduledAt, { addSuffix: true })} - ${typeLabel}${priorityLabel}`;
+          });
+          
+          transformedData[messageId] = {
+            messageId,
+            nextReminder,
+            formattedNextReminder,
+            hasSchedule,
+            upcomingReminders
+          };
+        });
+        
+        setReminders(transformedData);
         setLastRefreshed(Date.now());
       } catch (error: any) {
         console.error('[useBatchedReminders] Error fetching reminders:', error);
