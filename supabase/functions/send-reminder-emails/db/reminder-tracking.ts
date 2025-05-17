@@ -3,6 +3,7 @@ import { supabaseClient } from "../supabase-client.ts";
 
 /**
  * Record that a reminder was sent
+ * Using service role client to bypass RLS
  */
 export async function recordReminderSent(
   messageId: string,
@@ -43,6 +44,7 @@ export async function recordReminderSent(
 
 /**
  * Update the next reminder time for a condition
+ * Using service role client to bypass RLS
  */
 export async function updateNextReminderTime(
   conditionId: string, 
@@ -74,7 +76,7 @@ export async function updateNextReminderTime(
 
 /**
  * Mark reminders as obsolete when creating a new schedule
- * Fixed to ensure both message ID and condition ID are used correctly
+ * Using service role client to bypass RLS
  */
 export async function markRemindersObsolete(
   conditionId: string,

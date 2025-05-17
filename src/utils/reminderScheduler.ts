@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { toast } from "@/components/ui/use-toast";
@@ -71,12 +72,23 @@ export async function generateReminderSchedule(
     
     if (error) {
       console.error("[REMINDER-SCHEDULER] Error storing reminder schedule:", error);
-      toast({
-        title: "Reminder Schedule Error",
-        description: "Failed to create reminder schedule. Please try again or contact support.",
-        variant: "destructive",
-        duration: 5000
-      });
+      
+      // Handle RLS security errors specifically
+      if (error.code === "42501" || error.message?.includes("permission denied")) {
+        toast({
+          title: "Permission Error",
+          description: "You don't have permission to create reminders for this message.",
+          variant: "destructive",
+          duration: 5000
+        });
+      } else {
+        toast({
+          title: "Reminder Schedule Error",
+          description: "Failed to create reminder schedule. Please try again or contact support.",
+          variant: "destructive",
+          duration: 5000
+        });
+      }
       return false;
     }
     
@@ -192,7 +204,7 @@ export async function generateCheckInReminderSchedule(
 
 /**
  * Get upcoming reminders for a message
- * Updated to only return non-obsolete reminders
+ * Updated to handle potential permission errors from RLS
  */
 export async function getUpcomingReminders(messageId: string): Promise<{ 
   scheduledAt: Date, 
@@ -209,7 +221,12 @@ export async function getUpcomingReminders(messageId: string): Promise<{
       .order('scheduled_at', { ascending: true });
     
     if (error) {
-      console.error("[REMINDER-SCHEDULER] Error fetching upcoming reminders:", error);
+      // Handle RLS specific errors
+      if (error.code === "42501" || error.message?.includes("permission denied")) {
+        console.warn("[REMINDER-SCHEDULER] Permission denied accessing reminders - user likely doesn't own this message");
+      } else {
+        console.error("[REMINDER-SCHEDULER] Error fetching upcoming reminders:", error);
+      }
       return [];
     }
     

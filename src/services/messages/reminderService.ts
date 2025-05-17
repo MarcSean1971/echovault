@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { generateReminderSchedule } from "@/utils/reminderScheduler";
@@ -26,6 +27,7 @@ interface ReminderScheduleParams {
 
 /**
  * Create or update reminder schedule - uses upsert with the unique constraint
+ * Updated to properly handle RLS security constraints
  */
 export async function createOrUpdateReminderSchedule(params: ReminderScheduleParams): Promise<boolean> {
   try {
@@ -53,7 +55,18 @@ export async function createOrUpdateReminderSchedule(params: ReminderSchedulePar
       });
       
     if (error) {
-      console.error("[REMINDER-SERVICE] Error creating reminder schedule:", error);
+      // Check if this is a permissions error from RLS
+      if (error.code === "42501" || error.message?.includes("permission denied")) {
+        console.error("[REMINDER-SERVICE] Permission denied creating reminder schedule - user likely doesn't own this message");
+        toast({
+          title: "Permission Error",
+          description: "You don't have permission to create reminders for this message.",
+          variant: "destructive",
+          duration: 5000
+        });
+      } else {
+        console.error("[REMINDER-SERVICE] Error creating reminder schedule:", error);
+      }
       return false;
     }
     
@@ -67,6 +80,7 @@ export async function createOrUpdateReminderSchedule(params: ReminderSchedulePar
 
 /**
  * Mark existing reminders as obsolete
+ * Updated to handle RLS permissions
  */
 async function markExistingRemindersObsolete(messageId: string, conditionId: string): Promise<boolean> {
   try {
@@ -80,7 +94,12 @@ async function markExistingRemindersObsolete(messageId: string, conditionId: str
       .eq('condition_id', conditionId);
       
     if (error) {
-      console.error("[REMINDER-SERVICE] Error marking reminders as obsolete:", error);
+      // Check if this is a permissions error from RLS
+      if (error.code === "42501" || error.message?.includes("permission denied")) {
+        console.warn("[REMINDER-SERVICE] Permission denied marking reminders as obsolete - user likely doesn't own this message");
+      } else {
+        console.error("[REMINDER-SERVICE] Error marking reminders as obsolete:", error);
+      }
       return false;
     }
     
@@ -155,6 +174,7 @@ function calculateScheduleTimes(params: ReminderScheduleParams): any[] {
 
 /**
  * Get reminder schedule for a message
+ * Updated to handle RLS permissions
  */
 export async function getReminderScheduleForMessage(messageId: string): Promise<any[]> {
   try {
@@ -166,7 +186,12 @@ export async function getReminderScheduleForMessage(messageId: string): Promise<
       .order('scheduled_at', { ascending: true });
       
     if (error) {
-      console.error("[REMINDER-SERVICE] Error fetching reminder schedule:", error);
+      // Check if this is a permissions error from RLS
+      if (error.code === "42501" || error.message?.includes("permission denied")) {
+        console.warn("[REMINDER-SERVICE] Permission denied fetching reminder schedule - user likely doesn't own this message");
+      } else {
+        console.error("[REMINDER-SERVICE] Error fetching reminder schedule:", error);
+      }
       return [];
     }
     
@@ -179,6 +204,7 @@ export async function getReminderScheduleForMessage(messageId: string): Promise<
 
 /**
  * Get reminder history for a specific message
+ * Updated to handle RLS permissions
  */
 export async function getReminderHistory(messageId: string): Promise<Reminder[]> {
   try {
@@ -189,7 +215,12 @@ export async function getReminderHistory(messageId: string): Promise<Reminder[]>
       .order('sent_at', { ascending: false });
       
     if (error) {
-      console.error("[REMINDER-SERVICE] Error fetching reminder history:", error);
+      // Check if this is a permissions error from RLS
+      if (error.code === "42501" || error.message?.includes("permission denied")) {
+        console.warn("[REMINDER-SERVICE] Permission denied fetching reminder history - user likely doesn't own this message");
+      } else {
+        console.error("[REMINDER-SERVICE] Error fetching reminder history:", error);
+      }
       return [];
     }
     

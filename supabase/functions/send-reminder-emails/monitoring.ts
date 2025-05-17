@@ -3,6 +3,7 @@ import { supabaseClient } from "./supabase-client.ts";
 
 /**
  * Get monitoring status with optimized queries to reduce database load
+ * Updated to handle secure view access
  */
 export async function getMonitoringStatus() {
   const supabase = supabaseClient();
@@ -39,6 +40,7 @@ export async function getMonitoringStatus() {
 /**
  * Fallback monitoring status using separate queries
  * Only used if the optimized view query fails
+ * Updated to use service role client
  */
 async function getFallbackMonitoringStatus() {
   const supabase = supabaseClient();

@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { getReminderHistory } from "@/services/messages/reminderService";
 import { getUpcomingReminders, formatReminderSchedule } from "@/utils/reminderScheduler";
+import { toast } from "@/components/ui/use-toast";
 
 export interface ScheduledReminderInfo {
   nextReminder: Date | null;
@@ -17,12 +18,14 @@ export interface ScheduledReminderInfo {
   upcomingReminders: string[];
   hasSchedule: boolean;
   lastRefreshed?: number;
+  permissionError?: boolean;
 }
 
 /**
  * Hook to get information about scheduled and sent reminders
  * This hook is optimized to avoid N+1 query issues by using a proper batch fetching strategy
  * when viewing message details
+ * Updated to handle RLS permission errors gracefully
  */
 export function useScheduledReminders(messageId: string, refreshTrigger: number = 0) {
   const [scheduledInfo, setScheduledInfo] = useState<ScheduledReminderInfo>({
@@ -37,7 +40,8 @@ export function useScheduledReminders(messageId: string, refreshTrigger: number 
     isLoading: true,
     upcomingReminders: [],
     hasSchedule: false,
-    lastRefreshed: Date.now()
+    lastRefreshed: Date.now(),
+    permissionError: false
   });
   
   // Add a local refresh counter to force updates
@@ -59,7 +63,7 @@ export function useScheduledReminders(messageId: string, refreshTrigger: number 
     const fetchReminderData = async () => {
       try {
         console.log(`[useScheduledReminders] Fetching reminder data for message ${messageId} (refreshTrigger: ${refreshTrigger}, localCounter: ${localRefreshCounter})`);
-        setScheduledInfo(prev => ({ ...prev, isLoading: true }));
+        setScheduledInfo(prev => ({ ...prev, isLoading: true, permissionError: false }));
         
         // Get upcoming reminders from the schedule
         const upcomingReminders = await getUpcomingReminders(messageId);
@@ -124,11 +128,35 @@ export function useScheduledReminders(messageId: string, refreshTrigger: number 
           isLoading: false,
           upcomingReminders: formattedReminders,
           hasSchedule,
-          lastRefreshed: Date.now()
+          lastRefreshed: Date.now(),
+          permissionError: false
         });
-      } catch (error) {
+      } catch (error: any) {
         console.error("[useScheduledReminders] Error fetching reminder data:", error);
-        setScheduledInfo(prev => ({ ...prev, isLoading: false }));
+        
+        // Check if this is an RLS permission error
+        const isPermissionError = error?.code === "42501" || error?.message?.includes("permission denied");
+        
+        if (isPermissionError) {
+          // Handle permission errors specially
+          console.warn("[useScheduledReminders] Permission denied accessing reminders - user likely doesn't own this message");
+          
+          // Only show a toast for permission errors if not already shown
+          if (!scheduledInfo.permissionError) {
+            toast({
+              title: "Permission Error",
+              description: "You don't have permission to view reminders for this message.",
+              variant: "destructive",
+              duration: 5000
+            });
+          }
+        }
+        
+        setScheduledInfo(prev => ({ 
+          ...prev, 
+          isLoading: false,
+          permissionError: isPermissionError 
+        }));
       }
     };
     
@@ -174,7 +202,7 @@ export function useScheduledReminders(messageId: string, refreshTrigger: number 
       clearInterval(timer);
       window.removeEventListener('conditions-updated', handleGlobalEvent);
     };
-  }, [messageId, refreshTrigger, localRefreshCounter]);
+  }, [messageId, refreshTrigger, localRefreshCounter, scheduledInfo.permissionError]);
 
   return {
     ...scheduledInfo,
