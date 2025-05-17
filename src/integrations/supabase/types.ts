@@ -288,11 +288,13 @@ export type Database = {
         Row: {
           condition_id: string
           created_at: string
+          delivery_priority: string | null
           id: string
           last_attempt_at: string | null
           message_id: string
           reminder_type: string
           retry_count: number | null
+          retry_strategy: string | null
           scheduled_at: string
           status: string
           updated_at: string
@@ -300,11 +302,13 @@ export type Database = {
         Insert: {
           condition_id: string
           created_at?: string
+          delivery_priority?: string | null
           id?: string
           last_attempt_at?: string | null
           message_id: string
           reminder_type?: string
           retry_count?: number | null
+          retry_strategy?: string | null
           scheduled_at: string
           status?: string
           updated_at?: string
@@ -312,11 +316,13 @@ export type Database = {
         Update: {
           condition_id?: string
           created_at?: string
+          delivery_priority?: string | null
           id?: string
           last_attempt_at?: string | null
           message_id?: string
           reminder_type?: string
           retry_count?: number | null
+          retry_strategy?: string | null
           scheduled_at?: string
           status?: string
           updated_at?: string

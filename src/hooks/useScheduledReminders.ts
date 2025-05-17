@@ -40,7 +40,7 @@ export function useScheduledReminders(messageId: string, refreshTrigger: number 
   useEffect(() => {
     const fetchReminderData = async () => {
       try {
-        // First, try to get upcoming reminders from the new schedule system
+        // First, try to get upcoming reminders from the schedule system
         const upcomingReminders = await getUpcomingReminders(messageId);
         const hasSchedule = upcomingReminders.length > 0;
         

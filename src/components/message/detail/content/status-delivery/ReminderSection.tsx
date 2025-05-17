@@ -4,7 +4,7 @@ import { Bell } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { parseReminderMinutes } from "@/utils/reminderUtils";
 import { useNextReminders } from "@/hooks/useNextReminders";
-import { HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { HOVER_TRANSITION, ICON_HOVER_EFFECTS } from "@/utils/hoverEffects";
 
 interface ReminderSectionProps {
   condition: any | null;
@@ -22,7 +22,7 @@ export function ReminderSection({
   // Parse reminder minutes from the condition
   const reminderMinutes = parseReminderMinutes(condition?.reminder_hours);
   
-  // Get upcoming reminder information - pass only 2 arguments as expected
+  // Get upcoming reminder information
   const { upcomingReminders, hasReminders } = useNextReminders(
     deadline,
     reminderMinutes,
@@ -37,7 +37,7 @@ export function ReminderSection({
     <>
       <Separator className="mb-3" />
       <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center">
-        <Bell className={`h-4 w-4 mr-1.5 ${HOVER_TRANSITION}`} />
+        <Bell className={`h-4 w-4 mr-1.5 ${HOVER_TRANSITION} ${ICON_HOVER_EFFECTS.muted}`} />
         Reminder Information
       </h3>
       <div className="space-y-3 text-sm">
@@ -58,7 +58,11 @@ export function ReminderSection({
                   {upcomingReminders.map((reminder, index) => (
                     <span 
                       key={index} 
-                      className="inline-block px-2 py-1 bg-amber-50 border border-amber-200 text-amber-700 rounded-md text-xs hover:bg-amber-100 transition-colors"
+                      className={`inline-block px-2 py-1 ${
+                        reminder.isImportant 
+                          ? "bg-red-50 border border-red-200 text-red-700" 
+                          : "bg-amber-50 border border-amber-200 text-amber-700"
+                      } rounded-md text-xs hover:bg-amber-100 transition-colors`}
                       title={reminder.formattedText}
                     >
                       {reminder.formattedShortDate}

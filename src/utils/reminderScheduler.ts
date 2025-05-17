@@ -119,7 +119,11 @@ export async function getUpcomingReminders(messageId: string): Promise<{
       return [];
     }
     
-    return (data || []).map(item => ({
+    if (!data) {
+      return [];
+    }
+    
+    return data.map(item => ({
       scheduledAt: new Date(item.scheduled_at),
       reminderType: item.reminder_type,
       priority: item.delivery_priority || 'normal'

@@ -3,7 +3,7 @@ import React from "react";
 import { Clock, AlertTriangle } from "lucide-react";
 import { MessageDeliverySettings } from "../../MessageDeliverySettings";
 import { HOVER_TRANSITION, ICON_HOVER_EFFECTS } from "@/utils/hoverEffects";
-import { useNextReminders } from "@/hooks/useNextReminders";
+import { useScheduledReminders } from "@/hooks/useScheduledReminders";
 import { parseReminderMinutes } from "@/utils/reminderUtils";
 import { Badge } from "@/components/ui/badge";
 
@@ -28,13 +28,12 @@ export function DeliverySettingsSection({
     return null;
   }
 
-  // Use the updated next reminders hook to get all scheduled reminders
+  // Use the scheduled reminders hook to get information about all scheduled reminders
   const {
-    loading,
-    nextReminder,
-    formattedNextReminder,
-    formattedAllReminders
-  } = useNextReminders(deadline, parseReminderMinutes(condition.reminder_hours), refreshTrigger);
+    isLoading,
+    upcomingReminders: formattedAllReminders,
+    hasSchedule
+  } = useScheduledReminders(condition.message_id, refreshTrigger);
 
   return (
     <div className="space-y-3">
@@ -51,7 +50,7 @@ export function DeliverySettingsSection({
       />
       
       {/* Add scheduled reminders display */}
-      {!loading && formattedAllReminders.length > 0 && (
+      {!isLoading && formattedAllReminders.length > 0 && (
         <div className="bg-muted/30 rounded-md p-3 text-sm mt-2">
           <h4 className="font-medium mb-1 flex items-center justify-between">
             <span>Scheduled Events</span>
