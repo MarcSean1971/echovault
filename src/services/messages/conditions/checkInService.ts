@@ -14,7 +14,7 @@ export async function performCheckIn(userId: string, source: string = "app") {
       .from("message_conditions")
       .select("*")
       .eq("active", true)
-      .in("condition_type", ["no_check_in", "recurring_check_in", "inactivity_to_date"]);
+      .in("condition_type", ["no_check_in", "regular_check_in", "inactivity_to_date"]);
     
     if (conditionsError) {
       throw new Error(`Error fetching conditions: ${conditionsError.message}`);
@@ -35,20 +35,23 @@ export async function performCheckIn(userId: string, source: string = "app") {
     const now = new Date().toISOString();
     const updates = [];
     const reminderSchedules = [];
+    const reminderResults = [];
     
     for (const condition of conditions) {
       console.log(`[performCheckIn] Processing condition ${condition.id} for message ${condition.message_id}`);
       
       // Update condition with new last_checked timestamp
-      updates.push(
-        supabase
-          .from("message_conditions")
-          .update({ last_checked: now })
-          .eq("id", condition.id)
-      );
+      const { error: updateError } = await supabase
+        .from("message_conditions")
+        .update({ last_checked: now })
+        .eq("id", condition.id);
+        
+      if (updateError) {
+        console.error(`[performCheckIn] Error updating condition ${condition.id}:`, updateError);
+        continue; // Continue with other conditions even if one fails
+      }
       
-      // Create new reminder schedule based on updated check-in time
-      // IMPORTANT: Make sure reminderMinutes is properly handled and converted to an array
+      // Parse reminder minutes from the condition
       let reminderMinutes: number[] = [];
       if (condition.reminder_hours && Array.isArray(condition.reminder_hours)) {
         reminderMinutes = condition.reminder_hours.map(hours => hours * 60);
@@ -74,8 +77,8 @@ export async function performCheckIn(userId: string, source: string = "app") {
       );
       
       // Create new reminder schedule (this will also mark old ones as obsolete)
-      reminderSchedules.push(
-        createOrUpdateReminderSchedule({
+      try {
+        const result = await createOrUpdateReminderSchedule({
           messageId: condition.message_id,
           conditionId: condition.id,
           conditionType: condition.condition_type,
@@ -84,19 +87,37 @@ export async function performCheckIn(userId: string, source: string = "app") {
           lastChecked: now,
           hoursThreshold: condition.hours_threshold,
           minutesThreshold: condition.minutes_threshold || 0
-        })
-      );
+        });
+        
+        reminderResults.push({
+          messageId: condition.message_id,
+          conditionId: condition.id,
+          success: result
+        });
+        
+        console.log(`[performCheckIn] Reminder schedule ${result ? 'created' : 'failed'} for message ${condition.message_id}`);
+      } catch (scheduleError) {
+        console.error(`[performCheckIn] Error creating reminder schedule for message ${condition.message_id}:`, scheduleError);
+        reminderResults.push({
+          messageId: condition.message_id,
+          conditionId: condition.id,
+          success: false,
+          error: scheduleError
+        });
+      }
     }
-    
-    // Execute all updates in parallel
-    await Promise.all([...updates, ...reminderSchedules]);
     
     console.log(`[performCheckIn] Successfully updated ${conditions.length} conditions`);
     
     // Dispatch a global event to notify any listeners about the condition update
     try {
       if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('conditions-updated'));
+        window.dispatchEvent(new CustomEvent('conditions-updated', {
+          detail: {
+            updatedAt: now,
+            reminderResults: reminderResults
+          }
+        }));
       }
     } catch (eventError) {
       console.warn('[performCheckIn] Failed to dispatch conditions-updated event:', eventError);
@@ -105,7 +126,8 @@ export async function performCheckIn(userId: string, source: string = "app") {
     return {
       success: true,
       message: `Successfully checked in for ${conditions.length} conditions.`,
-      updatedConditions: conditions.length
+      updatedConditions: conditions.length,
+      reminderResults: reminderResults
     };
   } catch (error: any) {
     console.error("[performCheckIn] Error during check-in:", error);

@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 
@@ -12,18 +13,21 @@ export async function generateReminderSchedule(
 ): Promise<boolean> {
   try {
     if (!triggerDate) {
-      console.warn(`Cannot generate reminder schedule for message ${messageId} - no trigger date provided`);
+      console.error(`[REMINDER-SCHEDULER] Cannot generate reminder schedule for message ${messageId} - no trigger date provided`);
       return false;
     }
     
     if (!reminderMinutes || reminderMinutes.length === 0) {
-      console.warn(`Cannot generate reminder schedule for message ${messageId} - no reminder minutes provided`);
+      console.error(`[REMINDER-SCHEDULER] Cannot generate reminder schedule for message ${messageId} - no reminder minutes provided`);
       return false;
     }
     
-    // IMPORTANT FIX: Pass both messageId and conditionId when marking reminders as obsolete
-    console.log(`[REMINDER-SCHEDULER] Marking existing reminders obsolete for message ${messageId}, condition ${conditionId}`);
-    await markExistingRemindersObsolete(conditionId, messageId);
+    console.log(`[REMINDER-SCHEDULER] Generating reminder schedule for message ${messageId}, condition ${conditionId}`);
+    console.log(`[REMINDER-SCHEDULER] Trigger date: ${triggerDate.toISOString()}`);
+    console.log(`[REMINDER-SCHEDULER] Reminder minutes: ${JSON.stringify(reminderMinutes)}`);
+    
+    // Mark existing reminders as obsolete first
+    await markExistingRemindersObsolete(messageId);
     
     // Generate reminder timestamps
     const scheduleEntries = reminderMinutes.map(minutes => {
@@ -53,7 +57,7 @@ export async function generateReminderSchedule(
     console.log(`[REMINDER-SCHEDULER] Generated ${scheduleEntries.length} schedule entries for message ${messageId}`);
     
     // Insert schedule entries with conflict handling for idempotency
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('reminder_schedule')
       .upsert(scheduleEntries, {
         onConflict: 'message_id,condition_id,scheduled_at,reminder_type',
@@ -75,11 +79,11 @@ export async function generateReminderSchedule(
 
 /**
  * Mark existing reminders as obsolete when creating new schedule
- * IMPORTANT FIX: Ensure both parameters are properly used
+ * Fixed to use messageId consistently
  */
-async function markExistingRemindersObsolete(conditionId: string, messageId: string): Promise<boolean> {
+async function markExistingRemindersObsolete(messageId: string): Promise<boolean> {
   try {
-    console.log(`[REMINDER-SCHEDULER] Marking existing reminders as obsolete for condition ${conditionId}, message ${messageId}`);
+    console.log(`[REMINDER-SCHEDULER] Marking existing reminders as obsolete for message ${messageId}`);
     
     // CRITICAL FIX: Use message_id in the query to properly mark reminders as obsolete
     const { error, count } = await supabase
@@ -93,7 +97,7 @@ async function markExistingRemindersObsolete(conditionId: string, messageId: str
       return false;
     }
     
-    console.log(`[REMINDER-SCHEDULER] Marked ${count || 'unknown number of'} reminders as obsolete for message ${messageId}`);
+    console.log(`[REMINDER-SCHEDULER] Marked ${count || 0} reminders as obsolete for message ${messageId}`);
     return true;
   } catch (error) {
     console.error("[REMINDER-SCHEDULER] Error in markExistingRemindersObsolete:", error);
@@ -114,8 +118,13 @@ export async function generateCheckInReminderSchedule(
 ): Promise<boolean> {
   try {
     if (!lastCheckedDate) {
-      console.warn(`[REMINDER-SCHEDULER] Cannot generate check-in reminder schedule for message ${messageId} - no last checked date`);
+      console.error(`[REMINDER-SCHEDULER] Cannot generate check-in reminder schedule for message ${messageId} - no last checked date`);
       return false;
+    }
+    
+    if (reminderMinutes.length === 0) {
+      console.warn(`[REMINDER-SCHEDULER] No reminder minutes provided for message ${messageId}, using default`);
+      reminderMinutes = [24 * 60]; // Default to 24 hours before deadline if none specified
     }
     
     // Calculate virtual deadline based on last check-in + threshold
@@ -123,7 +132,12 @@ export async function generateCheckInReminderSchedule(
     virtualDeadline.setHours(virtualDeadline.getHours() + hoursThreshold);
     virtualDeadline.setMinutes(virtualDeadline.getMinutes() + minutesThreshold);
     
-    console.log(`[REMINDER-SCHEDULER] Generating reminder schedule for message ${messageId} with virtual deadline ${virtualDeadline.toISOString()}`);
+    console.log(`[REMINDER-SCHEDULER] Generating check-in reminder schedule for message ${messageId}`);
+    console.log(`[REMINDER-SCHEDULER] Last checked: ${lastCheckedDate.toISOString()}`);
+    console.log(`[REMINDER-SCHEDULER] Hours threshold: ${hoursThreshold}, Minutes threshold: ${minutesThreshold}`);
+    console.log(`[REMINDER-SCHEDULER] Virtual deadline: ${virtualDeadline.toISOString()}`);
+    console.log(`[REMINDER-SCHEDULER] Reminder minutes: ${JSON.stringify(reminderMinutes)}`);
+    
     return generateReminderSchedule(messageId, conditionId, virtualDeadline, reminderMinutes);
   } catch (error) {
     console.error("[REMINDER-SCHEDULER] Error in generateCheckInReminderSchedule:", error);

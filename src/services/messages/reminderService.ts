@@ -68,20 +68,28 @@ export async function triggerReminderCheck(messageId: string, forceSend: boolean
  */
 export async function createOrUpdateReminderSchedule(options: ReminderScheduleOptions): Promise<boolean> {
   try {
-    console.log(`Creating/updating reminder schedule for message ${options.messageId}`);
-    console.log(`Condition type: ${options.conditionType}`);
+    console.log(`[createOrUpdateReminderSchedule] Creating/updating reminder schedule for message ${options.messageId}`);
+    console.log(`[createOrUpdateReminderSchedule] Condition type: ${options.conditionType}`);
     
-    if (['no_check_in', 'recurring_check_in', 'inactivity_to_date'].includes(options.conditionType)) {
+    // Validate that we have required parameters
+    if (!options.messageId || !options.conditionId) {
+      console.error("[createOrUpdateReminderSchedule] Missing required message or condition ID");
+      return false;
+    }
+    
+    if (['no_check_in', 'regular_check_in', 'inactivity_to_date'].includes(options.conditionType)) {
       // For check-in type conditions, use last checked date + threshold
       if (!options.lastChecked) {
-        console.warn("No last checked date for check-in condition, can't create schedule");
+        console.error("[createOrUpdateReminderSchedule] No last checked date for check-in condition, can't create schedule");
         return false;
       }
       
       if (options.hoursThreshold === undefined) {
-        console.warn("No hours threshold for check-in condition, can't create schedule");
+        console.error("[createOrUpdateReminderSchedule] No hours threshold for check-in condition, can't create schedule");
         return false;
       }
+      
+      console.log(`[createOrUpdateReminderSchedule] Using check-in schedule method with last_checked: ${options.lastChecked}`);
       
       const result = await generateCheckInReminderSchedule(
         options.messageId,
@@ -98,17 +106,19 @@ export async function createOrUpdateReminderSchedule(options: ReminderScheduleOp
           const { data: userData } = await supabase.auth.getUser();
           if (userData && userData.user) {
             // Import dynamically to avoid circular dependencies
-            const { invalidateConditionsCache } = await import('./conditions/dbOperations');
+            const { invalidateConditionsCache } = await import('./conditions/operations/fetch-operations');
             invalidateConditionsCache(userData.user.id);
           }
         } catch (err) {
-          console.error("Failed to invalidate conditions cache:", err);
+          console.error("[createOrUpdateReminderSchedule] Failed to invalidate conditions cache:", err);
         }
       }
       
       return result;
     } else {
       // For normal conditions with trigger date
+      console.log(`[createOrUpdateReminderSchedule] Using standard schedule method with trigger date: ${options.triggerDate}`);
+      
       return await generateReminderSchedule(
         options.messageId,
         options.conditionId,
@@ -117,7 +127,7 @@ export async function createOrUpdateReminderSchedule(options: ReminderScheduleOp
       );
     }
   } catch (error) {
-    console.error("Error creating reminder schedule:", error);
+    console.error("[createOrUpdateReminderSchedule] Error creating reminder schedule:", error);
     return false;
   }
 }
