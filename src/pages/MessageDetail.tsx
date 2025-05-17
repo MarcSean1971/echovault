@@ -42,7 +42,7 @@ export default function MessageDetail() {
     isActionLoading,
     showSendTestDialog,
     setShowSendTestDialog,
-    handleMessageDelete,
+    handleDelete,
     onArmMessage,
     onDisarmMessage,
     onSendTestMessage,
@@ -112,7 +112,7 @@ export default function MessageDetail() {
       condition={condition}
       handleDisarmMessage={onDisarmMessage}
       handleArmMessage={onArmMessage}
-      handleDelete={handleMessageDelete}
+      handleDelete={handleDelete}
       formatDate={formatDate}
       renderConditionType={() => getConditionType(condition)}
       renderRecipients={renderRecipients}

@@ -26,7 +26,7 @@ export default function Messages() {
   
   // Handle actions like delete - using the correct arguments
   const { handleDelete } = useMessageActions(
-    messagesState, 
+    messages, 
     setMessagesState, 
     setPanicMessagesState, 
     setRegularMessagesState
