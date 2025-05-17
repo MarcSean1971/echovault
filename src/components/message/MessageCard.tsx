@@ -157,7 +157,7 @@ function MessageCardInner({ message, onDelete, reminderInfo }: MessageCardProps)
           lastCheckIn={formattedCheckIn}
           rawCheckInTime={rawCheckInTime}
           nextReminder={formattedNextReminder}
-          rawNextReminderTime={nextReminder ? nextReminder : null}
+          rawNextReminderTime={nextReminder}
           deadlineProgress={deadlineProgress}
           timeLeft={timeLeft}
           upcomingReminders={upcomingReminders}
@@ -179,3 +179,4 @@ function MessageCardInner({ message, onDelete, reminderInfo }: MessageCardProps)
 
 // Memoize the component to prevent unnecessary re-renders
 export const MessageCard = memo(MessageCardInner);
+
