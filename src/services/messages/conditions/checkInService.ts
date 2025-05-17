@@ -53,7 +53,7 @@ export async function performCheckIn(userId: string, method: string): Promise<Ch
             }
             
             // Make this awaited so we ensure reminders are properly updated
-            await createOrUpdateReminderSchedule({
+            const reminderResult = await createOrUpdateReminderSchedule({
               messageId: condition.message_id,
               conditionId: condition.id,
               conditionType: condition.condition_type,
@@ -64,15 +64,19 @@ export async function performCheckIn(userId: string, method: string): Promise<Ch
               minutesThreshold: condition.minutes_threshold
             });
             
-            // Dispatch event to notify UI of condition update
+            console.log(`[CHECK-IN] Reminder schedule creation result: ${reminderResult ? 'Success' : 'Failed'}`);
+            
+            // ENHANCED DISPATCH: Provide more details in the event for better UI updates
             if (typeof window !== 'undefined') {
-              console.log(`[CHECK-IN] Dispatching conditions-updated event for condition ${condition.id}, message ${condition.message_id}`);
+              console.log(`[CHECK-IN] Dispatching enhanced conditions-updated event for condition ${condition.id}, message ${condition.message_id}`);
               window.dispatchEvent(new CustomEvent('conditions-updated', { 
                 detail: { 
                   conditionId: condition.id,
                   messageId: condition.message_id, 
                   type: 'check-in',
-                  timestamp: Date.now() // Add unique timestamp to ensure events are distinct
+                  updatedAt: now,
+                  triggerValue: Date.now(), // Add unique timestamp to ensure events are distinct
+                  source: 'check-in-function' // Add source information for better debugging
                 }
               }));
             }

@@ -1,11 +1,12 @@
 
 import React, { useState, useEffect } from "react";
-import { Clock, AlertTriangle } from "lucide-react";
+import { Clock, AlertTriangle, RefreshCw } from "lucide-react";
 import { MessageDeliverySettings } from "../../MessageDeliverySettings";
 import { HOVER_TRANSITION, ICON_HOVER_EFFECTS } from "@/utils/hoverEffects";
 import { useScheduledReminders } from "@/hooks/useScheduledReminders";
 import { parseReminderMinutes } from "@/utils/reminderUtils";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 interface DeliverySettingsSectionProps {
   condition: any | null;
@@ -26,6 +27,7 @@ export function DeliverySettingsSection({
 }: DeliverySettingsSectionProps) {
   // Local refresh counter to force updates when needed
   const [localRefresh, setLocalRefresh] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   // Listen for condition updates to refresh scheduled reminders
   useEffect(() => {
@@ -62,20 +64,68 @@ export function DeliverySettingsSection({
     return null;
   }
 
+  // Handler for manual refresh button
+  const handleManualRefresh = async () => {
+    if (isRefreshing) return;
+    
+    setIsRefreshing(true);
+    console.log('[DeliverySettingsSection] Manual refresh requested');
+    
+    try {
+      // Simulate a slight delay for user feedback
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Update localRefresh to trigger a re-fetch
+      setLocalRefresh(prev => prev + 1);
+      
+      // Dispatch a global event to ensure all components refresh
+      window.dispatchEvent(new CustomEvent('conditions-updated', { 
+        detail: { 
+          conditionId: condition.id,
+          messageId: condition.message_id,
+          updatedAt: new Date().toISOString(),
+          triggerValue: Date.now(),
+          source: 'manual-refresh'
+        }
+      }));
+    } catch (error) {
+      console.error('[DeliverySettingsSection] Error during manual refresh:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   // Use the scheduled reminders hook to get information about all scheduled reminders
   const {
     isLoading,
     upcomingReminders: formattedAllReminders,
     hasSchedule,
-    lastRefreshed
+    lastRefreshed,
+    forceRefresh
   } = useScheduledReminders(condition.message_id, combinedRefreshTrigger);
 
   return (
     <div className="space-y-3">
-      <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center">
-        <Clock className={`h-4 w-4 mr-1.5 ${HOVER_TRANSITION} ${ICON_HOVER_EFFECTS.muted}`} />
-        Delivery Settings
-      </h3>
+      <div className="flex justify-between items-center mb-3">
+        <h3 className="text-sm font-medium text-muted-foreground flex items-center">
+          <Clock className={`h-4 w-4 mr-1.5 ${HOVER_TRANSITION} ${ICON_HOVER_EFFECTS.muted}`} />
+          Delivery Settings
+        </h3>
+        
+        {/* Add refresh button */}
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={handleManualRefresh} 
+          disabled={isRefreshing}
+          className="h-7 px-2"
+        >
+          <RefreshCw 
+            className={`h-3.5 w-3.5 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} 
+          />
+          <span className="text-xs">Refresh</span>
+        </Button>
+      </div>
       
       <MessageDeliverySettings 
         condition={condition}
@@ -118,6 +168,13 @@ export function DeliverySettingsSection({
             All reminders and final delivery are scheduled through our reliable delivery system
             with multiple fallbacks for critical messages.
           </p>
+          
+          {/* Show last refresh timestamp */}
+          {lastRefreshed && (
+            <p className="text-xs text-muted-foreground mt-1 text-right">
+              Last updated: {new Date(lastRefreshed).toLocaleTimeString()}
+            </p>
+          )}
         </div>
       )}
     </div>

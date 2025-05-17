@@ -37,11 +37,20 @@ export function useScheduledReminders(messageId: string, refreshTrigger: number 
     hasSchedule: false,
     lastRefreshed: Date.now()
   });
+  
+  // Add a local refresh counter to force updates
+  const [localRefreshCounter, setLocalRefreshCounter] = useState(0);
+
+  // Function to force a refresh of the data
+  const forceRefresh = () => {
+    console.log(`[useScheduledReminders] Force refreshing data for message ${messageId}`);
+    setLocalRefreshCounter(prev => prev + 1);
+  };
 
   useEffect(() => {
     const fetchReminderData = async () => {
       try {
-        console.log(`[useScheduledReminders] Fetching reminder data for message ${messageId} (refreshTrigger: ${refreshTrigger})`);
+        console.log(`[useScheduledReminders] Fetching reminder data for message ${messageId} (refreshTrigger: ${refreshTrigger}, localCounter: ${localRefreshCounter})`);
         setScheduledInfo(prev => ({ ...prev, isLoading: true }));
         
         // Get upcoming reminders from the schedule
@@ -143,8 +152,24 @@ export function useScheduledReminders(messageId: string, refreshTrigger: number 
       });
     }, 60000); // Update every minute
     
-    return () => clearInterval(timer);
-  }, [messageId, refreshTrigger]);
+    // Listen for global check-in events to force refresh
+    const handleGlobalEvent = (event: Event) => {
+      if (event instanceof CustomEvent) {
+        console.log(`[useScheduledReminders] Received conditions-updated event, forcing a refresh`);
+        forceRefresh();
+      }
+    };
+    
+    window.addEventListener('conditions-updated', handleGlobalEvent);
+    
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('conditions-updated', handleGlobalEvent);
+    };
+  }, [messageId, refreshTrigger, localRefreshCounter]);
 
-  return scheduledInfo;
+  return {
+    ...scheduledInfo,
+    forceRefresh
+  };
 }

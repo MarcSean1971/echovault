@@ -28,8 +28,11 @@ export function useCheckIn() {
       const result = await performCheckIn(userId, "app");
       console.log(`[useCheckIn] Check-in completed with result:`, result);
       
-      // Directly dispatch event to notify all components
+      // ENHANCED: Dispatch multiple events with slightly different timestamps 
+      // to ensure all listeners catch the update
       console.log("[useCheckIn] Dispatching conditions-updated event with timestamp", Date.now());
+      
+      // First immediate dispatch
       window.dispatchEvent(new CustomEvent('conditions-updated', { 
         detail: { 
           updatedAt: new Date().toISOString(),
@@ -37,6 +40,17 @@ export function useCheckIn() {
           source: 'check-in-button' // Add source information for debugging
         }
       }));
+      
+      // Second delayed dispatch to ensure all components have time to mount listeners
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('conditions-updated', { 
+          detail: { 
+            updatedAt: new Date().toISOString(),
+            triggerValue: Date.now() + 1, // Different value to ensure it's treated as a new event
+            source: 'check-in-button-delayed' 
+          }
+        }));
+      }, 500);
       
       toast({
         title: "Check-In Successful",
