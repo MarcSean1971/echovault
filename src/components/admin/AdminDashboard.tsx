@@ -5,7 +5,6 @@ import { Activity, Users, MessageSquare, Bell } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import UserManagement from "./UserManagement";
-import SystemMonitor from "./SystemMonitor";
 
 interface StatsCardProps {
   title: string;
@@ -104,7 +103,6 @@ export default function AdminDashboard() {
         <TabsList className="mb-4 w-full sm:w-auto">
           <TabsTrigger value="overview" className="flex-1 sm:flex-none">Overview</TabsTrigger>
           <TabsTrigger value="users" className="flex-1 sm:flex-none">User Management</TabsTrigger>
-          <TabsTrigger value="system" className="flex-1 sm:flex-none">System Monitor</TabsTrigger>
         </TabsList>
         
         <TabsContent value="overview" className="space-y-6">
@@ -202,10 +200,6 @@ export default function AdminDashboard() {
         
         <TabsContent value="users">
           <UserManagement />
-        </TabsContent>
-
-        <TabsContent value="system">
-          <SystemMonitor />
         </TabsContent>
       </Tabs>
     </div>
