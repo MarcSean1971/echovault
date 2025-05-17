@@ -19,8 +19,8 @@ export function useMessageActions(
   const [showSendTestDialog, setShowSendTestDialog] = useState(false);
   const { refreshConditions } = useConditionRefresh();
   
-  // Handle message deletion
-  const handleMessageDelete = useCallback(async () => {
+  // Handle message deletion - renamed to handleDelete for consistency
+  const handleDelete = useCallback(async () => {
     if (!messageId) return;
     
     const success = await deleteMessage(messageId);
@@ -85,7 +85,7 @@ export function useMessageActions(
     isActionLoading,
     showSendTestDialog,
     setShowSendTestDialog,
-    handleMessageDelete,
+    handleDelete, // Return handleDelete instead of handleMessageDelete
     onArmMessage,
     onDisarmMessage,
     onSendTestMessage,
