@@ -18,7 +18,7 @@ interface MessageCardContentProps {
   lastCheckIn: string | null;
   rawCheckInTime: string | null;
   nextReminder: string | null;
-  rawNextReminderTime: Date | null; // This expects Date | null
+  rawNextReminderTime: Date | null;
   deadlineProgress: number;
   timeLeft: string | null;
   upcomingReminders: string[];
@@ -41,7 +41,7 @@ export function MessageCardContent({
 }: MessageCardContentProps) {
   // Determine if this is a check-in type condition
   const isCheckInCondition = condition?.condition_type === 'no_check_in' || 
-                          condition?.condition_type === 'recurring_check_in' ||
+                          condition?.condition_type === 'regular_check_in' ||
                           condition?.condition_type === 'inactivity_to_date';
   
   // Extract the content from the message
@@ -85,10 +85,13 @@ export function MessageCardContent({
               deadlineProgress > 90 ? "bg-destructive/20" : 
               deadlineProgress > 75 ? "bg-amber-200/50" : "bg-green-200/50"
             )}
-            indicatorClassName={cn(
-              deadlineProgress > 90 ? "bg-destructive" : 
-              deadlineProgress > 75 ? "bg-amber-500" : "bg-green-500"
-            )}
+            // Update the style approach - use standard className for the indicator
+            // instead of the custom indicatorClassName prop that doesn't exist
+            style={{
+              '--progress-indicator-color': deadlineProgress > 90 ? 'var(--destructive)' : 
+                                           deadlineProgress > 75 ? 'rgb(245 158 11)' : 
+                                           'rgb(34 197 94)'
+            } as React.CSSProperties}
           />
         </div>
       )}
