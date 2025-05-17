@@ -11,16 +11,22 @@ import { useMessageTranscription } from "@/hooks/useMessageTranscription";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { useMessageCardActions } from "@/hooks/useMessageCardActions";
 import { useMessageLastCheckIn } from "@/hooks/useMessageLastCheckIn";
-import { useScheduledReminders } from "@/hooks/useScheduledReminders";
 import { intervalToDuration } from "date-fns";
 
 interface MessageCardProps {
   message: Message;
   onDelete: (id: string) => void;
+  reminderInfo?: {
+    messageId: string;
+    nextReminder: Date | null;
+    formattedNextReminder: string | null;
+    hasSchedule: boolean;
+    upcomingReminders: string[];
+  };
 }
 
 // The non-memoized inner component
-function MessageCardInner({ message, onDelete }: MessageCardProps) {
+function MessageCardInner({ message, onDelete, reminderInfo }: MessageCardProps) {
   // Get condition status and data
   const { 
     isArmed, 
@@ -37,8 +43,10 @@ function MessageCardInner({ message, onDelete }: MessageCardProps) {
   // Get last check-in information
   const { formattedCheckIn, rawCheckInTime, isDeadmansSwitch } = useMessageLastCheckIn(condition);
   
-  // Get next scheduled reminder
-  const { formattedNextReminder, nextReminder } = useScheduledReminders(message.id, refreshCounter);
+  // Use reminder info from props (from batched query) instead of individual hook
+  const formattedNextReminder = reminderInfo?.formattedNextReminder || null;
+  const nextReminder = reminderInfo?.nextReminder || null;
+  const upcomingReminders = reminderInfo?.upcomingReminders || [];
   
   // Calculate deadline progress
   const [deadlineProgress, setDeadlineProgress] = useState(0);
@@ -152,6 +160,7 @@ function MessageCardInner({ message, onDelete }: MessageCardProps) {
           rawNextReminderTime={nextReminder}
           deadlineProgress={deadlineProgress}
           timeLeft={timeLeft}
+          upcomingReminders={upcomingReminders}
         />
       </CardContent>
       <CardFooter className="flex justify-between border-t pt-4 bg-gradient-to-t from-muted/20 to-transparent">

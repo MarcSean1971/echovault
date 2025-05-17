@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 
@@ -174,6 +173,68 @@ export async function getUpcomingReminders(messageId: string): Promise<{
   } catch (error) {
     console.error("[REMINDER-SCHEDULER] Error in getUpcomingReminders:", error);
     return [];
+  }
+}
+
+/**
+ * NEW: Get upcoming reminders for multiple messages in a single batch query
+ * This eliminates the N+1 query pattern by fetching all reminders at once
+ */
+export async function getUpcomingRemindersForMultipleMessages(messageIds: string[]): Promise<
+  Record<string, { scheduledAt: Date, reminderType: string, priority?: string }[]>
+> {
+  if (!messageIds || messageIds.length === 0) {
+    return {};
+  }
+  
+  try {
+    console.log(`[REMINDER-SCHEDULER] Batch fetching reminders for ${messageIds.length} messages`);
+    
+    // Only get non-obsolete reminders
+    const { data, error } = await supabase
+      .from('reminder_schedule')
+      .select('message_id, scheduled_at, reminder_type, delivery_priority, status')
+      .in('message_id', messageIds)
+      .eq('status', 'pending')
+      .order('scheduled_at', { ascending: true });
+    
+    if (error) {
+      console.error("[REMINDER-SCHEDULER] Error batch fetching reminders:", error);
+      return {};
+    }
+    
+    if (!data || data.length === 0) {
+      console.log("[REMINDER-SCHEDULER] No reminders found in batch query");
+      return {};
+    }
+    
+    console.log(`[REMINDER-SCHEDULER] Found ${data.length} pending reminders across ${messageIds.length} messages`);
+    
+    // Group reminders by message_id
+    const remindersByMessage: Record<string, { scheduledAt: Date, reminderType: string, priority?: string }[]> = {};
+    
+    // Initialize all message IDs with empty arrays (so we return data for all messages, even those with no reminders)
+    messageIds.forEach(id => {
+      remindersByMessage[id] = [];
+    });
+    
+    // Populate with actual reminders
+    data.forEach(item => {
+      if (!remindersByMessage[item.message_id]) {
+        remindersByMessage[item.message_id] = [];
+      }
+      
+      remindersByMessage[item.message_id].push({
+        scheduledAt: new Date(item.scheduled_at),
+        reminderType: item.reminder_type,
+        priority: item.delivery_priority || 'normal'
+      });
+    });
+    
+    return remindersByMessage;
+  } catch (error) {
+    console.error("[REMINDER-SCHEDULER] Error in getUpcomingRemindersForMultipleMessages:", error);
+    return {};
   }
 }
 

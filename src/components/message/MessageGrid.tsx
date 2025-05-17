@@ -13,9 +13,16 @@ interface MessageGridProps {
   messages: Message[];
   isLoading: boolean;
   onDelete: (id: string) => void;
+  reminderData?: Record<string, {
+    messageId: string;
+    nextReminder: Date | null;
+    formattedNextReminder: string | null;
+    hasSchedule: boolean;
+    upcomingReminders: string[];
+  }>;
 }
 
-export function MessageGrid({ messages, isLoading, onDelete }: MessageGridProps) {
+export function MessageGrid({ messages, isLoading, onDelete, reminderData = {} }: MessageGridProps) {
   const navigate = useNavigate();
   
   // State for virtualized rendering
@@ -74,18 +81,24 @@ export function MessageGrid({ messages, isLoading, onDelete }: MessageGridProps)
   
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
-      {visibleMessages.map((message, index) => (
-        <div
-          key={message.id}
-          className="animate-fade-in"
-          style={{ animationDelay: `${Math.min(index * 0.05, 0.5)}s` }}
-        >
-          <MessageCard 
-            message={message} 
-            onDelete={onDelete} 
-          />
-        </div>
-      ))}
+      {visibleMessages.map((message, index) => {
+        // Get reminder data for this message
+        const messageReminderData = reminderData[message.id];
+        
+        return (
+          <div
+            key={message.id}
+            className="animate-fade-in"
+            style={{ animationDelay: `${Math.min(index * 0.05, 0.5)}s` }}
+          >
+            <MessageCard 
+              message={message} 
+              onDelete={onDelete}
+              reminderInfo={messageReminderData}
+            />
+          </div>
+        );
+      })}
     </div>
   );
 }

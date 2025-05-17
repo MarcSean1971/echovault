@@ -1,177 +1,105 @@
 
-import { getAuthClient } from "@/lib/supabaseClient";
-import { CheckInResult, CheckInDeadlineResult } from "./types";
-import { updateConditionsLastChecked } from "./dbOperations";
-import { MessageCondition, Recipient, TriggerType } from "@/types/message";
-import { createOrUpdateReminderSchedule } from "../reminderService";
+import { supabase } from "@/integrations/supabase/client";
+import { createOrUpdateReminderSchedule } from "@/services/messages/reminderService";
 
-export async function performCheckIn(userId: string, method: string): Promise<CheckInResult> {
-  const client = await getAuthClient();
-  const now = new Date().toISOString();
-  
+/**
+ * Perform a check-in for a message condition
+ */
+export async function performCheckIn(userId: string, source: string = "app") {
   try {
-    // Instead of using the check_ins table that doesn't exist yet,
-    // we'll update the last_checked timestamp on all active conditions
-    const { data: conditionsData, error: conditionsError } = await client
+    console.log(`[performCheckIn] Processing check-in for user ${userId} from ${source}`);
+    
+    // Get user's check-in conditions
+    const { data: conditions, error: conditionsError } = await supabase
       .from("message_conditions")
-      .select("id, message_id, condition_type, hours_threshold, minutes_threshold, reminder_hours, messages!inner(user_id)")
-      .eq("messages.user_id", userId)
-      .eq("active", true);
-      
+      .select("*")
+      .eq("active", true)
+      .in("condition_type", ["no_check_in", "recurring_check_in", "inactivity_to_date"]);
+    
     if (conditionsError) {
-      throw new Error(conditionsError.message);
+      throw new Error(`Error fetching conditions: ${conditionsError.message}`);
     }
     
-    // Update all conditions with the new check-in time
-    if (conditionsData && conditionsData.length > 0) {
-      const conditionIds = conditionsData.map(c => c.id);
-      // Fix: Call updateConditionsLastChecked with only the conditionIds parameter
-      await updateConditionsLastChecked(conditionIds);
+    if (!conditions || conditions.length === 0) {
+      console.log("[performCheckIn] No active conditions found for check-in");
+      return {
+        success: true,
+        message: "No active conditions found that require check-ins",
+        updatedConditions: 0
+      };
+    }
+    
+    console.log(`[performCheckIn] Found ${conditions.length} conditions to update`);
+    
+    // Update all check-in conditions with new timestamp
+    const now = new Date().toISOString();
+    const updates = [];
+    const reminderSchedules = [];
+    
+    for (const condition of conditions) {
+      console.log(`[performCheckIn] Processing condition ${condition.id} for message ${condition.message_id}`);
       
-      // Also update all reminder schedules for check-in conditions
-      for (const condition of conditionsData) {
-        if (['no_check_in', 'recurring_check_in', 'inactivity_to_date'].includes(condition.condition_type)) {
-          console.log(`[CHECK-IN] Generating new reminder schedule for condition ${condition.id}, message ${condition.message_id} after check-in`);
-          const reminderMinutes = condition.reminder_hours || [1440, 720, 360, 180, 60]; // Default reminder times
-          
-          try {
-            // First explicitly mark all old reminders as obsolete for this message
-            // This is critical to fix the issue!
-            const { supabase } = await import("@/integrations/supabase/client");
-            
-            // CRITICAL FIX: Mark all pending reminders for this message as obsolete
-            // This must happen before creating new reminders
-            console.log(`[CHECK-IN] Explicitly marking all reminders as obsolete for message ${condition.message_id} before creating new ones`);
-            const { error: obsoleteError } = await supabase
-              .from('reminder_schedule')
-              .update({ status: 'obsolete' })
-              .eq('message_id', condition.message_id)
-              .eq('status', 'pending');
-            
-            if (obsoleteError) {
-              console.error(`[CHECK-IN] Error marking reminders as obsolete: ${obsoleteError.message}`);
-            }
-            
-            // Make this awaited so we ensure reminders are properly updated
-            const reminderResult = await createOrUpdateReminderSchedule({
-              messageId: condition.message_id,
-              conditionId: condition.id,
-              conditionType: condition.condition_type,
-              triggerDate: null,
-              reminderMinutes,
-              lastChecked: now,
-              hoursThreshold: condition.hours_threshold,
-              minutesThreshold: condition.minutes_threshold
-            });
-            
-            console.log(`[CHECK-IN] Reminder schedule creation result: ${reminderResult ? 'Success' : 'Failed'}`);
-            
-            // ENHANCED DISPATCH: Provide more details in the event for better UI updates
-            if (typeof window !== 'undefined') {
-              console.log(`[CHECK-IN] Dispatching enhanced conditions-updated event for condition ${condition.id}, message ${condition.message_id}`);
-              window.dispatchEvent(new CustomEvent('conditions-updated', { 
-                detail: { 
-                  conditionId: condition.id,
-                  messageId: condition.message_id, 
-                  type: 'check-in',
-                  updatedAt: now,
-                  triggerValue: Date.now(), // Add unique timestamp to ensure events are distinct
-                  source: 'check-in-function' // Add source information for better debugging
-                }
-              }));
-            }
-          } catch (err) {
-            console.error(`[CHECK-IN] Failed to update reminder schedule for condition ${condition.id}:`, err);
-          }
+      // Update condition with new last_checked timestamp
+      updates.push(
+        supabase
+          .from("message_conditions")
+          .update({ last_checked: now })
+          .eq("id", condition.id)
+      );
+      
+      // Create new reminder schedule based on updated check-in time
+      // IMPORTANT: Make sure reminderMinutes is properly handled and converted to an array
+      let reminderMinutes: number[] = [];
+      if (condition.reminder_hours && Array.isArray(condition.reminder_hours)) {
+        reminderMinutes = condition.reminder_hours.map(hours => hours * 60);
+      }
+      
+      // If no reminder hours are specified, use default reminder minutes at 80% of threshold
+      if (reminderMinutes.length === 0) {
+        const thresholdMinutes = 
+          (condition.hours_threshold || 0) * 60 + (condition.minutes_threshold || 0);
+        
+        if (thresholdMinutes > 0) {
+          // Set reminder at 80% of the threshold time
+          reminderMinutes = [Math.floor(thresholdMinutes * 0.8)];
+        } else {
+          // Default to 24 hours
+          reminderMinutes = [24 * 60];
         }
       }
+      
+      console.log(
+        `[performCheckIn] Scheduling reminders for condition ${condition.id}, ` +
+        `message ${condition.message_id} with reminder minutes:`, reminderMinutes
+      );
+      
+      // Create new reminder schedule (this will also mark old ones as obsolete)
+      reminderSchedules.push(
+        createOrUpdateReminderSchedule({
+          messageId: condition.message_id,
+          conditionId: condition.id,
+          conditionType: condition.condition_type,
+          triggerDate: null,
+          reminderMinutes,
+          lastChecked: now,
+          hoursThreshold: condition.hours_threshold,
+          minutesThreshold: condition.minutes_threshold || 0
+        })
+      );
     }
+    
+    // Execute all updates in parallel
+    await Promise.all([...updates, ...reminderSchedules]);
+    
+    console.log(`[performCheckIn] Successfully updated ${conditions.length} conditions`);
     
     return {
       success: true,
-      timestamp: now,
-      method: method,
-      conditions_updated: conditionsData?.length || 0
+      message: `Successfully checked in for ${conditions.length} conditions.`,
+      updatedConditions: conditions.length
     };
   } catch (error: any) {
-    console.error("[CHECK-IN] Error performing check-in:", error);
-    throw new Error(error.message || "Failed to perform check-in");
-  }
-}
-
-export async function getNextCheckInDeadline(userId: string): Promise<CheckInDeadlineResult> {
-  const client = await getAuthClient();
-  
-  try {
-    // Get all active conditions that are check-in based
-    const { data, error } = await client
-      .from("message_conditions")
-      .select("*, messages!inner(*)")
-      .eq("messages.user_id", userId)
-      .eq("active", true)
-      .order("hours_threshold", { ascending: true });
-      
-    if (error) {
-      throw new Error(error.message);
-    }
-    
-    // Calculate the next deadline for each condition
-    const now = new Date();
-    let earliestDeadline: Date | null = null;
-    
-    if (data && data.length > 0) {
-      data.forEach(condition => {
-        // Convert last_checked to a Date
-        const lastChecked = new Date(condition.last_checked);
-        
-        // Add hours_threshold to get the deadline
-        const deadline = new Date(lastChecked);
-        deadline.setHours(deadline.getHours() + condition.hours_threshold);
-        
-        // If this is earlier than our current earliest, update it
-        if (!earliestDeadline || deadline < earliestDeadline) {
-          earliestDeadline = deadline;
-        }
-      });
-    }
-    
-    // If no conditions found, default to 24 hours from now
-    if (!earliestDeadline) {
-      earliestDeadline = new Date();
-      earliestDeadline.setHours(earliestDeadline.getHours() + 24);
-    }
-    
-    // Convert raw data to MessageCondition[] type with proper handling of recipients
-    const conditions: MessageCondition[] = data ? data.map(item => {
-      // Ensure recipients is properly cast to Recipient[]
-      let recipientsArray: Recipient[] = [];
-      if (Array.isArray(item.recipients)) {
-        recipientsArray = item.recipients as Recipient[];
-      } else if (item.recipients && typeof item.recipients === 'object') {
-        recipientsArray = [item.recipients as unknown as Recipient];
-      }
-      
-      return {
-        id: item.id,
-        message_id: item.message_id,
-        condition_type: item.condition_type as TriggerType, // Type casting
-        hours_threshold: item.hours_threshold,
-        created_at: item.created_at,
-        updated_at: item.updated_at,
-        last_checked: item.last_checked,
-        recipients: recipientsArray,
-        active: item.active,
-        triggered: false,
-        delivered: false
-      };
-    }) : [];
-    
-    return {
-      deadline: earliestDeadline,
-      conditions: conditions
-    };
-  } catch (error: any) {
-    console.error("Error getting next check-in deadline:", error);
-    throw new Error(error.message || "Failed to get next check-in deadline");
+    console.error("[performCheckIn] Error during check-in:", error);
+    throw new Error(`Check-in failed: ${error.message}`);
   }
 }

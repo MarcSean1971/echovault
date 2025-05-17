@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,6 +11,7 @@ import { Message, MessageCondition } from "@/types/message";
 import { BUTTON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { fetchMessageConditions, invalidateConditionsCache } from "@/services/messages/conditionService";
 import { PlusCircle } from "lucide-react";
+import { useBatchedReminders } from "@/hooks/useBatchedReminders";
 
 export default function Messages() {
   const navigate = useNavigate();
@@ -20,6 +22,7 @@ export default function Messages() {
   const [conditions, setConditions] = useState<MessageCondition[]>([]);
   const [panicMessages, setPanicMessages] = useState<Message[]>([]);
   const [regularMessages, setRegularMessages] = useState<Message[]>([]);
+  const [reminderRefreshTrigger, setReminderRefreshTrigger] = useState(0);
 
   // Optimized data loading function
   const loadData = useCallback(async () => {
@@ -64,6 +67,9 @@ export default function Messages() {
       setPanicMessages(panic);
       setRegularMessages(regular);
       
+      // Also update reminder refresh trigger to force batched reminders to reload
+      setReminderRefreshTrigger(prev => prev + 1);
+      
     } catch (error: any) {
       console.error("Error loading data:", error);
       toast({
@@ -81,6 +87,15 @@ export default function Messages() {
     }
   }, [userId, messageType]);
   
+  // Get all message IDs for reminder fetching
+  const allMessageIds = messages.map(message => message.id);
+  
+  // Fetch reminders for all messages in a single batch query
+  const { reminders: reminderData, forceRefresh: forceReminderRefresh } = useBatchedReminders(
+    allMessageIds, 
+    reminderRefreshTrigger
+  );
+  
   useEffect(() => {
     loadData();
   }, [loadData]);
@@ -94,13 +109,15 @@ export default function Messages() {
         invalidateConditionsCache(userId);
       }
       loadData();
+      // Also refresh reminder data
+      forceReminderRefresh();
     };
     
     window.addEventListener('conditions-updated', handleConditionsUpdated);
     return () => {
       window.removeEventListener('conditions-updated', handleConditionsUpdated);
     };
-  }, [userId, loadData]);
+  }, [userId, loadData, forceReminderRefresh]);
   
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this message?")) return;
@@ -165,7 +182,8 @@ export default function Messages() {
           <MessageGrid 
             messages={panicMessages} 
             isLoading={isLoading} 
-            onDelete={handleDelete} 
+            onDelete={handleDelete}
+            reminderData={reminderData}
           />
         </div>
       )}
@@ -184,7 +202,8 @@ export default function Messages() {
         <MessageGrid 
           messages={regularMessages} 
           isLoading={isLoading} 
-          onDelete={handleDelete} 
+          onDelete={handleDelete}
+          reminderData={reminderData}
         />
       </div>
     </div>

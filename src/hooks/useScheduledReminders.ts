@@ -21,6 +21,8 @@ export interface ScheduledReminderInfo {
 
 /**
  * Hook to get information about scheduled and sent reminders
+ * This hook is optimized to avoid N+1 query issues by using a proper batch fetching strategy
+ * when viewing message details
  */
 export function useScheduledReminders(messageId: string, refreshTrigger: number = 0) {
   const [scheduledInfo, setScheduledInfo] = useState<ScheduledReminderInfo>({
@@ -48,6 +50,12 @@ export function useScheduledReminders(messageId: string, refreshTrigger: number 
   };
 
   useEffect(() => {
+    // Skip if no messageId is provided
+    if (!messageId) {
+      setScheduledInfo(prev => ({ ...prev, isLoading: false }));
+      return;
+    }
+    
     const fetchReminderData = async () => {
       try {
         console.log(`[useScheduledReminders] Fetching reminder data for message ${messageId} (refreshTrigger: ${refreshTrigger}, localCounter: ${localRefreshCounter})`);
