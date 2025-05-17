@@ -23,6 +23,7 @@ export async function generateCheckInReminderSchedule(
       return false;
     }
     
+    // Make sure we have at least one reminder
     if (reminderMinutes.length === 0) {
       console.warn(`[REMINDER-GENERATOR] No reminder minutes provided for message ${messageId}, using default`);
       reminderMinutes = [24 * 60]; // Default to 24 hours before deadline if none specified
@@ -33,11 +34,19 @@ export async function generateCheckInReminderSchedule(
     virtualDeadline.setHours(virtualDeadline.getHours() + hoursThreshold);
     virtualDeadline.setMinutes(virtualDeadline.getMinutes() + minutesThreshold);
     
+    // Add debug log to check the reminder minutes array
     console.log(`[REMINDER-GENERATOR] Generating check-in reminder schedule for message ${messageId}`);
     console.log(`[REMINDER-GENERATOR] Last checked: ${lastCheckedDate.toISOString()}`);
     console.log(`[REMINDER-GENERATOR] Hours threshold: ${hoursThreshold}, Minutes threshold: ${minutesThreshold}`);
     console.log(`[REMINDER-GENERATOR] Virtual deadline: ${virtualDeadline.toISOString()}`);
-    console.log(`[REMINDER-GENERATOR] Reminder minutes: ${JSON.stringify(reminderMinutes)}`);
+    console.log(`[REMINDER-GENERATOR] Reminder minutes (count: ${reminderMinutes.length}): ${JSON.stringify(reminderMinutes)}`);
+    
+    // Ensure reminder minutes are unique
+    const uniqueReminderMinutes = Array.from(new Set(reminderMinutes)).sort((a, b) => a - b);
+    if (uniqueReminderMinutes.length !== reminderMinutes.length) {
+      console.warn(`[REMINDER-GENERATOR] Removed duplicate reminder minutes: ${reminderMinutes.length} -> ${uniqueReminderMinutes.length}`);
+      reminderMinutes = uniqueReminderMinutes;
+    }
     
     return generateReminderSchedule(messageId, conditionId, virtualDeadline, reminderMinutes);
   } catch (error) {
@@ -68,25 +77,28 @@ export async function generateReminderSchedule(
     
     console.log(`[REMINDER-GENERATOR] Generating reminder schedule for message ${messageId}, condition ${conditionId}`);
     console.log(`[REMINDER-GENERATOR] Trigger date: ${triggerDate.toISOString()}`);
-    console.log(`[REMINDER-GENERATOR] Reminder minutes: ${JSON.stringify(reminderMinutes)}`);
+    console.log(`[REMINDER-GENERATOR] Reminder minutes (count: ${reminderMinutes.length}): ${JSON.stringify(reminderMinutes)}`);
     
     // Mark existing reminders as obsolete first
-    const markResult = await markExistingRemindersObsolete(messageId);
+    const markResult = await markExistingRemindersObsolete(messageId, conditionId);
     if (!markResult) {
       console.warn(`[REMINDER-GENERATOR] Warning: Failed to mark existing reminders as obsolete for message ${messageId}`);
       // Continue despite warning, as we still want to try creating new reminders
     }
     
-    // Generate reminder timestamps
+    // Generate reminder timestamps - ensure we iterate through all reminder minutes
     const scheduleEntries = reminderMinutes.map(minutes => {
       const scheduledAt = new Date(triggerDate.getTime() - (minutes * 60 * 1000));
+      
+      console.log(`[REMINDER-GENERATOR] Creating reminder for ${minutes} minutes before deadline at ${scheduledAt.toISOString()}`);
+      
       return {
         message_id: messageId,
         condition_id: conditionId,
         scheduled_at: scheduledAt.toISOString(),
         reminder_type: 'reminder',
         status: 'pending',
-        delivery_priority: 'normal',
+        delivery_priority: minutes < 60 ? 'high' : 'normal', // High priority for reminders less than an hour before deadline
         retry_strategy: 'standard'
       };
     });
@@ -142,12 +154,13 @@ export async function generateReminderSchedule(
         .from('reminder_schedule')
         .select('*', { count: 'exact', head: true })
         .eq('message_id', messageId)
+        .eq('condition_id', conditionId)
         .eq('status', 'pending');
         
       if (countError) {
         console.error("[REMINDER-GENERATOR] Error verifying reminder count:", countError);
       } else {
-        console.log(`[REMINDER-GENERATOR] Verified ${count} pending reminders exist for message ${messageId}`);
+        console.log(`[REMINDER-GENERATOR] Verified ${count} pending reminders exist for message ${messageId}, condition ${conditionId}`);
         
         if (count === 0) {
           console.error("[REMINDER-GENERATOR] No reminders were created despite no error! This might indicate a constraint issue.");
@@ -173,5 +186,28 @@ export async function generateReminderSchedule(
       duration: 5000
     });
     return false;
+  }
+}
+
+/**
+ * Debug/testing utility to check reminder schedule
+ */
+export async function inspectReminderSchedule(messageId: string): Promise<any> {
+  try {
+    const { data, error } = await supabase
+      .from('reminder_schedule')
+      .select('*')
+      .eq('message_id', messageId)
+      .order('scheduled_at', { ascending: true });
+      
+    if (error) {
+      console.error("[REMINDER-GENERATOR] Error inspecting reminder schedule:", error);
+      return null;
+    }
+    
+    return data;
+  } catch (error) {
+    console.error("[REMINDER-GENERATOR] Error in inspectReminderSchedule:", error);
+    return null;
   }
 }

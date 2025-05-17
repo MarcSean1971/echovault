@@ -1,26 +1,46 @@
 
+/**
+ * Standardized hover effects for consistent UI interactions
+ */
 
-export const HOVER_TRANSITION = "transition-all duration-200";
+// Default timing for all transitions
+export const HOVER_TRANSITION = 'transition-all duration-200';
 
-export const BUTTON_HOVER_EFFECTS = {
-  default: "hover:bg-primary/90 hover:shadow",
-  secondary: "hover:bg-secondary/90 hover:shadow",
-  destructive: "hover:bg-destructive/90 hover:shadow",
-  outline: "hover:bg-accent hover:text-accent-foreground hover:shadow",
-  ghost: "hover:bg-accent hover:text-accent-foreground",
-  link: "hover:underline",
-};
-
+// Different hover effects categorized by element type
 export const ICON_HOVER_EFFECTS = {
-  default: "hover:text-primary transition-all duration-200",
-  muted: "hover:text-muted-foreground transition-all duration-200",
-  alert: "hover:text-destructive transition-all duration-200",
-  success: "hover:text-green-500 transition-all duration-200",
+  // For primary action icons (stronger hover effect)
+  primary: 'hover:scale-110 hover:text-primary',
+  
+  // For secondary action icons (medium hover effect)
+  secondary: 'hover:scale-105 hover:text-secondary-foreground',
+  
+  // For icons in muted or disabled state (subtle hover effect)
+  muted: 'hover:text-foreground',
+  
+  // For icons that show attention or warning (orange/amber hover)
+  warning: 'hover:text-amber-500',
+  
+  // For dangerous action icons (red hover)
+  danger: 'hover:text-destructive',
+  
+  // For simple icons with just opacity effect (default)
+  default: 'hover:opacity-80'
 };
 
-export const CONFIRMATION_ANIMATION = {
-  pulse: "animate-pulse",
-  shake: "animate-shake",
-  highlight: "animate-highlight",
+// For buttons with icon + text combinations
+export const BUTTON_HOVER_EFFECTS = {
+  // Transform effect for primary buttons
+  transform: 'hover:translate-y-[-1px] hover:shadow-md',
+  
+  // Scale effect for round buttons
+  scale: 'hover:scale-105',
+  
+  // Subtle effect for secondary/ghost buttons
+  subtle: 'hover:bg-muted/80',
+  
+  // No transform but color change
+  color: '',
+  
+  // Default is just what's built into the button variants
+  default: ''
 };
-

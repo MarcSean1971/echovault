@@ -1,12 +1,14 @@
 
 import React, { useState, useEffect } from "react";
-import { Bell, RefreshCw } from "lucide-react";
+import { Bell, RefreshCw, History } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { parseReminderMinutes } from "@/utils/reminderUtils";
 import { useNextReminders } from "@/hooks/useNextReminders";
 import { HOVER_TRANSITION, ICON_HOVER_EFFECTS } from "@/utils/hoverEffects";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
+import { triggerManualReminder } from "@/services/messages/whatsApp/core/reminderService";
+import { ReminderHistoryDialog } from "@/components/message/detail/ReminderHistoryDialog";
 
 interface ReminderSectionProps {
   condition: any | null;
@@ -27,6 +29,8 @@ export function ReminderSection({
   // State to track when the last force refresh happened
   const [lastForceRefresh, setLastForceRefresh] = useState<number>(0);
   const [refreshCount, setRefreshCount] = useState<number>(0);
+  const [historyOpen, setHistoryOpen] = useState<boolean>(false);
+  const [isTestingReminder, setIsTestingReminder] = useState<boolean>(false);
   
   // Get upcoming reminder information with ability to force refresh
   const { upcomingReminders, hasReminders, isLoading, forceRefresh, lastRefreshed, permissionError } = useNextReminders(
@@ -44,6 +48,20 @@ export function ReminderSection({
       description: "The reminders list is being updated...",
       duration: 2000,
     });
+  };
+  
+  // Handle manual test of reminder delivery
+  const handleTestReminder = async () => {
+    if (!condition?.message_id) return;
+    
+    setIsTestingReminder(true);
+    try {
+      await triggerManualReminder(condition.message_id, true);
+      // Force refresh after testing to show the updated state
+      setTimeout(() => handleForceRefresh(), 2000);
+    } finally {
+      setIsTestingReminder(false);
+    }
   };
   
   // Listen for condition-updated events to automatically refresh
@@ -96,15 +114,27 @@ export function ReminderSection({
           <Bell className={`h-4 w-4 mr-1.5 ${HOVER_TRANSITION} ${ICON_HOVER_EFFECTS.muted}`} />
           Reminder Information
         </div>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={handleForceRefresh} 
-          className={`h-6 px-2 transition-all ${HOVER_TRANSITION}`}
-          title="Refresh reminder data"
-        >
-          <RefreshCw className={`h-3 w-3 ${isLoading ? 'animate-spin' : ''}`} />
-        </Button>
+        <div className="flex items-center space-x-1">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setHistoryOpen(true)} 
+            className={`h-6 px-2 transition-all ${HOVER_TRANSITION}`}
+            title="View reminder history"
+          >
+            <History className={`h-3 w-3 ${ICON_HOVER_EFFECTS.muted}`} />
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={handleForceRefresh} 
+            className={`h-6 px-2 transition-all ${HOVER_TRANSITION}`}
+            title="Refresh reminder data"
+            disabled={isLoading}
+          >
+            <RefreshCw className={`h-3 w-3 ${isLoading ? 'animate-spin' : ''} ${ICON_HOVER_EFFECTS.muted}`} />
+          </Button>
+        </div>
       </h3>
       <div className="space-y-3 text-sm">
         {isLoading ? (
@@ -138,9 +168,9 @@ export function ReminderSection({
                       key={index} 
                       className={`inline-block px-2 py-1 ${
                         reminder.isImportant 
-                          ? "bg-red-50 border border-red-200 text-red-700" 
-                          : "bg-amber-50 border border-amber-200 text-amber-700"
-                      } rounded-md text-xs hover:bg-amber-100 transition-colors`}
+                          ? "bg-red-50 border border-red-200 text-red-700 hover:bg-red-100" 
+                          : "bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100"
+                      } rounded-md text-xs transition-colors ${HOVER_TRANSITION}`}
                       title={reminder.formattedText}
                     >
                       {reminder.formattedShortDate}
@@ -149,6 +179,24 @@ export function ReminderSection({
                 </div>
               </div>
             )}
+            <div className="mt-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleTestReminder}
+                disabled={isTestingReminder}
+                className={`w-full text-xs ${HOVER_TRANSITION}`}
+              >
+                {isTestingReminder ? (
+                  <>
+                    <RefreshCw className="h-3 w-3 mr-1 animate-spin" />
+                    Testing reminder delivery...
+                  </>
+                ) : (
+                  "Test Reminder Delivery"
+                )}
+              </Button>
+            </div>
           </>
         ) : (
           <div className="grid grid-cols-3 gap-1">
@@ -160,6 +208,23 @@ export function ReminderSection({
             </span>
           </div>
         )}
+        {/* Show configured reminder times */}
+        {reminderMinutes && reminderMinutes.length > 0 && (
+          <div className="grid grid-cols-3 gap-1 mt-2">
+            <span className="font-medium">Configured times:</span>
+            <div className="col-span-2 flex flex-wrap gap-1">
+              {reminderMinutes.sort((a, b) => b - a).map((minute, index) => (
+                <span
+                  key={index}
+                  className={`inline-block px-2 py-1 bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100 rounded-md text-xs ${HOVER_TRANSITION}`}
+                  title={`Reminder scheduled ${minute} minutes before deadline`}
+                >
+                  {minute >= 60 ? `${(minute / 60).toFixed(1)}h` : `${minute}m`}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
         {/* Show debug info in dev environment */}
         {process.env.NODE_ENV === 'development' && (
           <div className="mt-4 border-t pt-2 text-xs text-muted-foreground">
@@ -167,10 +232,20 @@ export function ReminderSection({
             <div>Condition ID: {condition?.id}</div>
             <div>Last refreshed: {new Date(lastRefreshed || 0).toLocaleTimeString()}</div>
             <div>Refresh count: {refreshCount}</div>
+            <div>Reminder minutes: {JSON.stringify(reminderMinutes)}</div>
             {permissionError && <div className="text-amber-600">Permission error detected</div>}
           </div>
         )}
       </div>
+      
+      {/* Reminder History Dialog */}
+      {condition?.message_id && (
+        <ReminderHistoryDialog
+          open={historyOpen}
+          onOpenChange={setHistoryOpen}
+          messageId={condition.message_id}
+        />
+      )}
     </>
   );
 }
