@@ -284,6 +284,60 @@ export type Database = {
         }
         Relationships: []
       }
+      reminder_schedule: {
+        Row: {
+          condition_id: string
+          created_at: string
+          id: string
+          last_attempt_at: string | null
+          message_id: string
+          reminder_type: string
+          retry_count: number | null
+          scheduled_at: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          condition_id: string
+          created_at?: string
+          id?: string
+          last_attempt_at?: string | null
+          message_id: string
+          reminder_type?: string
+          retry_count?: number | null
+          scheduled_at: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          condition_id?: string
+          created_at?: string
+          id?: string
+          last_attempt_at?: string | null
+          message_id?: string
+          reminder_type?: string
+          retry_count?: number | null
+          scheduled_at?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reminder_schedule_condition_id_fkey"
+            columns: ["condition_id"]
+            isOneToOne: false
+            referencedRelation: "message_conditions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reminder_schedule_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sent_reminders: {
         Row: {
           condition_id: string
@@ -334,7 +388,14 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      reminder_schedule_status: {
+        Row: {
+          due_reminders: number | null
+          failed_last_5min: number | null
+          sent_last_5min: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       message_has_delivery: {

@@ -1,7 +1,9 @@
 
 import { useState, useEffect } from "react";
 import { formatDistanceToNow } from "date-fns";
-import { getNextScheduledReminder, getReminderHistory } from "@/services/messages/reminderService";
+import { getReminderHistory } from "@/services/messages/reminderService";
+import { migrateMessageSchedule } from "@/services/messages/reminderMigration";
+import { getUpcomingReminders, formatReminderSchedule } from "@/utils/reminderScheduler";
 
 export interface ScheduledReminderInfo {
   nextReminder: Date | null;
@@ -13,6 +15,8 @@ export interface ScheduledReminderInfo {
     formattedScheduledFor: string | null;
   };
   isLoading: boolean;
+  upcomingReminders: string[];
+  hasSchedule: boolean;
 }
 
 /**
@@ -28,17 +32,48 @@ export function useScheduledReminders(messageId: string, refreshTrigger: number 
       formattedSentAt: null,
       formattedScheduledFor: null
     },
-    isLoading: true
+    isLoading: true,
+    upcomingReminders: [],
+    hasSchedule: false
   });
 
   useEffect(() => {
     const fetchReminderData = async () => {
       try {
-        // Get the next scheduled reminder
-        const nextReminder = await getNextScheduledReminder(messageId);
+        // First, try to get upcoming reminders from the new schedule system
+        const upcomingReminders = await getUpcomingReminders(messageId);
+        const hasSchedule = upcomingReminders.length > 0;
         
-        // Get reminder history
+        // If no schedule exists, try to migrate this message
+        if (!hasSchedule) {
+          console.log(`No reminder schedule found for message ${messageId}, attempting migration`);
+          const migrationSuccess = await migrateMessageSchedule(messageId);
+          
+          if (migrationSuccess) {
+            console.log(`Successfully migrated reminder schedule for message ${messageId}`);
+            // Fetch again after migration
+            const migratedReminders = await getUpcomingReminders(messageId);
+            if (migratedReminders.length > 0) {
+              console.log(`Found ${migratedReminders.length} reminders after migration`);
+            }
+          }
+        }
+        
+        // Get reminder history for last reminders
         const reminderHistory = await getReminderHistory(messageId);
+        
+        // Process data and update state
+        let nextReminderDate: Date | null = null;
+        const formattedReminders = formatReminderSchedule(upcomingReminders);
+        
+        if (upcomingReminders.length > 0) {
+          // Sort by closest first
+          const sortedReminders = [...upcomingReminders].sort((a, b) => 
+            a.scheduledAt.getTime() - b.scheduledAt.getTime()
+          );
+          
+          nextReminderDate = sortedReminders[0].scheduledAt;
+        }
         
         // Process the last sent reminder if available
         let lastSentAt: Date | null = null;
@@ -55,9 +90,9 @@ export function useScheduledReminders(messageId: string, refreshTrigger: number 
           }
         }
         
-        // Format the dates for display
-        const formattedNextReminder = nextReminder 
-          ? formatDistanceToNow(nextReminder, { addSuffix: true })
+        // Format dates for display
+        const formattedNextReminder = nextReminderDate 
+          ? formatDistanceToNow(nextReminderDate, { addSuffix: true })
           : null;
           
         const formattedSentAt = lastSentAt
@@ -68,9 +103,9 @@ export function useScheduledReminders(messageId: string, refreshTrigger: number 
           ? formatDistanceToNow(lastScheduledFor, { addSuffix: false }) + " ago"
           : null;
         
-        // Update the state with all the information
+        // Update state with all information
         setScheduledInfo({
-          nextReminder,
+          nextReminder: nextReminderDate,
           formattedNextReminder,
           lastReminder: {
             sentAt: lastSentAt,
@@ -78,7 +113,9 @@ export function useScheduledReminders(messageId: string, refreshTrigger: number 
             formattedSentAt,
             formattedScheduledFor
           },
-          isLoading: false
+          isLoading: false,
+          upcomingReminders: formattedReminders,
+          hasSchedule
         });
       } catch (error) {
         console.error("Error in useScheduledReminders:", error);

@@ -1,59 +1,90 @@
 
-import { useState, useEffect } from "react";
-import { calculateUpcomingReminders, formatReminderDate, formatReminderShortDate } from "@/utils/reminderUtils";
+import { useState, useEffect } from 'react';
+import { formatDistanceToNow } from 'date-fns';
+import { getUpcomingReminders, formatReminderSchedule } from '@/utils/reminderScheduler';
 
-export interface ReminderInfo {
-  date: Date;
-  formattedText: string;
-  formattedShortDate: string; // Added short date format
+export interface NextRemindersInfo {
+  loading: boolean;
+  nextReminder: Date | null;
+  formattedNextReminder: string | null;
+  allReminders: Date[];
+  formattedAllReminders: string[];
 }
 
 /**
- * Hook to get upcoming reminders for a message
- * @param deadline The message deadline
- * @param reminderMinutes Array of reminder times in minutes before deadline
- * @param refreshTrigger A value that when changed will cause reminders to recalculate
- * @returns Information about upcoming reminders
+ * Hook to get information about upcoming reminders for a message
  */
-export function useNextReminders(
-  deadline: Date | null, 
-  reminderMinutes: number[] = [],
-  refreshTrigger: number = 0
-) {
-  const [upcomingReminders, setUpcomingReminders] = useState<ReminderInfo[]>([]);
-  const [nextReminder, setNextReminder] = useState<ReminderInfo | null>(null);
-  const [hasReminders, setHasReminders] = useState(false);
+export function useNextReminders(messageId: string | undefined, refreshTrigger: number = 0): NextRemindersInfo {
+  const [info, setInfo] = useState<NextRemindersInfo>({
+    loading: true,
+    nextReminder: null,
+    formattedNextReminder: null,
+    allReminders: [],
+    formattedAllReminders: []
+  });
 
   useEffect(() => {
-    // Calculate all upcoming reminders
-    const reminderDates = calculateUpcomingReminders(deadline, reminderMinutes);
+    if (!messageId) {
+      setInfo(prev => ({ ...prev, loading: false }));
+      return;
+    }
+
+    const fetchReminderData = async () => {
+      try {
+        // Get all upcoming reminders for this message
+        const upcomingReminders = await getUpcomingReminders(messageId);
+        
+        // Sort by closest first (should already be sorted but just to be safe)
+        const sortedReminders = upcomingReminders.sort((a, b) => 
+          a.scheduledAt.getTime() - b.scheduledAt.getTime()
+        );
+        
+        // Extract just the dates for simple access
+        const reminderDates = sortedReminders.map(r => r.scheduledAt);
+        
+        // Format for display
+        const formattedReminders = formatReminderSchedule(sortedReminders);
+        
+        // Get the next reminder (first in the sorted list)
+        const nextReminder = reminderDates.length > 0 ? reminderDates[0] : null;
+        
+        // Format the next reminder with relative time
+        const formattedNextReminder = nextReminder 
+          ? formatDistanceToNow(nextReminder, { addSuffix: true })
+          : null;
+        
+        setInfo({
+          loading: false,
+          nextReminder,
+          formattedNextReminder,
+          allReminders: reminderDates,
+          formattedAllReminders: formattedReminders
+        });
+      } catch (error) {
+        console.error("Error in useNextReminders:", error);
+        setInfo(prev => ({ ...prev, loading: false }));
+      }
+    };
     
-    // Create formatted reminder info objects
-    const reminderInfos = reminderDates.map(date => ({
-      date,
-      formattedText: formatReminderDate(date),
-      formattedShortDate: formatReminderShortDate(date), // Add short date format
-    }));
-    
-    setUpcomingReminders(reminderInfos);
-    setNextReminder(reminderInfos.length > 0 ? reminderInfos[0] : null);
-    setHasReminders(reminderMinutes.length > 0);
+    fetchReminderData();
     
     // Set up a timer to refresh the formatted times
     const timer = setInterval(() => {
-      setUpcomingReminders(prev => prev.map(reminder => ({
-        ...reminder,
-        formattedText: formatReminderDate(reminder.date),
-        // No need to update short date as it doesn't change with time passing
-      })));
+      setInfo(prev => {
+        if (!prev.nextReminder) {
+          return prev; // No dates to update
+        }
+        
+        // Update the formatted string for display
+        return {
+          ...prev,
+          formattedNextReminder: formatDistanceToNow(prev.nextReminder, { addSuffix: true })
+        };
+      });
     }, 60000); // Update every minute
     
     return () => clearInterval(timer);
-  }, [deadline, reminderMinutes, refreshTrigger]);
+  }, [messageId, refreshTrigger]);
 
-  return {
-    upcomingReminders,
-    nextReminder,
-    hasReminders
-  };
+  return info;
 }
