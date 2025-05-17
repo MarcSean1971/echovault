@@ -42,5 +42,20 @@ export const BUTTON_HOVER_EFFECTS = {
   color: '',
   
   // Default is just what's built into the button variants
-  default: ''
+  default: '',
+  
+  // For outline buttons with hover effect
+  outline: 'hover:bg-accent hover:text-accent-foreground'
+};
+
+// Animation effects for confirmation actions
+export const CONFIRMATION_ANIMATION = {
+  // Pulse animation for drawing attention
+  pulse: 'animate-pulse',
+  
+  // Shake animation for warnings/errors
+  shake: 'animate-[shake_0.5s_ease-in-out]',
+  
+  // Highlight animation for success
+  highlight: 'animate-[highlight_1s_ease-in-out]'
 };
