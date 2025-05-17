@@ -149,6 +149,12 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
         );
       }
       
+      // Dispatch a custom event to trigger UI refresh before navigating away
+      console.log("Message updated, dispatching conditions-updated event");
+      window.dispatchEvent(new CustomEvent('conditions-updated', { 
+        detail: { updatedAt: new Date().toISOString() }
+      }));
+      
       toast({
         title: "Message updated",
         description: "Your message has been updated successfully",
