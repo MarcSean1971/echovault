@@ -25,7 +25,8 @@ export async function performCheckIn(userId: string, method: string): Promise<Ch
     // Update all conditions with the new check-in time
     if (conditionsData && conditionsData.length > 0) {
       const conditionIds = conditionsData.map(c => c.id);
-      await updateConditionsLastChecked(conditionIds, now);
+      // Fix: Call updateConditionsLastChecked with only the conditionIds parameter
+      await updateConditionsLastChecked(conditionIds);
       
       // Also update all reminder schedules for check-in conditions
       // This is a best-effort approach, so we don't await these

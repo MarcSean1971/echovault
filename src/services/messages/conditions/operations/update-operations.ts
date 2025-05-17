@@ -51,16 +51,15 @@ export async function updateConditionInDb(conditionId: string, updateData: any) 
 /**
  * Updates the last checked timestamp for conditions
  */
-export async function updateConditionsLastChecked(userId: string) {
+export async function updateConditionsLastChecked(conditionIds: string[]) {
   try {
     const now = new Date().toISOString();
     
-    // Update last_checked for all user's active check-in conditions
+    // Update last_checked for specific conditions
     const { data, error } = await supabase
       .from('message_conditions')
       .update({ last_checked: now })
-      .in('condition_type', ['no_check_in', 'recurring_check_in', 'inactivity_to_date'])
-      .eq('active', true)
+      .in('id', conditionIds)
       .select();
 
     if (error) {
