@@ -394,14 +394,7 @@ export type Database = {
       }
     }
     Views: {
-      reminder_schedule_status: {
-        Row: {
-          due_reminders: number | null
-          failed_last_5min: number | null
-          sent_last_5min: number | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
       acquire_due_reminders: {
@@ -436,6 +429,14 @@ export type Database = {
           scheduled_at: string
           status: string
           updated_at: string
+        }[]
+      }
+      get_system_reminder_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          due_reminders: number
+          sent_last_5min: number
+          failed_last_5min: number
         }[]
       }
       message_has_delivery: {
