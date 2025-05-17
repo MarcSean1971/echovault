@@ -1,107 +1,60 @@
 
 import { useState, useEffect } from "react";
-import { format, formatDistanceToNow } from "date-fns";
+import { isAfter, addHours, differenceInHours, format } from "date-fns";
+import { calculateUpcomingReminders, formatReminderDate, formatReminderShortDate } from "@/utils/reminderUtils";
 
-interface NextReminderInfo {
-  nextReminder: Date | null;
-  formattedNextReminder: string | null;
-  upcomingReminders: {
-    formattedText: string;
-    formattedShortDate: string;
-    date: Date;
-    isImportant: boolean;
-  }[];
-  hasReminders: boolean;
-  loading: boolean;
+interface ReminderInfo {
+  date: Date;
+  formattedText: string;
+  formattedShortDate: string;
+  isImportant: boolean;
 }
 
-/**
- * Hook to get information about scheduled reminders for a message
- */
-export function useNextReminders(
-  deadline: Date | null,
-  reminderMinutes: number[] = [], 
-  refreshTrigger: number = 0
-): NextReminderInfo {
-  const [loading, setLoading] = useState<boolean>(true);
-  const [nextReminder, setNextReminder] = useState<Date | null>(null);
-  const [formattedNextReminder, setFormattedNextReminder] = useState<string | null>(null);
-  const [upcomingReminders, setUpcomingReminders] = useState<{
-    formattedText: string;
-    formattedShortDate: string;
-    date: Date;
-    isImportant: boolean;
-  }[]>([]);
+export function useNextReminders(deadline: Date | null, reminderMinutes: number[] = [], refreshTrigger?: number) {
+  const [upcomingReminders, setUpcomingReminders] = useState<ReminderInfo[]>([]);
   const [hasReminders, setHasReminders] = useState<boolean>(false);
-
-  // Calculate reminder dates when deadline or minutes array changes
+  
   useEffect(() => {
-    setLoading(true);
-
-    if (!deadline || reminderMinutes.length === 0) {
-      setLoading(false);
-      setHasReminders(false);
+    if (!deadline || !reminderMinutes || reminderMinutes.length === 0) {
       setUpcomingReminders([]);
-      setNextReminder(null);
-      setFormattedNextReminder(null);
+      setHasReminders(false);
       return;
     }
-
-    try {
-      // Calculate dates for each reminder
-      const now = new Date();
-      const reminderDates = reminderMinutes
-        .map(minutes => {
-          const reminderDate = new Date(deadline.getTime() - minutes * 60 * 1000);
-          return {
-            date: reminderDate,
-            formattedText: format(reminderDate, "MMM d, yyyy h:mm a"),
-            formattedShortDate: formatDistanceToNow(reminderDate, { addSuffix: true }),
-            isPast: reminderDate < now,
-            isImportant: false
-          };
-        })
-        .filter(item => !item.isPast) // Filter out past reminders
-        .sort((a, b) => a.date.getTime() - b.date.getTime()); // Sort by date ascending
+    
+    // Calculate reminder dates
+    const now = new Date();
+    const reminderDates = calculateUpcomingReminders(deadline, reminderMinutes);
+    
+    // Format as reminder info objects
+    const reminderInfos: ReminderInfo[] = reminderDates.map(date => {
+      // Calculate if this reminder is important (within 24 hours)
+      const hoursUntil = differenceInHours(date, now);
+      const isImportant = hoursUntil <= 24;
       
-      // Add the actual deadline
-      reminderDates.push({
-        date: deadline,
-        formattedText: format(deadline, "MMM d, yyyy h:mm a") + " (Final Delivery)",
-        formattedShortDate: formatDistanceToNow(deadline, { addSuffix: true }) + " (Final)",
-        isPast: deadline < now,
-        isImportant: true
-      });
-      
-      // Filter out past reminders again and sort
-      const futureReminders = reminderDates
-        .filter(item => !item.isPast)
-        .sort((a, b) => a.date.getTime() - b.date.getTime());
-      
-      setUpcomingReminders(futureReminders);
-      setHasReminders(reminderDates.length > 0);
-      
-      // Set the next reminder if there are any
-      if (futureReminders.length > 0) {
-        const next = futureReminders[0].date;
-        setNextReminder(next);
-        setFormattedNextReminder(formatDistanceToNow(next, { addSuffix: true }));
-      } else {
-        setNextReminder(null);
-        setFormattedNextReminder(null);
-      }
-    } catch (err) {
-      console.error("Error calculating reminder dates:", err);
-    } finally {
-      setLoading(false);
-    }
+      return {
+        date,
+        formattedText: formatReminderDate(date),
+        formattedShortDate: formatReminderShortDate(date),
+        isImportant
+      };
+    });
+    
+    setUpcomingReminders(reminderInfos);
+    setHasReminders(reminderInfos.length > 0 || reminderMinutes.length > 0);
+    
+    // Set up a timer to refresh the formatted times
+    const timer = setInterval(() => {
+      setUpcomingReminders(reminders => 
+        reminders.map(reminder => ({
+          ...reminder,
+          formattedText: formatReminderDate(reminder.date),
+          formattedShortDate: formatReminderShortDate(reminder.date)
+        }))
+      );
+    }, 60000); // Update every minute
+    
+    return () => clearInterval(timer);
   }, [deadline, reminderMinutes, refreshTrigger]);
-
-  return {
-    loading,
-    nextReminder,
-    formattedNextReminder,
-    upcomingReminders,
-    hasReminders
-  };
+  
+  return { upcomingReminders, hasReminders };
 }

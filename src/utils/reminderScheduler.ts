@@ -22,6 +22,9 @@ export async function generateReminderSchedule(
       return false;
     }
     
+    // First, mark existing reminder schedules as obsolete
+    await markExistingRemindersObsolete(conditionId);
+    
     // Generate reminder timestamps
     const scheduleEntries = reminderMinutes.map(minutes => {
       const scheduledAt = new Date(triggerDate.getTime() - (minutes * 60 * 1000));
@@ -70,6 +73,31 @@ export async function generateReminderSchedule(
 }
 
 /**
+ * Mark existing reminders as obsolete when creating new schedule
+ */
+async function markExistingRemindersObsolete(conditionId: string): Promise<boolean> {
+  try {
+    console.log(`Marking existing reminders as obsolete for condition ${conditionId}`);
+    
+    const { error } = await supabase
+      .from('reminder_schedule')
+      .update({ status: 'obsolete' })
+      .eq('condition_id', conditionId)
+      .eq('status', 'pending');
+    
+    if (error) {
+      console.error("Error marking reminders as obsolete:", error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Error in markExistingRemindersObsolete:", error);
+    return false;
+  }
+}
+
+/**
  * Generate schedule for check-in type conditions
  */
 export async function generateCheckInReminderSchedule(
@@ -107,6 +135,7 @@ export async function getUpcomingReminders(messageId: string): Promise<{
   priority?: string 
 }[]> {
   try {
+    // Only get non-obsolete reminders
     const { data, error } = await supabase
       .from('reminder_schedule')
       .select('scheduled_at, reminder_type, delivery_priority')

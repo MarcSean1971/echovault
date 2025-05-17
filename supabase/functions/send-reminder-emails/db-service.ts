@@ -1,4 +1,3 @@
-
 import { supabaseClient } from "./supabase-client.ts";
 import { ReminderData } from "./types/reminder-types.ts";
 import { calculateNextReminderTime } from "./utils/reminder-calculator.ts";
@@ -271,4 +270,3 @@ export async function getMessagesNeedingReminders(
     throw error;
   }
 }
-

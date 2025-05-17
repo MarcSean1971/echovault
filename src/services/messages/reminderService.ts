@@ -83,7 +83,7 @@ export async function createOrUpdateReminderSchedule(options: ReminderScheduleOp
         return false;
       }
       
-      return await generateCheckInReminderSchedule(
+      const result = await generateCheckInReminderSchedule(
         options.messageId,
         options.conditionId,
         options.lastChecked ? new Date(options.lastChecked) : null,
@@ -91,6 +91,22 @@ export async function createOrUpdateReminderSchedule(options: ReminderScheduleOp
         options.minutesThreshold || 0,
         options.reminderMinutes
       );
+      
+      // Invalidate condition cache to force refresh
+      if (result) {
+        try {
+          const { data: userData } = await supabase.auth.getUser();
+          if (userData && userData.user) {
+            // Import dynamically to avoid circular dependencies
+            const { invalidateConditionsCache } = await import('./conditions/dbOperations');
+            invalidateConditionsCache(userData.user.id);
+          }
+        } catch (err) {
+          console.error("Failed to invalidate conditions cache:", err);
+        }
+      }
+      
+      return result;
     } else {
       // For normal conditions with trigger date
       return await generateReminderSchedule(

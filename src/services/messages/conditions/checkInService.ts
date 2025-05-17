@@ -29,28 +29,41 @@ export async function performCheckIn(userId: string, method: string): Promise<Ch
       await updateConditionsLastChecked(conditionIds);
       
       // Also update all reminder schedules for check-in conditions
-      // This is a best-effort approach, so we don't await these
-      conditionsData.forEach(condition => {
+      for (const condition of conditionsData) {
         if (['no_check_in', 'recurring_check_in', 'inactivity_to_date'].includes(condition.condition_type)) {
+          console.log(`Generating new reminder schedule for condition ${condition.id} after check-in`);
           const reminderMinutes = condition.reminder_hours || [1440, 720, 360, 180, 60]; // Default reminder times
           
-          createOrUpdateReminderSchedule({
-            messageId: condition.message_id,
-            conditionId: condition.id,
-            conditionType: condition.condition_type,
-            triggerDate: null,
-            reminderMinutes,
-            lastChecked: now,
-            hoursThreshold: condition.hours_threshold,
-            minutesThreshold: condition.minutes_threshold
-          }).catch(err => {
+          try {
+            // Make this awaited so we ensure reminders are properly updated
+            await createOrUpdateReminderSchedule({
+              messageId: condition.message_id,
+              conditionId: condition.id,
+              conditionType: condition.condition_type,
+              triggerDate: null,
+              reminderMinutes,
+              lastChecked: now,
+              hoursThreshold: condition.hours_threshold,
+              minutesThreshold: condition.minutes_threshold
+            });
+            
+            // Dispatch event to notify UI of condition update
+            if (typeof window !== 'undefined') {
+              window.dispatchEvent(new CustomEvent('conditions-updated', { 
+                detail: { 
+                  conditionId: condition.id,
+                  messageId: condition.message_id, 
+                  type: 'check-in'
+                }
+              }));
+            }
+          } catch (err) {
             console.error(`Failed to update reminder schedule for condition ${condition.id}:`, err);
-          });
+          }
         }
-      });
+      }
     }
     
-    // Log the check-in in the messages table for now (since we don't have check_ins yet)
     return {
       success: true,
       timestamp: now,

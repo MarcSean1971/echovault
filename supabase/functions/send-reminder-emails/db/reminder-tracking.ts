@@ -71,3 +71,42 @@ export async function updateNextReminderTime(
     return false;
   }
 }
+
+/**
+ * Mark reminders as obsolete when creating a new schedule
+ */
+export async function markRemindersObsolete(
+  conditionId: string,
+  messageId?: string
+): Promise<boolean> {
+  try {
+    const supabase = supabaseClient();
+    
+    let query = supabase
+      .from('reminder_schedule')
+      .update({ status: 'obsolete' })
+      .eq('status', 'pending');
+    
+    // Filter by condition ID if provided
+    if (conditionId) {
+      query = query.eq('condition_id', conditionId);
+    }
+    
+    // Filter by message ID if provided
+    if (messageId) {
+      query = query.eq('message_id', messageId);
+    }
+    
+    const { error } = await query;
+    
+    if (error) {
+      console.error("Error marking reminders obsolete:", error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Error in markRemindersObsolete:", error);
+    return false;
+  }
+}
