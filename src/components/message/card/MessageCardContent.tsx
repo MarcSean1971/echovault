@@ -85,13 +85,11 @@ export function MessageCardContent({
               deadlineProgress > 90 ? "bg-destructive/20" : 
               deadlineProgress > 75 ? "bg-amber-200/50" : "bg-green-200/50"
             )}
-            // Update the style approach - use standard className for the indicator
-            // instead of the custom indicatorClassName prop that doesn't exist
-            style={{
-              '--progress-indicator-color': deadlineProgress > 90 ? 'var(--destructive)' : 
-                                           deadlineProgress > 75 ? 'rgb(245 158 11)' : 
-                                           'rgb(34 197 94)'
-            } as React.CSSProperties}
+            indicatorClassName={cn(
+              deadlineProgress > 90 ? "bg-destructive" : 
+              deadlineProgress > 75 ? "bg-amber-500" : 
+              "bg-green-500"
+            )}
           />
         </div>
       )}
