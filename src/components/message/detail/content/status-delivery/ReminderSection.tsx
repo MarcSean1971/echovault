@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Bell, RefreshCw, History } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { parseReminderMinutes } from "@/utils/reminderUtils";
@@ -41,6 +41,11 @@ export function ReminderSection({
   const [isTestingReminder, setIsTestingReminder] = useState<boolean>(false);
   const [errorState, setErrorState] = useState<string | null>(null);
   
+  // Reference to track last refresh time for rate limiting
+  const lastRefreshTimeRef = useRef<number>(0);
+  const refreshInProgressRef = useRef<boolean>(false);
+  const testButtonClickedRef = useRef<boolean>(false);
+  
   // Get upcoming reminder information with ability to force refresh
   const { upcomingReminders, hasReminders, isLoading, forceRefresh, lastRefreshed, permissionError } = useNextReminders(
     condition?.message_id,
@@ -79,21 +84,45 @@ export function ReminderSection({
   // Transform string reminders to enhanced objects with required properties
   const enhancedReminders = enhanceReminders(upcomingReminders);
   
-  // Handle manual refresh of reminders data
+  // Handle manual refresh of reminders data with rate limiting
   const handleForceRefresh = () => {
     try {
+      // Rate limiting implementation - prevent refreshes more than once every 2 seconds
+      const now = Date.now();
+      if (now - lastRefreshTimeRef.current < 2000 || refreshInProgressRef.current) {
+        console.log(`[ReminderSection] Refresh rate limited - last refresh ${now - lastRefreshTimeRef.current}ms ago`);
+        return;
+      }
+      
+      lastRefreshTimeRef.current = now;
+      refreshInProgressRef.current = true;
+      
       setErrorState(null);
       forceRefresh();
-      setLastForceRefresh(Date.now());
+      setLastForceRefresh(now);
       setRefreshCount(prev => prev + 1);
-      toast({
-        title: "Refreshing reminders data",
-        description: "The reminders list is being updated...",
-        duration: 2000,
-      });
+      
+      // Only show toast for user-initiated refreshes, not automatic ones
+      if (!testButtonClickedRef.current) {
+        toast({
+          title: "Refreshing reminders data",
+          description: "The reminders list is being updated...",
+          duration: 2000,
+        });
+      }
+      
+      // Reset test button flag
+      testButtonClickedRef.current = false;
+      
+      // Reset refreshInProgress after a delay
+      setTimeout(() => {
+        refreshInProgressRef.current = false;
+      }, 2000);
+      
     } catch (error) {
       console.error("Error forcing refresh:", error);
       setErrorState("Failed to refresh reminder data");
+      refreshInProgressRef.current = false;
     }
   };
   
@@ -102,11 +131,18 @@ export function ReminderSection({
     if (!condition?.message_id) return;
     
     setIsTestingReminder(true);
+    testButtonClickedRef.current = true;
+    
     try {
       // Updated to explicitly set testMode=true
       await triggerManualReminder(condition.message_id, true, true);
-      // Force refresh after testing to show the updated state
-      setTimeout(() => handleForceRefresh(), 2000);
+      
+      // Single refresh after a delay instead of multiple refreshes
+      setTimeout(() => {
+        console.log(`[ReminderSection] Performing single refresh after test reminder`);
+        handleForceRefresh();
+      }, 2000);
+      
     } catch (error) {
       console.error("Error testing reminder:", error);
       setErrorState("Failed to test reminder");
@@ -118,35 +154,30 @@ export function ReminderSection({
   // Listen for condition-updated events to automatically refresh
   useEffect(() => {
     const handleConditionUpdated = (event: Event) => {
-      console.log(`[ReminderSection] Received conditions-updated event:`, event);
-      
       if (event instanceof CustomEvent) {
-        console.log(`[ReminderSection] Event details:`, event.detail);
-        
-        // Check if this update is relevant to this condition
+        // Enhanced event filtering to prevent cascading refreshes
+        const eventDetail = event.detail || {};
         const isRelevant = 
-          !event.detail?.conditionId || // Global update
-          !condition?.id || // We don't have a condition ID to compare
-          event.detail?.conditionId === condition.id || // Update for our condition
-          event.detail?.messageId === condition.message_id; // Update for our message
+          (eventDetail.conditionId && condition?.id === eventDetail.conditionId) ||
+          (eventDetail.messageId && condition?.message_id === eventDetail.messageId);
           
-        if (isRelevant) {
-          // Schedule multiple refresh attempts
-          // First refresh immediately
-          handleForceRefresh();
-          
-          // Second refresh after a delay
-          setTimeout(() => {
-            console.log(`[ReminderSection] Performing delayed refresh`);
-            handleForceRefresh();
-          }, 2000);
-          
-          // Third refresh after a longer delay 
-          setTimeout(() => {
-            console.log(`[ReminderSection] Performing final delayed refresh`);
-            handleForceRefresh();
-          }, 5000);
+        // Skip events that don't match our message/condition or were triggered by this component
+        if (!isRelevant || eventDetail.source === 'reminder-section-refresh') {
+          return;
         }
+        
+        // Log specific event details for debugging
+        console.log(`[ReminderSection] Received relevant conditions-updated event: ${eventDetail.action || 'update'}`);
+        
+        // Use rate limiting for event-triggered refreshes
+        const now = Date.now();
+        if (now - lastRefreshTimeRef.current < 5000 || refreshInProgressRef.current) {
+          console.log(`[ReminderSection] Event-triggered refresh skipped due to rate limiting`);
+          return;
+        }
+        
+        // Single refresh with specific origin identifier
+        handleForceRefresh();
       }
     };
     
@@ -158,6 +189,13 @@ export function ReminderSection({
   useEffect(() => {
     if (refreshTrigger && refreshTrigger > 0) {
       console.log(`[ReminderSection] External refresh trigger changed: ${refreshTrigger}`);
+      // Use the same rate limiting for external triggers
+      const now = Date.now();
+      if (now - lastRefreshTimeRef.current < 3000 || refreshInProgressRef.current) {
+        console.log(`[ReminderSection] External refresh skipped due to rate limiting`);
+        return;
+      }
+      
       handleForceRefresh();
     }
   }, [refreshTrigger]);
@@ -190,7 +228,7 @@ export function ReminderSection({
             onClick={handleForceRefresh} 
             className={`h-6 px-2 transition-all ${HOVER_TRANSITION}`}
             title="Refresh reminder data"
-            disabled={isLoading}
+            disabled={isLoading || refreshInProgressRef.current}
           >
             <RefreshCw className={`h-3 w-3 ${isLoading ? 'animate-spin' : ''} ${ICON_HOVER_EFFECTS.muted}`} />
           </Button>
@@ -250,7 +288,7 @@ export function ReminderSection({
                 variant="outline"
                 size="sm"
                 onClick={handleTestReminder}
-                disabled={isTestingReminder}
+                disabled={isTestingReminder || refreshInProgressRef.current}
                 className={`w-full text-xs ${HOVER_TRANSITION}`}
               >
                 {isTestingReminder ? (
