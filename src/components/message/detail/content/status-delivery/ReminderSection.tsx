@@ -106,27 +106,36 @@ export function ReminderSection({
       if (event instanceof CustomEvent) {
         console.log(`[ReminderSection] Event details:`, event.detail);
         
-        // Schedule multiple refresh attempts
-        // First refresh immediately
-        handleForceRefresh();
-        
-        // Second refresh after a delay
-        setTimeout(() => {
-          console.log(`[ReminderSection] Performing delayed refresh`);
+        // Check if this update is relevant to this condition
+        const isRelevant = 
+          !event.detail?.conditionId || // Global update
+          !condition?.id || // We don't have a condition ID to compare
+          event.detail?.conditionId === condition.id || // Update for our condition
+          event.detail?.messageId === condition.message_id; // Update for our message
+          
+        if (isRelevant) {
+          // Schedule multiple refresh attempts
+          // First refresh immediately
           handleForceRefresh();
-        }, 2000);
-        
-        // Third refresh after a longer delay 
-        setTimeout(() => {
-          console.log(`[ReminderSection] Performing final delayed refresh`);
-          handleForceRefresh();
-        }, 5000);
+          
+          // Second refresh after a delay
+          setTimeout(() => {
+            console.log(`[ReminderSection] Performing delayed refresh`);
+            handleForceRefresh();
+          }, 2000);
+          
+          // Third refresh after a longer delay 
+          setTimeout(() => {
+            console.log(`[ReminderSection] Performing final delayed refresh`);
+            handleForceRefresh();
+          }, 5000);
+        }
       }
     };
     
     window.addEventListener('conditions-updated', handleConditionUpdated);
     return () => window.removeEventListener('conditions-updated', handleConditionUpdated);
-  }, []);
+  }, [condition]);
   
   // Listen for external refresh trigger changes
   useEffect(() => {

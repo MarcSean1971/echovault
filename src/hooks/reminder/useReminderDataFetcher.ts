@@ -1,58 +1,64 @@
 
 import { useState } from "react";
-import { getReminderHistory } from "@/services/messages/reminderService";
-import { getUpcomingReminders } from "@/utils/reminder";
-import { toast } from "@/components/ui/use-toast";
-import { ScheduledReminderInfo } from "./types";
+import { supabase } from "@/integrations/supabase/client";
 
-/**
- * Hook to fetch reminder data from the API
- */
-export function useReminderDataFetcher(messageId: string) {
+export function useReminderDataFetcher(messageId: string | null | undefined) {
   const [isLoading, setIsLoading] = useState(false);
   const [permissionError, setPermissionError] = useState(false);
   
   /**
-   * Fetch reminder data from multiple sources
+   * Fetch all reminder data for a message
+   * This includes both scheduled and sent reminders
    */
-  const fetchReminderData = async (): Promise<{
-    upcomingReminders: any[];
-    reminderHistory: any[];
-  } | null> => {
+  const fetchReminderData = async () => {
     if (!messageId) return null;
+    setIsLoading(true);
     
     try {
-      console.log(`[useReminderDataFetcher] Fetching reminder data for message ${messageId}`);
-      setIsLoading(true);
-      setPermissionError(false);
-      
-      // Get upcoming reminders from the schedule
-      const upcomingReminders = await getUpcomingReminders(messageId);
-      console.log(`[useReminderDataFetcher] Found ${upcomingReminders.length} upcoming reminders`);
-      
-      // Get reminder history for last reminders
-      const reminderHistory = await getReminderHistory(messageId);
-      
-      return { upcomingReminders, reminderHistory };
-    } catch (error: any) {
-      console.error("[useReminderDataFetcher] Error fetching reminder data:", error);
-      
-      // Check if this is an RLS permission error
-      const isPermissionError = error?.code === "42501" || error?.message?.includes("permission denied");
-      
-      if (isPermissionError) {
-        console.warn("[useReminderDataFetcher] Permission denied accessing reminders - user likely doesn't own this message");
+      // First fetch upcoming reminders
+      const { data: upcomingReminders, error: upcomingError } = await supabase
+        .from('reminder_schedule')
+        .select('*')
+        .eq('message_id', messageId)
+        .eq('status', 'pending')
+        .order('scheduled_at', { ascending: true });
         
-        toast({
-          title: "Permission Error",
-          description: "You don't have permission to view reminders for this message.",
-          variant: "destructive",
-          duration: 5000
-        });
-        
-        setPermissionError(true);
+      if (upcomingError) {
+        if (upcomingError.code === '42501' || upcomingError.message?.includes('permission denied')) {
+          console.warn("Permission denied fetching reminder schedule - user likely doesn't own this message");
+          setPermissionError(true);
+        } else {
+          console.error("Error fetching upcoming reminders:", upcomingError);
+        }
+        return null;
       }
       
+      // Then fetch reminder history
+      const { data: reminderHistory, error: historyError } = await supabase
+        .from('sent_reminders')
+        .select('*')
+        .eq('message_id', messageId)
+        .order('sent_at', { ascending: false });
+        
+      if (historyError) {
+        if (historyError.code === '42501' || historyError.message?.includes('permission denied')) {
+          console.warn("Permission denied fetching reminder history - user likely doesn't own this message");
+          setPermissionError(true);
+        } else {
+          console.error("Error fetching reminder history:", historyError);
+        }
+        return null;
+      }
+      
+      console.log(`[ReminderDataFetcher] Found ${upcomingReminders?.length || 0} upcoming reminders and ${reminderHistory?.length || 0} reminder history records`);
+      
+      setPermissionError(false);
+      return {
+        upcomingReminders: upcomingReminders || [],
+        reminderHistory: reminderHistory || []
+      };
+    } catch (error) {
+      console.error("Error in fetchReminderData:", error);
       return null;
     } finally {
       setIsLoading(false);

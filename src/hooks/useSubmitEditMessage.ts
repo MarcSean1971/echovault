@@ -1,4 +1,3 @@
-
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +12,7 @@ import { useContentHandler } from "./message-edit/useContentHandler";
 import { useTimeThresholdHandler } from "./message-edit/useTimeThresholdHandler";
 import { useRecipientHandler } from "./message-edit/useRecipientHandler";
 import { useRecurringPatternHandler } from "./message-edit/useRecurringPatternHandler";
+import { ensureReminderSchedule } from "@/utils/reminder/ensureReminderSchedule";
 
 export function useSubmitEditMessage(message: Message, existingCondition: MessageCondition | null) {
   const navigate = useNavigate();
@@ -104,33 +104,36 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
       const finalRecurringPattern = processRecurringPattern(deliveryOption, recurringPattern);
       
       // Handle trigger conditions
+      let conditionId = null;
       if (existingCondition) {
         console.log("Updating existing condition with delivery option:", deliveryOption);
         console.log("Using hours_threshold:", finalHoursThreshold, "minutes_threshold:", minutesThreshold);
+        console.log("Reminder minutes:", reminderMinutes);
         
         // Update existing condition
-        // Note that the updateMessageCondition function will handle mapping panic_trigger_config to panic_config
-        await updateMessageCondition(existingCondition.id, {
+        const updatedCondition = await updateMessageCondition(existingCondition.id, {
           condition_type: conditionType,
           hours_threshold: finalHoursThreshold,
           minutes_threshold: minutesThreshold,
           recurring_pattern: finalRecurringPattern,
           pin_code: pinCode || null,
           trigger_date: triggerDate ? triggerDate.toISOString() : null,
-          panic_trigger_config: panicTriggerConfig,  // This will be mapped to panic_config in the service
+          panic_trigger_config: panicTriggerConfig,
           reminder_hours: reminderMinutes, // Values already in minutes
           unlock_delay_hours: unlockDelay,
           expiry_hours: expiryHours,
           recipients: selectedRecipientObjects,
           check_in_code: checkInCode || null
         });
+        
+        conditionId = existingCondition.id;
       } else {
         console.log("Creating new condition with delivery option:", deliveryOption);
         console.log("Using hours_threshold:", finalHoursThreshold, "minutes_threshold:", minutesThreshold);
+        console.log("Reminder minutes:", reminderMinutes);
         
         // Create new condition
-        // Note that the createMessageCondition function will handle mapping panicTriggerConfig to panic_config
-        await createMessageCondition(
+        const newCondition = await createMessageCondition(
           message.id,
           conditionType as TriggerType,
           {
@@ -142,17 +145,42 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
             pinCode,
             unlockDelayHours: unlockDelay,
             expiryHours,
-            panicTriggerConfig,  // This will be mapped to panic_config in the service
+            panicTriggerConfig,
             reminderHours: reminderMinutes, // Values already in minutes
             checkInCode: checkInCode || undefined
           }
         );
+        
+        if (newCondition && newCondition.id) {
+          conditionId = newCondition.id;
+        }
+      }
+      
+      // Generate reminder schedule if the condition is active
+      if (conditionId) {
+        console.log("Ensuring reminder schedule for condition after edit:", conditionId);
+        const active = existingCondition ? existingCondition.active : false;
+        
+        if (active) {
+          try {
+            await ensureReminderSchedule(conditionId, message.id);
+            console.log("Successfully updated reminder schedule after edit");
+          } catch (scheduleError) {
+            console.error("Error ensuring reminder schedule:", scheduleError);
+          }
+        } else {
+          console.log("Condition is not active, skipping reminder schedule creation");
+        }
       }
       
       // Dispatch a custom event to trigger UI refresh before navigating away
       console.log("Message updated, dispatching conditions-updated event");
       window.dispatchEvent(new CustomEvent('conditions-updated', { 
-        detail: { updatedAt: new Date().toISOString() }
+        detail: { 
+          messageId: message.id, 
+          conditionId, 
+          updatedAt: new Date().toISOString() 
+        }
       }));
       
       toast({

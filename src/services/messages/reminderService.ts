@@ -1,6 +1,8 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { generateReminderSchedule } from "@/utils/reminder"; // Updated import path
+import { markExistingRemindersObsolete } from "@/utils/reminder/reminderUtils";
 
 // Define the Reminder type that needs to be exported
 export interface Reminder {
@@ -70,6 +72,17 @@ export async function createOrUpdateReminderSchedule(params: ReminderSchedulePar
     }
     
     console.log(`[REMINDER-SERVICE] Successfully created ${scheduleTimes.length} reminder schedule entries`);
+    
+    // Broadcast an update event
+    window.dispatchEvent(new CustomEvent('conditions-updated', { 
+      detail: { 
+        messageId: params.messageId,
+        conditionId: params.conditionId,
+        updatedAt: new Date().toISOString(),
+        action: 'reminder-schedule-created'
+      }
+    }));
+    
     return true;
   } catch (error) {
     console.error("[REMINDER-SERVICE] Error in createOrUpdateReminderSchedule:", error);
@@ -142,9 +155,13 @@ function calculateScheduleTimes(params: ReminderScheduleParams): any[] {
     return [];
   }
   
-  // Generate schedule entries
+  // Generate schedule entries, ensuring reminder times are correct
+  console.log(`[REMINDER-SERVICE] Generating reminders for ${reminderMinutes.length} times:`, reminderMinutes);
+  console.log(`[REMINDER-SERVICE] Using deadline: ${effectiveDeadline.toISOString()}`);
+  
   const scheduleEntries = reminderMinutes.map(minutes => {
     const scheduledAt = new Date(effectiveDeadline!.getTime() - (minutes * 60 * 1000));
+    console.log(`[REMINDER-SERVICE] Creating reminder ${minutes} mins before deadline at ${scheduledAt.toISOString()}`);
     
     return {
       message_id: messageId,
