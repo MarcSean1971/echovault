@@ -5,5 +5,5 @@
 import { useScheduledReminders as useRefactoredScheduledReminders } from './reminder/useScheduledReminders';
 import { ScheduledReminderInfo } from './reminder/types';
 
-export interface { ScheduledReminderInfo };
+export type { ScheduledReminderInfo };
 export { useRefactoredScheduledReminders as useScheduledReminders };
