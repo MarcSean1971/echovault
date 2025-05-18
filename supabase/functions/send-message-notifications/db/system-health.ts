@@ -27,19 +27,32 @@ export async function getSystemHealthStatus() {
       .gte('created_at', new Date(Date.now() - 30 * 60 * 1000).toISOString())
       .group('delivery_status');
       
+    // Check trigger status (new check for trigger health)
+    const { data: triggerData, error: triggerError } = await supabase
+      .from('reminder_delivery_log')
+      .select('count(*)', { count: 'exact' })
+      .eq('delivery_channel', 'trigger')
+      .gte('created_at', new Date(Date.now() - 60 * 60 * 1000).toISOString());
+      
     const dbStatus = !testError ? 'healthy' : 'error';
     const remindersStatus = !pendingError ? 'healthy' : 'error';
+    const triggerStatus = !triggerError && triggerData?.[0]?.count > 0 ? 'healthy' : 'warning';
     
     return {
       status: dbStatus === 'healthy' && remindersStatus === 'healthy' ? 'healthy' : 'degraded',
       database: dbStatus,
       reminders: remindersStatus,
+      triggers: triggerStatus,
       pending_count: pendingData?.[0]?.count || 0,
       recent_activity: activityData || [],
+      trigger_activity: {
+        recent_hour: triggerData?.[0]?.count || 0
+      },
       errors: {
         database: testError?.message,
         reminders: pendingError?.message,
-        activity: activityError?.message
+        activity: activityError?.message,
+        triggers: triggerError?.message
       },
       timestamp: new Date().toISOString()
     };

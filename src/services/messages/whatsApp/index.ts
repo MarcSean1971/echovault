@@ -68,6 +68,14 @@ export async function diagnoseReminderSystem(messageId: string) {
     const statusResult = await supabase.functions.invoke("send-message-notifications/status", {});
     console.log("Notification system status:", statusResult.data);
     
+    // Check trigger functionality
+    let triggerStatus = 'Unknown';
+    if (statusResult.data?.triggers) {
+      triggerStatus = statusResult.data.triggers;
+      console.log(`Trigger status: ${triggerStatus}`);
+      console.log(`Trigger activity in last hour: ${statusResult.data.trigger_activity?.recent_hour || 0}`);
+    }
+    
     // Create a test reminder using the reminderService
     const testData = {
       messageId,
@@ -87,7 +95,7 @@ export async function diagnoseReminderSystem(messageId: string) {
     // Display results to the user
     toast({
       title: "Diagnostic Complete",
-      description: "Check the console for detailed results",
+      description: `System status: ${statusResult.data?.status || 'Unknown'}, Triggers: ${triggerStatus}`,
       duration: 8000,
     });
     

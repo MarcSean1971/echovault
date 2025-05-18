@@ -57,6 +57,17 @@ const handler = async (req: Request): Promise<Response> => {
     console.log(`Force send: ${forceSend ? 'YES' : 'No'}`);
     console.log(`Source: ${source}`);
     
+    // Enhanced logging for trigger sources
+    if (source && source.includes('trigger')) {
+      console.log(`TRIGGER SOURCE DETECTED: ${source}`);
+      console.log(`This notification was triggered by database trigger`);
+      
+      // Log additional info about the trigger
+      if (source === 'reminder_schedule_trigger') {
+        console.log(`Triggered by reminder_schedule status change to 'sent'`);
+      }
+    }
+    
     if (keepArmed !== undefined) {
       console.log(`Keep armed flag explicitly set to: ${keepArmed}`);
     }

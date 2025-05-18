@@ -77,8 +77,12 @@ export interface SystemHealthStatus {
   status: 'healthy' | 'degraded' | 'error';
   database: 'healthy' | 'degraded' | 'error';
   reminders: 'healthy' | 'degraded' | 'error';
+  triggers?: 'healthy' | 'warning' | 'error';
   pending_count: number;
   recent_activity: any[];
+  trigger_activity?: {
+    recent_hour: number;
+  };
   errors?: Record<string, string | undefined>;
   timestamp: string;
 }

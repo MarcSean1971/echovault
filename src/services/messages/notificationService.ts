@@ -14,7 +14,7 @@ export async function triggerMessageNotification(messageId: string) {
       body: { 
         messageId,
         debug: true,
-        forceSend: true,
+        forceSend: true, // Always force send when manually triggering
         source: 'manual_trigger'
       }
     });
