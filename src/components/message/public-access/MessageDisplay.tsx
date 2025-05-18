@@ -27,6 +27,7 @@ export const MessageDisplay = ({
   const recipientEmail = searchParams.get('recipient');
   
   const [isLoading, setIsLoading] = useState(true);
+  const [contentReady, setContentReady] = useState(false);
   
   // Format date helper
   const formatMessageDate = (dateString: string) => {
@@ -40,11 +41,20 @@ export const MessageDisplay = ({
   
   // Add a graceful loading state with fade-in effect
   useEffect(() => {
+    // Show initial loading indicator
     const timer = setTimeout(() => {
       setIsLoading(false);
     }, 600);
     
-    return () => clearTimeout(timer);
+    // Mark content as ready after metadata is loaded
+    const contentTimer = setTimeout(() => {
+      setContentReady(true);
+    }, 800);
+    
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(contentTimer);
+    };
   }, [message]);
 
   if (isLoading) {
@@ -91,7 +101,7 @@ export const MessageDisplay = ({
       )}
       
       <Card className="overflow-hidden border shadow-sm">
-        {/* Message Header */}
+        {/* Message Header - Shows immediately */}
         <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6 text-white">
           <h1 className="text-2xl font-bold mb-2">{message.title}</h1>
           <div className="flex items-center text-blue-100 text-sm">
@@ -100,7 +110,7 @@ export const MessageDisplay = ({
           </div>
         </div>
         
-        {/* Security Badge */}
+        {/* Security Badge - Shows immediately */}
         <div className="bg-blue-50 px-6 py-2 border-b border-blue-100">
           <div className="flex items-center">
             <Shield className={`h-4 w-4 text-blue-600 mr-2 ${HOVER_TRANSITION}`} />
@@ -112,14 +122,14 @@ export const MessageDisplay = ({
           </div>
         </div>
         
-        {/* Message Content - Let MessageContent handle all content including attachments */}
+        {/* Message Content - Progressive loading via MessageContent component */}
         <div className="p-6">
           <div className="prose max-w-full">
             {message && <MessageContent message={message} deliveryId={deliveryId} recipientEmail={recipientEmail} />}
           </div>
         </div>
         
-        {/* Footer */}
+        {/* Footer - Shows immediately */}
         <div className="bg-gray-50 px-6 py-4 text-sm text-gray-500 border-t">
           <div className="flex items-center justify-between">
             <div className="flex items-center">

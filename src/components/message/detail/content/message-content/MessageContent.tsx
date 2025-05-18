@@ -58,46 +58,29 @@ export function MessageContent({
                                 !shouldShowTextContent &&  // Make sure we don't duplicate
                                 !shouldShowDeadmansContent; // Make sure we don't duplicate
 
+  // Load content in priority order - lighter content first
+  // Message priority: Text > Attachments > Video > Location data
+
   return (
     <div className="space-y-6">
-      {/* Message content sections - With mutually exclusive conditions */}
+      {/* Message content sections - With priority loading order */}
       
-      {/* Case 1: Regular text message */}
+      {/* Priority 1: Regular text message - loads quickly */}
       {shouldShowTextContent && (
         <TextContentSection message={message} content={message.content} />
       )}
       
-      {/* Case 2: Video message */}
-      {message.message_type === "video" && (
-        <VideoContentSection 
-          message={message} 
-          additionalText={additionalText} 
-          transcription={transcription} 
-        />
-      )}
-      
-      {/* Case 3: For deadman's switch messages with content, show as text */}
+      {/* Priority 2: Deadman's switch text content - loads quickly */}
       {shouldShowDeadmansContent && (
         <TextContentSection message={message} content={message.content} />
       )}
       
-      {/* Case 4: For other message types with video content */}
-      {!message.message_type.includes("text") && 
-       !message.message_type.includes("video") && 
-       hasVideoContent && (
-        <VideoContentSection 
-          message={message} 
-          additionalText={additionalText} 
-          transcription={transcription} 
-        />
-      )}
-      
-      {/* Case 5: For other message types with text content but no video - more restricted now */}
+      {/* Priority 3: Other text content - loads quickly */}
       {shouldShowOtherTextContent && (
         <TextContentSection message={message} content={message.content} />
       )}
       
-      {/* Attachments section */}
+      {/* Priority 4: Attachments section - medium loading time */}
       {message.attachments && message.attachments.length > 0 && (
         <div>
           <Separator className="my-4" />
@@ -110,7 +93,16 @@ export function MessageContent({
         </div>
       )}
       
-      {/* Location display section */}
+      {/* Priority 5: Video message - progressive loading handled internally */}
+      {(message.message_type === "video" || (!message.message_type.includes("text") && hasVideoContent)) && (
+        <VideoContentSection 
+          message={message} 
+          additionalText={additionalText} 
+          transcription={transcription} 
+        />
+      )}
+      
+      {/* Priority 6: Location display section - loads last */}
       {hasLocationData && (
         <LocationSection 
           latitude={message.location_latitude!}
@@ -119,7 +111,7 @@ export function MessageContent({
         />
       )}
       
-      {/* WhatsApp Integration for panic triggers */}
+      {/* Priority 7: WhatsApp Integration for panic triggers - loads last */}
       {isPanicTrigger && hasPanicConfig && (
         <WhatsAppSection 
           messageId={message.id}

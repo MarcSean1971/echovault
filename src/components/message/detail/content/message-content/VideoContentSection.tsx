@@ -20,12 +20,12 @@ export function VideoContentSection({
   
   return (
     <>
-      {/* First show video content */}
+      {/* First show video content with progressive loading */}
       <div className="mb-6">
         <VideoMessageContent message={message} />
       </div>
       
-      {/* Then show transcription if available */}
+      {/* Then show transcription if available - this loads quickly */}
       {transcription && (
         <div className="mt-6 mb-4">
           <h3 className="text-sm font-medium mb-2">Video Transcription</h3>
@@ -35,7 +35,7 @@ export function VideoContentSection({
         </div>
       )}
       
-      {/* Show additional text if available */}
+      {/* Show additional text if available - also loads quickly */}
       {displayText && (
         <div className="mt-6">
           <h3 className="text-sm font-medium mb-2">Additional Notes</h3>

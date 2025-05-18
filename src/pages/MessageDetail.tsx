@@ -16,6 +16,7 @@ export default function MessageDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
+  const [loadingMessage, setLoadingMessage] = useState<string>("Loading message details...");
 
   // Use memoized callback for error navigation to prevent recreation on each render
   const handleError = useCallback(() => navigate("/messages"), [navigate]);
@@ -51,6 +52,27 @@ export default function MessageDetail() {
   
   // Get the recipient rendering function
   const { renderRecipients } = MessageRecipientProvider({ recipients });
+
+  // Update loading message to give user feedback during longer loads
+  useEffect(() => {
+    const initialTimer = setTimeout(() => {
+      setLoadingMessage("Loading message metadata...");
+    }, 500);
+    
+    const secondTimer = setTimeout(() => {
+      setLoadingMessage("Loading message content...");
+    }, 1500);
+    
+    const videoTimer = setTimeout(() => {
+      setLoadingMessage("Processing media content...");
+    }, 3000);
+    
+    return () => {
+      clearTimeout(initialTimer);
+      clearTimeout(secondTimer);
+      clearTimeout(videoTimer);
+    };
+  }, []);
 
   // Listen for condition updates to refresh data
   useEffect(() => {
@@ -94,7 +116,7 @@ export default function MessageDetail() {
   }, [refreshCount]);
 
   if (isLoading) {
-    return <MessageLoading />;
+    return <MessageLoading message={loadingMessage} />;
   }
 
   if (!message) {

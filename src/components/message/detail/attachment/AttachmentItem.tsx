@@ -1,3 +1,4 @@
+
 import React from "react";
 import { FileIcon, AlertCircle, FileCheck, Shield, ExternalLink } from "lucide-react";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
@@ -71,7 +72,7 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
   };
   
   return (
-    <div className={`border rounded-md p-3 transition-all duration-200 hover:shadow-sm ${
+    <div className={`border rounded-md p-3 transition-all duration-200 hover:shadow-sm ${HOVER_TRANSITION} ${
       hasError ? 'border-red-300 bg-red-50' : 
       downloadActive ? 'border-blue-200 bg-blue-50' : 
       'hover:border-blue-200 hover:bg-blue-50/30'
@@ -81,12 +82,12 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
           {getFileIcon()}
           <div className="truncate">
             <div className="flex items-center gap-2">
-              <span className="block truncate font-medium">{attachment.name}</span>
+              <span className={`block truncate font-medium ${HOVER_TRANSITION}`}>{attachment.name}</span>
             </div>
             <div className="flex items-center flex-wrap gap-2 mt-1">
               <AttachmentBadge method={downloadMethod} />
               <MethodStatusBadge status={currentMethodStatus} />
-              <span className="text-xs text-muted-foreground">{formatFileSize(attachment.size)}</span>
+              <span className={`text-xs text-muted-foreground ${HOVER_TRANSITION}`}>{formatFileSize(attachment.size)}</span>
             </div>
           </div>
         </div>
