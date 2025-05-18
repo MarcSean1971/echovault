@@ -103,7 +103,8 @@ export function ReminderSection({
     
     setIsTestingReminder(true);
     try {
-      await triggerManualReminder(condition.message_id, true);
+      // Updated to explicitly set testMode=true
+      await triggerManualReminder(condition.message_id, true, true);
       // Force refresh after testing to show the updated state
       setTimeout(() => handleForceRefresh(), 2000);
     } catch (error) {
