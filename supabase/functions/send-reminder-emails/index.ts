@@ -26,7 +26,7 @@ const handler = async (req: Request) => {
       console.log("No valid JSON body provided");
     }
     
-    const { messageId, debug = false, forceSend = false, action = 'process' } = body;
+    const { messageId, debug = true, forceSend = false, action = 'process' } = body;
     
     console.log(`====== REMINDER SERVICE STARTED ======`);
     console.log(`Processing reminders at ${new Date().toISOString()}`);
@@ -74,6 +74,8 @@ const handler = async (req: Request) => {
       JSON.stringify({ 
         success: results.successful > 0 || results.totalProcessed === 0, 
         results,
+        condition_type: results.conditionType,
+        successful_reminders: results.successful,
         timestamp: new Date().toISOString()
       }),
       {

@@ -8,6 +8,7 @@ interface ReminderProcessingResult {
   successful: number;
   failed: number;
   skipped: number;
+  conditionType?: string;
   details: any[];
 }
 
@@ -81,6 +82,17 @@ export async function processDueReminders(
     for (const [msgId, messageReminders] of Object.entries(remindersByMessage)) {
       if (debug) {
         console.log(`Processing batch of ${messageReminders.length} reminders for message ${msgId}`);
+      }
+      
+      // Get condition type to include in the result
+      const { data: conditionData } = await supabase
+        .from('message_conditions')
+        .select('condition_type')
+        .eq('message_id', msgId)
+        .single();
+        
+      if (conditionData) {
+        results.conditionType = conditionData.condition_type;
       }
       
       // Process each reminder for this message
