@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Activity, Clock, Calendar } from "lucide-react";
 import { ChartContainer } from "@/components/ui/chart";
 import { supabase } from "@/integrations/supabase/client";
-import { Reminder } from "@/services/messages/reminderService";
+import { Reminder } from "@/services/messages/reminder"; // Changed from reminderService to reminder
 import { SystemTimelineChart } from "./system/SystemTimelineChart";
 import { SystemStatusCards } from "./system/SystemStatusCards";
 import { formatDistanceToNow, parseISO, addHours, subHours, differenceInMinutes } from "date-fns";

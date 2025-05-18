@@ -4,7 +4,7 @@ export * from './messageService';
 export * from './conditionService';
 export * from './recipientService';
 export * from './fileService';
-export * from './reminderService';
+export * from './reminder'; // Changed from './reminderService' to './reminder'
 export * from './notificationService';
 export * from './whatsApp';
 export * from './mediaService';

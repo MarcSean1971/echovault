@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { createOrUpdateReminderSchedule } from "../../reminderService";
+import { createOrUpdateReminderSchedule } from "../../reminder"; // Changed from ../../reminderService to ../../reminder
 import { parseReminderMinutes } from "@/utils/reminderUtils";
 import { isCheckInCondition } from "../../../../../supabase/functions/send-reminder-emails/utils/condition-type";
 

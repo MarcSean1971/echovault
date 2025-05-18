@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from "react";
 import {
   Dialog,
@@ -10,7 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { formatDate } from "@/utils/messageHelpers";
 import { Loader2, Clock, Mail, Calendar } from "lucide-react";
-import { getReminderHistory, Reminder } from "@/services/messages/reminderService";
+import { getReminderHistory, Reminder } from "@/services/messages/reminder"; // Changed from reminderService to reminder
 import { ICON_HOVER_EFFECTS } from "@/utils/hoverEffects";
 
 interface ReminderHistoryDialogProps {
@@ -110,4 +108,3 @@ export function ReminderHistoryDialog({
     </Dialog>
   );
 }
-

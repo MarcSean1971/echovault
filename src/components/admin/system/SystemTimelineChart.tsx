@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
   ScatterChart, 
@@ -15,7 +14,7 @@ import {
 import { parseISO, format, addHours, subHours, differenceInMinutes } from 'date-fns';
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 import { Activity, Bell, Calendar } from 'lucide-react';
-import { Reminder } from '@/services/messages/reminderService';
+import { Reminder } from '@/services/messages/reminder'; // Changed from reminderService to reminder
 
 interface CronExecution {
   timestamp: string;

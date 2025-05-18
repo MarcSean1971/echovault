@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { Clock, History } from "lucide-react";
-import { getReminderHistory, Reminder } from "@/services/messages/reminderService";
+import { getReminderHistory, Reminder } from "@/services/messages/reminder"; // Changed from reminderService to reminder
 import { Separator } from "@/components/ui/separator";
 
 interface ReminderHistoryProps {

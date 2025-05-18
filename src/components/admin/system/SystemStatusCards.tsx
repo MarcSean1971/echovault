@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BellRing, CheckCircle, Clock, AlertCircle } from "lucide-react";
-import { Reminder } from '@/services/messages/reminderService';
+import { Reminder } from '@/services/messages/reminder'; // Changed from reminderService to reminder
 import { format, parseISO, differenceInMinutes, differenceInHours, differenceInDays } from 'date-fns';
 
 interface SystemStatusCardsProps {
