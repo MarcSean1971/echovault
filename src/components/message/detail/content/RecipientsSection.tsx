@@ -2,7 +2,7 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Mail } from "lucide-react";
+import { Mail, Users } from "lucide-react";
 import { MessageRecipientsList } from "../MessageRecipientsList";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
