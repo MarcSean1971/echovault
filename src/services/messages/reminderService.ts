@@ -84,6 +84,28 @@ export async function createOrUpdateReminderSchedule(params: ReminderSchedulePar
       }
     }));
     
+    // Directly trigger notification processing to ensure immediate delivery
+    try {
+      const { error: triggerError } = await supabase.functions.invoke("send-message-notifications", {
+        body: { 
+          messageId: params.messageId,
+          debug: true,
+          forceSend: true,
+          source: "reminder-schedule-direct-trigger"
+        }
+      });
+      
+      if (triggerError) {
+        console.warn("[REMINDER-SERVICE] Error triggering notification processing:", triggerError);
+        // Non-fatal, continue
+      } else {
+        console.log("[REMINDER-SERVICE] Successfully triggered notification processing");
+      }
+    } catch (triggerError) {
+      console.warn("[REMINDER-SERVICE] Exception triggering notification processing:", triggerError);
+      // Non-fatal, continue
+    }
+    
     return true;
   } catch (error) {
     console.error("[REMINDER-SERVICE] Error in createOrUpdateReminderSchedule:", error);
@@ -245,5 +267,47 @@ export async function getReminderHistory(messageId: string): Promise<Reminder[]>
   } catch (error) {
     console.error("[REMINDER-SERVICE] Error in getReminderHistory:", error);
     return [];
+  }
+}
+
+/**
+ * Manually test the reminder trigger functionality
+ * This is useful for debugging the reminder system
+ */
+export async function testReminderTrigger(messageId: string, conditionId: string): Promise<boolean> {
+  try {
+    console.log("[REMINDER-SERVICE] Testing reminder trigger for message:", messageId);
+    
+    // Create a test reminder entry in sent_reminders
+    const { data, error } = await supabase
+      .from('sent_reminders')
+      .insert({
+        message_id: messageId,
+        condition_id: conditionId,
+        user_id: (await supabase.auth.getUser()).data.user?.id || 'unknown',
+        deadline: new Date().toISOString(),
+        sent_at: new Date().toISOString()
+      });
+      
+    if (error) {
+      console.error("[REMINDER-SERVICE] Error creating test reminder:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create test reminder: " + error.message,
+        variant: "destructive"
+      });
+      return false;
+    }
+    
+    toast({
+      title: "Test Reminder Created",
+      description: "A test reminder has been created and should trigger the email notification system",
+      duration: 5000,
+    });
+    
+    return true;
+  } catch (error) {
+    console.error("[REMINDER-SERVICE] Error in testReminderTrigger:", error);
+    return false;
   }
 }

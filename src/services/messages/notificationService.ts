@@ -11,7 +11,12 @@ import { sendTestWhatsAppMessage } from "./whatsApp/core/messageService";
 export async function triggerMessageNotification(messageId: string) {
   try {
     const { data, error } = await supabase.functions.invoke("send-message-notifications", {
-      body: { messageId }
+      body: { 
+        messageId,
+        debug: true,
+        forceSend: true,
+        source: 'manual_trigger'
+      }
     });
     
     if (error) throw error;
@@ -26,10 +31,29 @@ export async function triggerMessageNotification(messageId: string) {
     console.error("Error triggering message notification:", error);
     toast({
       title: "Error",
-      description: "Failed to trigger message notification",
+      description: "Failed to trigger message notification: " + error.message,
       variant: "destructive"
     });
     throw error;
+  }
+}
+
+/**
+ * Check the status of the notification system
+ */
+export async function checkNotificationSystemStatus() {
+  try {
+    const { data, error } = await supabase.functions.invoke("send-message-notifications/status", {});
+    
+    if (error) throw error;
+    
+    return data;
+  } catch (error: any) {
+    console.error("Error checking notification system status:", error);
+    return {
+      status: 'error',
+      error: error.message || 'Unknown error'
+    };
   }
 }
 
@@ -74,7 +98,20 @@ export async function sendTestNotification(messageId: string) {
     
     if (messageError) throw messageError;
     
-    // Send test email to each recipient
+    // Test by creating a manual reminder entry
+    const { data: reminderData, error: reminderError } = await supabase.functions.invoke("send-reminder-emails", {
+      body: {
+        messageId,
+        debug: true,
+        forceSend: true,
+        action: 'test',
+        recipient: recipients[0].email
+      }
+    });
+    
+    if (reminderError) throw reminderError;
+    
+    // Send test email directly as well as a fallback
     const { error } = await supabase.functions.invoke("send-test-email", {
       body: {
         recipientName: recipients[0].name,
@@ -91,6 +128,8 @@ export async function sendTestNotification(messageId: string) {
       title: "Test notification sent",
       description: `Sent to ${recipients[0].email}`,
     });
+    
+    return reminderData;
     
   } catch (error: any) {
     console.error("Error sending test notification:", error);

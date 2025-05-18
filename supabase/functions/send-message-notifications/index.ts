@@ -4,6 +4,7 @@ import { getMessagesToNotify } from "./db/index.ts";
 import { sendMessageNotification } from "./notification-service.ts";
 import { MessageNotificationRequest } from "./types.ts";
 import { supabaseClient } from "./supabase-client.ts";
+import { getSystemHealthStatus } from "./db/system-health.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -17,6 +18,23 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    // Get URL to check if this is a status request
+    const url = new URL(req.url);
+    if (url.pathname.endsWith('/status')) {
+      console.log("Health check request received");
+      const status = await getSystemHealthStatus();
+      return new Response(
+        JSON.stringify(status),
+        {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders,
+          },
+        }
+      );
+    }
+    
     // Validate the request body
     let requestData: MessageNotificationRequest;
     
@@ -29,26 +47,130 @@ const handler = async (req: Request): Promise<Response> => {
       requestData = {};
     }
     
-    const { messageId, isEmergency = false, debug = false, keepArmed = undefined } = requestData;
+    const { messageId, isEmergency = false, debug = false, keepArmed = undefined, forceSend = false, source = 'api' } = requestData;
     
     console.log(`===== SEND MESSAGE NOTIFICATIONS =====`);
     console.log(`Starting notification process at ${new Date().toISOString()}`);
     console.log(`DEBUG MODE: ${debug ? 'Enabled' : 'Disabled'}`);
     console.log(`Processing message notifications${messageId ? ` for message ID: ${messageId}` : ''}`);
     console.log(`Is emergency notification: ${isEmergency ? 'YES' : 'No'}`);
+    console.log(`Force send: ${forceSend ? 'YES' : 'No'}`);
+    console.log(`Source: ${source}`);
+    
     if (keepArmed !== undefined) {
       console.log(`Keep armed flag explicitly set to: ${keepArmed}`);
     }
     
     // Get messages that need notification
-    const messagesToNotify = await getMessagesToNotify(messageId);
-    console.log(`Found ${messagesToNotify.length} messages to notify`);
+    const messagesToNotify = await getMessagesToNotify(messageId, forceSend);
+    console.log(`Found ${messagesToNotify.length} messages to notify out of ${messageId ? '1 requested' : 'all active conditions'}`);
+    
+    if (messagesToNotify.length === 0 && messageId) {
+      // If we have a specific messageId but couldn't find it for notification,
+      // let's check if it exists and log additional details
+      const supabase = supabaseClient();
+      const { data: messageData, error: messageError } = await supabase
+        .from('messages')
+        .select('id, title')
+        .eq('id', messageId)
+        .single();
+        
+      const { data: conditionData, error: conditionError } = await supabase
+        .from('message_conditions')
+        .select('id, condition_type, active')
+        .eq('message_id', messageId)
+        .single();
+      
+      if (messageData) {
+        console.log(`Requested message ${messageId} exists with title: "${messageData.title}"`);
+        
+        if (conditionData) {
+          console.log(`Message has condition type: ${conditionData.condition_type}, active: ${conditionData.active}`);
+          
+          // Log additional debugging information about why the message didn't qualify
+          if (!conditionData.active) {
+            console.log("Message condition is not active, that's why it wasn't included");
+            
+            // If forceSend is true, we'll include it anyway
+            if (forceSend) {
+              console.log("Force send is enabled, trying to process this message anyway");
+              
+              // Get the full message and condition data
+              const { data: fullMessageData } = await supabase
+                .from('messages')
+                .select('*')
+                .eq('id', messageId)
+                .single();
+                
+              const { data: fullConditionData } = await supabase
+                .from('message_conditions')
+                .select('*')
+                .eq('message_id', messageId)
+                .single();
+                
+              if (fullMessageData && fullConditionData) {
+                // Create a synthetic message notification object
+                const forcedMessage = {
+                  message: fullMessageData,
+                  condition: fullConditionData
+                };
+                
+                console.log("Forcing notification for:", forcedMessage);
+                
+                // Send notification
+                await sendMessageNotification(forcedMessage, {
+                  isEmergency,
+                  debug: true, // Always enable debug mode for forced messages
+                  forceSend: true
+                });
+                
+                return new Response(
+                  JSON.stringify({ 
+                    success: true, 
+                    message: "Forced message notification processed",
+                    messageId: messageId,
+                    timestamp: new Date().toISOString()
+                  }),
+                  {
+                    status: 200,
+                    headers: {
+                      "Content-Type": "application/json",
+                      ...corsHeaders,
+                    },
+                  }
+                );
+              }
+            }
+          }
+        } else {
+          console.log(`Message exists but has no conditions: ${conditionError?.message || 'No condition found'}`);
+        }
+      } else {
+        console.log(`Requested message ID ${messageId} not found: ${messageError?.message || 'Message not found'}`);
+      }
+      
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "No messages found to notify",
+          requestedMessageId: messageId || null,
+          source: source,
+          forceSend: forceSend,
+          timestamp: new Date().toISOString()
+        }),
+        {
+          status: 404,
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders,
+          },
+        }
+      );
+    }
     
     if (messagesToNotify.length === 0) {
       console.log("No messages found to notify! Check the active status and other parameters.");
-      if (messageId) {
-        console.log(`Requested message ID ${messageId} not found or not eligible for notification`);
-      }
+      
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -83,7 +205,8 @@ const handler = async (req: Request): Promise<Response> => {
       messagesToNotify.map(message => 
         sendMessageNotification(message, {
           isEmergency,
-          debug: debug || isEmergency // Always enable debug mode for emergency messages
+          debug: debug || isEmergency, // Always enable debug mode for emergency messages
+          forceSend
         })
       )
     );

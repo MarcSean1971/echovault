@@ -7,6 +7,8 @@ export interface MessageNotificationRequest {
   isEmergency?: boolean;
   debug?: boolean;
   keepArmed?: boolean;
+  forceSend?: boolean;
+  source?: string;
 }
 
 /**
@@ -24,8 +26,8 @@ export interface Message {
   location_latitude?: number | null;
   location_longitude?: number | null;
   location_name?: string | null;
-  expires_at?: string | null;  // Add expires_at field
-  sender_name?: string | null; // Add sender_name field
+  expires_at?: string | null;
+  sender_name?: string | null;
 }
 
 /**
@@ -66,4 +68,17 @@ export interface EmailTemplateData {
   locationLatitude?: number | null;
   locationLongitude?: number | null;
   locationName?: string | null;
+}
+
+/**
+ * System health status interface
+ */
+export interface SystemHealthStatus {
+  status: 'healthy' | 'degraded' | 'error';
+  database: 'healthy' | 'degraded' | 'error';
+  reminders: 'healthy' | 'degraded' | 'error';
+  pending_count: number;
+  recent_activity: any[];
+  errors?: Record<string, string | undefined>;
+  timestamp: string;
 }
