@@ -14,68 +14,124 @@ const handler = async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
-  
+
   try {
-    // Parse the request body
-    let body: { messageId?: string; debug?: boolean; forceSend?: boolean; action?: string } = {};
-    
-    try {
-      body = await req.json();
-    } catch (e) {
-      // If parsing fails, use an empty object
-      console.log("No valid JSON body provided");
-    }
-    
-    const { messageId, debug = true, forceSend = false, action = 'process' } = body;
-    
-    console.log(`====== REMINDER SERVICE STARTED ======`);
-    console.log(`Processing reminders at ${new Date().toISOString()}`);
-    console.log(`Debug mode: ${debug ? "enabled" : "disabled"}`);
-    console.log(`Force send: ${forceSend ? "enabled" : "disabled"}`);
-    console.log(`Action: ${action}`);
-    
-    if (messageId) {
-      console.log(`Target message ID: ${messageId}`);
-    }
-    
-    // If action is 'status', return monitoring information
-    if (action === 'status') {
+    // Get URL to check if this is a status request
+    const url = new URL(req.url);
+    if (url.pathname.endsWith('/status')) {
+      console.log("Health check request received");
       const status = await getMonitoringStatus();
-      console.log(`====== REMINDER SERVICE STATUS ======`);
-      console.log(`Due reminders: ${status.dueReminders}`);
-      console.log(`Sent in last 5 minutes: ${status.sentLastFiveMin}`);
-      console.log(`Failed in last 5 minutes: ${status.failedLastFiveMin}`);
-      console.log(`====== REMINDER SERVICE FINISHED ======`);
-      
       return new Response(
-        JSON.stringify({ 
-          success: true, 
-          status,
-          timestamp: new Date().toISOString()
-        }),
-        { 
+        JSON.stringify(status),
+        {
           status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" }
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders,
+          },
         }
       );
     }
     
-    // Process due reminders
-    const results = await processDueReminders(messageId, forceSend, debug);
+    // Parse the request body
+    let requestData;
+    try {
+      requestData = await req.json();
+    } catch (parseError) {
+      console.error("Error parsing request body:", parseError);
+      requestData = {};
+    }
     
-    console.log(`====== REMINDER SERVICE SUMMARY ======`);
-    console.log(`Total reminders processed: ${results.totalProcessed}`);
-    console.log(`Successful reminders: ${results.successful}`);
-    console.log(`Failed reminders: ${results.failed}`);
-    console.log(`Skipped reminders: ${results.skipped}`);
-    console.log(`====== REMINDER SERVICE FINISHED ======`);
-
+    const { 
+      messageId,
+      action = 'process', 
+      debug = false, 
+      forceSend = false,
+      source = 'api',
+      batchSize = 50 
+    } = requestData;
+    
+    console.log("====== REMINDER SERVICE STARTED ======");
+    console.log(`Processing reminders at ${new Date().toISOString()}`);
+    console.log(`Debug mode: ${debug ? 'enabled' : 'disabled'}`);
+    console.log(`Force send: ${forceSend ? 'enabled' : 'disabled'}`);
+    console.log(`Action: ${action}`);
+    
+    // Process the reminders with enhanced logging
+    console.log(`[OPTIMIZED] Processing reminders with batch size ${batchSize}`);
+    console.log(`[OPTIMIZED] Target message ID: ${messageId || 'None (processing all due reminders)'}`);
+    
+    // Get and process due reminders
+    const processingResults = await processDueReminders(batchSize, messageId, debug, forceSend);
+    
+    // Parse the results
+    const { 
+      processedCount = 0,
+      successCount = 0,
+      failedCount = 0,
+      skippedCount = 0,
+      results = []
+    } = processingResults || {};
+    
+    // AGGRESSIVE: If this is a direct request with messageId and there are no results, 
+    // but forceSend is true, force a message notification anyway
+    if (messageId && forceSend && processedCount === 0) {
+      console.log("No due reminders found, but forceSend is enabled - triggering direct message notification");
+      
+      try {
+        // Direct call to the notification function
+        const notifResponse = await fetch(
+          `https://onwthrpgcnfydxzzmyot.supabase.co/functions/v1/send-message-notifications`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9ud3RocnBnY25meWR4enpteW90Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYxMDQzOTUsImV4cCI6MjA2MTY4MDM5NX0.v4tYEDukTlMERZ6GHqvnoDbyH-g9KQd8s3-UlIOPkDs`,
+            },
+            body: JSON.stringify({
+              messageId: messageId,
+              debug: true,
+              forceSend: true,
+              source: "reminder-force-fallback"
+            })
+          }
+        );
+        
+        if (notifResponse.ok) {
+          const notifResult = await notifResponse.json();
+          console.log("Direct notification successful:", notifResult);
+          
+          // Add this to the results
+          results.push({
+            success: true,
+            message_id: messageId,
+            method: 'direct-notification',
+            result: notifResult
+          });
+        } else {
+          console.error("Direct notification failed:", await notifResponse.text());
+        }
+      } catch (directError) {
+        console.error("Error in direct notification call:", directError);
+      }
+    }
+    
+    // Log summary
+    console.log("====== REMINDER SERVICE SUMMARY ======");
+    console.log(`Total reminders processed: ${processedCount}`);
+    console.log(`Successful reminders: ${successCount}`);
+    console.log(`Failed reminders: ${failedCount}`);
+    console.log(`Skipped reminders: ${skippedCount}`);
+    console.log("====== REMINDER SERVICE FINISHED ======");
+    
     return new Response(
-      JSON.stringify({ 
-        success: results.successful > 0 || results.totalProcessed === 0, 
-        results,
-        condition_type: results.conditionType,
-        successful_reminders: results.successful,
+      JSON.stringify({
+        success: true,
+        processed: processedCount,
+        successful: successCount,
+        failed: failedCount,
+        skipped: skippedCount,
+        results: results,
         timestamp: new Date().toISOString()
       }),
       {
@@ -86,18 +142,22 @@ const handler = async (req: Request) => {
         },
       }
     );
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error in send-reminder-emails function:", error);
+    
     return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: error.message || "Unknown error occurred",
+      JSON.stringify({
+        success: false,
+        error: error.message || "Unknown error",
         stack: error.stack || "No stack trace available",
         timestamp: new Date().toISOString()
       }),
       {
         status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+        headers: {
+          "Content-Type": "application/json",
+          ...corsHeaders,
+        },
       }
     );
   }

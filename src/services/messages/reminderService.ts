@@ -84,9 +84,11 @@ export async function createOrUpdateReminderSchedule(params: ReminderSchedulePar
       }
     }));
     
-    // Directly trigger notification processing to ensure immediate delivery
+    // CRITICAL FIX: Directly trigger notification processing MULTIPLE TIMES to ensure immediate delivery
+    // First attempt - immediate
     try {
-      const { error: triggerError } = await supabase.functions.invoke("send-message-notifications", {
+      console.log("[REMINDER-SERVICE] Triggering immediate notification processing");
+      const { error: triggerError } = await supabase.functions.invoke("send-reminder-emails", {
         body: { 
           messageId: params.messageId,
           debug: true,
@@ -97,13 +99,68 @@ export async function createOrUpdateReminderSchedule(params: ReminderSchedulePar
       
       if (triggerError) {
         console.warn("[REMINDER-SERVICE] Error triggering notification processing:", triggerError);
-        // Non-fatal, continue
       } else {
         console.log("[REMINDER-SERVICE] Successfully triggered notification processing");
+        
+        // If successful, also call the second function as a backup
+        try {
+          console.log("[REMINDER-SERVICE] Also triggering message notifications function");
+          await supabase.functions.invoke("send-message-notifications", {
+            body: { 
+              messageId: params.messageId,
+              debug: true,
+              forceSend: true,
+              source: "reminder-schedule-backup-trigger"
+            }
+          });
+        } catch (backupError) {
+          console.warn("[REMINDER-SERVICE] Error in backup notification trigger:", backupError);
+        }
       }
     } catch (triggerError) {
       console.warn("[REMINDER-SERVICE] Exception triggering notification processing:", triggerError);
-      // Non-fatal, continue
+      
+      // Second attempt after 2 seconds if first fails
+      setTimeout(async () => {
+        try {
+          console.log("[REMINDER-SERVICE] Retry #1: Triggering notification processing");
+          await supabase.functions.invoke("send-reminder-emails", {
+            body: { 
+              messageId: params.messageId,
+              debug: true,
+              forceSend: true,
+              source: "retry-trigger-1"
+            }
+          });
+        } catch (retryError) {
+          console.warn("[REMINDER-SERVICE] Retry #1 failed:", retryError);
+          
+          // Third attempt after 5 more seconds (7s total)
+          setTimeout(async () => {
+            try {
+              console.log("[REMINDER-SERVICE] Retry #2: Final attempt at triggering notification");
+              await supabase.functions.invoke("send-reminder-emails", {
+                body: { 
+                  messageId: params.messageId,
+                  debug: true,
+                  forceSend: true,
+                  source: "retry-trigger-2"
+                }
+              });
+            } catch (finalError) {
+              console.error("[REMINDER-SERVICE] All trigger attempts failed:", finalError);
+              
+              // Show UI notification about trigger failure
+              toast({
+                title: "Warning",
+                description: "Reminder was scheduled but email trigger failed. Emails may be delayed.",
+                variant: "destructive",
+                duration: 10000
+              });
+            }
+          }, 5000);
+        }
+      }, 2000);
     }
     
     return true;
