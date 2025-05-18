@@ -38,21 +38,16 @@ export async function triggerDeadmanSwitch(messageId: string) {
       
       // If edge function fails, try direct database update as fallback
       try {
-        await supabase.from("message_notifications").insert({
+        // Use sent_reminders table as fallback
+        await supabase.from("sent_reminders").insert({
           message_id: messageId,
-          notification_type: "emergency",
-          status: "pending",
-          metadata: {
-            emergency: true,
-            triggered_at: new Date().toISOString(),
-            manual_trigger: true,
-            fallback: true
-          }
+          deadline: new Date().toISOString(),
+          user_id: (await supabase.auth.getUser()).data.user?.id || 'unknown'
         });
         
         toast({
           title: "Message queued for delivery",
-          description: "Your message has been queued for delivery. This may take a few minutes.",
+          description: "Your message has been queued for delivery using fallback method. This may take a few minutes.",
           duration: 5000,
         });
         
@@ -82,18 +77,12 @@ export async function triggerDeadmanSwitch(messageId: string) {
         
         return { success: true, details: data };
       } else if (data.success === false && data.error === "No messages found to notify") {
-        // If no messages found, try the fallback method
+        // If no messages found, try the fallback method using sent_reminders
         try {
-          await supabase.from("message_notifications").insert({
+          await supabase.from("sent_reminders").insert({
             message_id: messageId,
-            notification_type: "emergency",
-            status: "pending",
-            metadata: {
-              emergency: true,
-              triggered_at: new Date().toISOString(),
-              manual_trigger: true,
-              fallback: true
-            }
+            deadline: new Date().toISOString(),
+            user_id: (await supabase.auth.getUser()).data.user?.id || 'unknown'
           });
           
           toast({

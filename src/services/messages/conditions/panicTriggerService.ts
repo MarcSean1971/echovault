@@ -139,35 +139,52 @@ export async function triggerPanicMessage(userId: string, messageId: string): Pr
       
       // Check if the response indicates no messages were found
       if (funcData && !funcData.success && funcData.error === "No messages found to notify") {
-        console.warn("Edge function returned no messages found. Trying direct API call as fallback...");
-        throw new Error("No messages found, attempting direct API call");
+        console.warn("Edge function returned no messages found. Trying fallback mechanism...");
+        throw new Error("No messages found, attempting fallback");
       }
     } catch (edgeFuncError) {
-      console.error("Edge function failed, attempting direct notification:", edgeFuncError);
+      console.error("Edge function failed, attempting alternative fallback:", edgeFuncError);
       
-      // If the edge function fails, try sending an email/notification directly
-      // This is a fallback mechanism
+      // Fallback: Directly use the sent_reminders table
       const { data: directData, error: directError } = await supabase
-        .from("message_notifications")
+        .from("sent_reminders")
         .insert({
           message_id: messageId,
-          notification_type: "emergency",
-          status: "pending",
-          metadata: {
-            emergency: true,
-            triggered_by: userId,
-            triggered_at: new Date().toISOString(),
-            manual_trigger: true,
-            keep_armed: keepArmed
-          }
+          condition_id: data.id,
+          user_id: userId,
+          deadline: new Date().toISOString()
         });
       
       if (directError) {
-        console.error("Direct notification insertion failed:", directError);
+        console.error("Direct fallback insertion failed:", directError);
         throw directError;
       }
       
-      console.log("Direct notification created:", directData);
+      console.log("Created emergency fallback record:", directData);
+      
+      // Create a reminder delivery log entry to track this
+      try {
+        await supabase
+          .from("reminder_delivery_log")
+          .insert({
+            reminder_id: `manual-emergency-${Date.now()}`,
+            message_id: messageId,
+            condition_id: data.id,
+            recipient: 'emergency-fallback',
+            delivery_channel: 'fallback',
+            delivery_status: 'pending',
+            response_data: {
+              emergency: true,
+              triggered_by: userId,
+              triggered_at: new Date().toISOString(),
+              manual_trigger: true,
+              keep_armed: keepArmed,
+              fallback_method: true
+            }
+          });
+      } catch (logError) {
+        console.warn("Could not create log entry, but continuing with emergency protocol:", logError);
+      }
     }
 
     // Update the message condition as triggered
