@@ -13,7 +13,7 @@ export function useMessageActions(
 ) {
   const [isDeleting, setIsDeleting] = useState<Record<string, boolean>>({});
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = useCallback(async (id: string) => {
     if (!confirm("Are you sure you want to delete this message?")) return;
     
     setIsDeleting(prev => ({ ...prev, [id]: true }));
@@ -40,7 +40,7 @@ export function useMessageActions(
     } finally {
       setIsDeleting(prev => ({ ...prev, [id]: false }));
     }
-  };
+  }, [messages, setMessages, setPanicMessages, setRegularMessages]);
 
   return {
     handleDelete,

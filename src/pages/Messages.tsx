@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMessageList } from "@/hooks/useMessageList";
 import { useBatchedReminders } from "@/hooks/useBatchedReminders";
 import { useMessageActions } from "@/hooks/useMessageActions.tsx"; // Explicitly import from .tsx file
@@ -23,6 +22,13 @@ export default function Messages() {
   const [messagesState, setMessagesState] = useState(messages);
   const [panicMessagesState, setPanicMessagesState] = useState(panicMessages);
   const [regularMessagesState, setRegularMessagesState] = useState(regularMessages);
+  
+  // Keep state in sync with the data from useMessageList
+  useEffect(() => {
+    setMessagesState(messages);
+    setPanicMessagesState(panicMessages);
+    setRegularMessagesState(regularMessages);
+  }, [messages, panicMessages, regularMessages]);
   
   // Handle actions like delete - fixed the argument count to match the hook
   const { handleDelete } = useMessageActions(
