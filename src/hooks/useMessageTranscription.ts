@@ -5,28 +5,28 @@ import { parseMessageTranscription } from "@/services/messages/mediaService";
 
 export function useMessageTranscription(message: Message) {
   const [transcription, setTranscription] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   
-  // Try to extract transcription from content for voice/video messages
   useEffect(() => {
-    if (message.message_type !== 'text' && message.content) {
-      // Use the dedicated function from mediaService
-      const extractedTranscription = parseMessageTranscription(message.content);
-      if (extractedTranscription) {
-        setTranscription(extractedTranscription);
-      } else {
-        try {
-          // Fallback to direct JSON parsing
-          const contentObj = JSON.parse(message.content);
-          if (contentObj.transcription) {
-            setTranscription(contentObj.transcription);
-          }
-        } catch (e) {
-          // Not JSON or no transcription field
-          console.log("Could not extract transcription from message content");
-        }
-      }
+    // Skip processing for card view (message.video_content will be null in card view)
+    if (!message || message.message_type !== 'video' || !message.video_content) {
+      setTranscription(null);
+      return;
+    }
+    
+    setIsLoading(true);
+    
+    try {
+      // Extract transcription from video content - optimized to only run when video_content is present
+      const extractedTranscription = parseMessageTranscription(message.video_content);
+      setTranscription(extractedTranscription);
+    } catch (error) {
+      console.error("Error extracting transcription:", error);
+      setTranscription(null);
+    } finally {
+      setIsLoading(false);
     }
   }, [message]);
   
-  return { transcription };
+  return { transcription, isLoading };
 }

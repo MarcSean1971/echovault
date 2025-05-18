@@ -1,6 +1,7 @@
 
 /**
  * Extract video data from message content
+ * Optimized for performance with early returns
  */
 export const parseVideoContent = (content: string | null): { videoData: string | null; transcription: string | null; } => {
   if (!content) {
@@ -8,11 +9,11 @@ export const parseVideoContent = (content: string | null): { videoData: string |
   }
   
   try {
+    // Try to parse content as JSON
     const contentObj = JSON.parse(content);
     
     // If the content has a direct videoData property
     if (contentObj && contentObj.videoData) {
-      console.log("Found video data in content object");
       return { 
         videoData: contentObj.videoData,
         transcription: contentObj.transcription || null
@@ -25,8 +26,6 @@ export const parseVideoContent = (content: string | null): { videoData: string |
         const videoContentObj = typeof contentObj.videoContent === 'string' ? 
                              JSON.parse(contentObj.videoContent) : 
                              contentObj.videoContent;
-        
-        console.log("Found nested video content:", !!videoContentObj?.videoData);
         
         return {
           videoData: videoContentObj?.videoData || null,
@@ -45,6 +44,7 @@ export const parseVideoContent = (content: string | null): { videoData: string |
 
 /**
  * Extract transcription from message content
+ * Optimized to handle different content formats
  */
 export const parseMessageTranscription = (content: string | null): string | null => {
   if (!content) return null;
@@ -69,11 +69,11 @@ export const parseMessageTranscription = (content: string | null): string | null
           return videoContentObj.transcription;
         }
       } catch (e) {
-        console.error("Failed to parse nested videoContent for transcription:", e);
+        // Not JSON or parsing error, just return null
       }
     }
   } catch (e) {
-    // Not JSON or parsing error
+    // Not JSON or parsing error, just return null
   }
   
   return null;

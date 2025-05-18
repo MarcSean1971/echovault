@@ -7,7 +7,6 @@ import { MessageCardHeader } from "./card/MessageCardHeader";
 import { MessageCardContent } from "./card/MessageCardContent";
 import { MessageCardActions } from "./card/MessageCardActions";
 import { useMessageCondition } from "@/hooks/useMessageCondition";
-import { useMessageTranscription } from "@/hooks/useMessageTranscription";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { useMessageCardActions } from "@/hooks/useMessageCardActions";
 import { useMessageLastCheckIn } from "@/hooks/useMessageLastCheckIn";
@@ -37,8 +36,9 @@ function MessageCardInner({ message, onDelete, reminderInfo }: MessageCardProps)
     setRefreshCounter 
   } = useMessageCondition(message.id);
   
-  // Get transcription if available (with lazy loading)
-  const { transcription } = useMessageTranscription(message);
+  // Instead of using useMessageTranscription hook here which parses video content,
+  // we'll just pass null for video messages in card view to improve performance
+  const transcription = message.message_type === 'video' ? null : null;
   
   // Get last check-in information
   const { formattedCheckIn, rawCheckInTime, isDeadmansSwitch } = useMessageLastCheckIn(condition);

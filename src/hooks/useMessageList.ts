@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/components/ui/use-toast";
-import { fetchMessages } from "@/services/messages/messageService";
+import { fetchMessageCardsData, fetchMessages } from "@/services/messages/messageService";
 import { fetchMessageConditions, invalidateConditionsCache } from "@/services/messages/conditionService";
 import { Message, MessageCondition } from "@/types/message";
 
@@ -24,13 +24,13 @@ export function useMessageList(messageType: string | null) {
     try {
       console.log("Fetching messages and conditions for user:", userId);
       
-      // Fetch messages and conditions in parallel
+      // Fetch messages and conditions in parallel - use the optimized fetchMessageCardsData function
       const [messageData, conditionsData] = await Promise.all([
-        fetchMessages(messageType),
+        fetchMessageCardsData(messageType),
         fetchMessageConditions(userId)
       ]);
       
-      console.log("Messages fetched:", messageData?.length || 0);
+      console.log("Message cards fetched:", messageData?.length || 0);
       console.log("Conditions fetched:", conditionsData?.length || 0);
       
       // Update state with fetched data

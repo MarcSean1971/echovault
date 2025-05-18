@@ -3,8 +3,7 @@ import React from "react";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { MessageCondition, Message } from "@/types/message";
-import { extractTranscription } from "@/utils/messageFormatUtils";
-import { Clock, AlertTriangle, Bell } from "lucide-react";
+import { Clock, AlertTriangle, Bell, Video } from "lucide-react";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { cn } from "@/lib/utils";
 
@@ -44,13 +43,15 @@ export function MessageCardContent({
                           condition?.condition_type === 'regular_check_in' ||
                           condition?.condition_type === 'inactivity_to_date';
   
-  // Extract the content from the message
-  const content = message.content || "";
-  const messagePreview = message.message_type === 'text' 
-    ? content.substring(0, 120) + (content.length > 120 ? '...' : '')
-    : transcription 
-      ? transcription.substring(0, 100) + (transcription.length > 100 ? '...' : '') 
-      : 'No preview available';
+  // Extract the preview content from the message - optimized to avoid video processing
+  const isVideoMessage = message.message_type === 'video';
+  
+  // For text messages, use text_content or content
+  // For video messages, just show a placeholder instead of parsing video content
+  const messagePreview = isVideoMessage
+    ? 'Video message' // Simple placeholder for video messages without parsing
+    : (message.text_content || message.content || '').substring(0, 120) + 
+      ((message.text_content || message.content || '').length > 120 ? '...' : '');
 
   const showDeadline = isArmed && deadline && isCheckInCondition;
   const hasReminders = upcomingReminders && upcomingReminders.length > 0;
@@ -59,6 +60,12 @@ export function MessageCardContent({
     <div className="space-y-3">
       {/* Message preview text */}
       <p className="text-sm line-clamp-2 leading-relaxed text-gray-600">
+        {isVideoMessage && (
+          <span className="flex items-center text-muted-foreground mb-1">
+            <Video className="h-4 w-4 mr-1.5" strokeWidth={1.5} />
+            <span className="text-xs">Video message</span>
+          </span>
+        )}
         {messagePreview}
       </p>
 

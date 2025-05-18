@@ -4,6 +4,62 @@ import { Message } from "@/types/message";
 import { FileAttachment } from "@/components/FileUploader";
 import { uploadAttachments } from "./fileService";
 
+// New optimized function to fetch only essential message card data
+export async function fetchMessageCardsData(messageType: string | null = null) {
+  try {
+    const client = await getAuthClient();
+    
+    console.log("Fetching message cards data", messageType ? `with type: ${messageType}` : "all types");
+    
+    let query = client
+      .from('messages')
+      .select(`
+        id, 
+        user_id, 
+        title, 
+        message_type,
+        created_at,
+        updated_at,
+        text_content,
+        attachments,
+        location_latitude,
+        location_longitude,
+        location_name,
+        share_location
+      `) // Exclude video_content field!
+      .order('created_at', { ascending: false });
+      
+    if (messageType) {
+      query = query.eq('message_type', messageType);
+    }
+    
+    const { data, error } = await query;
+    
+    if (error) {
+      console.error("Error in fetchMessageCardsData:", error);
+      throw error;
+    }
+    
+    console.log(`Successfully retrieved ${data?.length || 0} message cards`);
+    
+    // Transform to Message type but with minimal data
+    return (data || []).map(msg => {
+      return {
+        ...msg,
+        content: msg.text_content || null, // Use text_content as the content for preview
+        video_content: null, // Explicitly set video_content to null for card view
+        expires_at: null,
+        sender_name: null,
+        panic_trigger_config: null,
+        panic_config: null
+      } as Message;
+    });
+  } catch (error) {
+    console.error("Error fetching message cards:", error);
+    throw error;
+  }
+}
+
 export async function fetchMessages(messageType: string | null = null) {
   try {
     const client = await getAuthClient();
