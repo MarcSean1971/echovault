@@ -38,3 +38,9 @@ verify_jwt = false
 [functions.send-whatsapp]
 verify_jwt = false
 
+[functions.send-reminder-emails]
+verify_jwt = false
+
+[functions.send-message-notifications]
+verify_jwt = false
+
