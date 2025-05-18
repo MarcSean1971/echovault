@@ -102,16 +102,8 @@ export function MessageDetailContent({
           handleArmMessage={handleArmMessage}
           deliveryId={deliveryId}
           recipientEmail={recipientEmail}
-        />
-        
-        {/* Status and Delivery Settings */}
-        <StatusDeliverySection
-          condition={condition}
-          isArmed={isArmed}
-          formatDate={formatDate}
-          renderConditionType={renderConditionType}
-          message={message}
-          deadline={deadline}
+          recipients={recipients}
+          onSendTestMessage={onSendTestMessage}
           lastCheckIn={lastCheckIn}
           checkInCode={checkInCode}
           lastDelivered={lastDelivered}
@@ -119,14 +111,7 @@ export function MessageDetailContent({
           viewCount={viewCount}
           isLoadingDelivery={isLoadingDelivery}
           refreshTrigger={refreshTrigger}
-        />
-        
-        {/* Recipients Section */}
-        <RecipientsSection
-          recipients={recipients}
-          isArmed={isArmed}
-          isActionLoading={isActionLoading}
-          onSendTestMessage={onSendTestMessage}
+          deadline={deadline}
         />
         
         {/* Actions Card */}
