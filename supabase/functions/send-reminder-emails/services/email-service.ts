@@ -22,7 +22,7 @@ export async function sendEmail(emailData: EmailData): Promise<boolean> {
     console.log(`Subject: ${emailData.subject}`);
     
     const { data, error } = await resend.emails.send({
-      from: emailData.from || "EchoVault <notifications@echvault.lovable.ai>",
+      from: emailData.from || "EchoVault <notifications@echo-vault.app>",
       to: [emailData.to],
       subject: emailData.subject,
       html: emailData.html,

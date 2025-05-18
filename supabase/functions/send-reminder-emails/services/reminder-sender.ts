@@ -98,7 +98,7 @@ export async function sendCreatorReminder(
             <h2>Message Check-in Reminder</h2>
             <p>This is a reminder about your message: <strong>${messageTitle}</strong></p>
             <p>Please check in to postpone message delivery.</p>
-            <p><a href="https://echvault.lovable.ai/check-in" style="padding: 10px 20px; background-color: #0070f3; color: white; text-decoration: none; border-radius: 4px;">Check In Now</a></p>
+            <p><a href="https://echo-vault.app/check-in" style="padding: 10px 20px; background-color: #0070f3; color: white; text-decoration: none; border-radius: 4px;">Check In Now</a></p>
           `
         });
         
@@ -291,7 +291,7 @@ export async function sendRecipientReminders(
             emailContent = `
               <h2>IMPORTANT MESSAGE</h2>
               <p>${senderName} has set up this message to be delivered to you: <strong>${messageTitle}</strong></p>
-              <p><a href="https://echvault.lovable.ai/message/${messageId}?recipient=${recipient.id}" 
+              <p><a href="https://echo-vault.app/message/${messageId}?recipient=${recipient.id}" 
                 style="padding: 10px 20px; background-color: #0070f3; color: white; text-decoration: none; border-radius: 4px;">
                 View Message
               </a></p>
