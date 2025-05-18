@@ -110,8 +110,8 @@ const handler = async (req: Request) => {
     console.log(`[OPTIMIZED] Processing reminders with batch size ${batchSize}`);
     console.log(`[OPTIMIZED] Target message ID: ${messageId || 'None (processing all due reminders)'}`);
     
-    // Get and process due reminders
-    const processingResults = await processDueReminders(batchSize, messageId, debug, forceSend);
+    // Get and process due reminders - FIXED PARAMETER ORDER HERE
+    const processingResults = await processDueReminders(messageId, forceSend, debug);
     
     // Parse the results
     const { 

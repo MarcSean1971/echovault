@@ -4,36 +4,44 @@ import { processReminder } from "./reminder-service.ts";
 
 // Result interface for processed reminders
 interface ReminderProcessingResult {
-  totalProcessed: number;
-  successful: number;
-  failed: number;
-  skipped: number;
+  processedCount: number;
+  successCount: number;
+  failedCount: number;
+  skippedCount: number;
   conditionType?: string;
-  details: any[];
+  results: any[];
 }
 
 /**
  * Process all due reminders with atomic operations
  * Optimized to use batching and more efficient DB operations
+ * 
+ * @param messageId - Optional message ID to filter reminders
+ * @param forceSend - Whether to force send reminders even if not due
+ * @param debug - Enable debug logging
+ * @param batchSize - Number of reminders to process in a batch
  */
 export async function processDueReminders(
   messageId?: string,
   forceSend: boolean = false,
-  debug: boolean = false
+  debug: boolean = false,
+  batchSize: number = 50
 ): Promise<ReminderProcessingResult> {
   const supabase = supabaseClient();
   const results: ReminderProcessingResult = {
-    totalProcessed: 0,
-    successful: 0,
-    failed: 0,
-    skipped: 0,
-    details: []
+    processedCount: 0,
+    successCount: 0,
+    failedCount: 0,
+    skippedCount: 0,
+    results: []
   };
   
   try {
     // Performance improvement: Increased batch size for more efficient processing
     // but only if not targeting a specific message
-    const batchSize = messageId ? 10 : 50;
+    if (messageId) {
+      batchSize = 10;
+    }
     
     if (debug) {
       console.log(`[OPTIMIZED] Processing reminders with batch size ${batchSize}`);
@@ -98,7 +106,7 @@ export async function processDueReminders(
       // Process each reminder for this message
       for (const reminder of messageReminders) {
         try {
-          results.totalProcessed++;
+          results.processedCount++;
           
           if (debug) {
             console.log(`-----------------------------------`);
@@ -122,7 +130,7 @@ export async function processDueReminders(
               })
               .eq('id', reminder.id);
               
-            results.successful++;
+            results.successCount++;
           } else {
             // Increment retry count and mark as failed if max retries reached
             const retryCount = (reminder.retry_count || 0) + 1;
@@ -139,13 +147,13 @@ export async function processDueReminders(
               .eq('id', reminder.id);
               
             if (status === 'failed') {
-              results.failed++;
+              results.failedCount++;
             } else {
-              results.skipped++;
+              results.skippedCount++;
             }
           }
           
-          results.details.push({
+          results.results.push({
             id: reminder.id,
             message_id: reminder.message_id,
             scheduled_at: reminder.scheduled_at,
@@ -166,8 +174,8 @@ export async function processDueReminders(
             })
             .eq('id', reminder.id);
             
-          results.failed++;
-          results.details.push({
+          results.failedCount++;
+          results.results.push({
             id: reminder.id,
             message_id: reminder.message_id,
             success: false,

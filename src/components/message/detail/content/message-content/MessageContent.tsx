@@ -9,7 +9,7 @@ import { LocationSection } from "./LocationSection";
 import { WhatsAppSection } from "./WhatsAppSection";
 import { useMessageContentTypes } from "./useMessageContentTypes";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { HOVER_TRANSITION, BUTTON_HOVER_EFFECTS } from "@/utils/hoverEffects";
 
 export interface MessageContentProps {
   message: Message;
@@ -82,8 +82,8 @@ export function MessageContent({
       {showVideoTab ? (
         <Tabs defaultValue="text" value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className={`${HOVER_TRANSITION}`}>
-            <TabsTrigger value="text">Text Content</TabsTrigger>
-            <TabsTrigger value="video">Video Content</TabsTrigger>
+            <TabsTrigger value="text" className={HOVER_TRANSITION}>Text Content</TabsTrigger>
+            <TabsTrigger value="video" className={HOVER_TRANSITION}>Video Content</TabsTrigger>
           </TabsList>
           
           {/* Text Content Tab */}
