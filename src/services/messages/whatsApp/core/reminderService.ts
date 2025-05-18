@@ -15,15 +15,11 @@ export async function triggerManualReminder(messageId: string, forceSend: boolea
       duration: 3000,
     });
 
-    // Added timeout parameter to ensure the function has enough time to complete
     const { data, error } = await supabase.functions.invoke("send-reminder-emails", {
       body: {
         messageId: messageId,
         debug: true,  // Enable debug mode for detailed logs
         forceSend: forceSend  // Force send even if not at reminder time
-      },
-      options: {
-        timeout: 30000 // 30 seconds timeout
       }
     });
 
