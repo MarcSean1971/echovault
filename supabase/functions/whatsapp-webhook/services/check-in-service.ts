@@ -13,17 +13,34 @@ export async function processCheckIn(userId: string, phoneNumber: string) {
   
   console.log(`[WEBHOOK] Processing check-in for user: ${userId}`);
   
-  // Process the check-in directly on all user conditions
-  const checkInResult = await performUserCheckIn(supabase, userId);
-  
-  // Send confirmation to user
-  await supabase.functions.invoke("send-whatsapp", {
-    body: {
-      to: phoneNumber,
-      message: "✅ CHECK-IN SUCCESSFUL. Your dead man's switch has been reset."
+  try {
+    // Process the check-in directly on all user conditions
+    const checkInResult = await performUserCheckIn(supabase, userId);
+    
+    // Send confirmation to user
+    await supabase.functions.invoke("send-whatsapp", {
+      body: {
+        to: phoneNumber,
+        message: "✅ CHECK-IN SUCCESSFUL. Your dead man's switch has been reset."
+      }
+    });
+    
+    return checkInResult;
+  } catch (error) {
+    console.error(`[WEBHOOK] Error processing check-in for user ${userId}:`, error);
+    
+    // Try to send error message to user
+    try {
+      await supabase.functions.invoke("send-whatsapp", {
+        body: {
+          to: phoneNumber,
+          message: "❌ CHECK-IN FAILED. Please try again or contact support."
+        }
+      });
+    } catch (msgError) {
+      console.error(`[WEBHOOK] Failed to send error message to user:`, msgError);
     }
-  });
-  
-  return checkInResult;
+    
+    throw error;
+  }
 }
-

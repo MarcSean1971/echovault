@@ -1,3 +1,4 @@
+
 import { formatDistanceToNow } from "date-fns";
 import { formatReminderSchedule } from "@/utils/reminder/reminderFormatter";
 
@@ -9,19 +10,26 @@ export function useReminderFormatter() {
    * Process and format reminder data for the UI
    */
   const formatReminderData = (
-    upcomingReminders: any[] = [],
+    upcomingReminders: { scheduledAt: Date, reminderType: string, priority?: string }[] = [],
     reminderHistory: any[] = []
   ) => {
     let nextReminderDate: Date | null = null;
     const formattedReminders = formatReminderSchedule(upcomingReminders);
     
     if (upcomingReminders.length > 0) {
-      // Sort by closest first
-      const sortedReminders = [...upcomingReminders].sort((a, b) => 
-        a.scheduledAt.getTime() - b.scheduledAt.getTime()
+      // Verify we have valid Date objects
+      const validReminders = upcomingReminders.filter(
+        reminder => reminder.scheduledAt instanceof Date && !isNaN(reminder.scheduledAt.getTime())
       );
       
-      nextReminderDate = sortedReminders[0].scheduledAt;
+      if (validReminders.length > 0) {
+        // Sort by closest first
+        const sortedReminders = [...validReminders].sort((a, b) => 
+          a.scheduledAt.getTime() - b.scheduledAt.getTime()
+        );
+        
+        nextReminderDate = sortedReminders[0].scheduledAt;
+      }
     }
     
     // Process the last sent reminder if available
@@ -44,11 +52,11 @@ export function useReminderFormatter() {
       ? formatDistanceToNow(nextReminderDate, { addSuffix: true })
       : null;
       
-    const formattedSentAt = lastSentAt
+    const formattedSentAt = lastSentAt && !isNaN(lastSentAt.getTime())
       ? formatDistanceToNow(lastSentAt, { addSuffix: false }) + " ago"
       : null;
       
-    const formattedScheduledFor = lastScheduledFor
+    const formattedScheduledFor = lastScheduledFor && !isNaN(lastScheduledFor.getTime())
       ? formatDistanceToNow(lastScheduledFor, { addSuffix: false }) + " ago"
       : null;
       
@@ -79,14 +87,14 @@ export function useReminderFormatter() {
     const { nextReminder, lastReminder } = existingData;
     
     return {
-      formattedNextReminder: nextReminder 
+      formattedNextReminder: nextReminder && !isNaN(nextReminder.getTime())
         ? formatDistanceToNow(nextReminder, { addSuffix: true })
         : null,
       lastReminderFormatted: {
-        formattedSentAt: lastReminder.sentAt
+        formattedSentAt: lastReminder.sentAt && !isNaN(lastReminder.sentAt.getTime())
           ? formatDistanceToNow(lastReminder.sentAt, { addSuffix: false }) + " ago"
           : null,
-        formattedScheduledFor: lastReminder.scheduledFor
+        formattedScheduledFor: lastReminder.scheduledFor && !isNaN(lastReminder.scheduledFor.getTime())
           ? formatDistanceToNow(lastReminder.scheduledFor, { addSuffix: false }) + " ago"
           : null
       }

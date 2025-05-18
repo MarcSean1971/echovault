@@ -2,9 +2,48 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
+interface ReminderItem {
+  scheduledAt: Date;
+  reminderType: string;
+  priority?: string;
+  id: string;
+  message_id: string;
+  condition_id: string;
+  status: string;
+}
+
+interface SentReminderItem {
+  id: string;
+  message_id: string;
+  condition_id: string;
+  sent_at: string;
+  deadline: string;
+  scheduled_for?: string | null;
+}
+
+interface ReminderData {
+  upcomingReminders: ReminderItem[];
+  reminderHistory: SentReminderItem[];
+}
+
 export function useReminderDataFetcher(messageId: string | null | undefined) {
   const [isLoading, setIsLoading] = useState(false);
   const [permissionError, setPermissionError] = useState(false);
+  
+  /**
+   * Transform database reminder objects to the format expected by the formatter
+   */
+  const transformReminderData = (reminders: any[]): ReminderItem[] => {
+    return reminders.map(reminder => ({
+      id: reminder.id,
+      message_id: reminder.message_id,
+      condition_id: reminder.condition_id,
+      scheduledAt: new Date(reminder.scheduled_at), // Convert to Date object
+      reminderType: reminder.reminder_type,
+      priority: reminder.delivery_priority,
+      status: reminder.status
+    }));
+  };
   
   /**
    * Fetch all reminder data for a message
@@ -52,11 +91,14 @@ export function useReminderDataFetcher(messageId: string | null | undefined) {
       
       console.log(`[ReminderDataFetcher] Found ${upcomingReminders?.length || 0} upcoming reminders and ${reminderHistory?.length || 0} reminder history records`);
       
+      // Transform reminders to have proper Date objects
+      const transformedReminders = upcomingReminders ? transformReminderData(upcomingReminders) : [];
+      
       setPermissionError(false);
       return {
-        upcomingReminders: upcomingReminders || [],
+        upcomingReminders: transformedReminders,
         reminderHistory: reminderHistory || []
-      };
+      } as ReminderData;
     } catch (error) {
       console.error("Error in fetchReminderData:", error);
       return null;

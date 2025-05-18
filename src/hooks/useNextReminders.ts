@@ -1,128 +1,61 @@
 
 import { useState, useEffect } from 'react';
-import { supabase } from "@/integrations/supabase/client";
+import { useReminderDataFetcher } from './reminder/useReminderDataFetcher';
+import { formatReminderSchedule } from '@/utils/reminder/reminderFormatter';
 
-export function useNextReminders(messageId?: string | null, refreshTrigger: number = 0) {
-  const [upcomingReminders, setUpcomingReminders] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [hasReminders, setHasReminders] = useState(false);
+/**
+ * Hook to get upcoming reminders for a specific message
+ * It returns string representations of the reminders for display
+ * And supports force refreshing via a refreshTrigger parameter
+ */
+export function useNextReminders(messageId: string | undefined, refreshTrigger: number = 0) {
   const [lastRefreshed, setLastRefreshed] = useState<number>(0);
-  const [permissionError, setPermissionError] = useState(false);
-
-  const formatReminderTimeString = (scheduledAt: string): string => {
+  const [upcomingReminders, setUpcomingReminders] = useState<string[]>([]);
+  const [hasReminders, setHasReminders] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  const { fetchReminderData, isLoading, permissionError } = useReminderDataFetcher(messageId);
+  
+  // Refresh function that can be called externally
+  const forceRefresh = async () => {
+    if (!messageId) return;
+    
     try {
-      const date = new Date(scheduledAt);
-      const now = new Date();
-      const diffMs = date.getTime() - now.getTime();
-      const diffMins = Math.round(diffMs / 60000);
+      console.log(`[useNextReminders] Force refreshing reminders for message ${messageId}`);
+      const result = await fetchReminderData();
       
-      if (diffMins < 0) {
-        return "Overdue";
-      } else if (diffMins < 60) {
-        return `In ${diffMins} minute${diffMins !== 1 ? 's' : ''}`;
-      } else if (diffMins < 1440) { // Less than 24 hours
-        const hours = Math.floor(diffMins / 60);
-        const mins = diffMins % 60;
-        return `In ${hours}h${mins > 0 ? ` ${mins}m` : ''}`;
+      if (result) {
+        const formattedReminders = formatReminderSchedule(result.upcomingReminders);
+        console.log(`[useNextReminders] Fetched ${formattedReminders.length} formatted reminders`);
+        
+        setUpcomingReminders(formattedReminders);
+        setHasReminders(result.upcomingReminders.length > 0 || result.reminderHistory.length > 0);
+        setLastRefreshed(Date.now());
+        setError(null);
       } else {
-        // Format as date for times more than 24 hours away
-        const options: Intl.DateTimeFormatOptions = { 
-          month: 'short', 
-          day: 'numeric', 
-          hour: '2-digit', 
-          minute: '2-digit'
-        };
-        return date.toLocaleDateString(undefined, options);
-      }
-    } catch (e) {
-      console.error("Error formatting reminder time:", e);
-      return "Invalid date";
-    }
-  };
-
-  const fetchReminders = async () => {
-    if (!messageId) {
-      setUpcomingReminders([]);
-      setIsLoading(false);
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      // Query for scheduled reminders
-      const { data: scheduledReminders, error: scheduleError } = await supabase
-        .from('reminder_schedule')
-        .select('*')
-        .eq('message_id', messageId)
-        .eq('status', 'pending')
-        .order('scheduled_at', { ascending: true });
-        
-      if (scheduleError) {
-        if (scheduleError.code === '42501' || scheduleError.message?.includes('permission denied')) {
-          console.log("Permission error fetching reminders - user likely doesn't own this message");
-          setPermissionError(true);
-        } else {
-          console.error("Error fetching scheduled reminders:", scheduleError);
-        }
-        
+        console.log(`[useNextReminders] No reminder data returned for message ${messageId}`);
         setUpcomingReminders([]);
         setHasReminders(false);
-        setIsLoading(false);
-        return;
       }
-      
-      // Format the reminders into user-friendly strings
-      const formattedReminders = (scheduledReminders || []).map(reminder => {
-        const timeText = formatReminderTimeString(reminder.scheduled_at);
-        const isCritical = reminder.reminder_type === 'final_delivery';
-        
-        if (isCritical) {
-          return `Final Delivery (${timeText})`;
-        } else {
-          return `Reminder: ${timeText}`;
-        }
-      });
-      
-      console.log(`[useNextReminders] Found ${formattedReminders.length} upcoming reminders`);
-      setUpcomingReminders(formattedReminders);
-      setHasReminders(scheduledReminders && scheduledReminders.length > 0);
-      setPermissionError(false);
-    } catch (error) {
-      console.error("Error in useNextReminders:", error);
-      setUpcomingReminders([]);
-      setHasReminders(false);
-    } finally {
-      setIsLoading(false);
-      setLastRefreshed(Date.now());
+    } catch (err: any) {
+      console.error(`[useNextReminders] Error refreshing reminders:`, err);
+      setError(err.message || 'Failed to fetch reminders');
     }
   };
-
-  const forceRefresh = () => {
-    console.log("[useNextReminders] Force refreshing reminders");
-    fetchReminders();
-  };
-
+  
+  // Effect to load data when messageId or refreshTrigger changes
   useEffect(() => {
-    fetchReminders();
-    
-    // Add listener for condition updates
-    const handleConditionUpdated = () => {
-      console.log("[useNextReminders] Received conditions-updated event, refreshing");
-      fetchReminders();
-    };
-    
-    window.addEventListener('conditions-updated', handleConditionUpdated);
-    
-    return () => {
-      window.removeEventListener('conditions-updated', handleConditionUpdated);
-    };
+    if (messageId) {
+      forceRefresh();
+    }
   }, [messageId, refreshTrigger]);
-
-  return { 
-    upcomingReminders, 
-    isLoading, 
-    hasReminders, 
-    forceRefresh, 
+  
+  return {
+    upcomingReminders,
+    hasReminders,
+    isLoading,
+    forceRefresh,
+    error,
     lastRefreshed,
     permissionError
   };

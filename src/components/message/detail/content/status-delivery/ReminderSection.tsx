@@ -39,6 +39,7 @@ export function ReminderSection({
   const [refreshCount, setRefreshCount] = useState<number>(0);
   const [historyOpen, setHistoryOpen] = useState<boolean>(false);
   const [isTestingReminder, setIsTestingReminder] = useState<boolean>(false);
+  const [errorState, setErrorState] = useState<string | null>(null);
   
   // Get upcoming reminder information with ability to force refresh
   const { upcomingReminders, hasReminders, isLoading, forceRefresh, lastRefreshed, permissionError } = useNextReminders(
@@ -48,25 +49,31 @@ export function ReminderSection({
   
   // Helper function to enhance string reminders with required properties
   const enhanceReminders = (reminders: string[]): EnhancedReminder[] => {
-    return reminders.map(reminder => {
-      // Extract date and type information from the reminder string
-      const isCritical = reminder.toLowerCase().includes('critical');
-      const hasTimeInfo = reminder.includes('(');
-      
-      // Create a short date format from the full reminder text
-      let shortDate = reminder;
-      if (hasTimeInfo) {
-        // Extract the date part before parentheses for short display
-        shortDate = reminder.split('(')[0].trim();
-      }
-      
-      return {
-        original: reminder,
-        formattedShortDate: shortDate,
-        formattedText: reminder,
-        isImportant: isCritical || reminder.toLowerCase().includes('final delivery')
-      };
-    });
+    try {
+      return reminders.map(reminder => {
+        // Extract date and type information from the reminder string
+        const isCritical = reminder.toLowerCase().includes('critical');
+        const hasTimeInfo = reminder.includes('(');
+        
+        // Create a short date format from the full reminder text
+        let shortDate = reminder;
+        if (hasTimeInfo) {
+          // Extract the date part before parentheses for short display
+          shortDate = reminder.split('(')[0].trim();
+        }
+        
+        return {
+          original: reminder,
+          formattedShortDate: shortDate,
+          formattedText: reminder,
+          isImportant: isCritical || reminder.toLowerCase().includes('final delivery')
+        };
+      });
+    } catch (error) {
+      console.error("Error enhancing reminders:", error);
+      setErrorState("Failed to process reminder data");
+      return [];
+    }
   };
   
   // Transform string reminders to enhanced objects with required properties
@@ -74,14 +81,20 @@ export function ReminderSection({
   
   // Handle manual refresh of reminders data
   const handleForceRefresh = () => {
-    forceRefresh();
-    setLastForceRefresh(Date.now());
-    setRefreshCount(prev => prev + 1);
-    toast({
-      title: "Refreshing reminders data",
-      description: "The reminders list is being updated...",
-      duration: 2000,
-    });
+    try {
+      setErrorState(null);
+      forceRefresh();
+      setLastForceRefresh(Date.now());
+      setRefreshCount(prev => prev + 1);
+      toast({
+        title: "Refreshing reminders data",
+        description: "The reminders list is being updated...",
+        duration: 2000,
+      });
+    } catch (error) {
+      console.error("Error forcing refresh:", error);
+      setErrorState("Failed to refresh reminder data");
+    }
   };
   
   // Handle manual test of reminder delivery
@@ -93,6 +106,9 @@ export function ReminderSection({
       await triggerManualReminder(condition.message_id, true);
       // Force refresh after testing to show the updated state
       setTimeout(() => handleForceRefresh(), 2000);
+    } catch (error) {
+      console.error("Error testing reminder:", error);
+      setErrorState("Failed to test reminder");
     } finally {
       setIsTestingReminder(false);
     }
@@ -180,6 +196,12 @@ export function ReminderSection({
         </div>
       </h3>
       <div className="space-y-3 text-sm">
+        {errorState && (
+          <div className="text-red-500 text-xs mb-2">
+            {errorState} - Try refreshing the data
+          </div>
+        )}
+        
         {isLoading ? (
           <div className="grid grid-cols-3 gap-1">
             <span className="font-medium">Status:</span>

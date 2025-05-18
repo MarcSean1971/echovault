@@ -57,6 +57,12 @@ export function useScheduledReminders(messageId: string, refreshTrigger: number 
       if (result) {
         const { upcomingReminders, reminderHistory } = result;
         
+        console.log("[useScheduledReminders] Processing reminders:", { 
+          upcomingCount: upcomingReminders.length,
+          historyCount: reminderHistory.length,
+          firstUpcoming: upcomingReminders[0] ? upcomingReminders[0].scheduledAt : 'none'
+        });
+        
         // Format the reminder data
         const formattedData = formatReminderData(upcomingReminders, reminderHistory);
         
