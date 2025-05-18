@@ -32,7 +32,8 @@ export function PanicButtonCard({ userId, panicMessage, panicMessages, isCheckin
     getKeepArmedValue,
     isSelectorOpen,
     setIsSelectorOpen,
-    inCancelWindow
+    inCancelWindow,
+    errorState
   } = usePanicButton(userId, panicMessage, panicMessages);
   
   // State for checking if user has any panic messages (even if not loaded in this component)
@@ -76,7 +77,7 @@ export function PanicButtonCard({ userId, panicMessage, panicMessages, isCheckin
   const hasMultipleMessages = panicMessages.length > 1;
 
   return (
-    <Card className={panicMode ? "border-red-500" : ""}>
+    <Card className={panicMode ? "border-red-500" : (errorState?.hasError ? "border-amber-500" : "")}>
       <CardHeader>
         <CardTitle className="flex items-center text-red-500">
           <AlertCircle className="h-5 w-5 mr-2" />
@@ -118,6 +119,7 @@ export function PanicButtonCard({ userId, panicMessage, panicMessages, isCheckin
           isLoading={isLoading}
           keepArmed={!!panicMessage && getKeepArmedValue()}
           inCancelWindow={inCancelWindow}
+          errorState={errorState}
         />
         
         {/* Message selection dialog */}

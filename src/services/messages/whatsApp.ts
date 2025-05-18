@@ -28,13 +28,43 @@ export async function triggerDeadmanSwitch(messageId: string) {
       body: { 
         messageId,
         debug: true,
-        isEmergency: true
+        isEmergency: true,
+        forceSend: true // Add forceSend parameter to ensure message is sent
       }
     });
     
     if (error) {
       console.error("Error triggering deadman's switch:", error);
-      throw error;
+      
+      // If edge function fails, try direct database update as fallback
+      try {
+        await supabase.from("message_notifications").insert({
+          message_id: messageId,
+          notification_type: "emergency",
+          status: "pending",
+          metadata: {
+            emergency: true,
+            triggered_at: new Date().toISOString(),
+            manual_trigger: true,
+            fallback: true
+          }
+        });
+        
+        toast({
+          title: "Message queued for delivery",
+          description: "Your message has been queued for delivery. This may take a few minutes.",
+          duration: 5000,
+        });
+        
+        // Dispatch event to refresh the UI
+        window.dispatchEvent(new CustomEvent('conditions-updated', { 
+          detail: { updatedAt: new Date().toISOString() }
+        }));
+        
+        return { success: true, details: { fallback: true } };
+      } catch (fallbackError) {
+        throw error; // If fallback fails, throw original error
+      }
     }
     
     if (data) {
@@ -51,6 +81,37 @@ export async function triggerDeadmanSwitch(messageId: string) {
         }));
         
         return { success: true, details: data };
+      } else if (data.success === false && data.error === "No messages found to notify") {
+        // If no messages found, try the fallback method
+        try {
+          await supabase.from("message_notifications").insert({
+            message_id: messageId,
+            notification_type: "emergency",
+            status: "pending",
+            metadata: {
+              emergency: true,
+              triggered_at: new Date().toISOString(),
+              manual_trigger: true,
+              fallback: true
+            }
+          });
+          
+          toast({
+            title: "Message queued for delivery",
+            description: "Your message has been queued for delivery using fallback mechanism.",
+            duration: 5000,
+          });
+          
+          return { success: true, details: { fallback: true } };
+        } catch (fallbackError) {
+          toast({
+            title: "Delivery failed",
+            description: "Failed to deliver message using both primary and fallback methods.",
+            variant: "destructive",
+            duration: 5000,
+          });
+          return { success: false, error: "Failed to deliver message using all available methods" };
+        }
       } else {
         toast({
           title: "Delivery failed",
@@ -77,4 +138,3 @@ export async function triggerDeadmanSwitch(messageId: string) {
 
 // Re-export all needed WhatsApp functions from the core directory structure
 export { sendTestWhatsAppMessage } from './whatsApp/core/messageService';
-// Remove the circular reference: export { triggerDeadmanSwitch } from './whatsApp';

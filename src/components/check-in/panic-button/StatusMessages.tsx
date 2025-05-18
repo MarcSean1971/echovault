@@ -1,28 +1,5 @@
 
-import { ReactNode } from "react";
-
-interface StatusMessageProps {
-  show: boolean;
-  variant: "error" | "warning" | "success" | "info";
-  children: ReactNode;
-}
-
-export function StatusMessage({ show, variant, children }: StatusMessageProps) {
-  if (!show) return null;
-  
-  const variantClasses = {
-    error: "text-red-500",
-    warning: "text-amber-500",
-    success: "text-green-600",
-    info: "text-blue-500"
-  };
-  
-  return (
-    <p className={`${variantClasses[variant]} text-sm`}>
-      {children}
-    </p>
-  );
-}
+import { AlertCircle, Check, AlertTriangle, HelpCircle } from "lucide-react";
 
 interface StatusMessagesProps {
   isConfirming: boolean;
@@ -30,8 +7,13 @@ interface StatusMessagesProps {
   hasPanicMessage: boolean;
   hasPanicMessages: boolean;
   isLoading: boolean;
-  keepArmed: boolean;
+  keepArmed?: boolean;
   inCancelWindow?: boolean;
+  errorState?: {
+    hasError: boolean;
+    message?: string;
+    isRetrying?: boolean;
+  };
 }
 
 export function StatusMessages({
@@ -41,33 +23,97 @@ export function StatusMessages({
   hasPanicMessages,
   isLoading,
   keepArmed,
-  inCancelWindow = false
+  inCancelWindow,
+  errorState
 }: StatusMessagesProps) {
+  if (isLoading) {
+    return (
+      <div className="text-sm text-muted-foreground">
+        <div className="flex items-center">
+          <div className="animate-spin mr-2 h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
+          <span>Loading emergency message configuration...</span>
+        </div>
+      </div>
+    );
+  }
+  
+  if (errorState?.hasError) {
+    return (
+      <div className="text-sm text-red-600">
+        <div className="flex items-center mb-1">
+          <AlertTriangle className="h-4 w-4 mr-2" />
+          <span>Error: {errorState.message || "Failed to send emergency message"}</span>
+        </div>
+        {errorState.isRetrying && (
+          <div className="flex items-center text-amber-600 mt-1">
+            <div className="animate-spin mr-2 h-3 w-3 border-2 border-amber-600 border-t-transparent rounded-full" />
+            <span>Retrying automatically...</span>
+          </div>
+        )}
+        <div className="mt-1 text-xs">
+          Please try again. If the problem persists, contact support.
+        </div>
+      </div>
+    );
+  }
+
+  if (!hasPanicMessage && !hasPanicMessages) {
+    return (
+      <div className="text-sm text-muted-foreground">
+        <div className="flex items-center">
+          <HelpCircle className="h-4 w-4 mr-2" />
+          <span>No emergency messages configured</span>
+        </div>
+        <p className="mt-1 text-xs">
+          Create an emergency message to enable the panic button feature.
+        </p>
+      </div>
+    );
+  }
+  
+  if (isConfirming && !inCancelWindow) {
+    return (
+      <div className="text-sm text-amber-600">
+        <div className="flex items-center">
+          <AlertCircle className="h-4 w-4 mr-2" />
+          <span>Press again to confirm sending emergency message</span>
+        </div>
+      </div>
+    );
+  }
+  
+  if (inCancelWindow) {
+    return (
+      <div className="text-sm text-red-600 animate-pulse">
+        <div className="flex items-center">
+          <AlertCircle className="h-4 w-4 mr-2" />
+          <span>Click to CANCEL sending emergency message</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <>
-      <StatusMessage show={isConfirming && !inCancelWindow} variant="error">
-        Click again to confirm emergency trigger
-      </StatusMessage>
-
-      <StatusMessage show={inCancelWindow} variant="error">
-        Click the button again to cancel the emergency trigger
-      </StatusMessage>
-
-      <StatusMessage show={locationPermission === "denied"} variant="warning">
-        Location access denied. Your current location won't be included in the emergency message.
-      </StatusMessage>
+    <div className="text-sm">
+      <div className="flex items-center text-green-600">
+        <Check className="h-4 w-4 mr-2" />
+        <span>Emergency message ready to trigger</span>
+      </div>
       
-      <StatusMessage show={!hasPanicMessage && !isLoading && !hasPanicMessages} variant="warning">
-        No panic trigger messages configured. Create one to use this feature.
-      </StatusMessage>
+      {locationPermission !== "granted" && (
+        <div className="flex items-center mt-1 text-xs text-amber-600">
+          <AlertCircle className="h-3 w-3 mr-1" />
+          <span>Location permission: {locationPermission}</span>
+        </div>
+      )}
       
-      <StatusMessage show={!hasPanicMessage && hasPanicMessages && !isLoading} variant="warning">
-        You have panic messages, but they're not appearing here. Try checking your message settings.
-      </StatusMessage>
-      
-      <StatusMessage show={hasPanicMessage && keepArmed} variant="success">
-        This panic button will remain active after triggering.
-      </StatusMessage>
-    </>
+      {keepArmed !== undefined && (
+        <div className="mt-1 text-xs text-muted-foreground">
+          {keepArmed 
+            ? "Message will remain armed after sending" 
+            : "Message will be disarmed after sending"}
+        </div>
+      )}
+    </div>
   );
 }

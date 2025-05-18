@@ -68,7 +68,7 @@ async function updateMessageWithLocation(messageId: string): Promise<boolean> {
 }
 
 /**
- * Trigger a panic message
+ * Trigger a panic message with fallback mechanisms
  */
 export async function triggerPanicMessage(userId: string, messageId: string): Promise<PanicTriggerResult> {
   try {
@@ -77,7 +77,7 @@ export async function triggerPanicMessage(userId: string, messageId: string): Pr
     // First, get the message condition to check its configuration
     const { data, error } = await supabase
       .from("message_conditions")
-      .select("id, panic_config")
+      .select("id, message_id, panic_config")
       .eq("message_id", messageId)
       .eq("condition_type", "panic_trigger")
       .eq("active", true)
@@ -111,28 +111,64 @@ export async function triggerPanicMessage(userId: string, messageId: string): Pr
     } else {
       console.warn("No panic_config found or invalid format, defaulting keepArmed to true");
     }
-
+    
     // Update the message with current location before sending
     await updateMessageWithLocation(messageId);
 
     console.log("Invoking edge function to send notifications");
     
-    // Trigger the notification via the edge function
-    const { data: funcData, error: funcError } = await supabase.functions.invoke("send-message-notifications", {
-      body: { 
-        messageId,
-        isEmergency: true,
-        debug: true, // Enable debug mode for emergency messages
-        keepArmed // Pass keepArmed flag explicitly to edge function
+    // Try using the edge function first
+    try {
+      // Trigger the notification via the edge function
+      const { data: funcData, error: funcError } = await supabase.functions.invoke("send-message-notifications", {
+        body: { 
+          messageId,
+          isEmergency: true,
+          debug: true, // Enable debug mode for emergency messages
+          keepArmed, // Pass keepArmed flag explicitly to edge function
+          forceSend: true // Force send even if conditions don't match
+        }
+      });
+      
+      if (funcError) {
+        console.error("Edge function error:", funcError);
+        throw funcError;
       }
-    });
-    
-    if (funcError) {
-      console.error("Edge function error:", funcError);
-      throw funcError;
-    }
 
-    console.log("Edge function response:", funcData);
+      console.log("Edge function response:", funcData);
+      
+      // Check if the response indicates no messages were found
+      if (funcData && !funcData.success && funcData.error === "No messages found to notify") {
+        console.warn("Edge function returned no messages found. Trying direct API call as fallback...");
+        throw new Error("No messages found, attempting direct API call");
+      }
+    } catch (edgeFuncError) {
+      console.error("Edge function failed, attempting direct notification:", edgeFuncError);
+      
+      // If the edge function fails, try sending an email/notification directly
+      // This is a fallback mechanism
+      const { data: directData, error: directError } = await supabase
+        .from("message_notifications")
+        .insert({
+          message_id: messageId,
+          notification_type: "emergency",
+          status: "pending",
+          metadata: {
+            emergency: true,
+            triggered_by: userId,
+            triggered_at: new Date().toISOString(),
+            manual_trigger: true,
+            keep_armed: keepArmed
+          }
+        });
+      
+      if (directError) {
+        console.error("Direct notification insertion failed:", directError);
+        throw directError;
+      }
+      
+      console.log("Direct notification created:", directData);
+    }
 
     // Update the message condition as triggered
     // But only deactivate if keepArmed is false
@@ -168,3 +204,6 @@ export async function triggerPanicMessage(userId: string, messageId: string): Pr
     throw error;
   }
 }
+
+// Make updateMessageWithLocation available for direct use
+export { updateMessageWithLocation };

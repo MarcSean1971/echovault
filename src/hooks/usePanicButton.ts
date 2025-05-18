@@ -14,9 +14,35 @@ export function usePanicButton(
   panicMessages: MessageCondition[] = []
 ) {
   const [hasPanicMessages, setHasPanicMessages] = useState(false);
+  const [errorState, setErrorState] = useState<{
+    hasError: boolean;
+    message?: string;
+    isRetrying?: boolean;
+  }>({
+    hasError: false
+  });
   
-  // Use the core panic button hook
-  const panicCore = usePanicCore(userId, panicMessage, panicMessages);
+  // Use the core panic button hook with error handling
+  const panicCore = usePanicCore(userId, panicMessage, panicMessages, {
+    onError: (error) => {
+      setErrorState({
+        hasError: true,
+        message: error.message || "Failed to send emergency message",
+        isRetrying: false
+      });
+      
+      // Auto-clear error after 10 seconds
+      setTimeout(() => {
+        setErrorState({ hasError: false });
+      }, 10000);
+    },
+    onRetry: () => {
+      setErrorState(prev => ({
+        ...prev,
+        isRetrying: true
+      }));
+    }
+  });
   
   // Check if user has any panic messages on mount
   useEffect(() => {
@@ -63,6 +89,7 @@ export function usePanicButton(
       setPanicMode(false);
       setIsConfirming(false);
       setTriggerInProgress(false);
+      setErrorState({ hasError: false });
     };
     
     window.addEventListener('panic-trigger-cancelled', handlePanicTriggerCancelled);
@@ -103,6 +130,7 @@ export function usePanicButton(
     countDown,
     hasPanicMessages,
     locationPermission,
+    errorState,
     checkLocationPermission,
     handlePanicButtonClick,
     handlePanicMessageSelect,
