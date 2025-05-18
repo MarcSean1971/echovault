@@ -17,6 +17,14 @@ interface ReminderSectionProps {
   refreshTrigger?: number;
 }
 
+// Interface for the enhanced reminder objects
+interface EnhancedReminder {
+  formattedShortDate: string;
+  formattedText: string;
+  isImportant: boolean;
+  original: string;
+}
+
 export function ReminderSection({ 
   condition, 
   deadline, 
@@ -37,6 +45,32 @@ export function ReminderSection({
     condition?.message_id,
     refreshTrigger || lastForceRefresh
   );
+  
+  // Helper function to enhance string reminders with required properties
+  const enhanceReminders = (reminders: string[]): EnhancedReminder[] => {
+    return reminders.map(reminder => {
+      // Extract date and type information from the reminder string
+      const isCritical = reminder.toLowerCase().includes('critical');
+      const hasTimeInfo = reminder.includes('(');
+      
+      // Create a short date format from the full reminder text
+      let shortDate = reminder;
+      if (hasTimeInfo) {
+        // Extract the date part before parentheses for short display
+        shortDate = reminder.split('(')[0].trim();
+      }
+      
+      return {
+        original: reminder,
+        formattedShortDate: shortDate,
+        formattedText: reminder,
+        isImportant: isCritical || reminder.toLowerCase().includes('final delivery')
+      };
+    });
+  };
+  
+  // Transform string reminders to enhanced objects with required properties
+  const enhancedReminders = enhanceReminders(upcomingReminders);
   
   // Handle manual refresh of reminders data
   const handleForceRefresh = () => {
@@ -154,16 +188,16 @@ export function ReminderSection({
             <div className="grid grid-cols-3 gap-1">
               <span className="font-medium">Status:</span>
               <span className="col-span-2">
-                {upcomingReminders.length > 0 
-                  ? `${upcomingReminders.length} upcoming reminder${upcomingReminders.length !== 1 ? 's' : ''}` 
+                {enhancedReminders.length > 0 
+                  ? `${enhancedReminders.length} upcoming reminder${enhancedReminders.length !== 1 ? 's' : ''}` 
                   : "All reminders sent"}
               </span>
             </div>
-            {upcomingReminders.length > 0 && (
+            {enhancedReminders.length > 0 && (
               <div className="grid grid-cols-3 gap-1">
                 <span className="font-medium">Next reminders:</span>
                 <div className="col-span-2 flex flex-wrap gap-1">
-                  {upcomingReminders.map((reminder, index) => (
+                  {enhancedReminders.map((reminder, index) => (
                     <span 
                       key={index} 
                       className={`inline-block px-2 py-1 ${
