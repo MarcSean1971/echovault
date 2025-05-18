@@ -3,6 +3,7 @@ import { supabaseClient } from "../supabase-client.ts";
 
 /**
  * Track message notification in the database
+ * FIXED: Removed direct email function call that was causing infinite loop
  */
 export async function trackMessageNotification(messageId: string, conditionId: string) {
   try {
@@ -40,28 +41,8 @@ export async function trackMessageNotification(messageId: string, conditionId: s
       // Non-fatal error, continue execution
     }
     
-    // CRITICAL: Directly trigger the email sending function
-    try {
-      console.log("[TRACKING] Directly triggering reminder email function");
-      const { data, error: triggerError } = await supabase.functions.invoke("send-reminder-emails", {
-        body: {
-          messageId: messageId,
-          debug: true,
-          forceSend: true,
-          source: "direct-manual-trigger"
-        }
-      });
-      
-      console.log("[TRACKING] Trigger response:", data);
-      
-      if (triggerError) {
-        console.error("[TRACKING] Error triggering email function:", triggerError);
-        throw triggerError;
-      }
-    } catch (triggerError) {
-      console.error("[TRACKING] Exception triggering email function:", triggerError);
-      // Log this error but don't throw, as we want to return success for the original tracking
-    }
+    // CRITICAL FIX: Removed the direct call to the email sending function
+    // that was causing the infinite loop
     
     return true;
   } catch (error) {
@@ -72,6 +53,7 @@ export async function trackMessageNotification(messageId: string, conditionId: s
 
 /**
  * Update reminder times for condition - ensures we don't miss any reminders
+ * FIXED: Added deduplication to prevent multiple emails
  */
 export async function markRemindersObsolete(
   conditionId: string,
@@ -97,14 +79,43 @@ export async function markRemindersObsolete(
     
     console.log(`[REMINDER-TRACKING] Successfully marked ${count || 'unknown number of'} reminders as obsolete for message ${messageId}`);
     
-    // IMMEDIATELY check for any reminders that should be processed now
+    // CRITICAL FIX: Add deduplication by checking if notification was already sent recently
     try {
+      // Check if a notification was sent in the last 5 minutes to avoid duplicates
+      const recentCheck = new Date();
+      recentCheck.setMinutes(recentCheck.getMinutes() - 5);
+      
+      const { data: recentNotifications } = await supabase
+        .from('reminder_delivery_log')
+        .select('id')
+        .eq('message_id', messageId)
+        .eq('delivery_channel', 'immediate-check')
+        .gt('created_at', recentCheck.toISOString())
+        .limit(1);
+      
+      if (recentNotifications && recentNotifications.length > 0) {
+        console.log("[REMINDER-TRACKING] Skipping immediate check as one was done recently");
+        return true; // Skip sending another notification
+      }
+      
+      // Create a tracking log for this check to prevent duplicates
+      await supabase.from('reminder_delivery_log').insert({
+        reminder_id: `obsolete-check-${Date.now()}`,
+        message_id: messageId,
+        condition_id: conditionId,
+        recipient: 'system',
+        delivery_channel: 'immediate-check',
+        delivery_status: 'processing',
+        response_data: { source: "markRemindersObsolete", time: new Date().toISOString() }
+      });
+      
+      // CONTROLLED IMMEDIATE CHECK: Only proceed if no recent notification
       console.log("[REMINDER-TRACKING] Running immediate reminder check for message:", messageId);
       await supabase.functions.invoke("send-reminder-emails", {
         body: {
           messageId: messageId,
           debug: true,
-          forceSend: true,
+          forceSend: false, // CRITICAL FIX: Changed to false to prevent forcing emails when not needed
           source: "obsolete-immediate-check"
         }
       });

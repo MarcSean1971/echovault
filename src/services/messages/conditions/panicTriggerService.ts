@@ -1,8 +1,12 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { PanicTriggerResult } from "./types";
 import { toast } from "@/components/ui/use-toast";
 import { getCurrentLocation } from "@/services/location/mapboxService";
 import { getConditionByMessageId } from "./operations/get-operations";
+
+// Track recently triggered messages to prevent duplicate emails
+const recentlyTriggeredMessages = new Set<string>();
 
 /**
  * Check if a user has any active panic messages
@@ -69,10 +73,44 @@ async function updateMessageWithLocation(messageId: string): Promise<boolean> {
 
 /**
  * Trigger a panic message with fallback mechanisms
+ * FIXED: Added deduplication to prevent infinite email loop
  */
 export async function triggerPanicMessage(userId: string, messageId: string): Promise<PanicTriggerResult> {
   try {
     console.log(`Triggering panic message for message ID: ${messageId}`);
+    
+    // CRITICAL FIX: Add deduplication to prevent duplicate triggering
+    const triggerKey = `${messageId}-${Date.now()}`;
+    
+    // Check if this message was triggered recently (within last 30 seconds)
+    // This helps prevent cascading triggers from multiple components
+    const now = Date.now();
+    const recentTrigger = Array.from(recentlyTriggeredMessages).find(key => 
+      key.startsWith(messageId) && 
+      (now - parseInt(key.split('-')[1])) < 30000
+    );
+    
+    if (recentTrigger) {
+      console.warn(`Panic message ${messageId} was triggered recently. Skipping duplicate trigger.`);
+      return {
+        success: true,
+        message: "Emergency message already triggered",
+        triggered_at: new Date().toISOString(),
+        keepArmed: true,
+        duplicate: true
+      };
+    }
+    
+    // Add this message to recently triggered set
+    recentlyTriggeredMessages.add(triggerKey);
+    
+    // Clean up old entries from the set (older than 60 seconds)
+    recentlyTriggeredMessages.forEach(key => {
+      const [msgId, timestamp] = key.split('-');
+      if (now - parseInt(timestamp) > 60000) {
+        recentlyTriggeredMessages.delete(key);
+      }
+    });
     
     // First, get the message condition to check its configuration
     const { data, error } = await supabase
@@ -117,8 +155,11 @@ export async function triggerPanicMessage(userId: string, messageId: string): Pr
 
     console.log("Invoking edge function to send notifications");
     
-    // Try using the edge function first
+    // Try using the edge function first - FIXED: Added deduplication flag and request ID
     try {
+      // Generate a unique request ID to help track this specific request
+      const requestId = `panic-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      
       // Trigger the notification via the edge function
       const { data: funcData, error: funcError } = await supabase.functions.invoke("send-message-notifications", {
         body: { 
@@ -126,7 +167,9 @@ export async function triggerPanicMessage(userId: string, messageId: string): Pr
           isEmergency: true,
           debug: true, // Enable debug mode for emergency messages
           keepArmed, // Pass keepArmed flag explicitly to edge function
-          forceSend: true // Force send even if conditions don't match
+          forceSend: true, // Force send even if conditions don't match
+          deduplicationId: requestId, // ADDED: For deduplication purposes
+          timestamp: Date.now() // ADDED: For deduplication within the edge function
         }
       });
       

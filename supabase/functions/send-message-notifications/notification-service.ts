@@ -9,9 +9,14 @@ import { Message, Condition } from "./types.ts";
 import { notifyRecipient } from "./services/recipient-notification-service.ts";
 import { generateAccessUrl } from "./utils/url-generator.ts";
 
+// Map to track recent message notifications (messageId -> timestamp)
+const recentNotifications = new Map<string, number>();
+
 interface NotificationOptions {
   isEmergency?: boolean;
   debug?: boolean;
+  deduplicationId?: string; // New property for tracking specific request
+  timestamp?: number;       // New property for time-based deduplication
 }
 
 export async function sendMessageNotification(
@@ -19,7 +24,7 @@ export async function sendMessageNotification(
   options: NotificationOptions = {}
 ): Promise<{ success: boolean; error?: string; details?: any }> {
   const { message, condition } = data;
-  const { isEmergency = false, debug = false } = options;
+  const { isEmergency = false, debug = false, deduplicationId, timestamp } = options;
   
   // Skip if no recipients
   if (!condition.recipients || condition.recipients.length === 0) {
@@ -35,7 +40,36 @@ export async function sendMessageNotification(
       console.log(`Message title: "${message.title}"`);
       console.log(`Number of recipients: ${condition.recipients.length}`);
       console.log(`User ID: ${message.user_id}`);
+      console.log(`Deduplication ID: ${deduplicationId || "None"}`);
+      console.log(`Timestamp: ${timestamp || "None"}`);
       console.log(`Condition data:`, JSON.stringify(condition, null, 2));
+    }
+    
+    // CRITICAL FIX: Add deduplication check
+    const now = Date.now();
+    const lastNotificationTime = recentNotifications.get(message.id);
+    
+    // If this message was notified within the last 30 seconds, don't send another notification
+    if (lastNotificationTime && now - lastNotificationTime < 30000) {
+      if (debug) {
+        console.log(`Message ${message.id} was already notified ${(now - lastNotificationTime) / 1000}s ago. Skipping duplicate notification.`);
+      }
+      
+      return { 
+        success: true, 
+        details: "Skipped duplicate notification", 
+        isDuplicate: true 
+      };
+    }
+    
+    // Set this message as recently notified
+    recentNotifications.set(message.id, now);
+    
+    // Cleanup old entries from the deduplication map
+    for (const [msgId, time] of recentNotifications.entries()) {
+      if (now - time > 60000) { // Remove entries older than 1 minute
+        recentNotifications.delete(msgId);
+      }
     }
     
     // Check if this is an emergency/panic message for special handling
@@ -56,7 +90,7 @@ export async function sendMessageNotification(
     }
     
     // For emergency messages, attempt multiple deliveries with retry
-    const maxRetries = isEmergencyMessage ? 3 : 1;
+    const maxRetries = isEmergencyMessage ? 2 : 1; // Reduced max retries from 3 to 2
     const retryDelay = 5000; // 5 seconds between retries for emergency messages
     
     // Check if this is a WhatsApp-enabled panic trigger

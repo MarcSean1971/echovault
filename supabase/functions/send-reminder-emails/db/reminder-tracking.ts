@@ -101,6 +101,43 @@ export async function markRemindersObsolete(
     }
     
     console.log(`[REMINDER-TRACKING] Successfully marked ${count || 'unknown number of'} reminders as obsolete for message ${messageId}`);
+    
+    // CRITICAL FIX: Add deduplication by checking if notification was already sent recently
+    try {
+      // Check if a notification was sent in the last 5 minutes to avoid duplicates
+      const recentCheck = new Date();
+      recentCheck.setMinutes(recentCheck.getMinutes() - 5);
+      
+      const { data: recentNotifications } = await supabase
+        .from('reminder_delivery_log')
+        .select('id')
+        .eq('message_id', messageId)
+        .eq('delivery_channel', 'immediate-check')
+        .gt('created_at', recentCheck.toISOString())
+        .limit(1);
+      
+      if (recentNotifications && recentNotifications.length > 0) {
+        console.log("[REMINDER-TRACKING] Skipping immediate check as one was done recently");
+        return true; // Skip sending another notification
+      }
+      
+      // Create a tracking log for this check to prevent duplicates
+      await supabase.from('reminder_delivery_log').insert({
+        reminder_id: `obsolete-check-${Date.now()}`,
+        message_id: messageId,
+        condition_id: conditionId,
+        recipient: 'system',
+        delivery_channel: 'immediate-check',
+        delivery_status: 'processing',
+        response_data: { source: "markRemindersObsolete", time: new Date().toISOString() }
+      });
+      
+      // REMOVED: The direct function call that was causing duplicate notifications
+    } catch (checkError) {
+      console.error("[REMINDER-TRACKING] Error running immediate reminder check:", checkError);
+      // Non-fatal error, continue execution
+    }
+    
     return true;
   } catch (error) {
     console.error("[REMINDER-TRACKING] Error in markRemindersObsolete:", error);

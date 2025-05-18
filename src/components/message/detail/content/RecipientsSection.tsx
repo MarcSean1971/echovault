@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Mail, Users } from "lucide-react";
@@ -19,9 +19,30 @@ export function RecipientsSection({
   isActionLoading,
   onSendTestMessage
 }: RecipientsSectionProps) {
+  // Add state to track recent test message sends - prevent multiple clicks
+  const [recentlySent, setRecentlySent] = useState(false);
+  
   if (!recipients || recipients.length === 0) {
     return null;
   }
+  
+  // Handler for test message that prevents rapid clicks
+  const handleSendTestMessage = () => {
+    if (recentlySent) {
+      return;
+    }
+    
+    // Mark as recently sent to prevent further clicks
+    setRecentlySent(true);
+    
+    // Call the actual handler
+    onSendTestMessage();
+    
+    // Reset after 10 seconds
+    setTimeout(() => {
+      setRecentlySent(false);
+    }, 10000);
+  };
   
   return (
     <Card className="overflow-hidden">
@@ -31,12 +52,12 @@ export function RecipientsSection({
           <Button
             variant="outline"
             size="sm"
-            onClick={onSendTestMessage}
-            disabled={isArmed || isActionLoading}
-            className="whitespace-nowrap"
+            onClick={handleSendTestMessage}
+            disabled={isArmed || isActionLoading || recentlySent}
+            className={`whitespace-nowrap ${HOVER_TRANSITION}`}
           >
             <Mail className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} />
-            Send Test Message
+            {recentlySent ? "Test Sent" : "Send Test Message"}
           </Button>
         </div>
         
