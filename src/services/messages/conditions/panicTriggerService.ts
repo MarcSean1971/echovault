@@ -1,8 +1,8 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { PanicTriggerResult } from "./types";
 import { toast } from "@/components/ui/use-toast";
 import { getCurrentLocation } from "@/services/location/mapboxService";
+import { getConditionByMessageId } from "./operations/get-operations";
 
 /**
  * Check if a user has any active panic messages
@@ -150,7 +150,7 @@ export async function triggerPanicMessage(userId: string, messageId: string): Pr
         .from("sent_reminders")
         .insert({
           message_id: messageId,
-          condition_id: data.id,
+          condition_id: data.id,  // Using the condition ID we fetched earlier
           user_id: userId,
           deadline: new Date().toISOString()
         });

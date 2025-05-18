@@ -2,6 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { triggerManualReminder as coreReminderTrigger } from "./whatsApp/core/reminderService";
+import { getConditionByMessageId } from "./conditions/operations/get-operations";
 
 /**
  * Trigger a manual reminder for a message
@@ -38,9 +39,17 @@ export async function triggerDeadmanSwitch(messageId: string) {
       
       // If edge function fails, try direct database update as fallback
       try {
-        // Use sent_reminders table as fallback
+        // First get the condition ID for this message
+        const condition = await getConditionByMessageId(messageId);
+        
+        if (!condition) {
+          throw new Error("No condition found for this message");
+        }
+        
+        // Use sent_reminders table as fallback with required condition_id
         await supabase.from("sent_reminders").insert({
           message_id: messageId,
+          condition_id: condition.id, // Include condition_id from fetched condition
           deadline: new Date().toISOString(),
           user_id: (await supabase.auth.getUser()).data.user?.id || 'unknown'
         });
@@ -79,8 +88,23 @@ export async function triggerDeadmanSwitch(messageId: string) {
       } else if (data.success === false && data.error === "No messages found to notify") {
         // If no messages found, try the fallback method using sent_reminders
         try {
+          // Get the condition ID first
+          const condition = await getConditionByMessageId(messageId);
+          
+          if (!condition) {
+            toast({
+              title: "Delivery failed",
+              description: "Could not find any conditions for this message",
+              variant: "destructive",
+              duration: 5000,
+            });
+            return { success: false, error: "No condition found for message" };
+          }
+          
+          // Now include the condition_id in our insert
           await supabase.from("sent_reminders").insert({
             message_id: messageId,
+            condition_id: condition.id,
             deadline: new Date().toISOString(),
             user_id: (await supabase.auth.getUser()).data.user?.id || 'unknown'
           });
