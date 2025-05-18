@@ -1,135 +1,86 @@
-
 import { supabase } from "@/integrations/supabase/client";
+import { markRemindersAsObsolete as markRemindersObsolete } from "@/services/messages/reminder";
 
 /**
- * Convert reminder hours to minutes for storage consistency
- * This is important since our database stores reminder times in minutes
- * NOTE: This function name is misleading - the database column is called 'reminder_hours'
- * but actually stores values in minutes
+ * Mark existing reminders as obsolete
+ * This is a wrapper around the service function to maintain API compatibility
  */
-export function convertReminderHoursToMinutes(reminderHours: number[]): number[] {
-  if (!reminderHours || reminderHours.length === 0) return [];
-  
-  return reminderHours.map(hours => hours * 60);
+export async function markExistingRemindersObsolete(messageId: string, conditionId: string): Promise<boolean> {
+  return markRemindersObsolete(messageId, conditionId);
 }
 
 /**
- * Parse reminder values from condition to normalized minutes
- * IMPORTANT: The database column is called 'reminder_hours' but actually stores values in minutes
- * This function now correctly preserves the original values without any conversion
+ * Parse reminder hours string into an array of minutes
+ * e.g. "0.5h,1h,2h" => [30, 60, 120]
  */
-export function parseReminderMinutes(reminderHours: any): number[] {
-  if (!reminderHours || !Array.isArray(reminderHours) || reminderHours.length === 0) {
-    return [];
+export function parseReminderMinutes(reminderHours: string | null | undefined): number[] | null {
+  if (!reminderHours) {
+    return null;
   }
-  
-  // All values in the reminder_hours array are already in minutes
-  // Return them directly without any conversion
-  return reminderHours;
-}
 
-/**
- * Calculate the effective deadline based on condition type
- */
-export function getEffectiveDeadline(condition: any): Date | null {
-  if (!condition) return null;
-  
-  // For date-based conditions, use the trigger_date
-  if (condition.trigger_date) {
-    return new Date(condition.trigger_date);
-  }
-  
-  // For check-in conditions, calculate based on last_checked + threshold
-  if (['no_check_in', 'recurring_check_in', 'inactivity_to_date'].includes(condition.condition_type) 
-      && condition.last_checked && (condition.hours_threshold || condition.minutes_threshold)) {
-    const lastChecked = new Date(condition.last_checked);
-    const hoursToAdd = condition.hours_threshold || 0;
-    const minutesToAdd = condition.minutes_threshold || 0;
-    
-    const deadline = new Date(lastChecked);
-    deadline.setHours(deadline.getHours() + hoursToAdd);
-    deadline.setMinutes(deadline.getMinutes() + minutesToAdd);
-    
-    return deadline;
-  }
-  
-  return null;
-}
-
-/**
- * Format reminder times into user-friendly text
- */
-export function formatReminderTime(minutes: number): string {
-  if (minutes < 60) {
-    return `${minutes} minute${minutes !== 1 ? 's' : ''} before`;
-  } else {
-    const hours = minutes / 60;
-    if (hours % 1 === 0) {
-      // Whole number of hours
-      return `${hours} hour${hours !== 1 ? 's' : ''} before`;
-    } else {
-      // Hours and minutes
-      const wholeHours = Math.floor(hours);
-      const remainingMinutes = Math.round((hours - wholeHours) * 60);
-      return `${wholeHours}h ${remainingMinutes}m before`;
-    }
-  }
-}
-
-/**
- * Clear existing reminders to prepare for new ones
- * This ensures we don't have duplicate or stale reminders
- */
-export async function markExistingRemindersObsolete(messageId: string, conditionId?: string): Promise<boolean> {
   try {
-    console.log(`[REMINDER-UTILS] Marking existing reminders as obsolete for message ${messageId}`);
-    
-    let query = supabase
-      .from('reminder_schedule')
-      .update({ status: 'obsolete' })
-      .eq('status', 'pending')
-      .eq('message_id', messageId);
-    
-    if (conditionId) {
-      query = query.eq('condition_id', conditionId);
-    }
-    
-    const { error } = await query;
+    const hoursArray = reminderHours.split(",");
+    const minutesArray = hoursArray.map(hourString => {
+      const trimmedHourString = hourString.trim().toLowerCase();
       
-    if (error) {
-      console.error("[REMINDER-UTILS] Error marking reminders as obsolete:", error);
-      return false;
-    }
-    
-    return true;
-  } catch (error) {
-    console.error("[REMINDER-UTILS] Error in markExistingRemindersObsolete:", error);
-    return false;
-  }
-}
-
-/**
- * Create a debug trigger for testing reminderss
- * This helps with manual testing of reminder functionality
- */
-export async function debugTriggerReminder(messageId: string): Promise<any> {
-  try {
-    const { data, error } = await supabase.functions.invoke("send-reminder-emails", {
-      body: {
-        messageId: messageId,
-        debug: true,
-        forceSend: true
+      if (trimmedHourString.endsWith("h")) {
+        const hours = parseFloat(trimmedHourString.slice(0, -1));
+        return Math.round(hours * 60);
+      } else if (trimmedHourString.endsWith("m")) {
+        return parseInt(trimmedHourString.slice(0, -1), 10);
+      } else {
+        // If no unit is provided, assume it's in minutes
+        return parseInt(trimmedHourString, 10);
       }
     });
-    
-    if (error) {
-      console.error("Error triggering reminder debug:", error);
-      return { success: false, error };
+
+    return minutesArray;
+  } catch (error) {
+    console.error("Error parsing reminder hours:", error);
+    return null;
+  }
+}
+
+/**
+ * Format reminder time in hours and minutes
+ * e.g. 60 => "1h", 30 => "30m"
+ */
+export function formatReminderTime(minutes: number): string {
+  if (minutes >= 60) {
+    return `${(minutes / 60).toFixed(1)}h`;
+  } else {
+    return `${minutes}m`;
+  }
+}
+
+/**
+ * Get effective deadline based on condition type
+ */
+export function getEffectiveDeadline(condition: any): Date | null {
+  if (!condition) {
+    return null;
+  }
+  
+  // Handle different condition types
+  if (condition.condition_type === 'no_check_in' || condition.condition_type === 'regular_check_in' || condition.condition_type === 'inactivity_to_date') {
+    if (!condition.last_checked || !condition.hours_threshold) {
+      console.warn(`[REMINDER-UTILS] Cannot determine deadline for ${condition.condition_type} without last_checked and hours_threshold`);
+      return null;
     }
     
-    return { success: true, data };
-  } catch (err) {
-    console.error("Error in debugTriggerReminder:", err);
-    return { success: false, error: err };
+    const lastCheckedDate = new Date(condition.last_checked);
+    const deadline = new Date(lastCheckedDate);
+    deadline.setHours(deadline.getHours() + condition.hours_threshold);
+    
+    if (condition.minutes_threshold) {
+      deadline.setMinutes(deadline.getMinutes() + condition.minutes_threshold);
+    }
+    
+    return deadline;
+  } else if (condition.trigger_date) {
+    return new Date(condition.trigger_date);
+  } else {
+    console.warn("[REMINDER-UTILS] Could not determine deadline for condition");
+    return null;
   }
 }
