@@ -1,5 +1,5 @@
 
-import { SupabaseClient } from '@supabase/supabase-js';
+import { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.7";
 
 /**
  * Perform check-in for ALL of a user's active conditions within edge function
