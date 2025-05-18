@@ -28,23 +28,32 @@ export function MessageGrid({ messages, isLoading, onDelete, reminderData = {} }
   // State for virtualized rendering
   const [visibleMessages, setVisibleMessages] = useState<Message[]>([]);
 
-  // Implement basic virtualization - only render visible items and a few extra
+  // Implement efficient virtualized rendering - only render visible items and a few extra
   useEffect(() => {
-    // Simple implementation - show all messages initially, but with delayed rendering
-    // for better perceived performance
-    if (messages.length > 0) {
-      // First render only first 3 messages immediately
-      setVisibleMessages(messages.slice(0, 3));
-      
-      // Then render the rest after a small delay
-      if (messages.length > 3) {
-        const timer = setTimeout(() => {
-          setVisibleMessages(messages);
-        }, 100);
-        return () => clearTimeout(timer);
-      }
-    } else {
+    if (!messages || messages.length === 0) {
       setVisibleMessages([]);
+      return;
+    }
+    
+    // Performance optimization: Render in small batches
+    // First render only first 6 messages immediately (fills typical first viewport)
+    setVisibleMessages(messages.slice(0, 6));
+    
+    // Then render the rest after a small delay
+    if (messages.length > 6) {
+      const timer = setTimeout(() => {
+        // Second batch
+        setVisibleMessages(messages.slice(0, 15));
+        
+        // Final batch - after another small delay
+        if (messages.length > 15) {
+          const finalTimer = setTimeout(() => {
+            setVisibleMessages(messages);
+          }, 100);
+          return () => clearTimeout(finalTimer);
+        }
+      }, 50);
+      return () => clearTimeout(timer);
     }
   }, [messages]);
   

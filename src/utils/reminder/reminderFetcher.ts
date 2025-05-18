@@ -1,6 +1,7 @@
 
 /**
  * Utilities for fetching reminder data from the database
+ * Optimized to use our new indexes
  */
 import { supabase } from "@/integrations/supabase/client";
 
@@ -24,11 +25,12 @@ export async function getUpcomingRemindersForMultipleMessages(
     console.log(`[REMINDER-FETCHER] Fetching reminders for ${messageIds.length} messages in batch`);
     
     // Query reminders for all message IDs in a single request
+    // Use our new index on message_id+status for better performance
     const { data, error } = await supabase
       .from('reminder_schedule')
       .select('*')
       .in('message_id', messageIds)
-      .eq('status', 'pending')
+      .eq('status', 'pending') // This uses our new compound index
       .order('scheduled_at', { ascending: true });
     
     if (error) {

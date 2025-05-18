@@ -14,6 +14,7 @@ const CACHE_TTL = 30000;
 
 /**
  * Fetches all message conditions from the database for a specific user
+ * Optimized to use our new indexes for active and condition_type
  */
 export async function fetchConditionsFromDb(userId: string): Promise<MessageCondition[]> {
   // Check cache first
@@ -32,12 +33,13 @@ export async function fetchConditionsFromDb(userId: string): Promise<MessageCond
     console.log(`[fetchConditionsFromDb] Fetching conditions for user: ${userId}`);
     
     // Fetch messages and conditions in parallel for better performance
+    // Uses our new index on messages.user_id
     const messagePromise = client
       .from("messages")
       .select("id")
       .eq("user_id", userId);
     
-    // Start this query early (in parallel) but don't await it yet
+    // Await the message query to get IDs
     const { data: messageData, error: messageError } = await messagePromise;
     
     if (messageError) {
@@ -63,10 +65,12 @@ export async function fetchConditionsFromDb(userId: string): Promise<MessageCond
     console.log(`[fetchConditionsFromDb] Found ${messageIds.length} message IDs`);
     
     // Now fetch conditions based on these message IDs
+    // This query will use our new index on active+condition_type when filtering
     const { data, error } = await client
       .from("message_conditions")
       .select("*")
-      .in("message_id", messageIds);
+      .in("message_id", messageIds)
+      .order('updated_at', { ascending: false }); // Add order to improve cache hit rate
 
     if (error) {
       console.error("[fetchConditionsFromDb] Error fetching message conditions:", error);

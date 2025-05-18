@@ -48,6 +48,7 @@ export function useReminderDataFetcher(messageId: string | null | undefined) {
   /**
    * Fetch all reminder data for a message
    * This includes both scheduled and sent reminders
+   * Optimized to use the new database indexes
    */
   const fetchReminderData = async () => {
     if (!messageId) return null;
@@ -55,14 +56,37 @@ export function useReminderDataFetcher(messageId: string | null | undefined) {
     console.log(`[ReminderDataFetcher] Fetching reminder data for message ${messageId}`);
     
     try {
-      // First fetch upcoming reminders
-      const { data: upcomingReminders, error: upcomingError } = await supabase
-        .from('reminder_schedule')
-        .select('*')
-        .eq('message_id', messageId)
-        .eq('status', 'pending')
-        .order('scheduled_at', { ascending: true });
-        
+      // Use Promise.all to run both queries in parallel for better performance
+      const [upcomingResult, historyResult, logsResult] = await Promise.all([
+        // Query for upcoming reminders using the new index on message_id and status
+        supabase
+          .from('reminder_schedule')
+          .select('*')
+          .eq('message_id', messageId)
+          .eq('status', 'pending')
+          .order('scheduled_at', { ascending: true }),
+          
+        // Query for reminder history
+        supabase
+          .from('sent_reminders')
+          .select('*')
+          .eq('message_id', messageId)
+          .order('sent_at', { ascending: false }),
+          
+        // Query for delivery logs using the new compound index
+        supabase
+          .from('reminder_delivery_log')
+          .select('*')
+          .eq('message_id', messageId)
+          .order('created_at', { ascending: false })
+          .limit(10)
+      ]);
+      
+      // Handle errors from any of the parallel queries
+      const upcomingError = upcomingResult.error;
+      const historyError = historyResult.error;
+      const logsError = logsResult.error;
+      
       if (upcomingError) {
         if (upcomingError.code === '42501' || upcomingError.message?.includes('permission denied')) {
           console.warn("[ReminderDataFetcher] Permission denied fetching reminder schedule - user likely doesn't own this message");
@@ -73,13 +97,6 @@ export function useReminderDataFetcher(messageId: string | null | undefined) {
         return null;
       }
       
-      // Then fetch reminder history
-      const { data: reminderHistory, error: historyError } = await supabase
-        .from('sent_reminders')
-        .select('*')
-        .eq('message_id', messageId)
-        .order('sent_at', { ascending: false });
-        
       if (historyError) {
         if (historyError.code === '42501' || historyError.message?.includes('permission denied')) {
           console.warn("[ReminderDataFetcher] Permission denied fetching reminder history - user likely doesn't own this message");
@@ -90,19 +107,14 @@ export function useReminderDataFetcher(messageId: string | null | undefined) {
         return null;
       }
       
-      // Fetch recent delivery logs (for monitoring purposes)
-      const { data: deliveryLogs, error: logsError } = await supabase
-        .from('reminder_delivery_log')
-        .select('*')
-        .eq('message_id', messageId)
-        .order('created_at', { ascending: false })
-        .limit(10);
-        
       if (logsError && logsError.code !== '42P01') { // Ignore "relation does not exist" errors
         console.warn("[ReminderDataFetcher] Error fetching delivery logs:", logsError);
-      } else if (deliveryLogs) {
-        console.log(`[ReminderDataFetcher] Found ${deliveryLogs.length} delivery log entries`);
+      } else if (logsResult.data) {
+        console.log(`[ReminderDataFetcher] Found ${logsResult.data.length} delivery log entries`);
       }
+      
+      const upcomingReminders = upcomingResult.data;
+      const reminderHistory = historyResult.data;
       
       console.log(`[ReminderDataFetcher] Found ${upcomingReminders?.length || 0} upcoming reminders and ${reminderHistory?.length || 0} reminder history records`);
       
