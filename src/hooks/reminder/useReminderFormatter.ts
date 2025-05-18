@@ -1,6 +1,5 @@
-
 import { formatDistanceToNow } from "date-fns";
-import { formatReminderSchedule } from "@/utils/reminder";
+import { formatReminderSchedule } from "@/utils/reminder/reminderFormatter";
 
 /**
  * Hook to format reminder data for display

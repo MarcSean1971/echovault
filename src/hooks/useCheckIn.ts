@@ -24,8 +24,9 @@ export function useCheckIn() {
         return false;
       }
       
+      // Fix: performCheckIn only accepts conditionId, not the second parameter "app"
       console.log(`[useCheckIn] Performing check-in for user: ${userId}`);
-      const result = await performCheckIn(userId, "app");
+      const result = await performCheckIn(userId);
       console.log(`[useCheckIn] Check-in completed with result:`, result);
       
       // ENHANCED: Dispatch multiple events with slightly different timestamps 

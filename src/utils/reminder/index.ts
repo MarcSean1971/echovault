@@ -10,5 +10,11 @@ export { calculateNextReminderTime } from './reminderCalculator';
 export { formatReminderTime, parseReminderMinutes } from './reminderUtils';
 export { ensureReminderSchedule } from './ensureReminderSchedule';
 
-// Export hooks
-export * from '../hooks/reminder';
+// Export formatters
+export { formatReminderSchedule } from './reminderFormatter';
+
+// Export batch reminder fetcher
+export { getUpcomingRemindersForMultipleMessages } from './reminderFetcher';
+
+// Do not export from hooks - this causes circular dependencies
+// export * from '../hooks/reminder';

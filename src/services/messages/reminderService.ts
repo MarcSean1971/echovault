@@ -1,8 +1,7 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { generateReminderSchedule } from "@/utils/reminder"; // Updated import path
-import { markExistingRemindersObsolete } from "@/utils/reminder/reminderUtils";
+import { markExistingRemindersObsolete as markRemindersAsObsolete } from "@/utils/reminder/reminderUtils";
 
 // Define the Reminder type that needs to be exported
 export interface Reminder {
@@ -35,7 +34,8 @@ export async function createOrUpdateReminderSchedule(params: ReminderSchedulePar
     console.log("[REMINDER-SERVICE] Creating or updating reminder schedule for:", params);
     
     // Mark existing reminders as obsolete first (safety measure)
-    await markExistingRemindersObsolete(params.messageId, params.conditionId);
+    // Renamed the imported function to avoid conflict
+    await markRemindersAsObsolete(params.messageId, params.conditionId);
     
     // Calculate scheduled times
     const scheduleTimes = calculateScheduleTimes(params);

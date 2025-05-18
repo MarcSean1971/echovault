@@ -1,119 +1,86 @@
 
 /**
- * Functions for fetching reminder data from the database
+ * Utilities for fetching reminder data from the database
  */
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/components/ui/use-toast";
 
 /**
- * Get upcoming reminders for a message
- * Updated to handle potential permission errors from RLS
+ * Fetches upcoming reminders for multiple messages in a single batch query
+ * This is an optimized version that eliminates N+1 query problems
  */
-export async function getUpcomingReminders(messageId: string): Promise<{ 
+export async function getUpcomingRemindersForMultipleMessages(
+  messageIds: string[]
+): Promise<Record<string, Array<{ 
   scheduledAt: Date, 
   reminderType: string,
-  priority?: string 
-}[]> {
-  try {
-    // Only get non-obsolete reminders
-    const { data, error } = await supabase
-      .from('reminder_schedule')
-      .select('scheduled_at, reminder_type, delivery_priority, status')
-      .eq('message_id', messageId)
-      .eq('status', 'pending')
-      .order('scheduled_at', { ascending: true });
-    
-    if (error) {
-      // Handle RLS specific errors
-      if (error.code === "42501" || error.message?.includes("permission denied")) {
-        console.warn("[REMINDER-FETCHER] Permission denied accessing reminders - user likely doesn't own this message");
-        throw new Error(`Permission denied: ${error.message}`);
-      } else {
-        console.error("[REMINDER-FETCHER] Error fetching upcoming reminders:", error);
-        throw error;
-      }
-    }
-    
-    if (!data) {
-      return [];
-    }
-    
-    console.log(`[REMINDER-FETCHER] Found ${data.length} pending reminders for message ${messageId}`);
-    
-    // For debugging, log the reminders
-    data.forEach((reminder, idx) => {
-      console.log(`[REMINDER-FETCHER] Reminder ${idx+1}: ${reminder.reminder_type} at ${reminder.scheduled_at} (status: ${reminder.status})`);
-    });
-    
-    return data.map(item => ({
-      scheduledAt: new Date(item.scheduled_at),
-      reminderType: item.reminder_type,
-      priority: item.delivery_priority || 'normal'
-    }));
-  } catch (error) {
-    console.error("[REMINDER-FETCHER] Error in getUpcomingReminders:", error);
-    throw error; // Re-throw to allow proper handling by callers
-  }
-}
-
-/**
- * Get upcoming reminders for multiple messages in a single batch query
- * This eliminates the N+1 query pattern by fetching all reminders at once
- */
-export async function getUpcomingRemindersForMultipleMessages(messageIds: string[]): Promise<
-  Record<string, { scheduledAt: Date, reminderType: string, priority?: string }[]>
-> {
+  priority?: string
+}>>> {
+  // Return early if no message IDs provided
   if (!messageIds || messageIds.length === 0) {
     return {};
   }
   
   try {
-    console.log(`[REMINDER-FETCHER] Batch fetching reminders for ${messageIds.length} messages`);
+    console.log(`[REMINDER-FETCHER] Fetching reminders for ${messageIds.length} messages in batch`);
     
-    // Only get non-obsolete reminders
+    // Query reminders for all message IDs in a single request
     const { data, error } = await supabase
       .from('reminder_schedule')
-      .select('message_id, scheduled_at, reminder_type, delivery_priority, status')
+      .select('*')
       .in('message_id', messageIds)
       .eq('status', 'pending')
       .order('scheduled_at', { ascending: true });
     
     if (error) {
-      console.error("[REMINDER-FETCHER] Error batch fetching reminders:", error);
-      return {};
+      console.error('[REMINDER-FETCHER] Error fetching batch reminders:', error);
+      throw error;
     }
     
-    if (!data || data.length === 0) {
-      console.log("[REMINDER-FETCHER] No reminders found in batch query");
-      return {};
-    }
+    // Group reminders by message ID
+    const remindersByMessage: Record<string, Array<{
+      scheduledAt: Date,
+      reminderType: string,
+      priority?: string
+    }>> = {};
     
-    console.log(`[REMINDER-FETCHER] Found ${data.length} pending reminders across ${messageIds.length} messages`);
-    
-    // Group reminders by message_id
-    const remindersByMessage: Record<string, { scheduledAt: Date, reminderType: string, priority?: string }[]> = {};
-    
-    // Initialize all message IDs with empty arrays (so we return data for all messages, even those with no reminders)
+    // Initialize empty arrays for all message IDs
     messageIds.forEach(id => {
       remindersByMessage[id] = [];
     });
     
-    // Populate with actual reminders
-    data.forEach(item => {
-      if (!remindersByMessage[item.message_id]) {
-        remindersByMessage[item.message_id] = [];
-      }
-      
-      remindersByMessage[item.message_id].push({
-        scheduledAt: new Date(item.scheduled_at),
-        reminderType: item.reminder_type,
-        priority: item.delivery_priority || 'normal'
+    // Process and group reminders
+    if (data && data.length > 0) {
+      data.forEach(reminder => {
+        const messageId = reminder.message_id;
+        
+        // Convert to the expected format
+        const formattedReminder = {
+          scheduledAt: new Date(reminder.scheduled_at),
+          reminderType: reminder.reminder_type,
+          priority: reminder.delivery_priority
+        };
+        
+        // Add to the appropriate message's array
+        if (remindersByMessage[messageId]) {
+          remindersByMessage[messageId].push(formattedReminder);
+        }
       });
-    });
+      
+      // Sort each message's reminders by scheduled_at
+      Object.keys(remindersByMessage).forEach(messageId => {
+        remindersByMessage[messageId].sort(
+          (a, b) => a.scheduledAt.getTime() - b.scheduledAt.getTime()
+        );
+      });
+    }
+    
+    console.log(`[REMINDER-FETCHER] Found reminders for ${Object.keys(remindersByMessage).filter(id => 
+      remindersByMessage[id].length > 0).length} out of ${messageIds.length} messages`);
     
     return remindersByMessage;
   } catch (error) {
-    console.error("[REMINDER-FETCHER] Error in getUpcomingRemindersForMultipleMessages:", error);
+    console.error('[REMINDER-FETCHER] Error in getUpcomingRemindersForMultipleMessages:', error);
+    // Return empty object on error
     return {};
   }
 }
