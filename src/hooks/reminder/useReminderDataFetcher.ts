@@ -52,6 +52,7 @@ export function useReminderDataFetcher(messageId: string | null | undefined) {
   const fetchReminderData = async () => {
     if (!messageId) return null;
     setIsLoading(true);
+    console.log(`[ReminderDataFetcher] Fetching reminder data for message ${messageId}`);
     
     try {
       // First fetch upcoming reminders
@@ -64,10 +65,10 @@ export function useReminderDataFetcher(messageId: string | null | undefined) {
         
       if (upcomingError) {
         if (upcomingError.code === '42501' || upcomingError.message?.includes('permission denied')) {
-          console.warn("Permission denied fetching reminder schedule - user likely doesn't own this message");
+          console.warn("[ReminderDataFetcher] Permission denied fetching reminder schedule - user likely doesn't own this message");
           setPermissionError(true);
         } else {
-          console.error("Error fetching upcoming reminders:", upcomingError);
+          console.error("[ReminderDataFetcher] Error fetching upcoming reminders:", upcomingError);
         }
         return null;
       }
@@ -81,12 +82,26 @@ export function useReminderDataFetcher(messageId: string | null | undefined) {
         
       if (historyError) {
         if (historyError.code === '42501' || historyError.message?.includes('permission denied')) {
-          console.warn("Permission denied fetching reminder history - user likely doesn't own this message");
+          console.warn("[ReminderDataFetcher] Permission denied fetching reminder history - user likely doesn't own this message");
           setPermissionError(true);
         } else {
-          console.error("Error fetching reminder history:", historyError);
+          console.error("[ReminderDataFetcher] Error fetching reminder history:", historyError);
         }
         return null;
+      }
+      
+      // Fetch recent delivery logs (for monitoring purposes)
+      const { data: deliveryLogs, error: logsError } = await supabase
+        .from('reminder_delivery_log')
+        .select('*')
+        .eq('message_id', messageId)
+        .order('created_at', { ascending: false })
+        .limit(10);
+        
+      if (logsError && logsError.code !== '42P01') { // Ignore "relation does not exist" errors
+        console.warn("[ReminderDataFetcher] Error fetching delivery logs:", logsError);
+      } else if (deliveryLogs) {
+        console.log(`[ReminderDataFetcher] Found ${deliveryLogs.length} delivery log entries`);
       }
       
       console.log(`[ReminderDataFetcher] Found ${upcomingReminders?.length || 0} upcoming reminders and ${reminderHistory?.length || 0} reminder history records`);
@@ -100,7 +115,7 @@ export function useReminderDataFetcher(messageId: string | null | undefined) {
         reminderHistory: reminderHistory || []
       } as ReminderData;
     } catch (error) {
-      console.error("Error in fetchReminderData:", error);
+      console.error("[ReminderDataFetcher] Error in fetchReminderData:", error);
       return null;
     } finally {
       setIsLoading(false);

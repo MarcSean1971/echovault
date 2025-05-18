@@ -36,6 +36,9 @@ export function useNextReminders(messageId: string | undefined, refreshTrigger: 
         console.log(`[useNextReminders] No reminder data returned for message ${messageId}`);
         setUpcomingReminders([]);
         setHasReminders(false);
+        if (permissionError) {
+          setError("Permission error: You don't have access to this message's reminders");
+        }
       }
     } catch (err: any) {
       console.error(`[useNextReminders] Error refreshing reminders:`, err);

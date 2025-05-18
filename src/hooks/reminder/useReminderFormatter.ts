@@ -29,6 +29,7 @@ export function useReminderFormatter() {
         );
         
         nextReminderDate = sortedReminders[0].scheduledAt;
+        console.log(`[ReminderFormatter] Next reminder scheduled for: ${nextReminderDate.toISOString()}`);
       }
     }
     
@@ -45,6 +46,8 @@ export function useReminderFormatter() {
       if (lastReminder.scheduled_for) {
         lastScheduledFor = new Date(lastReminder.scheduled_for);
       }
+      
+      console.log(`[ReminderFormatter] Last reminder sent at: ${lastSentAt.toISOString()}`);
     }
     
     // Format dates for display

@@ -22,9 +22,30 @@ export function formatReminderSchedule(schedule: { scheduledAt: Date, reminderTy
     
     try {
       const formattedTime = format(item.scheduledAt, "MMM d, yyyy h:mm a");
-      const typeName = item.reminderType === 'reminder' ? 'Reminder' : 
-                      (item.reminderType === 'final_delivery' ? 'Final Delivery' : item.reminderType);
-      const priorityFlag = item.priority === 'critical' ? ' (Critical)' : '';
+      
+      // Improved type display with proper capitalization and spacing
+      let typeName = item.reminderType;
+      if (item.reminderType === 'reminder') {
+        typeName = 'Reminder';
+      } else if (item.reminderType === 'final_delivery') {
+        typeName = 'Final Delivery';
+      } else {
+        // Convert snake_case to Title Case
+        typeName = item.reminderType
+          .split('_')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ');
+      }
+      
+      // Add priority flag if present
+      let priorityFlag = '';
+      if (item.priority) {
+        if (item.priority === 'critical') {
+          priorityFlag = ' (Critical)';
+        } else if (item.priority === 'high') {
+          priorityFlag = ' (High Priority)';
+        }
+      }
       
       return `${formattedTime} (${typeName}${priorityFlag})`;
     } catch (error) {

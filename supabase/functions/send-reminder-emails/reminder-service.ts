@@ -1,3 +1,4 @@
+
 import { supabaseClient } from "./supabase-client.ts";
 import { ReminderData } from "./types/reminder-types.ts";
 import { sendCreatorReminder, sendRecipientReminders, ReminderResult } from "./services/reminder-sender.ts";
@@ -35,6 +36,21 @@ export async function processReminder(
       
     if (messageError || !messageData) {
       console.error(`Error fetching message ${reminder.message_id}:`, messageError);
+      // Log the error in the delivery log
+      try {
+        await supabase.from('reminder_delivery_log').insert({
+          reminder_id: reminder.id,
+          message_id: reminder.message_id,
+          condition_id: reminder.condition_id,
+          recipient: "system",
+          delivery_channel: "system",
+          channel_order: 0,
+          delivery_status: 'error',
+          error_message: `Message not found: ${messageError?.message || 'Unknown error'}`
+        });
+      } catch (logError) {
+        console.error("Failed to log delivery error:", logError);
+      }
       return { success: false, error: `Message not found: ${messageError?.message}` };
     }
     
@@ -46,6 +62,21 @@ export async function processReminder(
       
     if (conditionError || !conditionData) {
       console.error(`Error fetching condition ${reminder.condition_id}:`, conditionError);
+      // Log the error in the delivery log
+      try {
+        await supabase.from('reminder_delivery_log').insert({
+          reminder_id: reminder.id,
+          message_id: reminder.message_id,
+          condition_id: reminder.condition_id,
+          recipient: "system",
+          delivery_channel: "system",
+          channel_order: 0,
+          delivery_status: 'error',
+          error_message: `Condition not found: ${conditionError?.message || 'Unknown error'}`
+        });
+      } catch (logError) {
+        console.error("Failed to log delivery error:", logError);
+      }
       return { success: false, error: `Condition not found: ${conditionError?.message}` };
     }
     
@@ -80,6 +111,23 @@ export async function processReminder(
         // Continue despite tracking error
       }
       
+      // Log the delivery attempt in the new delivery log
+      try {
+        await supabase.from('reminder_delivery_log').insert({
+          reminder_id: reminder.id,
+          message_id: reminder.message_id,
+          condition_id: reminder.condition_id,
+          recipient: "multiple-recipients",
+          delivery_channel: "system",
+          channel_order: 0,
+          delivery_status: 'processing',
+          error_message: null
+        });
+      } catch (logError) {
+        console.warn("Error logging delivery attempt:", logError);
+        // Continue despite logging error
+      }
+      
       // For final delivery, we want to try multiple channels with fallbacks
       // This matches behavior in send-message-notifications function
       try {
@@ -111,9 +159,41 @@ export async function processReminder(
           }
         } else {
           if (debug) console.log("No recipients configured for final delivery");
+          
+          // Log the missing recipients error
+          try {
+            await supabase.from('reminder_delivery_log').insert({
+              reminder_id: reminder.id,
+              message_id: reminder.message_id,
+              condition_id: reminder.condition_id,
+              recipient: "system",
+              delivery_channel: "system",
+              channel_order: 0,
+              delivery_status: 'error',
+              error_message: "No recipients configured for final delivery"
+            });
+          } catch (logError) {
+            console.warn("Error logging delivery error:", logError);
+          }
         }
       } catch (deliveryError) {
         console.error("Error in delivery channels for final delivery:", deliveryError);
+        
+        // Log the delivery error
+        try {
+          await supabase.from('reminder_delivery_log').insert({
+            reminder_id: reminder.id,
+            message_id: reminder.message_id,
+            condition_id: reminder.condition_id,
+            recipient: "system",
+            delivery_channel: "system", 
+            channel_order: 0,
+            delivery_status: 'error',
+            error_message: `Delivery channel error: ${deliveryError.message || 'Unknown error'}`
+          });
+        } catch (logError) {
+          console.warn("Error logging delivery error:", logError);
+        }
       }
       
       // Record the final delivery status
@@ -176,6 +256,22 @@ export async function processReminder(
           );
         } else {
           if (debug) console.log("No recipients configured for reminder");
+          
+          // Log the missing recipients error
+          try {
+            await supabase.from('reminder_delivery_log').insert({
+              reminder_id: reminder.id,
+              message_id: reminder.message_id,
+              condition_id: reminder.condition_id,
+              recipient: "system",
+              delivery_channel: "system",
+              channel_order: 0, 
+              delivery_status: 'error',
+              error_message: "No recipients configured for reminder"
+            });
+          } catch (logError) {
+            console.warn("Error logging delivery error:", logError);
+          }
         }
       }
       
@@ -198,6 +294,23 @@ export async function processReminder(
     const anySuccess = results.some(r => r.success);
     const allFailed = results.length > 0 && results.every(r => !r.success);
     
+    // Update the delivery log with final status
+    try {
+      await supabase.from('reminder_delivery_log').insert({
+        reminder_id: reminder.id,
+        message_id: reminder.message_id,
+        condition_id: reminder.condition_id,
+        recipient: "summary",
+        delivery_channel: "summary",
+        channel_order: 999,
+        delivery_status: anySuccess ? 'delivered' : 'failed',
+        error_message: allFailed ? "All reminder deliveries failed" : null,
+        response_data: { results: results }
+      });
+    } catch (logError) {
+      console.warn("Error logging final delivery status:", logError);
+    }
+    
     if (debug) {
       console.log(`Reminder processing complete with ${results.filter(r => r.success).length}/${results.length} successful deliveries`);
     }
@@ -210,6 +323,24 @@ export async function processReminder(
     };
   } catch (error: any) {
     console.error(`Error in processReminder:`, error);
+    
+    // Log the error in the delivery log
+    try {
+      const supabase = supabaseClient();
+      await supabase.from('reminder_delivery_log').insert({
+        reminder_id: "unknown", // We may not have the reminder id in case of error
+        message_id: "unknown",
+        condition_id: "unknown",
+        recipient: "system",
+        delivery_channel: "system",
+        channel_order: 0,
+        delivery_status: 'error',
+        error_message: `System error: ${error.message || 'Unknown error in processReminder'}`
+      });
+    } catch (logError) {
+      console.error("Failed to log error in delivery log:", logError);
+    }
+    
     return { 
       success: false, 
       error: error.message || "Unknown error in processReminder" 

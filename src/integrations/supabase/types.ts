@@ -284,6 +284,54 @@ export type Database = {
         }
         Relationships: []
       }
+      reminder_delivery_log: {
+        Row: {
+          attempt_count: number
+          channel_order: number
+          condition_id: string
+          created_at: string
+          delivery_channel: string
+          delivery_status: string
+          error_message: string | null
+          id: string
+          message_id: string
+          recipient: string
+          reminder_id: string
+          response_data: Json | null
+          updated_at: string
+        }
+        Insert: {
+          attempt_count?: number
+          channel_order?: number
+          condition_id: string
+          created_at?: string
+          delivery_channel?: string
+          delivery_status: string
+          error_message?: string | null
+          id?: string
+          message_id: string
+          recipient: string
+          reminder_id: string
+          response_data?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          attempt_count?: number
+          channel_order?: number
+          condition_id?: string
+          created_at?: string
+          delivery_channel?: string
+          delivery_status?: string
+          error_message?: string | null
+          id?: string
+          message_id?: string
+          recipient?: string
+          reminder_id?: string
+          response_data?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       reminder_schedule: {
         Row: {
           condition_id: string
