@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { toast } from "@/components/ui/use-toast";
-import { performCheckIn } from "@/services/messages/conditions/checkInService";
+import { performUserCheckIn } from "@/services/messages/conditions/checkInService";
 import { useAuth } from "@/contexts/AuthContext";
 
 export function useCheckIn() {
@@ -24,9 +24,9 @@ export function useCheckIn() {
         return false;
       }
       
-      // Fix: performCheckIn only accepts conditionId, not the second parameter "app"
+      // Fix: Call the new function that updates all user conditions
       console.log(`[useCheckIn] Performing check-in for user: ${userId}`);
-      const result = await performCheckIn(userId);
+      const result = await performUserCheckIn(userId);
       console.log(`[useCheckIn] Check-in completed with result:`, result);
       
       // ENHANCED: Dispatch multiple events with slightly different timestamps 

@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
+import { performUserCheckIn } from "@/services/messages/conditions/checkInService";
 
 /**
  * Send a WhatsApp check-in message
@@ -24,12 +25,21 @@ export async function sendWhatsAppCheckIn(
       formattedPhone : 
       `+${formattedPhone.replace(/\D/g, '')}`;
       
+    // Update all user conditions (using our new function)
+    const checkInResult = await performUserCheckIn(userId);
+    
+    if (!checkInResult) {
+      console.error("Failed to update user conditions for WhatsApp check-in");
+      return { success: false, error: "Failed to update user conditions" };
+    }
+    
     // Call the WhatsApp check-in function through Supabase Edge Function
     const { data, error } = await supabase.functions.invoke("perform-whatsapp-check-in", {
       body: {
         phone: cleanPhone,
         userId: userId,
-        checkInCode: checkInCode
+        checkInCode: checkInCode,
+        actionAlreadyPerformed: true // Indicate we already performed the check-in update
       }
     });
     

@@ -47,6 +47,74 @@ export async function performCheckIn(conditionId: string): Promise<boolean> {
 }
 
 /**
+ * Perform check-in for ALL of a user's active conditions
+ * This is called from the check-in button in the UI
+ */
+export async function performUserCheckIn(userId: string): Promise<boolean> {
+  try {
+    console.log(`[CHECK-IN] Performing user check-in for user ${userId}`);
+    const now = new Date().toISOString();
+    
+    // Fetch all active check-in type conditions for the user
+    const { data: conditions, error: fetchError } = await supabase
+      .from("message_conditions")
+      .select("id, message_id, condition_type")
+      .eq("active", true)
+      .in("condition_type", ["no_check_in", "recurring_check_in", "inactivity_to_date"])
+      .order("id");
+      
+    if (fetchError) {
+      console.error("[CHECK-IN] Error fetching user conditions:", fetchError);
+      return false;
+    }
+    
+    console.log(`[CHECK-IN] Found ${conditions?.length || 0} active conditions to update`);
+    
+    if (!conditions || conditions.length === 0) {
+      console.log("[CHECK-IN] No active conditions found for user");
+      return true; // No error, just no conditions to update
+    }
+    
+    // Update all conditions in a batch
+    const { error: updateError } = await supabase
+      .from("message_conditions")
+      .update({ 
+        last_checked: now
+      })
+      .in("id", conditions.map(condition => condition.id));
+      
+    if (updateError) {
+      console.error("[CHECK-IN] Error updating conditions:", updateError);
+      return false;
+    }
+    
+    console.log(`[CHECK-IN] Successfully updated ${conditions.length} conditions`);
+    
+    // Regenerate reminder schedules for all updated conditions
+    for (const condition of conditions) {
+      console.log(`[CHECK-IN] Regenerating reminder schedule for condition ${condition.id}`);
+      await ensureReminderSchedule(condition.id);
+    }
+    
+    // Dispatch a single event to notify components about the update
+    // This will trigger UI refreshes
+    window.dispatchEvent(new CustomEvent('conditions-updated', { 
+      detail: { 
+        updatedAt: now,
+        triggerValue: Date.now(), // Add unique timestamp to ensure events are distinct
+        source: 'user-check-in',
+        userId: userId
+      }
+    }));
+    
+    return true;
+  } catch (error) {
+    console.error("[CHECK-IN] Error in performUserCheckIn:", error);
+    return false;
+  }
+}
+
+/**
  * Get the next check-in deadline for a condition
  */
 export function getNextCheckInDeadline(condition: any): Date | null {
