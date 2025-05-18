@@ -60,15 +60,20 @@ export function DeadmanSwitchControls({
       
       toast({
         title: "Sending test reminder",
-        description: "Initiating reminder check...",
+        description: "Initiating test reminder to message creator...",
         duration: 3000,
       });
       
-      // Fix: Removing the second argument, as triggerManualReminder expects only messageId
-      const result = await triggerManualReminder(messageId);
+      // Call triggerManualReminder with testMode=true to ensure it sends to creator only
+      const result = await triggerManualReminder(messageId, true, true);
       
       if (result.success) {
-        console.log(`Reminder triggered successfully for message ${messageId}`);
+        console.log(`Test reminder triggered successfully for message ${messageId}`);
+        toast({
+          title: "Test reminder sent",
+          description: "A test reminder has been sent to the message creator.",
+          duration: 5000,
+        });
       } else {
         console.error("Error triggering reminder:", result.error);
         toast({

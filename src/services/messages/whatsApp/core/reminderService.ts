@@ -6,9 +6,9 @@ import { toast } from "@/components/ui/use-toast";
  * Trigger a manual reminder for a message
  * Enhanced with retry mechanism and multiple function calls
  */
-export async function triggerManualReminder(messageId: string, forceSend: boolean = true) {
+export async function triggerManualReminder(messageId: string, forceSend: boolean = true, testMode: boolean = true) {
   try {
-    console.log(`Triggering manual reminder check for message ${messageId}, forceSend: ${forceSend}`);
+    console.log(`Triggering manual reminder check for message ${messageId}, forceSend: ${forceSend}, testMode: ${testMode}`);
 
     toast({
       title: "Reminder Check Triggered",
@@ -25,7 +25,7 @@ export async function triggerManualReminder(messageId: string, forceSend: boolea
         recipient: 'system',
         delivery_channel: 'manual',
         delivery_status: 'processing',
-        response_data: { triggered_at: new Date().toISOString(), forceSend }
+        response_data: { triggered_at: new Date().toISOString(), forceSend, testMode }
       });
     } catch (logError) {
       console.warn("Error logging manual trigger:", logError);
@@ -40,7 +40,8 @@ export async function triggerManualReminder(messageId: string, forceSend: boolea
           messageId: messageId,
           debug: true,
           forceSend: forceSend,
-          source: "manual-ui-trigger"
+          source: "manual-ui-trigger",
+          testMode: testMode // Add testMode parameter to force creator-only reminder
         }
       });
       
@@ -64,7 +65,8 @@ export async function triggerManualReminder(messageId: string, forceSend: boolea
           messageId: messageId,
           debug: true,
           forceSend: forceSend,
-          source: "manual-ui-trigger-backup"
+          source: "manual-ui-trigger-backup",
+          testMode: testMode // Add testMode parameter to force creator-only reminder
         }
       });
 
@@ -90,7 +92,7 @@ export async function triggerManualReminder(messageId: string, forceSend: boolea
       let successMessage = `Successfully initiated reminder sending process.`;
       
       toast({
-        title: "Reminder Process Started",
+        title: "Test Reminder Sent",
         description: successMessage,
         duration: 5000,
       });
@@ -104,7 +106,7 @@ export async function triggerManualReminder(messageId: string, forceSend: boolea
           recipient: 'system',
           delivery_channel: 'manual',
           delivery_status: 'delivered',
-          response_data: { completed_at: new Date().toISOString() }
+          response_data: { completed_at: new Date().toISOString(), testMode }
         });
       } catch (logError) {
         console.warn("Error logging manual trigger completion:", logError);

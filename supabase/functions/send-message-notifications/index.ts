@@ -5,6 +5,7 @@ import { sendMessageNotification } from "./notification-service.ts";
 import { MessageNotificationRequest } from "./types.ts";
 import { supabaseClient } from "./supabase-client.ts";
 import { getSystemHealthStatus } from "./db/system-health.ts";
+import { sendCreatorTestNotification } from "./test-notification-service.ts"; // New import for test mode
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -47,7 +48,15 @@ const handler = async (req: Request): Promise<Response> => {
       requestData = {};
     }
     
-    const { messageId, isEmergency = false, debug = false, keepArmed = undefined, forceSend = false, source = 'api' } = requestData;
+    const { 
+      messageId, 
+      isEmergency = false, 
+      debug = false, 
+      keepArmed = undefined, 
+      forceSend = false, 
+      source = 'api',
+      testMode = false // New parameter for test mode
+    } = requestData;
     
     console.log(`===== SEND MESSAGE NOTIFICATIONS =====`);
     console.log(`Starting notification process at ${new Date().toISOString()}`);
@@ -55,7 +64,33 @@ const handler = async (req: Request): Promise<Response> => {
     console.log(`Processing message notifications${messageId ? ` for message ID: ${messageId}` : ''}`);
     console.log(`Is emergency notification: ${isEmergency ? 'YES' : 'No'}`);
     console.log(`Force send: ${forceSend ? 'YES' : 'No'}`);
+    console.log(`Test mode: ${testMode ? 'YES' : 'No'}`);
     console.log(`Source: ${source}`);
+    
+    // New: Handle test mode specially
+    if (testMode && messageId) {
+      console.log(`Test mode enabled for message ${messageId} - sending test notification to creator only`);
+      const testResult = await sendCreatorTestNotification(messageId, debug);
+      
+      return new Response(
+        JSON.stringify({
+          success: testResult.success,
+          messages_processed: 1,
+          successful_notifications: testResult.success ? 1 : 0,
+          failed_notifications: testResult.success ? 0 : 1,
+          results: [testResult],
+          timestamp: new Date().toISOString(),
+          testMode: true
+        }),
+        {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json", 
+            ...corsHeaders,
+          },
+        }
+      );
+    }
     
     // Enhanced logging for trigger sources
     if (source && source.includes('trigger')) {

@@ -2,6 +2,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { processDueReminders } from "./reminder-processor.ts";
 import { getMonitoringStatus } from "./monitoring.ts";
+import { sendCreatorTestReminder } from "./services/test-reminder-service.ts"; // New import
 
 // Define CORS headers
 const corsHeaders = {
@@ -48,14 +49,62 @@ const handler = async (req: Request) => {
       debug = false, 
       forceSend = false,
       source = 'api',
-      batchSize = 50 
+      batchSize = 50,
+      testMode = false // New parameter
     } = requestData;
     
     console.log("====== REMINDER SERVICE STARTED ======");
     console.log(`Processing reminders at ${new Date().toISOString()}`);
     console.log(`Debug mode: ${debug ? 'enabled' : 'disabled'}`);
     console.log(`Force send: ${forceSend ? 'enabled' : 'disabled'}`);
+    console.log(`Test mode: ${testMode ? 'enabled' : 'disabled'}`);
     console.log(`Action: ${action}`);
+    
+    // NEW: Direct test reminder to creator path
+    if (testMode && messageId) {
+      console.log(`Test mode enabled for message ${messageId} - sending direct reminder to creator`);
+      const testResult = await sendCreatorTestReminder(messageId, debug);
+      
+      console.log(`Test reminder result:`, testResult);
+      
+      if (testResult.success) {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            processed: 1,
+            successful: 1,
+            failed: 0,
+            skipped: 0,
+            results: [testResult],
+            timestamp: new Date().toISOString(),
+            testMode: true
+          }),
+          {
+            status: 200,
+            headers: {
+              "Content-Type": "application/json",
+              ...corsHeaders,
+            },
+          }
+        );
+      } else {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: testResult.error || "Test reminder failed",
+            timestamp: new Date().toISOString(),
+            testMode: true
+          }),
+          {
+            status: 500,
+            headers: {
+              "Content-Type": "application/json",
+              ...corsHeaders,
+            },
+          }
+        );
+      }
+    }
     
     // Process the reminders with enhanced logging
     console.log(`[OPTIMIZED] Processing reminders with batch size ${batchSize}`);
@@ -92,7 +141,8 @@ const handler = async (req: Request) => {
               messageId: messageId,
               debug: true,
               forceSend: true,
-              source: "reminder-force-fallback"
+              source: "reminder-force-fallback",
+              testMode: testMode // Pass testMode to notification function
             })
           }
         );
