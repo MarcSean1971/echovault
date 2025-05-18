@@ -50,6 +50,7 @@ export interface PanicTriggerResult {
   message: string;
   triggered_at: string;
   keepArmed?: boolean;
+  duplicate?: boolean; // Added this property to fix the TypeScript error
 }
 
 export interface MessageStatusResult {
