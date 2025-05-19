@@ -62,11 +62,11 @@ export function VideoPlayer({
   
   return (
     <div className="space-y-2">
-      <div className="relative rounded-md overflow-hidden bg-black group">
+      <div className="relative rounded-md overflow-hidden bg-black group aspect-video w-full">
         <video 
           ref={videoRef}
           src={videoUrl}
-          className="w-full h-full max-h-[300px]"
+          className="w-full h-full object-contain"
           onEnded={() => setIsPlaying(false)}
           key={videoUrl} // Key helps React recognize when to remount the video element
         />

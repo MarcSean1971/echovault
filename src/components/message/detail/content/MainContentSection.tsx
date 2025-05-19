@@ -55,9 +55,10 @@ export function MainContentSection({
   deadline,
   isLoading = false
 }: MainContentSectionProps) {
+  // Render everything immediately for better user experience
   return (
     <div className="space-y-6">
-      {/* Message Header - Render immediately */}
+      {/* Message Header */}
       <MessageHeader
         message={message}
         isArmed={isArmed}
@@ -66,7 +67,7 @@ export function MainContentSection({
         handleArmMessage={handleArmMessage}
       />
       
-      {/* Main Message Content Card - Render immediately */}
+      {/* Main Message Content Card */}
       <Card className="overflow-hidden border border-border/50 shadow-sm">
         <CardContent className="p-6">
           <MessageContent 
@@ -77,14 +78,13 @@ export function MainContentSection({
         </CardContent>
       </Card>
       
-      {/* Status & Delivery Section - May use loading state */}
+      {/* Status & Delivery Section */}
       <Card className="overflow-hidden border border-border/50 shadow-sm">
         <CardContent className="p-6">
-          {isLoading && !condition ? (
+          {!condition ? (
             <div className="space-y-4">
               <Skeleton className="h-6 w-1/4" />
-              <Skeleton className="h-24 w-full" />
-              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-16 w-full" />
             </div>
           ) : (
             <StatusDeliverySection
@@ -106,40 +106,32 @@ export function MainContentSection({
         </CardContent>
       </Card>
       
-      {/* Recipients Section - May use loading state */}
+      {/* Recipients Section */}
       <Card className="overflow-hidden border border-border/50 shadow-sm">
         <CardHeader className="px-6 pt-6 pb-3">
           <h3 className="text-lg font-medium">Recipients</h3>
         </CardHeader>
         <CardContent className="p-6 pt-0">
-          {isLoading && (!recipients || recipients.length === 0) ? (
-            <div className="space-y-2">
-              <Skeleton className="h-8 w-full" />
-              <Skeleton className="h-8 w-full" />
-            </div>
+          {!recipients || recipients.length === 0 ? (
+            <div className="text-muted-foreground">No recipients configured</div>
           ) : (
             <RecipientsSection
               recipients={recipients}
               isArmed={isArmed}
               isActionLoading={isActionLoading}
               onSendTestMessage={onSendTestMessage}
-              renderRecipients={() => {
-                if (!recipients || recipients.length === 0) {
-                  return <div className="text-muted-foreground">No recipients configured</div>;
-                }
-                return (
-                  <div className="space-y-2">
-                    {recipients.map((recipient) => (
-                      <div key={recipient.id} className="p-2 border rounded-md flex justify-between items-center">
-                        <div>
-                          <div className="font-medium">{recipient.name}</div>
-                          <div className="text-sm text-muted-foreground">{recipient.email}</div>
-                        </div>
+              renderRecipients={() => (
+                <div className="space-y-2">
+                  {recipients.map((recipient) => (
+                    <div key={recipient.id} className="p-2 border rounded-md flex justify-between items-center">
+                      <div>
+                        <div className="font-medium">{recipient.name}</div>
+                        <div className="text-sm text-muted-foreground">{recipient.email}</div>
                       </div>
-                    ))}
-                  </div>
-                );
-              }}
+                    </div>
+                  ))}
+                </div>
+              )}
             />
           )}
         </CardContent>

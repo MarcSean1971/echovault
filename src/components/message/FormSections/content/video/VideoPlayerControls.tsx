@@ -2,7 +2,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Play, Pause, Trash2 } from "lucide-react";
-import { BUTTON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface VideoPlayerControlsProps {
@@ -17,7 +17,7 @@ export function VideoPlayerControls({
   onClearVideo
 }: VideoPlayerControlsProps) {
   return (
-    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity flex justify-between items-center">
+    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity flex justify-between items-center w-full">
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>

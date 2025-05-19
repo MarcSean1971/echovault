@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import { Message } from "@/types/message";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { RefreshCw } from "lucide-react";
@@ -30,10 +30,10 @@ export function VideoContentSection({
   
   return (
     <>
-      {/* Video container with proper sizing */}
+      {/* Video container with proper sizing - ensures consistent width */}
       <div className="mb-6 relative rounded-md overflow-hidden bg-black/5 hover:shadow-md">
-        {/* Video player loads automatically */}
-        <div className="aspect-video">
+        {/* Fixed aspect ratio container for video */}
+        <div className="aspect-video w-full">
           <VideoPlayer 
             message={message} 
             onError={(error) => setLoadingError(error)} 
@@ -79,66 +79,74 @@ export function VideoContentSection({
   );
 }
 
-// Simplified video player component with proper width constraints
+// Optimized video player component with proper width constraints
 function VideoPlayer({ message, onError }: { message: Message; onError: (error: string) => void }) {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   
   // Process video content immediately when component mounts
-  useEffect(() => {
-    processVideoContent();
-  }, [message]);
-  
-  // Extract video data from message
-  const processVideoContent = useCallback(async () => {
-    try {
-      // Reset states
-      setIsLoading(true);
-      
-      // Import dynamically to avoid slowing down initial page load
-      const { parseVideoContent } = await import('@/services/messages/mediaService');
-      
-      // Get video content
-      const contentToUse = message.video_content || message.content;
-      
-      if (!contentToUse) {
-        onError("No video content found");
-        setIsLoading(false);
-        return;
-      }
-      
+  React.useEffect(() => {
+    // Reset states and start loading immediately
+    setIsLoading(true);
+    setVideoUrl(null);
+    
+    // Use an async function to process video
+    const loadVideo = async () => {
       try {
-        // Extract video data
-        const { videoData } = parseVideoContent(contentToUse);
+        // Import dynamically to avoid slowing down initial page load
+        const { parseVideoContent } = await import('@/services/messages/mediaService');
         
-        if (!videoData) {
-          onError("Unable to parse video content");
+        // Get video content
+        const contentToUse = message.video_content || message.content;
+        
+        if (!contentToUse) {
+          onError("No video content found");
           setIsLoading(false);
           return;
         }
         
-        // Create blob URL from video data
-        const binaryString = window.atob(videoData);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
+        try {
+          // Extract video data
+          const { videoData } = parseVideoContent(contentToUse);
+          
+          if (!videoData) {
+            onError("Unable to parse video content");
+            setIsLoading(false);
+            return;
+          }
+          
+          // Create blob URL from video data
+          const binaryString = window.atob(videoData);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          
+          const blob = new Blob([bytes], { type: 'video/webm' });
+          const url = URL.createObjectURL(blob);
+          
+          setVideoUrl(url);
+        } catch (e) {
+          console.error("Error processing video:", e);
+          onError("Error processing video data");
         }
-        
-        const blob = new Blob([bytes], { type: 'video/webm' });
-        const url = URL.createObjectURL(blob);
-        
-        setVideoUrl(url);
-        setIsLoading(false);
       } catch (e) {
-        console.error("Error processing video:", e);
-        onError("Error processing video data");
+        console.error("Error in video processing:", e);
+        onError("Error loading video processing module");
+      } finally {
         setIsLoading(false);
       }
-    } catch (e) {
-      console.error("Error in video processing:", e);
-      onError("Error loading video processing module");
-      setIsLoading(false);
-    }
+    };
+    
+    // Start loading video immediately
+    loadVideo();
+    
+    // Cleanup function to revoke object URL when component unmounts
+    return () => {
+      if (videoUrl) {
+        URL.revokeObjectURL(videoUrl);
+      }
+    };
   }, [message, onError]);
   
   if (isLoading) {
@@ -161,7 +169,7 @@ function VideoPlayer({ message, onError }: { message: Message; onError: (error: 
     <video 
       controls
       src={videoUrl}
-      className="w-full h-full"
+      className="w-full h-full object-contain"
       preload="metadata"
       onError={() => onError("Error playing video")}
     />

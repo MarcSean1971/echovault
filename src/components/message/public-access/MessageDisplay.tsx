@@ -27,7 +27,6 @@ export const MessageDisplay = ({
   const recipientEmail = searchParams.get('recipient');
   
   const [isLoading, setIsLoading] = useState(true);
-  const [contentReady, setContentReady] = useState(false);
   
   // Format date helper
   const formatMessageDate = (dateString: string) => {
@@ -39,22 +38,15 @@ export const MessageDisplay = ({
     }
   };
   
-  // Add a graceful loading state with immediate fade-in effect
-  // MODIFIED: Show content immediately
+  // Show content immediately without artificial delays
   useEffect(() => {
-    // Show initial loading indicator extremely briefly
+    // Show loading state for just a minimal time
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 100); // Reduced from 300ms
-    
-    // Mark content as ready almost immediately
-    const contentTimer = setTimeout(() => {
-      setContentReady(true);
-    }, 150); // Reduced from 400ms
+    }, 50); // Minimal delay, just for transition
     
     return () => {
       clearTimeout(timer);
-      clearTimeout(contentTimer);
     };
   }, [message]);
 
@@ -123,7 +115,7 @@ export const MessageDisplay = ({
           </div>
         </div>
         
-        {/* Message Content - Progressive loading via MessageContent component */}
+        {/* Message Content - Show immediately without progressive loading */}
         <div className="p-6">
           <div className="prose max-w-full">
             {message && <MessageContent message={message} deliveryId={deliveryId} recipientEmail={recipientEmail} />}

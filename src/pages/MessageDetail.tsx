@@ -16,7 +16,6 @@ import { toast } from "@/components/ui/use-toast";
 export default function MessageDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [isRendered, setIsRendered] = useState(false);
   
   // Use memoized callback for error navigation
   const handleError = useCallback(() => {
@@ -60,11 +59,8 @@ export default function MessageDetail() {
   // Get the recipient rendering function
   const { renderRecipients } = MessageRecipientProvider({ recipients });
   
-  // Show UI immediately without artificial delays
+  // Set up event listeners for conditions and deadline
   useEffect(() => {
-    // Mark the UI as ready to display right away
-    setIsRendered(true);
-    
     // Listen for condition updates to refresh data
     const handleConditionUpdated = () => {
       console.log('[MessageDetail] Condition updated event received');
@@ -96,7 +92,7 @@ export default function MessageDetail() {
   }, [id, isArmed, condition]);
   
   // Show minimal loading state just for a brief moment
-  if (!isRendered || (isLoading && !message)) {
+  if (isLoading && !message) {
     return <MessageLoading message="Loading message..." />;
   }
 
@@ -108,7 +104,7 @@ export default function MessageDetail() {
   return (
     <MessageDetailContent
       message={message}
-      isLoading={false} // Set to false to avoid skeleton loaders blocking the UI
+      isLoading={false} // Never use skeleton loaders to block UI rendering
       isArmed={isArmed}
       isActionLoading={isActionLoading}
       deadline={deadline}

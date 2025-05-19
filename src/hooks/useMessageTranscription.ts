@@ -21,6 +21,7 @@ export function useMessageTranscription(message: Message) {
     setIsLoading(true);
     setError(null);
     
+    // Use a more immediate approach to transcription extraction
     try {
       // Check if we already have a transcription in message.text_content
       if (message.text_content && message.text_content.toLowerCase().includes("transcript")) {
@@ -29,7 +30,7 @@ export function useMessageTranscription(message: Message) {
         return;
       }
       
-      // Extract transcription from video content - fast operation
+      // Extract transcription from video content - fast operation without delays
       const extractedTranscription = parseMessageTranscription(
         message.video_content || message.content
       );
@@ -41,6 +42,7 @@ export function useMessageTranscription(message: Message) {
       setError("Failed to load transcription");
       setTranscription(null);
     } finally {
+      // Always set loading to false to ensure UI updates
       setIsLoading(false);
     }
   }, [message]);
