@@ -3,16 +3,14 @@ import React, { useState } from "react";
 import { parseReminderMinutes } from "@/utils/reminderUtils";
 import { useNextReminders } from "@/hooks/useNextReminders";
 import { ReminderHistoryDialog } from "@/components/message/detail/ReminderHistoryDialog";
-import { ReminderHeader } from "./reminder/ReminderHeader";
 import { ReminderStatus } from "./reminder/ReminderStatus";
 import { TestReminderButton } from "./reminder/TestReminderButton";
 import { DebugInfo } from "./reminder/DebugInfo";
 import { useReminderManager } from "./reminder/hooks/useReminderManager";
 import { enhanceReminders } from "./reminder/utils/reminderEnhancer";
-import { AlertTriangle, Bell, History, RefreshCw } from "lucide-react";
+import { Bell } from "lucide-react";
 import { AccordionSection } from "@/components/message/detail/AccordionSection";
-import { Button } from "@/components/ui/button";
-import { HOVER_TRANSITION, ICON_HOVER_EFFECTS } from "@/utils/hoverEffects";
+import { ICON_HOVER_EFFECTS } from "@/utils/hoverEffects";
 
 interface ReminderSectionProps {
   condition: any | null;
@@ -75,42 +73,9 @@ export function ReminderSection({
     <div className="mt-1">
       <AccordionSection
         title={
-          <div className="flex justify-between items-center w-full">
-            <div className="flex items-center">
-              <Bell className={`h-4 w-4 mr-1.5 ${HOVER_TRANSITION} ${ICON_HOVER_EFFECTS.muted}`} />
-              Reminder Information
-            </div>
-            
-            <div className="flex items-center space-x-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                className={`h-7 w-7 rounded-full ${HOVER_TRANSITION}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleForceRefresh();
-                }}
-                disabled={refreshInProgressRef.current || isLoading}
-                title="Refresh reminders"
-              >
-                <RefreshCw 
-                  className={`h-4 w-4 ${refreshInProgressRef.current ? 'animate-spin' : ''} ${HOVER_TRANSITION} ${ICON_HOVER_EFFECTS.muted}`} 
-                />
-              </Button>
-              
-              <Button
-                variant="ghost"
-                size="icon"
-                className={`h-7 w-7 rounded-full ${HOVER_TRANSITION}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setHistoryOpen(true);
-                }}
-                title="View reminder history"
-              >
-                <History className={`h-4 w-4 ${HOVER_TRANSITION} ${ICON_HOVER_EFFECTS.muted}`} />
-              </Button>
-            </div>
+          <div className="flex items-center">
+            <Bell className={`h-4 w-4 mr-1.5 ${ICON_HOVER_EFFECTS.muted}`} />
+            Reminder Information
           </div>
         }
         defaultOpen={true}
@@ -123,9 +88,6 @@ export function ReminderSection({
                 <div key={index} className={`flex items-start ${reminder.includes("Final Delivery") ? "text-destructive font-medium" : "text-muted-foreground"}`}>
                   <span className="mr-2 mt-0.5 flex-shrink-0">•</span>
                   <div className="flex items-center">
-                    {reminder.includes("Final Delivery") && (
-                      <AlertTriangle className="inline-block h-3.5 w-3.5 mr-1.5" />
-                    )}
                     {reminder}
                   </div>
                 </div>
@@ -143,15 +105,7 @@ export function ReminderSection({
           errorState={errorState}
         />
         
-        {hasReminders && enhancedReminders.length > 0 && (
-          <TestReminderButton
-            onTestReminder={handleTestReminder}
-            isTestingReminder={isTestingReminder}
-            disabled={refreshInProgressRef.current}
-          />
-        )}
-        
-        {/* Show debug info in dev environment */}
+        {/* Debug info only shown in development environment */}
         <DebugInfo
           isVisible={process.env.NODE_ENV === 'development'}
           messageId={condition?.message_id}
@@ -163,7 +117,7 @@ export function ReminderSection({
         />
       </AccordionSection>
       
-      {/* Reminder History Dialog */}
+      {/* Reminder History Dialog - hidden but kept for functionality */}
       {condition?.message_id && (
         <ReminderHistoryDialog
           open={historyOpen}
