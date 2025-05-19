@@ -20,17 +20,11 @@ export function MessageContent({
   deliveryId, 
   recipientEmail 
 }: MessageContentProps) {
-  const [isReady, setIsReady] = useState(false);
+  // Get text content immediately, then transcription asynchronously
   const { additionalText } = useMessageAdditionalText(message);
-  const { transcription } = useMessageTranscription(message);
+  const { transcription, isLoading: isTranscriptionLoading } = useMessageTranscription(message);
   
-  // Immediate mounting effect to show content
-  useEffect(() => {
-    // Set ready state immediately - no artificial delay
-    setIsReady(true);
-  }, []);
-  
-  // Progressive loading approach - render immediately with what we have
+  // Render immediately with what we have - true progressive loading
   return (
     <div className="space-y-6">
       {/* Main message content - render immediately */}

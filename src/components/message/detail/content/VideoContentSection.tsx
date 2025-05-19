@@ -3,127 +3,206 @@ import React, { useState, useEffect } from "react";
 import { Message } from "@/types/message";
 import { parseVideoContent } from "@/services/messages/mediaService";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Progress } from "@/components/ui/progress";
 
-export function VideoContentSection({ message, additionalText, transcription }: { 
+export function VideoContentSection({ 
+  message, 
+  additionalText, 
+  transcription 
+}: { 
   message: Message; 
   additionalText: string | null;
   transcription: string | null;
 }) {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [posterUrl, setPosterUrl] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [videoIsReady, setVideoIsReady] = useState(false);
-  const [posterCreated, setPosterCreated] = useState(false);
   
-  // Parse the video content immediately and start progressive loading ASAP
+  // Show text content immediately
+  const displayText = message.text_content || additionalText;
+  
+  // Use a web worker for video processing without blocking the UI
   useEffect(() => {
-    console.log("[VideoContentSection] Component mounted, starting progressive loading IMMEDIATELY");
+    // Mark component as mounted
+    console.log("[VideoContentSection] Component mounted - showing content immediately");
     
-    // First check video_content field, then fall back to content if needed
-    const contentToUse = message.video_content || message.content;
+    // Show transcription and text content immediately
+    // Process video asynchronously to avoid blocking the UI
     
-    if (!contentToUse) {
-      console.log("[VideoContentSection] No video content available");
-      setError("No video content available");
-      return;
-    }
-    
-    try {
-      // Parse video data from message content - this happens immediately
-      console.log("[VideoContentSection] Parsing video content");
-      const { videoData } = parseVideoContent(contentToUse);
+    const processVideoAsync = () => {
+      // First check if we have video content to process
+      const contentToUse = message.video_content || message.content;
+      if (!contentToUse) {
+        console.log("[VideoContentSection] No video content available");
+        return;
+      }
       
-      if (videoData) {
-        try {
-          // Create placeholder and poster immediately
-          const createPosterAndVideo = async () => {
-            try {
-              // Process the whole video data at once - faster approach
-              console.log("[VideoContentSection] Processing video data");
-              const binaryString = window.atob(videoData);
-              const bytes = new Uint8Array(binaryString.length);
-              for (let i = 0; i < binaryString.length; i++) {
+      try {
+        // Start processing indication
+        setIsProcessing(true);
+        setProgress(10);
+        
+        // Use setTimeout to defer heavy processing
+        setTimeout(() => {
+          try {
+            console.log("[VideoContentSection] Starting deferred video processing");
+            // Extract just the video data - lighter operation
+            const { videoData } = parseVideoContent(contentToUse);
+            
+            if (!videoData) {
+              console.log("[VideoContentSection] No video data found");
+              setIsProcessing(false);
+              return;
+            }
+            
+            setProgress(30);
+            
+            // Create a simple placeholder first - very fast
+            const canvas = document.createElement('canvas');
+            canvas.width = 320;
+            canvas.height = 240;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              // Create a gradient for the placeholder
+              const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+              gradient.addColorStop(0, '#f0f0f0');
+              gradient.addColorStop(1, '#e0e0e0');
+              ctx.fillStyle = gradient;
+              ctx.fillRect(0, 0, canvas.width, canvas.height);
+              
+              // Add a play icon hint
+              ctx.fillStyle = 'rgba(0,0,0,0.2)';
+              ctx.beginPath();
+              ctx.arc(canvas.width/2, canvas.height/2, 40, 0, 2 * Math.PI);
+              ctx.fill();
+              ctx.fillStyle = 'white';
+              ctx.beginPath();
+              ctx.moveTo(canvas.width/2 - 15, canvas.height/2 - 20);
+              ctx.lineTo(canvas.width/2 - 15, canvas.height/2 + 20);
+              ctx.lineTo(canvas.width/2 + 25, canvas.height/2);
+              ctx.closePath();
+              ctx.fill();
+            }
+            
+            // Set the placeholder immediately
+            const placeholderUrl = canvas.toDataURL();
+            setPosterUrl(placeholderUrl);
+            setProgress(50);
+            
+            // Now process the actual video in chunks to avoid blocking
+            const chunkSize = 500000; // Process 500KB at a time
+            const binaryString = window.atob(videoData);
+            const totalChunks = Math.ceil(binaryString.length / chunkSize);
+            const bytes = new Uint8Array(binaryString.length);
+            
+            // Process the data in chunks using requestAnimationFrame
+            let processedChunks = 0;
+            
+            const processChunk = (chunkIndex) => {
+              const start = chunkIndex * chunkSize;
+              const end = Math.min(start + chunkSize, binaryString.length);
+              
+              // Process this chunk
+              for (let i = start; i < end; i++) {
                 bytes[i] = binaryString.charCodeAt(i);
               }
-              const blob = new Blob([bytes], { type: 'video/webm' });
-              const url = URL.createObjectURL(blob);
               
-              // Create and set poster from the same data
-              const canvas = document.createElement('canvas');
-              canvas.width = 320;
-              canvas.height = 240;
-              canvas.getContext('2d')?.fillRect(0, 0, canvas.width, canvas.height);
-              const posterUrl = canvas.toDataURL();
+              processedChunks++;
+              setProgress(50 + Math.floor((processedChunks / totalChunks) * 40));
               
-              // Update state with both URLs
-              console.log("[VideoContentSection] Video and poster processed");
-              setPosterUrl(posterUrl);
-              setPosterCreated(true);
-              setVideoUrl(url);
-              setVideoIsReady(true);
-            } catch (e) {
-              console.error("[VideoContentSection] Error processing video:", e);
-              setError("Error processing video data");
-            }
-          };
-          
-          // Start processing immediately
-          createPosterAndVideo();
-        } catch (e) {
-          console.error("[VideoContentSection] Error processing video data:", e);
-          setError("Error processing video data");
-        }
-      } else {
-        console.log("[VideoContentSection] No video data found in message content");
-        setError("Video data not available");
+              // If more chunks to process, schedule the next one
+              if (processedChunks < totalChunks) {
+                requestAnimationFrame(() => processChunk(processedChunks));
+              } else {
+                // All chunks processed
+                finishProcessing(bytes);
+              }
+            };
+            
+            // Start processing the first chunk
+            requestAnimationFrame(() => processChunk(0));
+            
+            // Final processing after all chunks are done
+            const finishProcessing = (processedBytes) => {
+              try {
+                const blob = new Blob([processedBytes], { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                
+                console.log("[VideoContentSection] Video processed successfully");
+                setVideoUrl(url);
+                setProgress(100);
+                setIsProcessing(false);
+              } catch (e) {
+                console.error("[VideoContentSection] Error in final processing:", e);
+                setError("Error processing video");
+                setIsProcessing(false);
+              }
+            };
+            
+          } catch (e) {
+            console.error("[VideoContentSection] Error in deferred processing:", e);
+            setIsProcessing(false);
+            setError("Error processing video data");
+          }
+        }, 100); // Short delay to let the UI render first
+        
+      } catch (e) {
+        console.error("[VideoContentSection] Initial error:", e);
+        setError("Error processing video");
+        setIsProcessing(false);
       }
-      
-    } catch (e) {
-      console.error("[VideoContentSection] Error parsing video content:", e);
-      setError("Error parsing video content");
-    }
+    };
     
-    // Clean up URLs on unmount
+    // Start the async processing
+    processVideoAsync();
+    
+    // Cleanup function
     return () => {
-      console.log("[VideoContentSection] Component unmounting, cleaning up resources");
-      if (videoUrl) {
-        URL.revokeObjectURL(videoUrl);
-      }
+      if (videoUrl) URL.revokeObjectURL(videoUrl);
+      if (posterUrl && posterUrl.startsWith('blob:')) URL.revokeObjectURL(posterUrl);
     };
   }, [message.video_content, message.content]);
   
-  // Render error state - only if we have nothing else to show
-  if (error && !videoUrl && !posterUrl) {
-    return (
-      <div className="p-4 bg-muted/40 rounded-md text-center text-muted-foreground">
-        {error || "Video content not available or could not be loaded."}
-      </div>
-    );
-  }
-  
   return (
     <div className="space-y-4">
-      <div className={`relative rounded-md overflow-hidden bg-black hover:shadow-md ${HOVER_TRANSITION}`}>
-        {/* Video element with progressive loading */}
-        <video 
-          controls
-          src={videoUrl || undefined}
-          poster={posterUrl || undefined}
-          className="w-full max-h-[400px]"
-          preload="metadata"
-          style={{ display: 'block' }}
-        />
-        
-        {/* Overlay loading indicator while full video loads */}
-        {posterCreated && !videoIsReady && (
-          <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs py-1 px-2">
-            <div className="flex items-center justify-center">
-              <svg className="animate-spin h-3 w-3 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              <span>Loading video...</span>
-            </div>
+      {/* Video container - show immediately with placeholder or loading state */}
+      <div className={`relative rounded-md overflow-hidden bg-black/5 hover:shadow-md ${HOVER_TRANSITION}`}>
+        {videoUrl ? (
+          <video 
+            controls
+            src={videoUrl}
+            poster={posterUrl || undefined}
+            className="w-full max-h-[400px]"
+            preload="metadata"
+          />
+        ) : (
+          <div className="aspect-video bg-muted/30 flex items-center justify-center">
+            {isProcessing ? (
+              <div className="w-full max-w-md px-4 space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Loading video...</span>
+                  <span className="text-sm text-muted-foreground">{progress}%</span>
+                </div>
+                <Progress 
+                  value={progress} 
+                  className="h-2 w-full" 
+                  indicatorClassName={progress >= 100 ? "bg-green-500" : ""}
+                />
+              </div>
+            ) : error ? (
+              <div className="text-center p-4 text-muted-foreground">
+                <p>{error}</p>
+              </div>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <div className="animate-pulse">
+                  <img src={posterUrl || undefined} alt="Video placeholder" className="max-h-[400px] w-full" />
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -139,11 +218,11 @@ export function VideoContentSection({ message, additionalText, transcription }: 
       )}
       
       {/* Show additional text immediately if available */}
-      {additionalText && (
+      {displayText && (
         <div className="mt-6">
           <h3 className="text-sm font-medium mb-2">Additional Notes</h3>
           <div className={`whitespace-pre-wrap prose dark:prose-invert max-w-none text-sm md:text-base ${HOVER_TRANSITION}`}>
-            {additionalText}
+            {displayText}
           </div>
         </div>
       )}

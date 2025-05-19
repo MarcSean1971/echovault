@@ -11,17 +11,24 @@ import { MessageRecipientProvider } from "@/components/message/detail/MessageRec
 import { useMessageActions } from "@/hooks/useMessageActions";
 import { useMessageDeliveryStatus } from "@/hooks/useMessageDeliveryStatus";
 import { triggerDeadmanSwitch } from "@/services/messages/whatsApp";
+import { toast } from "@/components/ui/use-toast";
 
 export default function MessageDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
-  const [loadingMessage, setLoadingMessage] = useState<string>("Loading message details...");
-
-  // Use memoized callback for error navigation to prevent recreation on each render
-  const handleError = useCallback(() => navigate("/messages"), [navigate]);
-
-  // Use our custom hook to fetch the message data - now optimized for parallel loading
+  const [isRendered, setIsRendered] = useState(false);
+  
+  // Use memoized callback for error navigation
+  const handleError = useCallback(() => {
+    toast({
+      title: "Error",
+      description: "Could not load message details",
+      variant: "destructive"
+    });
+    navigate("/messages");
+  }, [navigate]);
+  
+  // Get minimal message data first for immediate display
   const { 
     message, 
     isLoading, 
@@ -52,17 +59,15 @@ export default function MessageDetail() {
   
   // Get the recipient rendering function
   const { renderRecipients } = MessageRecipientProvider({ recipients });
-
-  // Show content immediately without artificial delays
+  
+  // Show content immediately without any artificial delays
   useEffect(() => {
-    // No artificial delays - let content render immediately
-    setLoadingMessage("Ready");
-  }, []);
-
-  // Listen for condition updates to refresh data
-  useEffect(() => {
+    // Mark the UI as ready to display immediately
+    setIsRendered(true);
+    
+    // Listen for condition updates to refresh data
     const handleConditionUpdated = () => {
-      setRefreshTrigger(prev => prev + 1);
+      console.log('[MessageDetail] Condition updated event received');
     };
     
     window.addEventListener('conditions-updated', handleConditionUpdated);
@@ -73,8 +78,6 @@ export default function MessageDetail() {
       
       // Check if this is a deadman's switch (no_check_in condition)
       if (condition && condition.condition_type === 'no_check_in') {
-        // If this is a deadman's switch and the deadline has been reached,
-        // attempt to automatically trigger the message delivery
         console.log('[MessageDetail] Deadline reached event received, attempting to trigger message delivery');
         
         // Attempt automatic delivery
@@ -91,19 +94,10 @@ export default function MessageDetail() {
       window.removeEventListener('deadline-reached', handleDeadlineReached);
     };
   }, [id, isArmed, condition]);
-
-  // Update the local refreshTrigger whenever refreshCount changes from the hook
-  useEffect(() => {
-    if (refreshCount > 0) {
-      console.log(`[MessageDetail] refreshCount changed to ${refreshCount}, updating refreshTrigger`);
-      setRefreshTrigger(refreshCount);
-    }
-  }, [refreshCount]);
-
-  // Only show loading state if there's no message data at all
-  // This will allow earlier rendering of partial content
-  if (isLoading && !message) {
-    return <MessageLoading message={loadingMessage} />;
+  
+  // Show minimal loading state only when absolutely necessary
+  if (!isRendered || (isLoading && !message)) {
+    return <MessageLoading message="Loading message..." />;
   }
 
   if (!message) {
@@ -113,7 +107,7 @@ export default function MessageDetail() {
   return (
     <MessageDetailContent
       message={message}
-      isLoading={isLoading}
+      isLoading={isLoading} // Pass loading state for progressive UI
       isArmed={isArmed}
       isActionLoading={isActionLoading}
       deadline={deadline}
@@ -136,7 +130,7 @@ export default function MessageDetail() {
       isDelivered={isDelivered}
       viewCount={viewCount}
       isLoadingDelivery={isLoadingDelivery}
-      refreshTrigger={refreshTrigger}
+      refreshTrigger={refreshCount}
     />
   );
 }
