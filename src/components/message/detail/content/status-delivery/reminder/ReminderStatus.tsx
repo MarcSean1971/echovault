@@ -25,7 +25,7 @@ export function ReminderStatus({
 }: ReminderStatusProps) {
   if (errorState) {
     return (
-      <div className="text-red-500 text-sm mb-2">
+      <div className="text-red-500 text-sm mb-1">
         {errorState} - Try refreshing the data
       </div>
     );

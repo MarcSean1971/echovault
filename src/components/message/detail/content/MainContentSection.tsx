@@ -57,7 +57,7 @@ export function MainContentSection({
 }: MainContentSectionProps) {
   // Render everything immediately for better user experience
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Message Header */}
       <MessageHeader
         message={message}
@@ -69,7 +69,7 @@ export function MainContentSection({
       
       {/* Main Message Content Card */}
       <Card className="overflow-hidden border border-border/50 shadow-sm">
-        <CardContent className="p-6">
+        <CardContent className="p-4">
           <MessageContent 
             message={message} 
             deliveryId={deliveryId} 
@@ -80,7 +80,7 @@ export function MainContentSection({
       
       {/* Status & Delivery Section */}
       <Card className="overflow-hidden border border-border/50 shadow-sm">
-        <CardContent className="p-6">
+        <CardContent className="p-4">
           {!condition ? (
             <div className="space-y-4">
               <Skeleton className="h-6 w-1/4" />
@@ -108,10 +108,7 @@ export function MainContentSection({
       
       {/* Recipients Section */}
       <Card className="overflow-hidden border border-border/50 shadow-sm">
-        <CardHeader className="px-6 pt-6 pb-3">
-          <h3 className="text-lg font-medium">Recipients</h3>
-        </CardHeader>
-        <CardContent className="p-6 pt-0">
+        <CardContent className="p-4">
           {!recipients || recipients.length === 0 ? (
             <div className="text-muted-foreground">No recipients configured</div>
           ) : (
@@ -121,7 +118,7 @@ export function MainContentSection({
               isActionLoading={isActionLoading}
               onSendTestMessage={onSendTestMessage}
               renderRecipients={() => (
-                <div className="space-y-2">
+                <div className="space-y-1">
                   {recipients.map((recipient) => (
                     <div key={recipient.id} className="p-2 border rounded-md flex justify-between items-center">
                       <div>

@@ -26,11 +26,11 @@ export function MessageInfoSection({
 }: MessageInfoSectionProps) {
   return (
     <div>
-      <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center">
+      <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center">
         <Shield className={`h-4 w-4 mr-1.5 ${HOVER_TRANSITION}`} />
         Message Information
       </h3>
-      <div className="space-y-3 text-sm">
+      <div className="space-y-2 text-sm">
         <div className="grid grid-cols-3 gap-1">
           <span className="font-medium">Created:</span>
           <span className="col-span-2">{formatDate(message.created_at)}</span>
@@ -65,12 +65,12 @@ export function MessageInfoSection({
       {/* Check-In Information */}
       {(lastCheckIn || checkInCode || condition?.condition_type?.includes('check_in')) && (
         <>
-          <Separator className="my-3" />
-          <h3 className="text-sm font-medium text-muted-foreground mb-3 mt-3 flex items-center">
+          <Separator className="my-2" />
+          <h3 className="text-sm font-medium text-muted-foreground mb-2 mt-2 flex items-center">
             <Clock className={`h-4 w-4 mr-1.5 ${HOVER_TRANSITION}`} />
             Check-In Information
           </h3>
-          <div className="space-y-3 text-sm">
+          <div className="space-y-2 text-sm">
             {lastCheckIn && (
               <div className="grid grid-cols-3 gap-1">
                 <span className="font-medium">Last check-in:</span>

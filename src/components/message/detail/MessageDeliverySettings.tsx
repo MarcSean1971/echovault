@@ -23,15 +23,15 @@ export function MessageDeliverySettings({
   
   if (!condition) {
     return (
-      <div className="space-y-6 pt-2">
+      <div className="space-y-2 pt-2">
         <p className="text-muted-foreground">No delivery settings configured for this message.</p>
       </div>
     );
   }
 
   return (
-    <div className={`space-y-4 ${showInTabs ? 'pt-0' : 'pt-2'}`}>
-      <div className="grid grid-cols-1 gap-2 text-sm">
+    <div className={`space-y-2 ${showInTabs ? 'pt-0' : 'pt-2'}`}>
+      <div className="grid grid-cols-1 gap-1 text-sm">
         <div className="grid grid-cols-3 gap-1">
           <span className="font-medium">Type:</span>
           <span className="col-span-2">{renderConditionType()}</span>
@@ -86,12 +86,12 @@ export function MessageDeliverySettings({
       {/* Security settings section - Now with consistent grid layout */}
       {(condition.expiry_hours > 0 || condition.unlock_delay_hours > 0 || condition.pin_code) && (
         <>
-          <Separator className="my-4" />
-          <h3 className="text-sm font-medium text-muted-foreground mb-3 flex items-center">
+          <Separator className="my-2" />
+          <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center">
             <Lock className={`h-4 w-4 mr-1.5 ${HOVER_TRANSITION}`} />
             Security Settings
           </h3>
-          <div className="grid grid-cols-1 gap-2 text-sm">
+          <div className="grid grid-cols-1 gap-1 text-sm">
             {condition.pin_code && (
               <div className="grid grid-cols-3 gap-1">
                 <span className="font-medium">PIN Code:</span>

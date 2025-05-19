@@ -71,7 +71,7 @@ export function ReminderSection({
 
   return (
     <>
-      <Separator className="mb-3" />
+      <Separator className="mb-2" />
       
       <ReminderHeader
         onRefresh={handleForceRefresh}
@@ -82,8 +82,8 @@ export function ReminderSection({
       
       {/* Display formatted reminders list with consistent text-sm styling */}
       {formattedAllReminders.length > 0 && (
-        <div className="mb-3">
-          <div className="grid gap-2 text-sm">
+        <div className="mb-2">
+          <div className="grid gap-1 text-sm">
             {formattedAllReminders.map((reminder, index) => (
               <div key={index} className={`flex items-start ${reminder.includes("Final Delivery") ? "text-destructive font-medium" : "text-muted-foreground"}`}>
                 <span className="mr-2 mt-0.5 flex-shrink-0">•</span>
@@ -115,8 +115,6 @@ export function ReminderSection({
           disabled={refreshInProgressRef.current}
         />
       )}
-      
-      {/* Remove ReminderConfigTimes component */}
       
       {/* Show debug info in dev environment */}
       <DebugInfo

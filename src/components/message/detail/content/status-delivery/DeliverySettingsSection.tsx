@@ -107,8 +107,8 @@ export function DeliverySettingsSection({
   }, [formattedAllReminders, onFormattedRemindersChange]);
   
   return (
-    <div className="space-y-3">
-      <div className="flex justify-between items-center mb-3">
+    <div className="space-y-2">
+      <div className="flex justify-between items-center mb-1">
         <h3 className="text-sm font-medium text-muted-foreground flex items-center">
           <Clock className={`h-4 w-4 mr-1.5 ${HOVER_TRANSITION} ${ICON_HOVER_EFFECTS.muted}`} />
           Delivery Settings
