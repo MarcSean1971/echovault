@@ -46,6 +46,13 @@ export function formatReminderDate(reminderDate: Date): string {
 }
 
 /**
+ * Format a reminder time with specific formatting
+ */
+export function formatReminderTime(reminderDate: Date): string {
+  return format(reminderDate, "h:mm a");
+}
+
+/**
  * Format a reminder date in short format
  * @param reminderDate The reminder date to format
  * @returns Formatted string like "May 15, 4:30 PM"

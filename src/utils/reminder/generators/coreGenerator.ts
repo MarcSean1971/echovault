@@ -4,7 +4,7 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
-import { markExistingRemindersObsolete } from '../reminderUtils';
+import { markRemindersAsObsolete } from '../reminderUtils';
 
 /**
  * Generate and store reminder schedule for a message
@@ -31,7 +31,7 @@ export async function generateReminderSchedule(
     console.log(`[REMINDER-GENERATOR] Reminder minutes (count: ${reminderMinutes.length}): ${JSON.stringify(reminderMinutes)}`);
     
     // Mark existing reminders as obsolete first
-    const markResult = await markExistingRemindersObsolete(messageId, conditionId);
+    const markResult = await markRemindersAsObsolete(messageId, conditionId);
     if (!markResult) {
       console.warn(`[REMINDER-GENERATOR] Warning: Failed to mark existing reminders as obsolete for message ${messageId}`);
       // Continue despite warning, as we still want to try creating new reminders

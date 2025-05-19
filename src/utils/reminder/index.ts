@@ -7,8 +7,8 @@
 // Export the reminder creation utilities
 export { generateReminderSchedule } from './generators/coreGenerator';
 export { calculateNextReminderTime } from './reminderCalculator';
-export { formatReminderTime, parseReminderMinutes } from './reminderUtils';
-export { ensureReminderSchedule } from './ensureReminderSchedule';
+export { markRemindersAsObsolete } from './reminderUtils';
+export { formatReminderDate, formatScheduledReminderTime, parseReminderMinutes } from '../reminderUtils';
 
 // Export formatters
 export { formatReminderSchedule } from './reminderFormatter';

@@ -2,7 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { useActionToasts } from "./useActionToasts";
 import { useConditionUpdates } from "./useConditionUpdates";
-import { markExistingRemindersObsolete } from "@/utils/reminder/reminderUtils";
+import { markRemindersAsObsolete } from "@/utils/reminder/reminderUtils";
 
 /**
  * Hook for handling disarming message operations
@@ -51,7 +51,7 @@ export function useDisarmOperations() {
       // CRITICAL FIX: Mark all reminders as obsolete when disarming
       if (messageId) {
         console.log(`[useDisarmOperations] Marking reminders obsolete for message ${messageId}, condition ${conditionId}`);
-        await markExistingRemindersObsolete(messageId, conditionId);
+        await markRemindersAsObsolete(messageId, conditionId);
       }
       
       // Direct database operation for faster disarming

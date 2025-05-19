@@ -5,7 +5,7 @@
 import { getUpcomingRemindersForMultipleMessages } from './reminderFetcher';
 import { generateReminderSchedule, generateCheckInReminderSchedule } from './reminderGenerator';
 import { formatReminderSchedule } from './reminderFormatter';
-import { markExistingRemindersObsolete } from './reminderUtils';
+import { markRemindersAsObsolete } from './reminderUtils';
 
 // Re-export everything for backward compatibility
 export {
@@ -13,5 +13,5 @@ export {
   generateReminderSchedule,
   generateCheckInReminderSchedule,
   formatReminderSchedule,
-  markExistingRemindersObsolete
+  markRemindersAsObsolete
 };

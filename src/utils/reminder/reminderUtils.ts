@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 /**
@@ -98,3 +97,6 @@ export function getEffectiveDeadline(condition: any): Date | null {
   // For types we don't understand, return null
   return null;
 }
+
+// Add an alias for backward compatibility
+export const markExistingRemindersObsolete = markRemindersAsObsolete;
