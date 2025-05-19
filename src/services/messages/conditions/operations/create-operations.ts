@@ -13,7 +13,7 @@ export async function createConditionInDb(conditionData: any) {
     const data = {
       ...conditionData,
       last_checked: new Date().toISOString(),
-      active: true
+      active: false // CRITICAL FIX: Set default value to false to prevent reminder creation until armed
     };
     
     // Insert the condition
@@ -28,41 +28,8 @@ export async function createConditionInDb(conditionData: any) {
       throw error;
     }
     
-    // Create reminder schedule for the new condition
-    if (newCondition) {
-      try {
-        const reminderMinutes = parseReminderMinutes(newCondition.reminder_hours);
-        
-        // Check condition type to determine the correct parameters
-        if (isCheckInCondition(newCondition.condition_type)) {
-          // For check-in conditions, use last_checked and threshold
-          await createOrUpdateReminderSchedule({
-            messageId: newCondition.message_id,
-            conditionId: newCondition.id,
-            conditionType: newCondition.condition_type,
-            triggerDate: null,
-            reminderMinutes,
-            lastChecked: newCondition.last_checked,
-            hoursThreshold: newCondition.hours_threshold,
-            minutesThreshold: newCondition.minutes_threshold
-          });
-        } else {
-          // For date-based conditions, use trigger_date
-          // FIX: Add lastChecked parameter which was missing
-          await createOrUpdateReminderSchedule({
-            messageId: newCondition.message_id,
-            conditionId: newCondition.id,
-            conditionType: newCondition.condition_type,
-            triggerDate: newCondition.trigger_date,
-            reminderMinutes,
-            lastChecked: newCondition.last_checked // Add the missing parameter
-          });
-        }
-      } catch (scheduleError) {
-        console.error("Error creating reminder schedule:", scheduleError);
-        // Don't throw, just log - we don't want to fail the condition creation
-      }
-    }
+    // Don't create reminder schedule by default - this will be done during arming
+    console.log("[create-operations] Created condition but NOT creating reminder schedule (will be done on arm)");
     
     return newCondition;
   } catch (error) {

@@ -1,3 +1,4 @@
+
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -107,8 +108,15 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
       let conditionId = null;
       if (existingCondition) {
         console.log("Updating existing condition with delivery option:", deliveryOption);
-        console.log("Using hours_threshold:", finalHoursThreshold, "minutes_threshold:", minutesThreshold);
-        console.log("Reminder minutes:", reminderMinutes);
+        
+        // CRITICAL FIX: Check if timing-related parameters have changed to determine if we need to regenerate reminders
+        const timingParamsChanged = hasTimingParamsChanged(existingCondition, {
+          hoursThreshold: finalHoursThreshold,
+          minutesThreshold,
+          reminderMinutes,
+          triggerDate: triggerDate ? triggerDate.toISOString() : null,
+          recurringPattern: finalRecurringPattern
+        });
         
         // Update existing condition
         const updatedCondition = await updateMessageCondition(existingCondition.id, {
@@ -127,12 +135,23 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
         });
         
         conditionId = existingCondition.id;
+        
+        // Only regenerate reminder schedule if the condition is active AND timing parameters changed
+        if (existingCondition.active && timingParamsChanged) {
+          console.log("Condition is active and timing parameters changed, regenerating reminder schedule");
+          try {
+            await ensureReminderSchedule(conditionId, message.id);
+            console.log("Successfully updated reminder schedule after edit");
+          } catch (scheduleError) {
+            console.error("Error ensuring reminder schedule:", scheduleError);
+          }
+        } else {
+          console.log("Skipping reminder schedule update - condition inactive or timing parameters unchanged");
+        }
       } else {
         console.log("Creating new condition with delivery option:", deliveryOption);
-        console.log("Using hours_threshold:", finalHoursThreshold, "minutes_threshold:", minutesThreshold);
-        console.log("Reminder minutes:", reminderMinutes);
         
-        // Create new condition
+        // Create new condition - reminder schedule will not be created due to changes in createConditionInDb
         const newCondition = await createMessageCondition(
           message.id,
           conditionType as TriggerType,
@@ -153,23 +172,7 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
         
         if (newCondition && newCondition.id) {
           conditionId = newCondition.id;
-        }
-      }
-      
-      // Generate reminder schedule if the condition is active
-      if (conditionId) {
-        console.log("Ensuring reminder schedule for condition after edit:", conditionId);
-        const active = existingCondition ? existingCondition.active : false;
-        
-        if (active) {
-          try {
-            await ensureReminderSchedule(conditionId, message.id);
-            console.log("Successfully updated reminder schedule after edit");
-          } catch (scheduleError) {
-            console.error("Error ensuring reminder schedule:", scheduleError);
-          }
-        } else {
-          console.log("Condition is not active, skipping reminder schedule creation");
+          console.log("New condition created, but reminders will only be generated when armed");
         }
       }
       
@@ -200,6 +203,76 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
       setIsLoading(false);
       setShowUploadDialog(false);
     }
+  };
+
+  // Helper function to check if timing-related parameters have changed
+  const hasTimingParamsChanged = (
+    existingCondition: MessageCondition, 
+    newParams: {
+      hoursThreshold: number;
+      minutesThreshold: number;
+      reminderMinutes: number[];
+      triggerDate: string | null;
+      recurringPattern: any;
+    }
+  ): boolean => {
+    // Check hours threshold change
+    if (existingCondition.hours_threshold !== newParams.hoursThreshold) {
+      return true;
+    }
+    
+    // Check minutes threshold change
+    if (existingCondition.minutes_threshold !== newParams.minutesThreshold) {
+      return true;
+    }
+    
+    // Check reminder hours change (deep comparison needed as it's an array)
+    const existingReminderMinutes = existingCondition.reminder_hours || [];
+    const newReminderMinutes = newParams.reminderMinutes || [];
+    
+    if (existingReminderMinutes.length !== newReminderMinutes.length) {
+      return true;
+    }
+    
+    // Sort both arrays to ensure we're comparing the same values
+    const sortedExisting = [...existingReminderMinutes].sort((a, b) => a - b);
+    const sortedNew = [...newReminderMinutes].sort((a, b) => a - b);
+    
+    for (let i = 0; i < sortedExisting.length; i++) {
+      if (sortedExisting[i] !== sortedNew[i]) {
+        return true;
+      }
+    }
+    
+    // Check trigger date change
+    const existingTriggerDate = existingCondition.trigger_date || null;
+    const newTriggerDate = newParams.triggerDate || null;
+    
+    if ((existingTriggerDate === null && newTriggerDate !== null) || 
+        (existingTriggerDate !== null && newTriggerDate === null)) {
+      return true;
+    }
+    
+    if (existingTriggerDate && newTriggerDate && 
+        new Date(existingTriggerDate).getTime() !== new Date(newTriggerDate).getTime()) {
+      return true;
+    }
+    
+    // Check recurring pattern change
+    const existingPattern = existingCondition.recurring_pattern;
+    const newPattern = newParams.recurringPattern;
+    
+    if ((existingPattern === null && newPattern !== null) || 
+        (existingPattern !== null && newPattern === null)) {
+      return true;
+    }
+    
+    if (existingPattern && newPattern && 
+        JSON.stringify(existingPattern) !== JSON.stringify(newPattern)) {
+      return true;
+    }
+    
+    return false;
   };
 
   return {
