@@ -27,6 +27,7 @@ export function VideoPlayerControls({
               type="button"
               onClick={togglePlayback}
               className={`text-white hover:bg-white/20 ${HOVER_TRANSITION}`}
+              aria-label={isPlaying ? "Pause video" : "Play video"}
             >
               {isPlaying ? (
                 <Pause className="h-5 w-5" />
@@ -51,6 +52,7 @@ export function VideoPlayerControls({
                 type="button"
                 onClick={onClearVideo}
                 className={`text-white hover:bg-white/20 ${HOVER_TRANSITION}`}
+                aria-label="Delete video"
               >
                 <Trash2 className="h-5 w-5" />
               </Button>

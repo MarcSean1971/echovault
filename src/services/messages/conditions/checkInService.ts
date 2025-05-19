@@ -134,14 +134,14 @@ export async function performUserCheckIn(userId: string): Promise<boolean> {
     
     console.log(`[CHECK-IN] Reminder regeneration summary: ${regenerationSuccessCount} successful, ${regenerationFailCount} failed`);
     
-    // Dispatch a single event to notify components about the update
-    // This will trigger UI refreshes
+    // FIXED: Only dispatch a single event with all the necessary data
     window.dispatchEvent(new CustomEvent('conditions-updated', { 
       detail: { 
         updatedAt: now,
-        triggerValue: Date.now(), // Add unique timestamp to ensure events are distinct
+        triggerValue: Date.now(),
         source: 'user-check-in',
-        userId: userId
+        userId: userId,
+        conditionsCount: conditions.length
       }
     }));
     

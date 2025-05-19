@@ -24,34 +24,22 @@ export function useCheckIn() {
         return false;
       }
       
-      // Fix: Call the new function that updates all user conditions
       console.log(`[useCheckIn] Performing check-in for user: ${userId}`);
       const result = await performUserCheckIn(userId);
       console.log(`[useCheckIn] Check-in completed with result:`, result);
       
-      // ENHANCED: Dispatch multiple events with slightly different timestamps 
-      // to ensure all listeners catch the update
-      console.log("[useCheckIn] Dispatching conditions-updated event with timestamp", Date.now());
+      // FIXED: Only dispatch a single event with a unique timestamp
+      // Remove the redundant setTimeout-based delayed dispatch
+      console.log("[useCheckIn] Dispatching single conditions-updated event");
       
-      // First immediate dispatch
       window.dispatchEvent(new CustomEvent('conditions-updated', { 
         detail: { 
           updatedAt: new Date().toISOString(),
-          triggerValue: Date.now(), // Add unique timestamp to ensure events are distinct
-          source: 'check-in-button' // Add source information for debugging
+          triggerValue: Date.now(),
+          source: 'check-in-button',
+          userId
         }
       }));
-      
-      // Second delayed dispatch to ensure all components have time to mount listeners
-      setTimeout(() => {
-        window.dispatchEvent(new CustomEvent('conditions-updated', { 
-          detail: { 
-            updatedAt: new Date().toISOString(),
-            triggerValue: Date.now() + 1, // Different value to ensure it's treated as a new event
-            source: 'check-in-button-delayed' 
-          }
-        }));
-      }, 500);
       
       toast({
         title: "Check-In Successful",

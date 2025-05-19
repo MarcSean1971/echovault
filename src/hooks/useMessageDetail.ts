@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/components/ui/use-toast";
@@ -22,6 +22,11 @@ export function useMessageDetail(messageId: string | undefined, onError: () => v
   const [hasAttemptedFetch, setHasAttemptedFetch] = useState(false);
   const [lastCheckIn, setLastCheckIn] = useState<string | null>(null);
   const [refreshCount, setRefreshCount] = useState(0);
+  
+  // Add a ref to track the last refresh time to prevent duplicate refreshes
+  const lastRefreshTimeRef = useRef<number>(0);
+  // Add a timeout ref to implement debouncing
+  const refreshTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Function to fetch deadline for the message
   const fetchDeadline = useCallback(async (condId: string) => {
@@ -75,9 +80,19 @@ export function useMessageDetail(messageId: string | undefined, onError: () => v
     }
   }, []);
 
-  // Function to refresh condition and deadline data
+  // Function to refresh condition and deadline data with debouncing
   const refreshConditionData = useCallback(async () => {
     if (!messageId) return;
+    
+    // Check if we've refreshed recently (within last 2 seconds)
+    const now = Date.now();
+    if (now - lastRefreshTimeRef.current < 2000) {
+      console.log('[useMessageDetail] Skipping refresh, too soon after last refresh');
+      return;
+    }
+    
+    // Update last refresh time
+    lastRefreshTimeRef.current = now;
     
     try {
       console.log(`[useMessageDetail] Refreshing condition data for message ${messageId}`);
@@ -199,28 +214,46 @@ export function useMessageDetail(messageId: string | undefined, onError: () => v
     fetchData();
   }, [fetchData]);
 
-  // Add listener for condition updates
+  // Optimized listener for condition updates with debouncing
   useEffect(() => {
     const handleConditionUpdated = (event: Event) => {
       if (event instanceof CustomEvent) {
-        console.log(`[useMessageDetail] Received conditions-updated event for ${messageId}, refreshing data...`, event.detail);
+        console.log(`[useMessageDetail] Received conditions-updated event, details:`, event.detail);
         
-        // Clear any cached data
-        if (messageId) {
-          invalidateConditionsCache();
+        // Clear existing timeout if there is one
+        if (refreshTimeoutRef.current) {
+          clearTimeout(refreshTimeoutRef.current);
         }
         
-        // Refresh condition data to get the latest information
-        refreshConditionData();
-        
-        // Increment counter to force downstream components to re-render
-        setRefreshCount(prev => prev + 1);
+        // Debounce the refresh to avoid multiple rapid refreshes
+        refreshTimeoutRef.current = setTimeout(() => {
+          console.log(`[useMessageDetail] Debounced refresh for message ${messageId}`);
+          
+          // Clear any cached data
+          if (messageId) {
+            invalidateConditionsCache();
+          }
+          
+          // Refresh condition data to get the latest information
+          refreshConditionData();
+          
+          // Increment counter to force downstream components to re-render
+          // But only do it once per group of events
+          setRefreshCount(prev => prev + 1);
+          
+          // Clear the timeout ref
+          refreshTimeoutRef.current = null;
+        }, 300); // 300ms debounce time
       }
     };
     
     window.addEventListener('conditions-updated', handleConditionUpdated);
     return () => {
       window.removeEventListener('conditions-updated', handleConditionUpdated);
+      // Clear any pending timeout when component unmounts
+      if (refreshTimeoutRef.current) {
+        clearTimeout(refreshTimeoutRef.current);
+      }
     };
   }, [messageId, refreshConditionData]);
 

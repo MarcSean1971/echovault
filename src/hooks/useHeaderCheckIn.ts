@@ -12,26 +12,16 @@ export function useHeaderCheckIn(
   const navigate = useNavigate();
   const [localRefreshTrigger, setLocalRefreshTrigger] = useState(0);
 
-  // Modified check-in handler that also dispatches the event
+  // Modified to NOT dispatch another event, since the original check-in already dispatches one
   const handleCheckIn = async () => {
     try {
-      // Explicitly ensure we get a boolean result from handleDashboardCheckIn
+      // Use the dashboard check-in function which already dispatches the event
       const success = await handleDashboardCheckIn();
       
-      // Only proceed if success is explicitly true
+      // Only update local state if successful
       if (success === true) {
         // Increment local trigger for immediate UI update
         setLocalRefreshTrigger(prev => prev + 1);
-        
-        // Dispatch event with current timestamp for global updates
-        console.log("Dispatching conditions-updated event from HeaderButtons");
-        window.dispatchEvent(new CustomEvent('conditions-updated', { 
-          detail: { 
-            updatedAt: new Date().toISOString(),
-            triggerValue: Date.now() // Add unique value to ensure it's always different
-          }
-        }));
-        
         return true;
       }
       
