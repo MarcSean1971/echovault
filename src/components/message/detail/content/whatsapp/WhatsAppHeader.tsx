@@ -10,8 +10,6 @@ export function WhatsAppHeader({
 }: WhatsAppHeaderProps) {
   return <div>
       
-      <p className="text-sm text-gray-600">
-        {description}
-      </p>
+      
     </div>;
 }
