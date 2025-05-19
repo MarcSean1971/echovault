@@ -149,7 +149,6 @@ export function VideoMessageContent({ message }: { message: Message }) {
           style={{ display: 'block' }}
           // Show loading indicator until video can play
           onLoadedData={() => setIsLoading(false)}
-          // Removed invalid 'loading' attribute
         />
         
         {/* Overlay loading indicator while full video loads */}
