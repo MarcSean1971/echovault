@@ -109,38 +109,35 @@ export function DeliverySettingsSection({
   }, [formattedAllReminders, onFormattedRemindersChange]);
   
   return (
-    <div>
-      <AccordionSection
-        title={
-          <div className="flex justify-between items-center w-full">
-            <div className="flex items-center">
-              <Clock className={`h-4 w-4 mr-1.5 ${HOVER_TRANSITION} ${ICON_HOVER_EFFECTS.muted}`} />
-              Delivery Settings
-            </div>
-            
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className={`h-7 w-7 rounded-full ${HOVER_TRANSITION}`}
-              onClick={handleManualRefresh}
-              disabled={isRefreshing}
-            >
-              <RefreshCw 
-                className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''} ${HOVER_TRANSITION} ${ICON_HOVER_EFFECTS.muted}`} 
-              />
-            </Button>
+    <AccordionSection
+      title={
+        <div className="flex justify-between items-center w-full">
+          <div className="flex items-center">
+            <Clock className={`h-4 w-4 mr-1.5 ${HOVER_TRANSITION} ${ICON_HOVER_EFFECTS.muted}`} />
+            Delivery Settings
           </div>
-        }
-        defaultOpen={true}
-        className="mt-1"
-      >
-        <MessageDeliverySettings 
-          condition={condition} 
-          formatDate={formatDate} 
-          renderConditionType={renderConditionType} 
-          showInTabs={true} 
-        />
-      </AccordionSection>
-    </div>
+          
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className={`h-7 w-7 rounded-full ${HOVER_TRANSITION}`}
+            onClick={handleManualRefresh}
+            disabled={isRefreshing}
+          >
+            <RefreshCw 
+              className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''} ${HOVER_TRANSITION} ${ICON_HOVER_EFFECTS.muted}`} 
+            />
+          </Button>
+        </div>
+      }
+      defaultOpen={true}
+    >
+      <MessageDeliverySettings 
+        condition={condition} 
+        formatDate={formatDate} 
+        renderConditionType={renderConditionType} 
+        showInTabs={true} 
+      />
+    </AccordionSection>
   );
 }

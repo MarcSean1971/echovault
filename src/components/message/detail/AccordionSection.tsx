@@ -29,7 +29,7 @@ export function AccordionSection({
         <AccordionTrigger className={`py-2 text-sm font-medium text-muted-foreground ${HOVER_TRANSITION}`}>
           {title}
         </AccordionTrigger>
-        <AccordionContent className="pt-1 pb-0">
+        <AccordionContent className="pt-1 pb-2">
           {children}
         </AccordionContent>
       </AccordionItem>

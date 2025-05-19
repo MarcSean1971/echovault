@@ -19,5 +19,16 @@ export function DebugInfo({
   permissionError
 }: DebugInfoProps) {
   if (!isVisible) return null;
-  return;
+  
+  return (
+    <div className="text-xs text-muted-foreground border-t border-dashed border-muted mt-2 pt-2">
+      <div><strong>Debug Info:</strong></div>
+      <div>Message ID: {messageId || 'N/A'}</div>
+      <div>Condition ID: {conditionId || 'N/A'}</div>
+      <div>Last refreshed: {new Date(lastRefreshed).toLocaleTimeString()}</div>
+      <div>Refresh count: {refreshCount}</div>
+      <div>Reminder minutes: {reminderMinutes ? reminderMinutes.join(', ') : 'None'}</div>
+      <div>Permission error: {permissionError ? 'Yes' : 'No'}</div>
+    </div>
+  );
 }

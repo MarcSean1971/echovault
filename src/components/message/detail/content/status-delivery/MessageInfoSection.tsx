@@ -25,7 +25,7 @@ export function MessageInfoSection({
   condition
 }: MessageInfoSectionProps) {
   return (
-    <div>
+    <>
       <AccordionSection
         title={
           <div className="flex items-center">
@@ -78,7 +78,6 @@ export function MessageInfoSection({
             </div>
           }
           defaultOpen={true}
-          className="mt-1"
           value="check-in"
         >
           <div className="space-y-2 text-sm">
@@ -109,6 +108,6 @@ export function MessageInfoSection({
           </div>
         </AccordionSection>
       )}
-    </div>
+    </>
   );
 }

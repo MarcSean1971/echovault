@@ -4,7 +4,6 @@ import { parseReminderMinutes } from "@/utils/reminderUtils";
 import { useNextReminders } from "@/hooks/useNextReminders";
 import { ReminderHistoryDialog } from "@/components/message/detail/ReminderHistoryDialog";
 import { ReminderStatus } from "./reminder/ReminderStatus";
-import { TestReminderButton } from "./reminder/TestReminderButton";
 import { DebugInfo } from "./reminder/DebugInfo";
 import { useReminderManager } from "./reminder/hooks/useReminderManager";
 import { enhanceReminders } from "./reminder/utils/reminderEnhancer";
@@ -70,52 +69,50 @@ export function ReminderSection({
   }
 
   return (
-    <div className="mt-1">
-      <AccordionSection
-        title={
-          <div className="flex items-center">
-            <Bell className={`h-4 w-4 mr-1.5 ${ICON_HOVER_EFFECTS.muted}`} />
-            Reminder Information
-          </div>
-        }
-        defaultOpen={true}
-      >
-        {/* Display formatted reminders list with consistent text-sm styling */}
-        {formattedAllReminders.length > 0 && (
-          <div className="mb-1">
-            <div className="grid gap-1 text-sm">
-              {formattedAllReminders.map((reminder, index) => (
-                <div key={index} className={`flex items-start ${reminder.includes("Final Delivery") ? "text-destructive font-medium" : "text-muted-foreground"}`}>
-                  <span className="mr-2 mt-0.5 flex-shrink-0">•</span>
-                  <div className="flex items-center">
-                    {reminder}
-                  </div>
+    <AccordionSection
+      title={
+        <div className="flex items-center">
+          <Bell className={`h-4 w-4 mr-1.5 ${ICON_HOVER_EFFECTS.muted}`} />
+          Reminder Information
+        </div>
+      }
+      defaultOpen={true}
+    >
+      {/* Display formatted reminders list with consistent text-sm styling */}
+      {formattedAllReminders.length > 0 && (
+        <div className="mb-2">
+          <div className="grid gap-1 text-sm">
+            {formattedAllReminders.map((reminder, index) => (
+              <div key={index} className={`flex items-start ${reminder.includes("Final Delivery") ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+                <span className="mr-2 mt-0.5 flex-shrink-0">•</span>
+                <div className="flex items-center">
+                  {reminder}
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
-        )}
-        
-        <ReminderStatus
-          isLoading={isLoading}
-          permissionError={permissionError}
-          hasReminders={hasReminders}
-          enhancedReminders={enhancedReminders}
-          refreshCount={refreshCount}
-          errorState={errorState}
-        />
-        
-        {/* Debug info only shown in development environment */}
-        <DebugInfo
-          isVisible={process.env.NODE_ENV === 'development'}
-          messageId={condition?.message_id}
-          conditionId={condition?.id}
-          lastRefreshed={lastRefreshed || 0}
-          refreshCount={refreshCount}
-          reminderMinutes={reminderMinutes}
-          permissionError={permissionError}
-        />
-      </AccordionSection>
+        </div>
+      )}
+      
+      <ReminderStatus
+        isLoading={isLoading}
+        permissionError={permissionError}
+        hasReminders={hasReminders}
+        enhancedReminders={enhancedReminders}
+        refreshCount={refreshCount}
+        errorState={errorState}
+      />
+      
+      {/* Debug info only shown in development environment */}
+      <DebugInfo
+        isVisible={process.env.NODE_ENV === 'development'}
+        messageId={condition?.message_id}
+        conditionId={condition?.id}
+        lastRefreshed={lastRefreshed || 0}
+        refreshCount={refreshCount}
+        reminderMinutes={reminderMinutes}
+        permissionError={permissionError}
+      />
       
       {/* Reminder History Dialog - hidden but kept for functionality */}
       {condition?.message_id && (
@@ -125,6 +122,6 @@ export function ReminderSection({
           messageId={condition.message_id}
         />
       )}
-    </div>
+    </AccordionSection>
   );
 }
