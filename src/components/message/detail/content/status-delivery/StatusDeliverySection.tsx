@@ -4,6 +4,7 @@ import { getEffectiveDeadline, parseReminderMinutes } from '@/utils/reminderUtil
 import { MessageInfoSection } from './MessageInfoSection';
 import { DeliverySettingsSection } from './DeliverySettingsSection';
 import { ReminderSection } from './ReminderSection';
+import { RecipientsSection } from '../RecipientsSection';
 
 interface StatusDeliverySectionProps {
   message: any;
@@ -19,6 +20,11 @@ interface StatusDeliverySectionProps {
   isDelivered?: boolean;
   viewCount?: number | null;
   isLoadingDelivery?: boolean;
+  // New props for Recipients section
+  recipients?: any[];
+  isActionLoading?: boolean;
+  onSendTestMessage?: () => void;
+  renderRecipients?: () => React.ReactNode;
 }
 
 export function StatusDeliverySection({ 
@@ -34,7 +40,12 @@ export function StatusDeliverySection({
   lastDelivered,
   isDelivered,
   viewCount,
-  isLoadingDelivery
+  isLoadingDelivery,
+  // New props for Recipients section
+  recipients = [],
+  isActionLoading = false,
+  onSendTestMessage = () => {},
+  renderRecipients
 }: StatusDeliverySectionProps) {
   const [effectiveDeadline, setEffectiveDeadline] = useState<Date | null>(null);
   const [formattedReminders, setFormattedReminders] = useState<string[]>([]);
@@ -84,6 +95,17 @@ export function StatusDeliverySection({
         refreshTrigger={refreshTrigger}
         formattedAllReminders={formattedReminders}
       />
+      
+      {/* Recipients section moved here for consistent spacing */}
+      {recipients && recipients.length > 0 && (
+        <RecipientsSection
+          recipients={recipients}
+          isArmed={isArmed}
+          isActionLoading={isActionLoading}
+          onSendTestMessage={onSendTestMessage}
+          renderRecipients={renderRecipients}
+        />
+      )}
     </div>
   );
 }

@@ -2,7 +2,6 @@
 import React from "react";
 import { Message } from "@/types/message";
 import { StatusDeliverySection } from "./StatusDeliverySection";
-import { RecipientsSection } from "./RecipientsSection";
 import { MessageHeader } from "../MessageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { MessageContent } from "../content/message-content";
@@ -78,7 +77,7 @@ export function MainContentSection({
         </CardContent>
       </Card>
       
-      {/* Status & Delivery Section */}
+      {/* Status & Delivery Section - now includes Recipients */}
       <Card className="overflow-hidden border border-border/50 shadow-sm">
         <CardContent className="p-3">
           {!condition ? (
@@ -101,20 +100,8 @@ export function MainContentSection({
               isDelivered={isDelivered}
               viewCount={viewCount}
               isLoadingDelivery={isLoadingDelivery}
-            />
-          )}
-        </CardContent>
-      </Card>
-      
-      {/* Recipients Section */}
-      <Card className="overflow-hidden border border-border/50 shadow-sm">
-        <CardContent className="p-3">
-          {!recipients || recipients.length === 0 ? (
-            <div className="text-muted-foreground">No recipients configured</div>
-          ) : (
-            <RecipientsSection
+              // Pass recipients props
               recipients={recipients}
-              isArmed={isArmed}
               isActionLoading={isActionLoading}
               onSendTestMessage={onSendTestMessage}
               renderRecipients={() => (
