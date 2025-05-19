@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { toast } from "@/components/ui/use-toast";
-import { armMessage, disarmMessage } from "@/services/messages/conditionService";
+import { handleArmMessage, handleDisarmMessage } from "@/services/messages/messageDetailService";
 import { useConditionRefresh } from "@/hooks/useConditionRefresh";
 
 export function useMessageCardActions() {
@@ -9,19 +9,19 @@ export function useMessageCardActions() {
   const { refreshConditions } = useConditionRefresh();
   
   const handleArmMessage = async (conditionId: string) => {
-    if (!conditionId) return;
+    if (!conditionId) return null;
     
     setIsLoading(true);
     try {
-      await armMessage(conditionId);
-      
-      // Get updated deadline
-      const deadlineDate = await refreshConditions();
-      
-      toast({
-        title: "Message armed",
-        description: "Your message has been armed and will trigger according to your settings",
+      // Use the complete implementation from messageDetailService
+      // which also handles reminder schedule generation
+      const deadlineDate = await handleArmMessage(conditionId, (isArmed: boolean) => {
+        // This is a temporary state update function that will be replaced
+        // when the UI refreshes from the database
       });
+      
+      // Refresh conditions data to update UI components
+      await refreshConditions();
       
       return deadlineDate;
     } catch (error) {
@@ -42,15 +42,14 @@ export function useMessageCardActions() {
     
     setIsLoading(true);
     try {
-      await disarmMessage(conditionId);
-      
-      // Refresh condition data in other components
-      await refreshConditions();
-      
-      toast({
-        title: "Message disarmed",
-        description: "Your message has been disarmed and will not trigger",
+      // Use the complete implementation from messageDetailService
+      await handleDisarmMessage(conditionId, (isArmed: boolean) => {
+        // This is a temporary state update function that will be replaced
+        // when the UI refreshes from the database
       });
+      
+      // Refresh conditions data to update UI components
+      await refreshConditions();
     } catch (error) {
       console.error("Error disarming message:", error);
       toast({

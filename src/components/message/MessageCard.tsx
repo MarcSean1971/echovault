@@ -103,7 +103,7 @@ function MessageCardInner({ message, onDelete, reminderInfo }: MessageCardProps)
     }
   }, [isArmed, deadline, condition]);
   
-  // Import the action handlers from the hook
+  // Import the action handlers from the hook - now uses the complete implementation from messageDetailService
   const { handleArmMessage, handleDisarmMessage } = useMessageCardActions();
   
   // Action handlers with refresh counter update

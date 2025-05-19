@@ -1,6 +1,7 @@
 
 import { Shield, ShieldOff } from "lucide-react";
 import { ActionButton } from "./ActionButton";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface ArmButtonProps {
   isArmed: boolean;
@@ -23,7 +24,8 @@ export function ArmButton({
         onClick={onDisarmMessage}
         disabled={isActionLoading}
         variant="outline"
-        iconClassName="text-green-600"
+        iconClassName="text-green-600 transition-all group-hover:scale-110"
+        tooltipText={isActionLoading ? "Disarming in progress..." : undefined}
       />
     );
   }
@@ -35,6 +37,8 @@ export function ArmButton({
       onClick={onArmMessage}
       disabled={isActionLoading}
       variant="destructive"
+      iconClassName="transition-all group-hover:scale-110"
+      tooltipText={isActionLoading ? "Arming in progress..." : undefined}
     />
   );
 }
