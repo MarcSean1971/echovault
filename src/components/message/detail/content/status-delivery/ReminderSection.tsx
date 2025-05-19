@@ -4,7 +4,6 @@ import { parseReminderMinutes } from "@/utils/reminderUtils";
 import { useNextReminders } from "@/hooks/useNextReminders";
 import { ReminderHistoryDialog } from "@/components/message/detail/ReminderHistoryDialog";
 import { ReminderStatus } from "./reminder/ReminderStatus";
-import { DebugInfo } from "./reminder/DebugInfo";
 import { useReminderManager } from "./reminder/hooks/useReminderManager";
 import { enhanceReminders } from "./reminder/utils/reminderEnhancer";
 import { Bell } from "lucide-react";
@@ -101,17 +100,6 @@ export function ReminderSection({
         enhancedReminders={enhancedReminders}
         refreshCount={refreshCount}
         errorState={errorState}
-      />
-      
-      {/* Debug info only shown in development environment */}
-      <DebugInfo
-        isVisible={process.env.NODE_ENV === 'development'}
-        messageId={condition?.message_id}
-        conditionId={condition?.id}
-        lastRefreshed={lastRefreshed || 0}
-        refreshCount={refreshCount}
-        reminderMinutes={reminderMinutes}
-        permissionError={permissionError}
       />
       
       {/* Reminder History Dialog - hidden but kept for functionality */}

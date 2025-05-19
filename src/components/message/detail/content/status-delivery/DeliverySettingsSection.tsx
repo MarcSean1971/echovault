@@ -1,10 +1,8 @@
-
 import React, { useState, useEffect } from "react";
-import { Clock, RefreshCw } from "lucide-react";
+import { Clock } from "lucide-react";
 import { MessageDeliverySettings } from "../../MessageDeliverySettings";
 import { HOVER_TRANSITION, ICON_HOVER_EFFECTS } from "@/utils/hoverEffects";
 import { useScheduledReminders } from "@/hooks/useScheduledReminders";
-import { Button } from "@/components/ui/button";
 import { AccordionSection } from "@/components/message/detail/AccordionSection";
 
 interface DeliverySettingsSectionProps {
@@ -28,7 +26,6 @@ export function DeliverySettingsSection({
 }: DeliverySettingsSectionProps) {
   // Local refresh counter to force updates when needed
   const [localRefresh, setLocalRefresh] = useState(0);
-  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Listen for condition updates to refresh scheduled reminders
   useEffect(() => {
@@ -60,18 +57,10 @@ export function DeliverySettingsSection({
     return null;
   }
 
-  // Handler for manual refresh button
-  const handleManualRefresh = async (e?: React.MouseEvent) => {
-    if (e) {
-      e.stopPropagation();
-    }
-    if (isRefreshing) return;
-    setIsRefreshing(true);
+  // Handler for manual refresh - still keeping the functionality in case it's needed elsewhere
+  const handleManualRefresh = async () => {
     console.log('[DeliverySettingsSection] Manual refresh requested');
     try {
-      // Simulate a slight delay for user feedback
-      await new Promise(resolve => setTimeout(resolve, 300));
-
       // Update localRefresh to trigger a re-fetch
       setLocalRefresh(prev => prev + 1);
 
@@ -87,8 +76,6 @@ export function DeliverySettingsSection({
       }));
     } catch (error) {
       console.error('[DeliverySettingsSection] Error during manual refresh:', error);
-    } finally {
-      setIsRefreshing(false);
     }
   };
 
@@ -97,8 +84,7 @@ export function DeliverySettingsSection({
     isLoading,
     upcomingReminders: formattedAllReminders,
     hasSchedule,
-    lastRefreshed,
-    forceRefresh
+    lastRefreshed
   } = useScheduledReminders(condition.message_id, combinedRefreshTrigger);
 
   // Pass the formatted reminders up to the parent component
@@ -111,23 +97,9 @@ export function DeliverySettingsSection({
   return (
     <AccordionSection
       title={
-        <div className="flex justify-between items-center w-full">
-          <div className="flex items-center">
-            <Clock className={`h-4 w-4 mr-1.5 ${HOVER_TRANSITION} ${ICON_HOVER_EFFECTS.muted}`} />
-            Delivery Settings
-          </div>
-          
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className={`h-7 w-7 rounded-full ${HOVER_TRANSITION}`}
-            onClick={handleManualRefresh}
-            disabled={isRefreshing}
-          >
-            <RefreshCw 
-              className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''} ${HOVER_TRANSITION} ${ICON_HOVER_EFFECTS.muted}`} 
-            />
-          </Button>
+        <div className="flex items-center">
+          <Clock className={`h-4 w-4 mr-1.5 ${HOVER_TRANSITION} ${ICON_HOVER_EFFECTS.muted}`} />
+          Delivery Settings
         </div>
       }
       defaultOpen={true}

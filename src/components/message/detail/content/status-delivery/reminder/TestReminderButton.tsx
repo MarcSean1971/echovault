@@ -1,8 +1,5 @@
 
 import React from "react";
-import { Button } from "@/components/ui/button";
-import { RefreshCw } from "lucide-react";
-import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface TestReminderButtonProps {
   onTestReminder: () => Promise<void>;
@@ -15,6 +12,7 @@ export function TestReminderButton({
   isTestingReminder,
   disabled = false
 }: TestReminderButtonProps) {
-  // This component has been deprecated as part of UI simplification
+  // This component has been removed as part of UI simplification
+  // It previously contained a button to test reminder functionality
   return null;
 }
