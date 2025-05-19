@@ -6,7 +6,6 @@ import { useNextReminders } from "@/hooks/useNextReminders";
 import { ReminderHistoryDialog } from "@/components/message/detail/ReminderHistoryDialog";
 import { ReminderHeader } from "./reminder/ReminderHeader";
 import { ReminderStatus } from "./reminder/ReminderStatus";
-import { ReminderConfigTimes } from "./reminder/ReminderConfigTimes";
 import { TestReminderButton } from "./reminder/TestReminderButton";
 import { DebugInfo } from "./reminder/DebugInfo";
 import { useReminderManager } from "./reminder/hooks/useReminderManager";
@@ -114,8 +113,7 @@ export function ReminderSection({
         />
       )}
       
-      {/* Show configured reminder times */}
-      <ReminderConfigTimes reminderMinutes={reminderMinutes} />
+      {/* Remove ReminderConfigTimes component */}
       
       {/* Show debug info in dev environment */}
       <DebugInfo

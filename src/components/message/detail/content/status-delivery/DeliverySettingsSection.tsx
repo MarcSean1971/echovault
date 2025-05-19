@@ -115,7 +115,17 @@ export function DeliverySettingsSection({
         </h3>
         
         {/* Add refresh button */}
-        
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          className={`h-7 w-7 rounded-full ${HOVER_TRANSITION}`}
+          onClick={handleManualRefresh}
+          disabled={isRefreshing}
+        >
+          <RefreshCw 
+            className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''} ${HOVER_TRANSITION} ${ICON_HOVER_EFFECTS.muted}`} 
+          />
+        </Button>
       </div>
       
       <MessageDeliverySettings condition={condition} formatDate={formatDate} renderConditionType={renderConditionType} showInTabs={true} />
