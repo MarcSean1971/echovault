@@ -11,19 +11,22 @@ import { TestReminderButton } from "./reminder/TestReminderButton";
 import { DebugInfo } from "./reminder/DebugInfo";
 import { useReminderManager } from "./reminder/hooks/useReminderManager";
 import { enhanceReminders } from "./reminder/utils/reminderEnhancer";
+import { AlertTriangle } from "lucide-react";
 
 interface ReminderSectionProps {
   condition: any | null;
   deadline: Date | null;
   isArmed: boolean;
   refreshTrigger?: number;
+  formattedAllReminders?: string[];
 }
 
 export function ReminderSection({ 
   condition, 
   deadline, 
   isArmed,
-  refreshTrigger 
+  refreshTrigger,
+  formattedAllReminders = []
 }: ReminderSectionProps) {
   // Parse reminder minutes from the condition
   const reminderMinutes = parseReminderMinutes(condition?.reminder_hours);
@@ -77,6 +80,22 @@ export function ReminderSection({
         isLoading={isLoading}
         refreshInProgress={refreshInProgressRef.current}
       />
+      
+      {/* Display formatted reminders list moved from DeliverySettingsSection */}
+      {formattedAllReminders.length > 0 && (
+        <div className="mb-3">
+          <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
+            {formattedAllReminders.map((reminder, index) => (
+              <li key={index} className={reminder.includes("Final Delivery") ? "font-medium text-destructive" : ""}>
+                {reminder.includes("Final Delivery") && (
+                  <AlertTriangle className="inline-block h-3.5 w-3.5 mr-1 -mt-0.5" />
+                )}
+                {reminder}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       
       <ReminderStatus
         isLoading={isLoading}

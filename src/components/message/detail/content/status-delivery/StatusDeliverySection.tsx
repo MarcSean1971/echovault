@@ -37,6 +37,7 @@ export function StatusDeliverySection({
   isLoadingDelivery
 }: StatusDeliverySectionProps) {
   const [effectiveDeadline, setEffectiveDeadline] = useState<Date | null>(null);
+  const [formattedReminders, setFormattedReminders] = useState<string[]>([]);
   
   // Calculate effective deadline for both regular and check-in conditions
   useEffect(() => {
@@ -73,6 +74,7 @@ export function StatusDeliverySection({
         deadline={effectiveDeadline}
         isArmed={isArmed}
         refreshTrigger={refreshTrigger}
+        onFormattedRemindersChange={setFormattedReminders}
       />
       
       <ReminderSection
@@ -80,6 +82,7 @@ export function StatusDeliverySection({
         deadline={effectiveDeadline}
         isArmed={isArmed}
         refreshTrigger={refreshTrigger}
+        formattedAllReminders={formattedReminders}
       />
     </div>
   );

@@ -15,6 +15,7 @@ interface DeliverySettingsSectionProps {
   deadline?: Date | null;
   isArmed?: boolean;
   refreshTrigger?: number;
+  onFormattedRemindersChange?: (reminders: string[]) => void;
 }
 
 export function DeliverySettingsSection({
@@ -23,7 +24,8 @@ export function DeliverySettingsSection({
   renderConditionType,
   deadline,
   isArmed = false,
-  refreshTrigger
+  refreshTrigger,
+  onFormattedRemindersChange
 }: DeliverySettingsSectionProps) {
   // Local refresh counter to force updates when needed
   const [localRefresh, setLocalRefresh] = useState(0);
@@ -103,6 +105,13 @@ export function DeliverySettingsSection({
     lastRefreshed,
     forceRefresh
   } = useScheduledReminders(condition.message_id, combinedRefreshTrigger);
+  
+  // Pass the formatted reminders up to the parent component
+  useEffect(() => {
+    if (onFormattedRemindersChange && formattedAllReminders) {
+      onFormattedRemindersChange(formattedAllReminders);
+    }
+  }, [formattedAllReminders, onFormattedRemindersChange]);
 
   return (
     <div className="space-y-3">
@@ -143,18 +152,8 @@ export function DeliverySettingsSection({
             {!isArmed && <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">Inactive</Badge>}
           </h4>
           
-          {formattedAllReminders.length > 0 ? (
-            <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
-              {formattedAllReminders.map((reminder, index) => (
-                <li key={index} className={reminder.includes("Final Delivery") ? "font-medium text-destructive" : ""}>
-                  {reminder.includes("Final Delivery") && (
-                    <AlertTriangle className="inline-block h-3.5 w-3.5 mr-1 -mt-0.5" />
-                  )}
-                  {reminder}
-                </li>
-              ))}
-            </ul>
-          ) : (
+          {/* Removed the ul element which is now in ReminderSection */}
+          {formattedAllReminders.length === 0 && (
             <p className="text-muted-foreground italic">
               {isArmed ? 
                 "No scheduled reminders found. They may have been already sent or not configured." :
