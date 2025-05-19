@@ -1,3 +1,4 @@
+
 import { supabaseClient } from "../supabase-client.ts";
 import { sendEmail } from "./email-service.ts";
 
@@ -91,14 +92,17 @@ export async function sendCreatorReminder(
           console.log(`Sending email to creator at ${email}`);
         }
         
+        // FIXED: Using a proper check-in reminder template with clear subject
         await sendEmail({
           to: email,
-          subject: `Reminder: "${messageTitle}" - Check-in Required`,
+          subject: `ACTION REQUIRED: Check-in Reminder for "${messageTitle}"`,
           html: `
-            <h2>Message Check-in Reminder</h2>
-            <p>This is a reminder about your message: <strong>${messageTitle}</strong></p>
-            <p>Please check in to postpone message delivery.</p>
+            <h2>Check-in Reminder</h2>
+            <p>Your message <strong>"${messageTitle}"</strong> requires a check-in.</p>
+            <p>You have <strong>${timeRemaining}</strong> remaining before the message will be automatically delivered.</p>
+            <p>To prevent automatic delivery, please check in now:</p>
             <p><a href="https://echo-vault.app/check-in" style="padding: 10px 20px; background-color: #0070f3; color: white; text-decoration: none; border-radius: 4px;">Check In Now</a></p>
+            <p>If you do not check in before the deadline (${new Date(deadlineDate).toLocaleString()}), your message will be automatically sent to all recipients.</p>
           `
         });
         
