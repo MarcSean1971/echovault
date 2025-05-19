@@ -2,6 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { parseReminderMinutes } from "../reminderUtils";
 import { getEffectiveDeadline } from "./reminderUtils";
+import { markRemindersAsObsolete } from "./reminderUtils";
 import { generateReminderSchedule } from "./reminderGenerator";
 
 /**
@@ -10,6 +11,8 @@ import { generateReminderSchedule } from "./reminderGenerator";
  * - When a message is armed
  * - When a message condition is updated/edited
  * - After check-ins that update the condition's last_checked time
+ * 
+ * FIXED: Added better error handling and logging for improved debugging of permission issues
  */
 export async function ensureReminderSchedule(
   conditionId: string,
@@ -61,6 +64,15 @@ export async function ensureReminderSchedule(
       return true;
     }
     
+    // First mark existing reminders as obsolete
+    try {
+      console.log(`[ENSURE-REMINDERS] Marking existing reminders as obsolete for message ${messageId}`);
+      await markRemindersAsObsolete(messageId, conditionId);
+    } catch (obsoleteError) {
+      console.error("[ENSURE-REMINDERS] Error marking reminders as obsolete:", obsoleteError);
+      // Continue execution to attempt creating new reminders even if marking obsolete fails
+    }
+    
     // Get reminder times (already in minutes in the database)
     const reminderMinutes = parseReminderMinutes(condition.reminder_hours);
     
@@ -76,12 +88,48 @@ export async function ensureReminderSchedule(
     console.log(`[ENSURE-REMINDERS] Using reminder minutes: ${JSON.stringify(reminderMinutes)}`);
     
     // Generate reminder schedule
-    return await generateReminderSchedule(
-      messageId,
-      conditionId,
-      effectiveDeadline,
-      reminderMinutes
-    );
+    try {
+      const result = await generateReminderSchedule(
+        messageId,
+        conditionId,
+        effectiveDeadline,
+        reminderMinutes
+      );
+      
+      if (result) {
+        console.log("[ENSURE-REMINDERS] Successfully generated reminder schedule");
+        return true;
+      } else {
+        console.error("[ENSURE-REMINDERS] Failed to generate reminder schedule");
+        return false;
+      }
+    } catch (scheduleError) {
+      console.error("[ENSURE-REMINDERS] Error generating reminder schedule:", scheduleError);
+      
+      // Enhanced error logging with more details
+      if (scheduleError.message?.includes("policy")) {
+        console.error("[ENSURE-REMINDERS] This appears to be a permissions error with RLS policies");
+        
+        // Try the edge function approach as a fallback
+        try {
+          console.log("[ENSURE-REMINDERS] Attempting to use edge function to regenerate reminders");
+          await supabase.functions.invoke("send-reminder-emails", {
+            body: { 
+              messageId, 
+              debug: true, 
+              forceSend: false,
+              action: "regenerate-schedule" 
+            }
+          });
+          console.log("[ENSURE-REMINDERS] Successfully triggered edge function to regenerate reminders");
+          return true;
+        } catch (edgeFunctionError) {
+          console.error("[ENSURE-REMINDERS] Edge function fallback failed:", edgeFunctionError);
+        }
+      }
+      
+      return false;
+    }
   } catch (error) {
     console.error("[ENSURE-REMINDERS] Error ensuring reminder schedule:", error);
     return false;

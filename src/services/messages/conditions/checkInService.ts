@@ -28,7 +28,15 @@ export async function performCheckIn(conditionId: string): Promise<boolean> {
     
     // After successful check-in, update the reminder schedule
     // This is crucial for no_check_in conditions where the deadline shifts
-    await ensureReminderSchedule(conditionId);
+    try {
+      await ensureReminderSchedule(conditionId);
+      // Add improved logging to track success/failure
+      console.log("[CHECK-IN] Successfully regenerated reminder schedule");
+    } catch (scheduleError) {
+      console.error("[CHECK-IN] Error regenerating reminder schedule:", scheduleError);
+      // Continue execution even if reminder regeneration fails
+      // This way the check-in still completes but we log the error
+    }
     
     // Dispatch a custom event to notify components about the condition update
     window.dispatchEvent(new CustomEvent('conditions-updated', { 
@@ -91,10 +99,40 @@ export async function performUserCheckIn(userId: string): Promise<boolean> {
     console.log(`[CHECK-IN] Successfully updated ${conditions.length} conditions`);
     
     // Regenerate reminder schedules for all updated conditions
-    for (const condition of conditions) {
-      console.log(`[CHECK-IN] Regenerating reminder schedule for condition ${condition.id}`);
-      await ensureReminderSchedule(condition.id);
+    let regenerationSuccessCount = 0;
+    let regenerationFailCount = 0;
+    
+    // Use batch processing to avoid overwhelming the browser
+    const batchSize = 5;
+    for (let i = 0; i < conditions.length; i += batchSize) {
+      const batch = conditions.slice(i, i + batchSize);
+      
+      // Process batch in parallel
+      const results = await Promise.allSettled(
+        batch.map(condition => 
+          ensureReminderSchedule(condition.id)
+            .then(result => {
+              console.log(`[CHECK-IN] Regenerated reminder schedule for condition ${condition.id}: ${result ? 'success' : 'failed'}`);
+              return { conditionId: condition.id, success: result };
+            })
+            .catch(error => {
+              console.error(`[CHECK-IN] Error regenerating reminder schedule for condition ${condition.id}:`, error);
+              return { conditionId: condition.id, success: false, error };
+            })
+        )
+      );
+      
+      // Count successes and failures
+      results.forEach(result => {
+        if (result.status === 'fulfilled' && result.value.success) {
+          regenerationSuccessCount++;
+        } else {
+          regenerationFailCount++;
+        }
+      });
     }
+    
+    console.log(`[CHECK-IN] Reminder regeneration summary: ${regenerationSuccessCount} successful, ${regenerationFailCount} failed`);
     
     // Dispatch a single event to notify components about the update
     // This will trigger UI refreshes
@@ -106,6 +144,21 @@ export async function performUserCheckIn(userId: string): Promise<boolean> {
         userId: userId
       }
     }));
+    
+    // Trigger reminder schedule processing via edge function to ensure immediate updates
+    try {
+      console.log("[CHECK-IN] Triggering reminder processing edge function");
+      await supabase.functions.invoke("send-reminder-emails", {
+        body: { 
+          debug: true,
+          action: "process",
+          source: "check-in-button"
+        }
+      });
+    } catch (functionError) {
+      console.error("[CHECK-IN] Error triggering reminder processing:", functionError);
+      // Non-fatal error, continue execution
+    }
     
     return true;
   } catch (error) {
