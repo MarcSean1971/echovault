@@ -50,19 +50,27 @@ export async function sendCreatorReminder(
     // Get backup email if available
     const emailList = [];
     
-    // Use backup_email if set, otherwise try to get email from auth.users
-    if (profile.backup_email) {
-      emailList.push(profile.backup_email);
-    } else {
-      try {
-        // Try to get user email from auth
-        const { data: user } = await supabaseClient().auth.admin.getUserById(userId);
-        
-        if (user?.email) {
-          emailList.push(user.email);
+    // IMPORTANT CHANGE: First try to get primary email from auth.users
+    try {
+      // Get user email from auth - use this as primary
+      const { data: user } = await supabaseClient().auth.admin.getUserById(userId);
+      
+      if (user?.user?.email) {
+        emailList.push(user.user.email);
+        if (debug) {
+          console.log(`Using primary email from auth: ${user.user.email}`);
         }
-      } catch (authError) {
-        console.warn("Error getting user email from auth:", authError);
+      }
+    } catch (authError) {
+      console.warn("Error getting user email from auth:", authError);
+      // No action here, we'll check backup email below
+    }
+    
+    // Only use backup_email if primary email was not found
+    if (emailList.length === 0 && profile.backup_email) {
+      emailList.push(profile.backup_email);
+      if (debug) {
+        console.log(`Using backup email from profile: ${profile.backup_email}`);
       }
     }
     
