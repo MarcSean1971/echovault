@@ -40,16 +40,17 @@ export const MessageDisplay = ({
   };
   
   // Add a graceful loading state with fade-in effect
+  // MODIFIED: Reduced loading times for faster UI display
   useEffect(() => {
-    // Show initial loading indicator
+    // Show initial loading indicator very briefly
     const timer = setTimeout(() => {
       setIsLoading(false);
-    }, 600);
+    }, 300);
     
-    // Mark content as ready after metadata is loaded
+    // Mark content as ready almost immediately
     const contentTimer = setTimeout(() => {
       setContentReady(true);
-    }, 800);
+    }, 400);
     
     return () => {
       clearTimeout(timer);
