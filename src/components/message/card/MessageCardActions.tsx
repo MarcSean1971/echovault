@@ -12,7 +12,7 @@ interface MessageCardActionsProps {
   condition: any | null;
   isArmed: boolean;
   isLoading: boolean;
-  onArmMessage: () => Promise<void>;
+  onArmMessage: () => Promise<Date | null>;
   onDisarmMessage: () => Promise<void>;
 }
 
