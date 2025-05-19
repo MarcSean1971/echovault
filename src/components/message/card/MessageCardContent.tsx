@@ -57,11 +57,6 @@ export function MessageCardContent({
     <div className="space-y-3">
       {/* Message preview text - now consistent for all message types */}
       <div className="text-sm leading-relaxed text-gray-600">
-        {isVideoMessage && (
-          <span className="flex items-center text-muted-foreground mb-1">
-            <Video className="h-4 w-4 mr-1.5" strokeWidth={1.5} />
-          </span>
-        )}
         <p className="line-clamp-2">
           {messagePreview}
         </p>
