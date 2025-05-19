@@ -39,11 +39,13 @@ export function VideoPlayer({
     
     if (isPlaying) {
       videoRef.current.pause();
+      setIsPlaying(false);
     } else {
-      videoRef.current.play();
+      videoRef.current.play().catch(error => {
+        console.error("Error playing video:", error);
+      });
+      setIsPlaying(true);
     }
-    
-    setIsPlaying(!isPlaying);
   };
   
   // Handle ending playback

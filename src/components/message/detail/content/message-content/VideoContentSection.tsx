@@ -2,9 +2,10 @@
 import React, { useState, useCallback } from "react";
 import { Message } from "@/types/message";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Play, Pause } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface VideoContentSectionProps {
   message: Message;
@@ -17,8 +18,9 @@ export function VideoContentSection({
   additionalText, 
   transcription 
 }: VideoContentSectionProps) {
-  // States for managing video loading
+  // States for managing video loading and playback
   const [loadingError, setLoadingError] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
   
   // Use the text_content directly if available, otherwise use additionalText from the hook
   const displayText = message.text_content || additionalText;
@@ -31,12 +33,14 @@ export function VideoContentSection({
   return (
     <>
       {/* Video container with proper sizing - ensures consistent width */}
-      <div className="mb-6 relative rounded-md overflow-hidden bg-black/5 hover:shadow-md">
+      <div className="mb-6 relative rounded-md overflow-hidden bg-black/5 hover:shadow-md transition-shadow">
         {/* Fixed aspect ratio container for video */}
         <div className="aspect-video w-full">
           <VideoPlayer 
             message={message} 
-            onError={(error) => setLoadingError(error)} 
+            onError={(error) => setLoadingError(error)}
+            isPlaying={isPlaying}
+            setIsPlaying={setIsPlaying}
           />
         </div>
 
@@ -79,8 +83,18 @@ export function VideoContentSection({
   );
 }
 
-// Optimized video player component with proper width constraints
-function VideoPlayer({ message, onError }: { message: Message; onError: (error: string) => void }) {
+// Optimized video player component with proper custom controls
+function VideoPlayer({ 
+  message, 
+  onError, 
+  isPlaying, 
+  setIsPlaying 
+}: { 
+  message: Message; 
+  onError: (error: string) => void;
+  isPlaying: boolean;
+  setIsPlaying: (isPlaying: boolean) => void;
+}) {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -149,6 +163,30 @@ function VideoPlayer({ message, onError }: { message: Message; onError: (error: 
     };
   }, [message, onError]);
   
+  // Handle video playback
+  const videoRef = React.useRef<HTMLVideoElement>(null);
+  
+  // Toggle video playback
+  const togglePlayback = useCallback(() => {
+    if (!videoRef.current) return;
+    
+    if (isPlaying) {
+      videoRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      videoRef.current.play().catch(err => {
+        console.error("Error playing video:", err);
+        onError("Error playing video");
+      });
+      setIsPlaying(true);
+    }
+  }, [isPlaying, setIsPlaying, onError]);
+  
+  // Handle video ended event
+  const handleVideoEnded = useCallback(() => {
+    setIsPlaying(false);
+  }, [setIsPlaying]);
+  
   if (isLoading) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-muted/30">
@@ -166,12 +204,42 @@ function VideoPlayer({ message, onError }: { message: Message; onError: (error: 
   }
   
   return (
-    <video 
-      controls
-      src={videoUrl}
-      className="w-full h-full object-contain"
-      preload="metadata"
-      onError={() => onError("Error playing video")}
-    />
+    <div className="relative group h-full w-full bg-black">
+      <video 
+        ref={videoRef}
+        src={videoUrl}
+        className="w-full h-full object-contain"
+        preload="metadata"
+        onError={() => onError("Error playing video")}
+        onEnded={handleVideoEnded}
+      />
+      
+      {/* Custom video controls */}
+      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity flex justify-between items-center w-full">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon"
+                type="button"
+                onClick={togglePlayback}
+                className="text-white hover:bg-white/20 transition-colors"
+                aria-label={isPlaying ? "Pause video" : "Play video"}
+              >
+                {isPlaying ? (
+                  <Pause className="h-5 w-5" />
+                ) : (
+                  <Play className="h-5 w-5" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{isPlaying ? 'Pause video' : 'Play video'}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+    </div>
   );
 }
