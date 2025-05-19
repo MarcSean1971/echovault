@@ -32,16 +32,16 @@ export function MessageDeliverySettings({
   return (
     <div className={`space-y-4 ${showInTabs ? 'pt-0' : 'pt-2'}`}>
       <div className="grid grid-cols-1 gap-2 text-sm">
-        <div className="flex justify-between">
+        <div className="grid grid-cols-3 gap-1">
           <span className="font-medium">Type:</span>
-          <span className="text-right">{renderConditionType()}</span>
+          <span className="col-span-2">{renderConditionType()}</span>
         </div>
         
         {condition.condition_type === 'no_check_in' && (
           <>
-            <div className="flex justify-between">
+            <div className="grid grid-cols-3 gap-1">
               <span className="font-medium">Check-in period:</span>
-              <span className="text-right">
+              <span className="col-span-2">
                 {condition.hours_threshold} hours
                 {condition.minutes_threshold ? ` ${condition.minutes_threshold} minutes` : ''}
               </span>
@@ -49,9 +49,9 @@ export function MessageDeliverySettings({
             
             {/* Fixed: Show reminder settings in same format as other settings */}
             {condition.reminder_hours && condition.reminder_hours.length > 0 && (
-              <div className="flex justify-between">
+              <div className="grid grid-cols-3 gap-1">
                 <span className="font-medium">Reminder settings:</span>
-                <span className="text-right">
+                <span className="col-span-2">
                   {condition.reminder_hours.sort((a: number, b: number) => b - a)
                     .map((minutes: number) => formatReminderTime(minutes))
                     .join(', ')}
@@ -62,9 +62,9 @@ export function MessageDeliverySettings({
         )}
         
         {condition.recurring_pattern && (
-          <div className="flex justify-between">
+          <div className="grid grid-cols-3 gap-1">
             <span className="font-medium">Recurring:</span>
-            <span className="text-right">
+            <span className="col-span-2">
               {condition.recurring_pattern.type} 
               {condition.recurring_pattern.interval > 1 ? 
                 ` (every ${condition.recurring_pattern.interval} ${condition.recurring_pattern.type.slice(0, -2)}s)` : 
@@ -74,16 +74,16 @@ export function MessageDeliverySettings({
         )}
         
         {condition.trigger_date && (
-          <div className="flex justify-between">
+          <div className="grid grid-cols-3 gap-1">
             <span className="font-medium">Scheduled date:</span>
-            <span className="text-right">
+            <span className="col-span-2">
               {formatDate(condition.trigger_date)}
             </span>
           </div>
         )}
       </div>
       
-      {/* Security settings section - Now with consistent heading style */}
+      {/* Security settings section - Now with consistent grid layout */}
       {(condition.expiry_hours > 0 || condition.unlock_delay_hours > 0 || condition.pin_code) && (
         <>
           <Separator className="my-4" />
@@ -93,27 +93,27 @@ export function MessageDeliverySettings({
           </h3>
           <div className="grid grid-cols-1 gap-2 text-sm">
             {condition.pin_code && (
-              <div className="flex justify-between text-sm">
+              <div className="grid grid-cols-3 gap-1">
                 <span className="font-medium">PIN Code:</span>
-                <span className="text-right">
+                <span className="col-span-2">
                   {condition.pin_code}
                 </span>
               </div>
             )}
             
             {condition.expiry_hours > 0 && (
-              <div className="flex justify-between text-sm">
+              <div className="grid grid-cols-3 gap-1">
                 <span className="font-medium">Message Expiry:</span>
-                <span className="text-right">
+                <span className="col-span-2">
                   {condition.expiry_hours} hours after delivery
                 </span>
               </div>
             )}
             
             {condition.unlock_delay_hours > 0 && (
-              <div className="flex justify-between text-sm">
+              <div className="grid grid-cols-3 gap-1">
                 <span className="font-medium">Delay Settings:</span>
-                <span className="text-right">
+                <span className="col-span-2">
                   {condition.unlock_delay_hours} hours after delivery
                 </span>
               </div>

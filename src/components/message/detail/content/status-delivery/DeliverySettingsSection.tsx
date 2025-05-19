@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Clock, AlertTriangle, RefreshCw } from "lucide-react";
 import { MessageDeliverySettings } from "../../MessageDeliverySettings";
@@ -6,6 +7,7 @@ import { useScheduledReminders } from "@/hooks/useScheduledReminders";
 import { parseReminderMinutes } from "@/utils/reminderUtils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+
 interface DeliverySettingsSectionProps {
   condition: any | null;
   formatDate: (dateString: string) => string;
@@ -15,6 +17,7 @@ interface DeliverySettingsSectionProps {
   refreshTrigger?: number;
   onFormattedRemindersChange?: (reminders: string[]) => void;
 }
+
 export function DeliverySettingsSection({
   condition,
   formatDate,
@@ -102,7 +105,9 @@ export function DeliverySettingsSection({
       onFormattedRemindersChange(formattedAllReminders);
     }
   }, [formattedAllReminders, onFormattedRemindersChange]);
-  return <div className="space-y-3">
+  
+  return (
+    <div className="space-y-3">
       <div className="flex justify-between items-center mb-3">
         <h3 className="text-sm font-medium text-muted-foreground flex items-center">
           <Clock className={`h-4 w-4 mr-1.5 ${HOVER_TRANSITION} ${ICON_HOVER_EFFECTS.muted}`} />
@@ -117,5 +122,6 @@ export function DeliverySettingsSection({
       
       {/* Add scheduled reminders display */}
       {!isLoading}
-    </div>;
+    </div>
+  );
 }
