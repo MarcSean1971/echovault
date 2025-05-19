@@ -6,37 +6,45 @@ import { parseMessageTranscription } from "@/services/messages/mediaService";
 export function useMessageTranscription(message: Message) {
   const [transcription, setTranscription] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   useEffect(() => {
     // Skip processing for non-video messages
     if (!message || message.message_type !== 'video') {
       setTranscription(null);
+      setIsLoading(false);
+      setError(null);
       return;
     }
     
     // Set to loading but don't block UI
     setIsLoading(true);
+    setError(null);
     
-    // Use setTimeout to defer processing to after page render is complete
-    const timer = setTimeout(() => {
-      try {
-        // Extract transcription from video content - fast operation
-        const extractedTranscription = parseMessageTranscription(
-          message.video_content || message.content
-        );
-        
-        // Update state with extracted transcription
-        setTranscription(extractedTranscription);
-      } catch (error) {
-        console.error("Error extracting transcription:", error);
-        setTranscription(null);
-      } finally {
+    // Process immediately to avoid delays
+    try {
+      // Check if we already have a transcription in message.text_content
+      if (message.text_content && message.text_content.toLowerCase().includes("transcript")) {
+        setTranscription(message.text_content);
         setIsLoading(false);
+        return;
       }
-    }, 1000); // Delay by 1 second to ensure page loads first
-    
-    return () => clearTimeout(timer);
+      
+      // Extract transcription from video content - fast operation
+      const extractedTranscription = parseMessageTranscription(
+        message.video_content || message.content
+      );
+      
+      // Update state with extracted transcription
+      setTranscription(extractedTranscription);
+    } catch (error) {
+      console.error("Error extracting transcription:", error);
+      setError("Failed to load transcription");
+      setTranscription(null);
+    } finally {
+      setIsLoading(false);
+    }
   }, [message]);
   
-  return { transcription, isLoading };
+  return { transcription, isLoading, error };
 }
