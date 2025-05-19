@@ -9,6 +9,7 @@ import { useTriggerDashboard } from "@/hooks/useTriggerDashboard";
 import { useHeaderCheckIn } from "@/hooks/useHeaderCheckIn";
 import { usePanicButton } from "@/hooks/usePanicButton";
 import { useDeadlineMeter } from "@/hooks/useDeadlineMeter";
+import { PanicMessageSelector } from "@/components/check-in/panic-button/PanicMessageSelector";
 
 interface HeaderButtonsProps {
   conditions: MessageCondition[];
@@ -26,10 +27,13 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
     refreshConditions 
   } = useTriggerDashboard();
 
-  // Find panic message from conditions
-  const panicMessage = conditions.find(c => 
+  // Find all panic messages from conditions - now getting an array of messages
+  const panicMessages = conditions.filter(c => 
     c.condition_type === 'panic_trigger' && c.active === true
-  ) || null;
+  );
+
+  // Get the first panic message as fallback for compatibility
+  const panicMessage = panicMessages.length > 0 ? panicMessages[0] : null;
 
   // Find check-in related conditions - only count active conditions
   const hasCheckInConditions = conditions.some(c => 
@@ -46,8 +50,13 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
     countDown, 
     triggerInProgress,
     handlePanicButtonClick,
-    inCancelWindow
-  } = usePanicButton(userId, panicMessage);
+    inCancelWindow,
+    isSelectorOpen,
+    setIsSelectorOpen,
+    selectedMessageId,
+    setSelectedMessageId,
+    handlePanicMessageSelect
+  } = usePanicButton(userId, panicMessage, panicMessages);
   
   // Force refresh conditions when component mounts and when lastRefresh changes
   useEffect(() => {
@@ -68,41 +77,53 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
     : "flex justify-center space-x-4";
 
   return (
-    <div className={containerClass}>
-      {/* Messages button - always visible */}
-      <MessagesButton
-        buttonPaddingClass={buttonPaddingClass}
-        buttonSizeClass={buttonSizeClass}
-        iconSizeClass={iconSizeClass}
-        isMobile={isMobile}
-      />
-      
-      {/* Check In Now button - only show when active check-in conditions exist */}
-      {hasCheckInConditions && (
-        <CheckInButton
-          onClick={handleCheckIn}
-          isDisabled={isChecking || panicMode}
-          isMobile={isMobile}
+    <>
+      <div className={containerClass}>
+        {/* Messages button - always visible */}
+        <MessagesButton
           buttonPaddingClass={buttonPaddingClass}
           buttonSizeClass={buttonSizeClass}
           iconSizeClass={iconSizeClass}
-        />
-      )}
-      
-      {/* Emergency Panic Button - only shown when active panic message exists */}
-      {panicMessage && (
-        <PanicButton
-          onClick={handlePanicButtonClick}
-          isDisabled={isChecking || (panicMode && !inCancelWindow) || (triggerInProgress && !inCancelWindow)}
           isMobile={isMobile}
-          buttonPaddingClass={buttonPaddingClass}
-          buttonSizeClass={buttonSizeClass}
-          iconSizeClass={iconSizeClass}
-          panicMode={panicMode}
-          countDown={countDown}
-          isConfirming={isConfirming}
+        />
+        
+        {/* Check In Now button - only show when active check-in conditions exist */}
+        {hasCheckInConditions && (
+          <CheckInButton
+            onClick={handleCheckIn}
+            isDisabled={isChecking || panicMode}
+            isMobile={isMobile}
+            buttonPaddingClass={buttonPaddingClass}
+            buttonSizeClass={buttonSizeClass}
+            iconSizeClass={iconSizeClass}
+          />
+        )}
+        
+        {/* Emergency Panic Button - only shown when active panic message exists */}
+        {panicMessages.length > 0 && (
+          <PanicButton
+            onClick={handlePanicButtonClick}
+            isDisabled={isChecking || (panicMode && !inCancelWindow) || (triggerInProgress && !inCancelWindow)}
+            isMobile={isMobile}
+            buttonPaddingClass={buttonPaddingClass}
+            buttonSizeClass={buttonSizeClass}
+            iconSizeClass={iconSizeClass}
+            panicMode={panicMode}
+            countDown={countDown}
+            isConfirming={isConfirming}
+          />
+        )}
+      </div>
+
+      {/* Panic Message Selector - shown when there are multiple panic messages */}
+      {panicMessages.length > 1 && (
+        <PanicMessageSelector
+          messages={panicMessages}
+          isOpen={isSelectorOpen}
+          onClose={() => setIsSelectorOpen(false)}
+          onSelect={handlePanicMessageSelect}
         />
       )}
-    </div>
+    </>
   );
 }
