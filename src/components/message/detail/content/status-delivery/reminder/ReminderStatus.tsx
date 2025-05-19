@@ -65,36 +65,13 @@ export function ReminderStatus({
   }
 
   return (
-    <>
-      <div className="grid grid-cols-3 gap-1">
-        <span className="font-medium">Status:</span>
-        <span className="col-span-2">
-          {enhancedReminders.length > 0 
-            ? `${enhancedReminders.length} upcoming reminder${enhancedReminders.length !== 1 ? 's' : ''}` 
-            : "All reminders sent"}
-        </span>
-      </div>
-      
-      {enhancedReminders.length > 0 && (
-        <div className="grid grid-cols-3 gap-1">
-          <span className="font-medium">Next reminders:</span>
-          <div className="col-span-2 flex flex-wrap gap-1">
-            {enhancedReminders.map((reminder, index) => (
-              <span 
-                key={index} 
-                className={`inline-block px-2 py-1 ${
-                  reminder.isImportant 
-                    ? "bg-red-50 border border-red-200 text-red-700 hover:bg-red-100" 
-                    : "bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100"
-                } rounded-md text-xs transition-colors hover:transition-colors`}
-                title={reminder.formattedText}
-              >
-                {reminder.formattedShortDate}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-    </>
+    <div className="grid grid-cols-3 gap-1">
+      <span className="font-medium">Status:</span>
+      <span className="col-span-2">
+        {enhancedReminders.length > 0 
+          ? `${enhancedReminders.length} upcoming reminder${enhancedReminders.length !== 1 ? 's' : ''}` 
+          : "All reminders sent"}
+      </span>
+    </div>
   );
 }
