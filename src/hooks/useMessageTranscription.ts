@@ -14,10 +14,11 @@ export function useMessageTranscription(message: Message) {
       return;
     }
     
+    // Set to loading but don't block UI
     setIsLoading(true);
     
-    // Use requestAnimationFrame to process transcription without blocking the UI
-    requestAnimationFrame(() => {
+    // Use setTimeout to defer processing to after page render is complete
+    const timer = setTimeout(() => {
       try {
         // Extract transcription from video content - fast operation
         const extractedTranscription = parseMessageTranscription(
@@ -32,7 +33,9 @@ export function useMessageTranscription(message: Message) {
       } finally {
         setIsLoading(false);
       }
-    });
+    }, 1000); // Delay by 1 second to ensure page loads first
+    
+    return () => clearTimeout(timer);
   }, [message]);
   
   return { transcription, isLoading };

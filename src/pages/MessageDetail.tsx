@@ -28,7 +28,7 @@ export default function MessageDetail() {
     navigate("/messages");
   }, [navigate]);
   
-  // Get minimal message data first for immediate display
+  // Get minimal message data first for immediate display - show UI ASAP
   const { 
     message, 
     isLoading, 
@@ -60,9 +60,9 @@ export default function MessageDetail() {
   // Get the recipient rendering function
   const { renderRecipients } = MessageRecipientProvider({ recipients });
   
-  // Show content immediately without any artificial delays
+  // Show UI immediately without artificial delays
   useEffect(() => {
-    // Mark the UI as ready to display immediately
+    // Mark the UI as ready to display right away
     setIsRendered(true);
     
     // Listen for condition updates to refresh data
@@ -72,17 +72,17 @@ export default function MessageDetail() {
     
     window.addEventListener('conditions-updated', handleConditionUpdated);
     
-    // Add listener for deadline reached event
+    // Listen for deadline reached event
     const handleDeadlineReached = (event: Event) => {
       if (!id || !isArmed) return;
       
-      // Check if this is a deadman's switch (no_check_in condition)
+      // Check if this is a deadman's switch
       if (condition && condition.condition_type === 'no_check_in') {
-        console.log('[MessageDetail] Deadline reached event received, attempting to trigger message delivery');
+        console.log('[MessageDetail] Deadline reached event received');
         
         // Attempt automatic delivery
         triggerDeadmanSwitch(id).catch(error => {
-          console.error('[MessageDetail] Failed to auto-trigger deadman switch on deadline reached:', error);
+          console.error('[MessageDetail] Failed to trigger deadman switch:', error);
         });
       }
     };
@@ -95,7 +95,7 @@ export default function MessageDetail() {
     };
   }, [id, isArmed, condition]);
   
-  // Show minimal loading state only when absolutely necessary
+  // Show minimal loading state just for a brief moment
   if (!isRendered || (isLoading && !message)) {
     return <MessageLoading message="Loading message..." />;
   }
@@ -104,10 +104,11 @@ export default function MessageDetail() {
     return <MessageNotFound />;
   }
 
+  // Render the page with all available data immediately
   return (
     <MessageDetailContent
       message={message}
-      isLoading={isLoading} // Pass loading state for progressive UI
+      isLoading={false} // Set to false to avoid skeleton loaders blocking the UI
       isArmed={isArmed}
       isActionLoading={isActionLoading}
       deadline={deadline}

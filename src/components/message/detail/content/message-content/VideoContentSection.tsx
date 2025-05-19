@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect } from "react";
 import { Message } from "@/types/message";
-import { VideoMessageContent } from "../VideoMessageContent";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { Button } from "@/components/ui/button";
+import { Play } from "lucide-react";
 
 interface VideoContentSectionProps {
   message: Message;
@@ -15,28 +16,40 @@ export function VideoContentSection({
   additionalText, 
   transcription 
 }: VideoContentSectionProps) {
-  // Track when component mounts to trigger early video loading
-  const [isMounted, setIsMounted] = useState(false);
-  
-  // Mark component as mounted to start video loading process immediately
-  useEffect(() => {
-    console.log("[VideoContentSection] Component mounted, immediately displaying video container");
-    setIsMounted(true);
-    
-    // Log the transcription status for debugging
-    if (transcription) {
-      console.log("[VideoContentSection] Transcription available, displaying alongside video");
-    }
-  }, [transcription]);
+  // States for managing video loading
+  const [isVideoLoading, setIsVideoLoading] = useState(false);
+  const [showVideo, setShowVideo] = useState(false);
   
   // Use the text_content directly if available, otherwise use additionalText from the hook
   const displayText = message.text_content || additionalText;
   
+  // Function to trigger video loading only when user chooses to
+  const handleLoadVideo = () => {
+    setIsVideoLoading(true);
+    setShowVideo(true);
+  };
+  
   return (
     <>
-      {/* First show video content with progressive loading - this loads quickly with a placeholder */}
-      <div className="mb-6">
-        <VideoMessageContent message={message} />
+      {/* Video placeholder or loaded video */}
+      <div className="mb-6 relative rounded-md overflow-hidden bg-black/5">
+        {!showVideo ? (
+          // Show placeholder until user clicks to load
+          <div className="aspect-video bg-muted/30 flex items-center justify-center">
+            <Button 
+              variant="outline" 
+              className="flex items-center gap-2"
+              onClick={handleLoadVideo}
+            >
+              <Play className="h-4 w-4" /> Load Video
+            </Button>
+          </div>
+        ) : (
+          // Lazy-load the actual video component only when needed
+          <div className="aspect-video">
+            <LazyVideoLoader message={message} />
+          </div>
+        )}
       </div>
       
       {/* Show transcription immediately if available - this is just text */}
@@ -59,5 +72,129 @@ export function VideoContentSection({
         </div>
       )}
     </>
+  );
+}
+
+// Separate component to handle video loading
+function LazyVideoLoader({ message }: { message: Message }) {
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  useEffect(() => {
+    // Create a simple placeholder
+    const createPlaceholder = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 320;
+      canvas.height = 240;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.fillStyle = '#f0f0f0';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.beginPath();
+        ctx.arc(canvas.width/2, canvas.height/2, 40, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.moveTo(canvas.width/2 - 15, canvas.height/2 - 20);
+        ctx.lineTo(canvas.width/2 - 15, canvas.height/2 + 20);
+        ctx.lineTo(canvas.width/2 + 25, canvas.height/2);
+        ctx.closePath();
+        ctx.fill();
+      }
+    };
+    
+    // Import dynamically to avoid slowing down initial page load
+    import('@/services/messages/mediaService').then(module => {
+      const { parseVideoContent } = module;
+      
+      // Get video content
+      const contentToUse = message.video_content || message.content;
+      
+      if (!contentToUse) {
+        setIsProcessing(false);
+        setError("No video content found");
+        return;
+      }
+      
+      try {
+        // Extract video data - moved to separate function to avoid blocking UI
+        setTimeout(() => {
+          try {
+            const { videoData } = parseVideoContent(contentToUse);
+            
+            if (!videoData) {
+              setIsProcessing(false);
+              setError("Unable to parse video content");
+              return;
+            }
+            
+            // Create blob URL from video data
+            const binaryString = window.atob(videoData);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+            
+            const blob = new Blob([bytes], { type: 'video/webm' });
+            const url = URL.createObjectURL(blob);
+            
+            setVideoUrl(url);
+            setIsProcessing(false);
+          } catch (e) {
+            console.error("Error processing video:", e);
+            setError("Error processing video");
+            setIsProcessing(false);
+          }
+        }, 500);
+      } catch (e) {
+        console.error("Error in video processing:", e);
+        setError("Error processing video");
+        setIsProcessing(false);
+      }
+    });
+    
+    return () => {
+      if (videoUrl) URL.revokeObjectURL(videoUrl);
+    };
+  }, [message, videoUrl]);
+  
+  if (isProcessing) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-muted/30">
+        <div className="text-center">
+          <div className="w-10 h-10 border-4 border-t-blue-500 border-blue-200 rounded-full animate-spin mx-auto mb-3"></div>
+          <p className="text-sm text-muted-foreground">Loading video...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (error) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-muted/30">
+        <div className="text-center p-4 text-muted-foreground">
+          <p>{error}</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (!videoUrl) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-muted/30">
+        <p className="text-sm text-muted-foreground">Video unavailable</p>
+      </div>
+    );
+  }
+  
+  return (
+    <video 
+      controls
+      src={videoUrl}
+      className="w-full h-full"
+      preload="metadata"
+    />
   );
 }

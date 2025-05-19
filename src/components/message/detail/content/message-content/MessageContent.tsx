@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Message } from "@/types/message";
 import { TextContentSection } from "./TextContentSection";
 import { VideoContentSection } from "../VideoContentSection";
@@ -7,7 +7,6 @@ import { LocationSection } from "./LocationSection";
 import { WhatsAppSection } from "./WhatsAppSection";
 import { useMessageAdditionalText } from "@/hooks/useMessageAdditionalText";
 import { useMessageTranscription } from "@/hooks/useMessageTranscription";
-import { Skeleton } from "@/components/ui/skeleton";
 
 export interface MessageContentProps {
   message: Message;
@@ -22,7 +21,7 @@ export function MessageContent({
 }: MessageContentProps) {
   // Get text content immediately, then transcription asynchronously
   const { additionalText } = useMessageAdditionalText(message);
-  const { transcription, isLoading: isTranscriptionLoading } = useMessageTranscription(message);
+  const { transcription } = useMessageTranscription(message);
   
   // Render immediately with what we have - true progressive loading
   return (
