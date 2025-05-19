@@ -7,6 +7,7 @@ import { LocationSection } from "./LocationSection";
 import { WhatsAppSection } from "./WhatsAppSection";
 import { useMessageAdditionalText } from "@/hooks/useMessageAdditionalText";
 import { useMessageTranscription } from "@/hooks/useMessageTranscription";
+import { MessageAttachments } from "@/components/message/detail/MessageAttachments";
 
 export interface MessageContentProps {
   message: Message;
@@ -46,6 +47,15 @@ export function MessageContent({
           latitude={message.location_latitude} 
           longitude={message.location_longitude} 
           locationName={message.location_name} 
+        />
+      )}
+      
+      {/* Attachments section - render if available */}
+      {message.attachments && message.attachments.length > 0 && (
+        <MessageAttachments
+          message={message}
+          deliveryId={deliveryId}
+          recipientEmail={recipientEmail}
         />
       )}
       
