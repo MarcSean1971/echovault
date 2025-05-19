@@ -103,24 +103,36 @@ function MessageCardInner({ message, onDelete, reminderInfo }: MessageCardProps)
     }
   }, [isArmed, deadline, condition]);
   
-  // Import the action handlers from the hook - now uses the complete implementation from messageDetailService
-  const { handleArmMessage, handleDisarmMessage } = useMessageCardActions();
+  // Import the action handlers from the hook - now uses the complete implementation
+  const { handleArmMessage, handleDisarmMessage, isLoading: actionIsLoading } = useMessageCardActions();
   
   // Action handlers with refresh counter update
   const onArmMessage = async () => {
-    if (!condition) return;
+    if (!condition) {
+      console.log("[MessageCard] Cannot arm message: no condition");
+      return;
+    }
     
+    console.log(`[MessageCard] Arming message ${message.id} with condition ${condition.id}`);
     await handleArmMessage(condition.id);
+    
     // Increment refresh counter to force timer re-render
     setRefreshCounter(prev => prev + 1);
+    console.log("[MessageCard] Incremented refresh counter after arming");
   };
   
   const onDisarmMessage = async () => {
-    if (!condition) return;
+    if (!condition) {
+      console.log("[MessageCard] Cannot disarm message: no condition");
+      return;
+    }
     
+    console.log(`[MessageCard] Disarming message ${message.id} with condition ${condition.id}`);
     await handleDisarmMessage(condition.id);
+    
     // Increment refresh counter to force timer re-render
     setRefreshCounter(prev => prev + 1);
+    console.log("[MessageCard] Incremented refresh counter after disarming");
   };
 
   // Determine card color based on status
@@ -168,7 +180,7 @@ function MessageCardInner({ message, onDelete, reminderInfo }: MessageCardProps)
           messageId={message.id}
           condition={condition}
           isArmed={isArmed}
-          isLoading={false}
+          isLoading={actionIsLoading} // Now using the actionIsLoading state from the hook
           onArmMessage={onArmMessage}
           onDisarmMessage={onDisarmMessage}
         />
