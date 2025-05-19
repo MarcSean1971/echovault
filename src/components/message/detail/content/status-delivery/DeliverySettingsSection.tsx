@@ -110,10 +110,7 @@ export function DeliverySettingsSection({
         </h3>
         
         {/* Add refresh button */}
-        <Button variant="ghost" size="sm" onClick={handleManualRefresh} disabled={isRefreshing} className="h-7 px-2">
-          <RefreshCw className={`h-3.5 w-3.5 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
-          <span className="text-xs">Refresh</span>
-        </Button>
+        
       </div>
       
       <MessageDeliverySettings condition={condition} formatDate={formatDate} renderConditionType={renderConditionType} showInTabs={true} />
