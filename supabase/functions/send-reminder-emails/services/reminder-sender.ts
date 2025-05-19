@@ -1,4 +1,3 @@
-
 import { supabaseClient } from "../supabase-client.ts";
 import { sendEmail } from "./email-service.ts";
 
@@ -294,8 +293,30 @@ export async function sendRecipientReminders(
             console.log(`Sending email to recipient ${recipient.name} at ${recipient.email} (attempt ${attempt + 1}/${maxRetries})`);
           }
           
-          // Create a delivery ID for access tracking
+          // Create a delivery ID for access tracking and database record
           const deliveryId = `${messageId}-${recipient.id}-${Date.now()}`;
+          
+          // For final deliveries, create a delivery record in the database
+          if (isFinalDelivery) {
+            try {
+              // Create delivery record in database
+              const supabase = supabaseClient();
+              await supabase.from("delivered_messages").insert({
+                message_id: messageId,
+                condition_id: recipient.conditionId || "unknown",
+                recipient_id: recipient.id,
+                delivery_id: deliveryId,
+                delivered_at: new Date().toISOString()
+              });
+              
+              if (debug) {
+                console.log(`Created delivery record for final delivery: ${deliveryId}`);
+              }
+            } catch (recordError) {
+              console.error(`Error creating delivery record:`, recordError);
+              // Continue despite error - we'll try to deliver the email anyway
+            }
+          }
           
           // Prepare email content based on type
           let emailSubject = '';
