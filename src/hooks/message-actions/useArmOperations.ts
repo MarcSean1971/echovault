@@ -2,6 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { useActionToasts } from "./useActionToasts";
 import { useConditionUpdates } from "./useConditionUpdates";
+import { ensureReminderSchedule } from "@/utils/reminder/ensureReminderSchedule";
 
 /**
  * Hook for handling arming message operations
@@ -65,6 +66,11 @@ export function useArmOperations() {
       
       // Get message ID for UI feedback and reminders
       const actualMessageId = data.message_id;
+      
+      // CRITICAL FIX: Directly ensure reminder schedule is created
+      // This is the key fix to make sure reminders are always generated
+      console.log(`[useArmOperations] Directly ensuring reminder schedule for condition ${conditionId}`);
+      await ensureReminderSchedule(conditionId, actualMessageId);
       
       // Fire a background event to handle reminder generation without blocking UI
       setTimeout(() => {
