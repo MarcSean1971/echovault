@@ -6,7 +6,7 @@ import { formatDate } from "@/utils/messageFormatUtils";
 import { MessageCardHeader } from "./card/MessageCardHeader";
 import { MessageCardContent } from "./card/MessageCardContent";
 import { MessageCardActions } from "./card/MessageCardActions";
-import { useMessageCondition } from "@/hooks/useMessageCondition";
+import { useMessageCondition, invalidateConditionCache } from "@/hooks/useMessageCondition";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { useMessageCardActions } from "@/hooks/useMessageCardActions";
 import { useMessageLastCheckIn } from "@/hooks/useMessageLastCheckIn";
@@ -27,15 +27,26 @@ interface MessageCardProps {
 
 // The non-memoized inner component
 function MessageCardInner({ message, onDelete, reminderInfo }: MessageCardProps) {
-  // Get condition status and data
+  // Track local force refresh state
+  const [forceRefresh, setForceRefresh] = useState(false);
+
+  // Get condition status and data with potential forced refresh
   const { 
     isArmed, 
     deadline, 
     condition, 
     isPanicTrigger,
     refreshCounter, 
-    setRefreshCounter 
-  } = useMessageCondition(message.id);
+    setRefreshCounter,
+    invalidateCache
+  } = useMessageCondition(message.id, forceRefresh);
+  
+  // Reset force refresh after it's been used
+  useEffect(() => {
+    if (forceRefresh) {
+      setForceRefresh(false);
+    }
+  }, [forceRefresh]);
   
   // Instead of using useMessageTranscription hook here which parses video content,
   // we'll just pass null for video messages in card view to improve performance
@@ -107,7 +118,7 @@ function MessageCardInner({ message, onDelete, reminderInfo }: MessageCardProps)
   // Import the action handlers from the hook - now uses the complete implementation
   const { handleArmMessage, handleDisarmMessage, isLoading: actionIsLoading } = useMessageCardActions();
   
-  // Action handlers with refresh counter update
+  // Action handlers with refresh and cache invalidation
   const onArmMessage = async () => {
     if (!condition) {
       console.log("[MessageCard] Cannot arm message: no condition");
@@ -115,10 +126,20 @@ function MessageCardInner({ message, onDelete, reminderInfo }: MessageCardProps)
     }
     
     console.log(`[MessageCard] Fast arming message ${message.id} with condition ${condition.id}`);
-    await handleArmMessage(condition.id);
+    
+    // Invalidate cache before arming to ensure fresh data
+    invalidateCache();
+    
+    // Arm the message
+    const result = await handleArmMessage(condition.id);
+    
+    // Force refresh the component after arming
+    setForceRefresh(true);
     
     // Increment refresh counter to force timer re-render
     setRefreshCounter(prev => prev + 1);
+    
+    return result;
   };
   
   const onDisarmMessage = async () => {
@@ -128,11 +149,44 @@ function MessageCardInner({ message, onDelete, reminderInfo }: MessageCardProps)
     }
     
     console.log(`[MessageCard] Disarming message ${message.id} with condition ${condition.id}`);
+    
+    // Invalidate cache before disarming to ensure fresh data
+    invalidateCache();
+    
+    // Disarm the message
     await handleDisarmMessage(condition.id);
+    
+    // Force refresh the component after disarming
+    setForceRefresh(true);
     
     // Increment refresh counter to force timer re-render
     setRefreshCounter(prev => prev + 1);
   };
+
+  // Listen for targeted update events
+  useEffect(() => {
+    const handleTargetedUpdate = (event: Event) => {
+      if (event instanceof CustomEvent) {
+        const detail = event.detail || {};
+        
+        // Check if this event targets the current message
+        if (detail.messageId === message.id) {
+          console.log(`[MessageCard] Received targeted update for message ${message.id}, action: ${detail.action}`);
+          
+          // Invalidate cache and force refresh
+          invalidateCache();
+          setForceRefresh(true);
+        }
+      }
+    };
+    
+    // Listen for targeted update events
+    window.addEventListener('message-targeted-update', handleTargetedUpdate);
+    
+    return () => {
+      window.removeEventListener('message-targeted-update', handleTargetedUpdate);
+    };
+  }, [message.id, invalidateCache]);
 
   // Listen for reminder generation request events
   useEffect(() => {
@@ -201,7 +255,7 @@ function MessageCardInner({ message, onDelete, reminderInfo }: MessageCardProps)
           messageId={message.id}
           condition={condition}
           isArmed={isArmed}
-          isLoading={actionIsLoading} // Now using the actionIsLoading state from the hook
+          isLoading={actionIsLoading} 
           onArmMessage={onArmMessage}
           onDisarmMessage={onDisarmMessage}
         />
@@ -210,5 +264,16 @@ function MessageCardInner({ message, onDelete, reminderInfo }: MessageCardProps)
   );
 }
 
-// Memoize the component to prevent unnecessary re-renders
-export const MessageCard = memo(MessageCardInner);
+// Memoize the component with a custom comparison function to ensure updates when needed
+export const MessageCard = memo(MessageCardInner, (prevProps, nextProps) => {
+  // Always re-render if message IDs are different
+  if (prevProps.message.id !== nextProps.message.id) return false;
+  
+  // Check if reminder info has changed
+  const prevReminder = prevProps.reminderInfo?.formattedNextReminder;
+  const nextReminder = nextProps.reminderInfo?.formattedNextReminder;
+  if (prevReminder !== nextReminder) return false;
+  
+  // Default to standard memo behavior for other properties
+  return true;
+});

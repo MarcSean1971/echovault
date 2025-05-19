@@ -9,10 +9,21 @@ const conditionCache = new Map<string, {
   timestamp: number
 }>();
 
-// Cache TTL in milliseconds (10 seconds)
-const CACHE_TTL = 10000;
+// Cache TTL in milliseconds (reduced from 10 seconds to 2 seconds for more responsive updates)
+const CACHE_TTL = 2000;
 
-export function useMessageCondition(messageId: string) {
+// Function to invalidate cache for a specific message ID or all messages
+export function invalidateConditionCache(messageId?: string) {
+  if (messageId) {
+    console.log(`[useMessageCondition] Invalidating cache for message ${messageId}`);
+    conditionCache.delete(messageId);
+  } else {
+    console.log('[useMessageCondition] Invalidating all condition caches');
+    conditionCache.clear();
+  }
+}
+
+export function useMessageCondition(messageId: string, forceRefresh: boolean = false) {
   const [isArmed, setIsArmed] = useState(false);
   const [deadline, setDeadline] = useState<Date | null>(null);
   const [condition, setCondition] = useState<MessageCondition | null>(null);
@@ -21,13 +32,19 @@ export function useMessageCondition(messageId: string) {
   const [refreshCounter, setRefreshCounter] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load message condition status with caching
+  // Load message condition status with improved caching
   useEffect(() => {
-    // Check if we have a recent cached version first
+    // Skip loading if we don't have a messageId
+    if (!messageId) {
+      setIsLoading(false);
+      return;
+    }
+
+    // Check if we have a recent cached version first (and not forcing refresh)
     const cachedData = conditionCache.get(messageId);
     const now = Date.now();
     
-    if (cachedData && (now - cachedData.timestamp < CACHE_TTL)) {
+    if (!forceRefresh && cachedData && (now - cachedData.timestamp < CACHE_TTL)) {
       const cachedCondition = cachedData.condition;
       if (cachedCondition) {
         console.log(`[MessageCondition] Using cached condition for message ${messageId}`);
@@ -96,14 +113,22 @@ export function useMessageCondition(messageId: string) {
     // Also reload when conditions-updated event is received
     const handleConditionsUpdated = (event: Event) => {
       if (event instanceof CustomEvent) {
-        console.log(`[MessageCard ${messageId}] Received conditions-updated event, reloading`);
+        const detail = event.detail || {};
+        const eventMessageId = detail.messageId;
         
-        // Clear cache for this message
-        conditionCache.delete(messageId);
-        
-        loadConditionStatus();
-        // Increment refresh counter to force re-render of timer
-        setRefreshCounter(prev => prev + 1);
+        // If event is for this specific message or it's a global update
+        if (!eventMessageId || eventMessageId === messageId) {
+          console.log(`[MessageCard ${messageId}] Received conditions-updated event, reloading`);
+          
+          // Clear cache for this message
+          invalidateConditionCache(messageId);
+          
+          // Reload data
+          loadConditionStatus();
+          
+          // Increment refresh counter to force re-render of timer
+          setRefreshCounter(prev => prev + 1);
+        }
       }
     };
     
@@ -111,7 +136,7 @@ export function useMessageCondition(messageId: string) {
     return () => {
       window.removeEventListener('conditions-updated', handleConditionsUpdated);
     };
-  }, [messageId, refreshCounter]);
+  }, [messageId, refreshCounter, forceRefresh]);
   
   return { 
     isArmed, 
@@ -121,6 +146,7 @@ export function useMessageCondition(messageId: string) {
     transcription,
     refreshCounter,
     isLoading,
-    setRefreshCounter
+    setRefreshCounter,
+    invalidateCache: () => invalidateConditionCache(messageId)
   };
 }

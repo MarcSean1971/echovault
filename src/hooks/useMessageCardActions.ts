@@ -3,6 +3,7 @@ import { useState } from "react";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useConditionRefresh } from "@/hooks/useConditionRefresh";
+import { invalidateConditionCache } from "@/hooks/useMessageCondition";
 
 /**
  * Hook for handling message card arming/disarming actions
@@ -12,7 +13,7 @@ export function useMessageCardActions() {
   const [isLoading, setIsLoading] = useState(false);
   const { refreshConditions } = useConditionRefresh();
   
-  // Fast arming implementation that avoids unnecessary content loading
+  // Fast arming implementation with optimistic UI updates
   const handleArmMessage = async (conditionId: string) => {
     if (!conditionId) {
       console.log("[useMessageCardActions] Cannot arm message: no conditionId provided");
@@ -23,6 +24,33 @@ export function useMessageCardActions() {
     console.log(`[useMessageCardActions] Fast arming message with condition ${conditionId}`);
     
     try {
+      // First, get the current condition to extract messageId for later use
+      const { data: currentCondition, error: fetchError } = await supabase
+        .from("message_conditions")
+        .select("message_id")
+        .eq("id", conditionId)
+        .single();
+        
+      if (fetchError) throw fetchError;
+      
+      const messageId = currentCondition?.message_id;
+      
+      // Immediately invalidate cache to force a refresh on next query
+      if (messageId) {
+        invalidateConditionCache(messageId);
+      }
+      
+      // Emit an optimistic update event immediately
+      window.dispatchEvent(new CustomEvent('conditions-updated', { 
+        detail: { 
+          conditionId,
+          messageId,
+          action: 'arm',
+          optimistic: true,
+          timestamp: new Date().toISOString()
+        }
+      }));
+      
       // Direct database operation for faster arming - avoids processing content
       const { data, error } = await supabase
         .from("message_conditions")
@@ -38,13 +66,13 @@ export function useMessageCardActions() {
         throw error;
       }
       
-      // Get deadline for UI feedback
-      const messageId = data.message_id;
+      // Get message ID for UI feedback and reminders
+      const actualMessageId = data.message_id;
       
       // Fire a background event to handle reminder generation without blocking UI
       setTimeout(() => {
         const event = new CustomEvent('generate-message-reminders', { 
-          detail: { messageId, conditionId }
+          detail: { messageId: actualMessageId, conditionId }
         });
         window.dispatchEvent(event);
       }, 100);
@@ -76,6 +104,18 @@ export function useMessageCardActions() {
         description: "Your message has been armed and will trigger according to your settings"
       });
       
+      // Fire a confirmed update event now that we have real data
+      window.dispatchEvent(new CustomEvent('conditions-updated', { 
+        detail: { 
+          conditionId,
+          messageId: actualMessageId,
+          action: 'arm',
+          optimistic: false,
+          deadline: deadlineDate?.toISOString(),
+          timestamp: new Date().toISOString()
+        }
+      }));
+      
       // Refresh conditions data to update UI components with the latest state
       await refreshConditions();
       
@@ -103,6 +143,33 @@ export function useMessageCardActions() {
     console.log(`[useMessageCardActions] Disarming message with condition ${conditionId}`);
     
     try {
+      // First, get the current condition to extract messageId for later use
+      const { data: currentCondition, error: fetchError } = await supabase
+        .from("message_conditions")
+        .select("message_id")
+        .eq("id", conditionId)
+        .single();
+        
+      if (fetchError) throw fetchError;
+      
+      const messageId = currentCondition?.message_id;
+      
+      // Immediately invalidate cache to force a refresh on next query
+      if (messageId) {
+        invalidateConditionCache(messageId);
+      }
+      
+      // Emit an optimistic update event immediately
+      window.dispatchEvent(new CustomEvent('conditions-updated', { 
+        detail: { 
+          conditionId,
+          messageId,
+          action: 'disarm',
+          optimistic: true,
+          timestamp: new Date().toISOString()
+        }
+      }));
+      
       // Direct database operation for faster disarming
       const { error } = await supabase
         .from("message_conditions")
@@ -120,6 +187,17 @@ export function useMessageCardActions() {
         title: "Message disarmed",
         description: "Your message has been disarmed and will not trigger"
       });
+      
+      // Fire a confirmed update event now that we have real data
+      window.dispatchEvent(new CustomEvent('conditions-updated', { 
+        detail: { 
+          conditionId,
+          messageId,
+          action: 'disarm',
+          optimistic: false,
+          timestamp: new Date().toISOString() 
+        }
+      }));
       
       // Refresh conditions data to update UI components with the latest state
       await refreshConditions();

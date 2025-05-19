@@ -29,7 +29,8 @@ export function MessageCardActions({
   
   const buttonIsLoading = isLoading || isActionLoading;
   
-  const iconHoverEffect = "transition-transform group-hover:scale-110";
+  // Enhanced hover effect with transition
+  const iconHoverEffect = "transition-transform duration-200 group-hover:scale-110";
 
   return (
     <div className="flex justify-between w-full">
