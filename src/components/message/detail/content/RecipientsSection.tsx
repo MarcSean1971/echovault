@@ -11,13 +11,15 @@ interface RecipientsSectionProps {
   isArmed: boolean;
   isActionLoading: boolean;
   onSendTestMessage: () => void;
+  renderRecipients?: () => React.ReactNode;
 }
 
 export function RecipientsSection({
   recipients,
   isArmed,
   isActionLoading,
-  onSendTestMessage
+  onSendTestMessage,
+  renderRecipients
 }: RecipientsSectionProps) {
   // Add state to track recent test message sends - prevent multiple clicks
   const [recentlySent, setRecentlySent] = useState(false);
@@ -62,7 +64,8 @@ export function RecipientsSection({
         </div>
         
         <div className="mt-2">
-          <MessageRecipientsList recipients={recipients} />
+          {/* Use renderRecipients function if provided, otherwise use default MessageRecipientsList */}
+          {renderRecipients ? renderRecipients() : <MessageRecipientsList recipients={recipients} />}
         </div>
       </CardContent>
     </Card>

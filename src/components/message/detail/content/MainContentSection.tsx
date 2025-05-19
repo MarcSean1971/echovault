@@ -120,6 +120,9 @@ export function MainContentSection({
           ) : (
             <RecipientsSection
               recipients={recipients}
+              isArmed={isArmed}
+              isActionLoading={isActionLoading}
+              onSendTestMessage={onSendTestMessage}
               renderRecipients={() => {
                 if (!recipients || recipients.length === 0) {
                   return <div className="text-muted-foreground">No recipients configured</div>;
@@ -137,9 +140,6 @@ export function MainContentSection({
                   </div>
                 );
               }}
-              isArmed={isArmed}
-              isActionLoading={isActionLoading}
-              onSendTestMessage={onSendTestMessage}
             />
           )}
         </CardContent>
