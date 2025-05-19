@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { toast } from "@/components/ui/use-toast";
-import { handleArmMessage, handleDisarmMessage } from "@/services/messages/messageDetailService";
+import { handleArmMessage as serviceArmMessage, handleDisarmMessage as serviceDisarmMessage } from "@/services/messages/messageDetailService";
 import { useConditionRefresh } from "@/hooks/useConditionRefresh";
 
 export function useMessageCardActions() {
@@ -13,12 +13,9 @@ export function useMessageCardActions() {
     
     setIsLoading(true);
     try {
-      // Use the complete implementation from messageDetailService
-      // which also handles reminder schedule generation
-      const deadlineDate = await handleArmMessage(conditionId, (isArmed: boolean) => {
-        // This is a temporary state update function that will be replaced
-        // when the UI refreshes from the database
-      });
+      // The messageDetailService.handleArmMessage expects a conditionId and a setIsArmed callback
+      // We need to provide a dummy callback since we'll refresh the data anyway
+      const deadlineDate = await serviceArmMessage(conditionId);
       
       // Refresh conditions data to update UI components
       await refreshConditions();
@@ -42,11 +39,9 @@ export function useMessageCardActions() {
     
     setIsLoading(true);
     try {
-      // Use the complete implementation from messageDetailService
-      await handleDisarmMessage(conditionId, (isArmed: boolean) => {
-        // This is a temporary state update function that will be replaced
-        // when the UI refreshes from the database
-      });
+      // The messageDetailService.handleDisarmMessage expects a conditionId and a setIsArmed callback
+      // We need to provide a dummy callback since we'll refresh the data anyway
+      await serviceDisarmMessage(conditionId);
       
       // Refresh conditions data to update UI components
       await refreshConditions();
