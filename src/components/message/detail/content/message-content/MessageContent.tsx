@@ -40,21 +40,21 @@ export function MessageContent({
         />
       )}
       
-      {/* Location section - render if available */}
-      {message.share_location && (
-        <LocationSection 
-          latitude={message.location_latitude} 
-          longitude={message.location_longitude} 
-          locationName={message.location_name} 
-        />
-      )}
-      
-      {/* Attachments section - render if available */}
+      {/* Attachments section - render if available (SWAPPED ORDER - now before location) */}
       {message.attachments && message.attachments.length > 0 && (
         <MessageAttachments
           message={message}
           deliveryId={deliveryId}
           recipientEmail={recipientEmail}
+        />
+      )}
+      
+      {/* Location section - render if available (SWAPPED ORDER - now after attachments) */}
+      {message.share_location && (
+        <LocationSection 
+          latitude={message.location_latitude} 
+          longitude={message.location_longitude} 
+          locationName={message.location_name} 
         />
       )}
       
