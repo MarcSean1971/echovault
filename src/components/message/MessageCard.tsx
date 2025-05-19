@@ -11,6 +11,7 @@ import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { useMessageCardActions } from "@/hooks/useMessageCardActions";
 import { useMessageLastCheckIn } from "@/hooks/useMessageLastCheckIn";
 import { intervalToDuration } from "date-fns";
+import { ensureReminderSchedule } from "@/utils/reminder/ensureReminderSchedule";
 
 interface MessageCardProps {
   message: Message;
@@ -113,12 +114,11 @@ function MessageCardInner({ message, onDelete, reminderInfo }: MessageCardProps)
       return;
     }
     
-    console.log(`[MessageCard] Arming message ${message.id} with condition ${condition.id}`);
+    console.log(`[MessageCard] Fast arming message ${message.id} with condition ${condition.id}`);
     await handleArmMessage(condition.id);
     
     // Increment refresh counter to force timer re-render
     setRefreshCounter(prev => prev + 1);
-    console.log("[MessageCard] Incremented refresh counter after arming");
   };
   
   const onDisarmMessage = async () => {
@@ -132,8 +132,29 @@ function MessageCardInner({ message, onDelete, reminderInfo }: MessageCardProps)
     
     // Increment refresh counter to force timer re-render
     setRefreshCounter(prev => prev + 1);
-    console.log("[MessageCard] Incremented refresh counter after disarming");
   };
+
+  // Listen for reminder generation request events
+  useEffect(() => {
+    const handleGenerateReminders = (event: Event) => {
+      if (event instanceof CustomEvent) {
+        const { messageId, conditionId } = event.detail || {};
+        
+        if (messageId === message.id && conditionId) {
+          console.log(`[MessageCard] Background reminder generation for message ${messageId}`);
+          // Generate reminders in the background
+          ensureReminderSchedule(conditionId, messageId).catch(error => {
+            console.error("[MessageCard] Error in background reminder generation:", error);
+          });
+        }
+      }
+    };
+    
+    window.addEventListener('generate-message-reminders', handleGenerateReminders);
+    return () => {
+      window.removeEventListener('generate-message-reminders', handleGenerateReminders);
+    };
+  }, [message.id]);
 
   // Determine card color based on status
   const getCardClasses = () => {
