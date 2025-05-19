@@ -4,7 +4,7 @@ import { Message } from "@/types/message";
 import { StatusDeliverySection } from "./StatusDeliverySection";
 import { RecipientsSection } from "./RecipientsSection";
 import { MessageHeader } from "../MessageHeader";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { MessageContent } from "../content/message-content";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -80,7 +80,7 @@ export function MainContentSection({
       
       {/* Status & Delivery Section */}
       <Card className="overflow-hidden border border-border/50 shadow-sm">
-        <CardContent className="p-4">
+        <CardContent className="p-3">
           {!condition ? (
             <div className="space-y-4">
               <Skeleton className="h-6 w-1/4" />
@@ -108,7 +108,7 @@ export function MainContentSection({
       
       {/* Recipients Section */}
       <Card className="overflow-hidden border border-border/50 shadow-sm">
-        <CardContent className="p-4">
+        <CardContent className="p-3">
           {!recipients || recipients.length === 0 ? (
             <div className="text-muted-foreground">No recipients configured</div>
           ) : (

@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Clock, Shield, Lock } from "lucide-react";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { AccordionSection } from "@/components/message/detail/AccordionSection";
 
 interface MessageDeliverySettingsProps {
   condition: any | null;
@@ -30,7 +31,7 @@ export function MessageDeliverySettings({
   }
 
   return (
-    <div className={`space-y-2 ${showInTabs ? 'pt-0' : 'pt-2'}`}>
+    <div className={`space-y-1 ${showInTabs ? 'pt-0' : 'pt-2'}`}>
       <div className="grid grid-cols-1 gap-1 text-sm">
         <div className="grid grid-cols-3 gap-1">
           <span className="font-medium">Type:</span>
@@ -83,14 +84,18 @@ export function MessageDeliverySettings({
         )}
       </div>
       
-      {/* Security settings section - Now with consistent grid layout */}
+      {/* Security settings section - Now with accordion */}
       {(condition.expiry_hours > 0 || condition.unlock_delay_hours > 0 || condition.pin_code) && (
-        <>
-          <Separator className="my-2" />
-          <h3 className="text-sm font-medium text-muted-foreground mb-2 flex items-center">
-            <Lock className={`h-4 w-4 mr-1.5 ${HOVER_TRANSITION}`} />
-            Security Settings
-          </h3>
+        <AccordionSection
+          title={
+            <div className="flex items-center">
+              <Lock className={`h-4 w-4 mr-1.5 ${HOVER_TRANSITION}`} />
+              Security Settings
+            </div>
+          }
+          defaultOpen={true}
+          className="mt-1"
+        >
           <div className="grid grid-cols-1 gap-1 text-sm">
             {condition.pin_code && (
               <div className="grid grid-cols-3 gap-1">
@@ -119,7 +124,7 @@ export function MessageDeliverySettings({
               </div>
             )}
           </div>
-        </>
+        </AccordionSection>
       )}
     </div>
   );

@@ -1,12 +1,11 @@
 
 import React, { useState, useEffect } from "react";
-import { Clock, AlertTriangle, RefreshCw } from "lucide-react";
+import { Clock, RefreshCw } from "lucide-react";
 import { MessageDeliverySettings } from "../../MessageDeliverySettings";
 import { HOVER_TRANSITION, ICON_HOVER_EFFECTS } from "@/utils/hoverEffects";
 import { useScheduledReminders } from "@/hooks/useScheduledReminders";
-import { parseReminderMinutes } from "@/utils/reminderUtils";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AccordionSection } from "@/components/message/detail/AccordionSection";
 
 interface DeliverySettingsSectionProps {
   condition: any | null;
@@ -62,7 +61,10 @@ export function DeliverySettingsSection({
   }
 
   // Handler for manual refresh button
-  const handleManualRefresh = async () => {
+  const handleManualRefresh = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
     if (isRefreshing) return;
     setIsRefreshing(true);
     console.log('[DeliverySettingsSection] Manual refresh requested');
@@ -107,31 +109,38 @@ export function DeliverySettingsSection({
   }, [formattedAllReminders, onFormattedRemindersChange]);
   
   return (
-    <div className="space-y-2">
-      <div className="flex justify-between items-center mb-1">
-        <h3 className="text-sm font-medium text-muted-foreground flex items-center">
-          <Clock className={`h-4 w-4 mr-1.5 ${HOVER_TRANSITION} ${ICON_HOVER_EFFECTS.muted}`} />
-          Delivery Settings
-        </h3>
-        
-        {/* Add refresh button */}
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          className={`h-7 w-7 rounded-full ${HOVER_TRANSITION}`}
-          onClick={handleManualRefresh}
-          disabled={isRefreshing}
-        >
-          <RefreshCw 
-            className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''} ${HOVER_TRANSITION} ${ICON_HOVER_EFFECTS.muted}`} 
-          />
-        </Button>
-      </div>
-      
-      <MessageDeliverySettings condition={condition} formatDate={formatDate} renderConditionType={renderConditionType} showInTabs={true} />
-      
-      {/* Add scheduled reminders display */}
-      {!isLoading}
+    <div>
+      <AccordionSection
+        title={
+          <div className="flex justify-between items-center w-full">
+            <div className="flex items-center">
+              <Clock className={`h-4 w-4 mr-1.5 ${HOVER_TRANSITION} ${ICON_HOVER_EFFECTS.muted}`} />
+              Delivery Settings
+            </div>
+            
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className={`h-7 w-7 rounded-full ${HOVER_TRANSITION}`}
+              onClick={handleManualRefresh}
+              disabled={isRefreshing}
+            >
+              <RefreshCw 
+                className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''} ${HOVER_TRANSITION} ${ICON_HOVER_EFFECTS.muted}`} 
+              />
+            </Button>
+          </div>
+        }
+        defaultOpen={true}
+        className="mt-1"
+      >
+        <MessageDeliverySettings 
+          condition={condition} 
+          formatDate={formatDate} 
+          renderConditionType={renderConditionType} 
+          showInTabs={true} 
+        />
+      </AccordionSection>
     </div>
   );
 }
