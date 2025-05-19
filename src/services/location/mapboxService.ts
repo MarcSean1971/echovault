@@ -23,6 +23,22 @@ export async function getMapboxToken(): Promise<string> {
 }
 
 /**
+ * Load Mapbox CSS if it hasn't been loaded already
+ * This serves as a backup method to ensure CSS is available
+ */
+export function ensureMapboxCssLoaded(): void {
+  // Check if Mapbox CSS is already loaded
+  if (!document.querySelector('link[href*="mapbox-gl"]')) {
+    const linkElement = document.createElement('link');
+    linkElement.rel = 'stylesheet';
+    linkElement.href = 'https://api.mapbox.com/mapbox-gl-js/v3.11.1/mapbox-gl.css';
+    document.head.appendChild(linkElement);
+    
+    console.log("Mapbox CSS loaded dynamically");
+  }
+}
+
+/**
  * Reverse geocode coordinates to get a human-readable address
  */
 export async function reverseGeocode(
@@ -30,6 +46,9 @@ export async function reverseGeocode(
   longitude: number
 ): Promise<string | null> {
   try {
+    // Ensure CSS is loaded
+    ensureMapboxCssLoaded();
+    
     const token = await getMapboxToken();
     const endpoint = `https://api.mapbox.com/geocoding/v5/mapbox.places/${longitude},${latitude}.json?access_token=${token}&types=address,place,neighborhood,locality&limit=1`;
     

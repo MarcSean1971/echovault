@@ -3,7 +3,9 @@ import { useEffect, useRef, useState } from "react";
 import { getMapboxToken } from "@/services/location/mapboxService";
 import { Loader2 } from "lucide-react";
 import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
+// Instead of importing the CSS directly, we'll add it to the head in the useEffect
+// This prevents the preloading issue with the CSS file
+// import 'mapbox-gl/dist/mapbox-gl.css';
 
 interface MapDisplayProps {
   latitude: number;
@@ -26,6 +28,12 @@ export function MapDisplay({
   const [error, setError] = useState<string | null>(null);
   
   useEffect(() => {
+    // Load Mapbox CSS dynamically to avoid preloading issues
+    const linkElement = document.createElement('link');
+    linkElement.rel = 'stylesheet';
+    linkElement.href = 'https://api.mapbox.com/mapbox-gl-js/v3.11.1/mapbox-gl.css';
+    document.head.appendChild(linkElement);
+    
     let isMounted = true;
     
     const initializeMap = async () => {
@@ -93,6 +101,8 @@ export function MapDisplay({
         map.current.remove();
         map.current = null;
       }
+      // Clean up the CSS link when component unmounts
+      document.head.removeChild(linkElement);
     };
   }, [latitude, longitude, locationName]);
   

@@ -8,7 +8,7 @@ import { BUTTON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { Separator } from "@/components/ui/separator";
 import { useMessageForm } from "../MessageFormContext";
 import MapDisplay from "@/components/location/MapDisplay";
-import { reverseGeocode } from "@/services/location/mapboxService";
+import { reverseGeocode, ensureMapboxCssLoaded } from "@/services/location/mapboxService";
 
 export function LocationSection() {
   const { 
@@ -24,6 +24,11 @@ export function LocationSection() {
   
   const [isCapturingLocation, setIsCapturingLocation] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Ensure Mapbox CSS is loaded when component mounts
+  useEffect(() => {
+    ensureMapboxCssLoaded();
+  }, []);
 
   // Function to capture user's current location
   const captureLocation = () => {
