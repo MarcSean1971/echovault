@@ -41,7 +41,7 @@ export function ReminderHeader({
           title="Refresh reminder data"
           disabled={isLoading || refreshInProgress}
         >
-          <RefreshCw className={`h-3 w-3 ${isLoading ? 'animate-spin' : ''} ${ICON_HOVER_EFFECTS.muted}`} />
+          <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''} ${ICON_HOVER_EFFECTS.muted}`} />
         </Button>
       </div>
     </h3>

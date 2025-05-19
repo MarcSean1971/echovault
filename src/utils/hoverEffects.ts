@@ -17,9 +17,21 @@ export const ICON_HOVER_EFFECTS = {
   danger: "transition-all duration-200 hover:scale-110 hover:text-red-500",
   success: "transition-all duration-200 hover:scale-110 hover:text-green-500",
   warning: "transition-all duration-200 hover:scale-110 hover:text-amber-500",
+  // Add back the muted property that was being used
+  muted: "transition-all duration-200 hover:text-gray-700",
+  primary: "transition-all duration-200 hover:scale-110 hover:text-primary",
+  secondary: "transition-all duration-200 hover:text-secondary",
+  destructive: "transition-all duration-200 hover:text-destructive"
 };
 
 export const CARD_HOVER_EFFECTS = {
   default: "transition-all duration-200 hover:shadow-md hover:border-gray-300",
   clickable: "transition-all duration-200 hover:shadow-md hover:border-gray-300 cursor-pointer",
+};
+
+// Add back the CONFIRMATION_ANIMATION that was referenced
+export const CONFIRMATION_ANIMATION = {
+  pulse: "animate-pulse",
+  shake: "animate-[shake_0.5s_ease-in-out]",
+  highlight: "animate-[highlight_1s_ease-in-out]"
 };
