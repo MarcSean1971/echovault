@@ -43,14 +43,11 @@ export function MessageCardContent({
                           condition?.condition_type === 'regular_check_in' ||
                           condition?.condition_type === 'inactivity_to_date';
   
-  // Extract the preview content from the message - optimized to avoid video processing
+  // Extract the preview content from the message with improved handling for all message types
   const isVideoMessage = message.message_type === 'video';
   
-  // For text messages, use text_content or content
-  // For video messages, just show a placeholder instead of parsing video content
-  const messagePreview = isVideoMessage
-    ? 'Video message' // Simple placeholder for video messages without parsing
-    : (message.text_content || message.content || '').substring(0, 120) + 
+  // For all message types, use text_content or content when available
+  const messagePreview = (message.text_content || message.content || '').substring(0, 120) + 
       ((message.text_content || message.content || '').length > 120 ? '...' : '');
 
   const showDeadline = isArmed && deadline && isCheckInCondition;
@@ -58,16 +55,17 @@ export function MessageCardContent({
 
   return (
     <div className="space-y-3">
-      {/* Message preview text */}
-      <p className="text-sm line-clamp-2 leading-relaxed text-gray-600">
+      {/* Message preview text - now consistent for all message types */}
+      <div className="text-sm leading-relaxed text-gray-600">
         {isVideoMessage && (
           <span className="flex items-center text-muted-foreground mb-1">
             <Video className="h-4 w-4 mr-1.5" strokeWidth={1.5} />
-            <span className="text-xs">Video message</span>
           </span>
         )}
-        {messagePreview}
-      </p>
+        <p className="line-clamp-2">
+          {messagePreview}
+        </p>
+      </div>
 
       {/* Show deadline and countdown if armed */}
       {showDeadline && timeLeft && (
