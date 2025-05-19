@@ -1,133 +1,67 @@
 
-import React, { useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Message } from "@/types/message";
-import { Separator } from "@/components/ui/separator";
-import { MessageAttachments } from "../../MessageAttachments";
 import { TextContentSection } from "./TextContentSection";
-import { VideoContentSection } from "./VideoContentSection";
+import { VideoContentSection } from "../VideoContentSection";
 import { LocationSection } from "./LocationSection";
 import { WhatsAppSection } from "./WhatsAppSection";
-import { useMessageContentTypes } from "./useMessageContentTypes";
-import { HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { useMessageAdditionalText } from "@/hooks/useMessageAdditionalText";
+import { useMessageTranscription } from "@/hooks/useMessageTranscription";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export interface MessageContentProps {
   message: Message;
   deliveryId?: string | null;
   recipientEmail?: string | null;
-  conditionType?: string;
 }
 
 export function MessageContent({ 
-  message,
-  deliveryId,
-  recipientEmail,
-  conditionType
+  message, 
+  deliveryId, 
+  recipientEmail 
 }: MessageContentProps) {
-  const {
-    hasVideoContent,
-    hasTextContent,
-    additionalText,
-    transcription,
-    isDeadmansSwitch,
-    isMessageDetailPage
-  } = useMessageContentTypes(message, conditionType);
+  const [isReady, setIsReady] = useState(false);
+  const { additionalText } = useMessageAdditionalText(message);
+  const { transcription } = useMessageTranscription(message);
   
-  // Determine if this is a panic trigger message with WhatsApp configuration
-  const isPanicTrigger = message.message_type === "panic_trigger";
-  const hasPanicConfig = message.panic_config || message.panic_trigger_config;
-
-  // Check if message has location data
-  const hasLocationData = message.share_location && 
-                         message.location_latitude && 
-                         message.location_longitude;
-
-  // Determine which content to show - we'll make sure to only show one text component
-  const shouldShowTextContent = message.message_type === "text";
-  
-  // For deadman's switch with content but not text message type
-  const shouldShowDeadmansContent = isDeadmansSwitch && 
-                               message.content && 
-                               message.message_type !== "text" &&
-                               !hasVideoContent;
-  
-  // For other message types with text but no video
-  const shouldShowOtherTextContent = hasTextContent && 
-                                !message.message_type.includes("text") && 
-                                !message.message_type.includes("video") && 
-                                !hasVideoContent && 
-                                message.content &&
-                                !shouldShowTextContent &&  // Make sure we don't duplicate
-                                !shouldShowDeadmansContent; // Make sure we don't duplicate
-
-  // Should show video content?
-  const showVideoContent = message.message_type === "video" || 
-    (!message.message_type.includes("text") && hasVideoContent);
-  
-  // Start loading video content in the background when page loads
+  // Immediate mounting effect to show content
   useEffect(() => {
-    if (showVideoContent) {
-      console.log("Starting to load video content in the background");
-      // This effect just ensures we're triggering loading early
-    }
-  }, [showVideoContent]);
-
+    // Set ready state immediately - no artificial delay
+    setIsReady(true);
+  }, []);
+  
+  // Progressive loading approach - render immediately with what we have
   return (
     <div className="space-y-6">
-      {/* Text content sections - Always show first */}
-      {shouldShowTextContent && (
-        <TextContentSection message={message} content={message.content} />
+      {/* Main message content - render immediately */}
+      {message.message_type === "video" ? (
+        <VideoContentSection 
+          message={message} 
+          additionalText={additionalText} 
+          transcription={transcription} 
+        />
+      ) : (
+        <TextContentSection 
+          message={message} 
+          additionalText={additionalText} 
+        />
       )}
       
-      {shouldShowDeadmansContent && (
-        <TextContentSection message={message} content={message.content} />
-      )}
-      
-      {shouldShowOtherTextContent && (
-        <TextContentSection message={message} content={message.content} />
-      )}
-      
-      {/* Video content - Show if available */}
-      {showVideoContent && (
-        <div className="mt-6">
-          <Separator className="mb-4" />
-          <h3 className="text-lg font-medium mb-3">Video Message</h3>
-          <VideoContentSection 
-            message={message} 
-            additionalText={additionalText} 
-            transcription={transcription} 
-          />
-        </div>
-      )}
-      
-      {/* Attachments section */}
-      {message.attachments && message.attachments.length > 0 && (
-        <div className="mt-6">
-          <Separator className="my-4" />
-          <h3 className="text-lg font-medium mb-3">Attachments</h3>
-          <MessageAttachments 
-            message={message}
-            deliveryId={deliveryId}
-            recipientEmail={recipientEmail}
-          />
-        </div>
-      )}
-      
-      {/* Location display section */}
-      {hasLocationData && (
+      {/* Location section - render if available */}
+      {message.share_location && (
         <LocationSection 
-          latitude={message.location_latitude!}
-          longitude={message.location_longitude!}
-          locationName={message.location_name}
+          latitude={message.location_latitude} 
+          longitude={message.location_longitude} 
+          locationName={message.location_name} 
         />
       )}
       
-      {/* WhatsApp Integration for panic triggers */}
-      {isPanicTrigger && hasPanicConfig && (
-        <WhatsAppSection 
-          messageId={message.id}
-          panicConfig={message.panic_config || message.panic_trigger_config}
-        />
-      )}
+      {/* WhatsApp section */}
+      <WhatsAppSection 
+        message={message} 
+        deliveryId={deliveryId} 
+        recipientEmail={recipientEmail} 
+      />
     </div>
   );
 }

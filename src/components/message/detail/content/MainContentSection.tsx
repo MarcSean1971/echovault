@@ -1,26 +1,26 @@
 
 import React from "react";
 import { Message } from "@/types/message";
-import { MessageHeader } from "../MessageHeader";
-import { MessageContent } from "../MessageContent";
-import { MessageMainCard } from "../MessageMainCard";
 import { StatusDeliverySection } from "./StatusDeliverySection";
 import { RecipientsSection } from "./RecipientsSection";
-import { Separator } from "@/components/ui/separator";
+import { MessageHeader } from "../MessageHeader";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { MessageContent } from "../content/message-content";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface MainContentSectionProps {
   message: Message;
   isArmed: boolean;
   isActionLoading: boolean;
-  condition: any;
+  condition: any | null;
   formatDate: (dateString: string) => string;
   renderConditionType: () => string;
   handleDisarmMessage: () => Promise<void>;
   handleArmMessage: () => Promise<Date | null>;
-  deliveryId: string | null;
-  recipientEmail: string | null;
-  recipients?: any[];
-  onSendTestMessage?: () => void;
+  deliveryId?: string | null;
+  recipientEmail?: string | null;
+  recipients: any[];
+  onSendTestMessage: () => void;
   lastCheckIn?: string | null;
   checkInCode?: string | null;
   lastDelivered?: string | null;
@@ -29,6 +29,7 @@ interface MainContentSectionProps {
   isLoadingDelivery?: boolean;
   refreshTrigger?: number;
   deadline?: Date | null;
+  isLoading?: boolean;
 }
 
 export function MainContentSection({
@@ -42,7 +43,7 @@ export function MainContentSection({
   handleArmMessage,
   deliveryId,
   recipientEmail,
-  recipients = [],
+  recipients,
   onSendTestMessage,
   lastCheckIn,
   checkInCode,
@@ -51,10 +52,12 @@ export function MainContentSection({
   viewCount,
   isLoadingDelivery,
   refreshTrigger,
-  deadline
+  deadline,
+  isLoading = false
 }: MainContentSectionProps) {
   return (
-    <>
+    <div className="space-y-6">
+      {/* Message Header - Render immediately */}
       <MessageHeader
         message={message}
         isArmed={isArmed}
@@ -63,50 +66,84 @@ export function MainContentSection({
         handleArmMessage={handleArmMessage}
       />
       
-      <MessageMainCard>
-        {/* Message Content - Text, Video, Attachments, Location, Etc */}
-        <MessageContent 
-          message={message}
-          deliveryId={deliveryId}
-          recipientEmail={recipientEmail}
-          conditionType={condition?.condition_type}
-        />
-        
-        {/* Message Information Sections */}
-        <Separator className="my-6" />
-        
-        {/* Status and Delivery Settings */}
-        <div className="mt-8">
-          <h3 className="text-lg font-medium mb-3">Message Settings</h3>
-          <StatusDeliverySection 
-            message={message}
-            condition={condition}
-            formatDate={formatDate}
-            renderConditionType={renderConditionType}
-            isArmed={isArmed}
-            refreshTrigger={refreshTrigger}
-            deadline={deadline}
-            lastCheckIn={lastCheckIn}
-            checkInCode={checkInCode}
-            lastDelivered={lastDelivered}
-            isDelivered={isDelivered}
-            viewCount={viewCount}
-            isLoadingDelivery={isLoadingDelivery}
+      {/* Main Message Content Card - Render immediately */}
+      <Card className="overflow-hidden border border-border/50 shadow-sm">
+        <CardContent className="p-6">
+          <MessageContent 
+            message={message} 
+            deliveryId={deliveryId} 
+            recipientEmail={recipientEmail} 
           />
-        </div>
-        
-        {/* Recipients Section */}
-        {recipients && recipients.length > 0 && (
-          <div className="mt-8">
+        </CardContent>
+      </Card>
+      
+      {/* Status & Delivery Section - May use loading state */}
+      <Card className="overflow-hidden border border-border/50 shadow-sm">
+        <CardContent className="p-6">
+          {isLoading && !condition ? (
+            <div className="space-y-4">
+              <Skeleton className="h-6 w-1/4" />
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-24 w-full" />
+            </div>
+          ) : (
+            <StatusDeliverySection
+              message={message}
+              condition={condition}
+              formatDate={formatDate}
+              renderConditionType={renderConditionType}
+              isArmed={isArmed}
+              refreshTrigger={refreshTrigger}
+              deadline={deadline}
+              lastCheckIn={lastCheckIn}
+              checkInCode={checkInCode}
+              lastDelivered={lastDelivered}
+              isDelivered={isDelivered}
+              viewCount={viewCount}
+              isLoadingDelivery={isLoadingDelivery}
+            />
+          )}
+        </CardContent>
+      </Card>
+      
+      {/* Recipients Section - May use loading state */}
+      <Card className="overflow-hidden border border-border/50 shadow-sm">
+        <CardHeader className="px-6 pt-6 pb-3">
+          <h3 className="text-lg font-medium">Recipients</h3>
+        </CardHeader>
+        <CardContent className="p-6 pt-0">
+          {isLoading && (!recipients || recipients.length === 0) ? (
+            <div className="space-y-2">
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
+            </div>
+          ) : (
             <RecipientsSection
               recipients={recipients}
+              renderRecipients={() => {
+                if (!recipients || recipients.length === 0) {
+                  return <div className="text-muted-foreground">No recipients configured</div>;
+                }
+                return (
+                  <div className="space-y-2">
+                    {recipients.map((recipient) => (
+                      <div key={recipient.id} className="p-2 border rounded-md flex justify-between items-center">
+                        <div>
+                          <div className="font-medium">{recipient.name}</div>
+                          <div className="text-sm text-muted-foreground">{recipient.email}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              }}
               isArmed={isArmed}
               isActionLoading={isActionLoading}
-              onSendTestMessage={onSendTestMessage || (() => {})}
+              onSendTestMessage={onSendTestMessage}
             />
-          </div>
-        )}
-      </MessageMainCard>
-    </>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }

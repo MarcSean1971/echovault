@@ -5,9 +5,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/components/ui/use-toast";
 import { getConditionByMessageId, getMessageDeadline } from "@/services/messages/conditionService";
 import { Message } from "@/types/message";
+import { invalidateConditionsCache } from "@/services/messages/conditions/operations/fetch-operations";
 
 /**
- * Custom hook for loading message details and conditions
+ * Custom hook for loading message details and conditions with optimized parallel loading
  */
 export function useMessageDetail(messageId: string | undefined, onError: () => void) {
   const { userId } = useAuth();
@@ -37,13 +38,50 @@ export function useMessageDetail(messageId: string | undefined, onError: () => v
     }
   }, []);
 
+  // Optimized function to fetch condition data
+  const fetchConditionData = useCallback(async (messageId: string) => {
+    try {
+      console.log(`[useMessageDetail] Fetching condition data for message ${messageId}`);
+      const conditionData = await getConditionByMessageId(messageId);
+      
+      if (conditionData) {
+        console.log(`[useMessageDetail] Condition data retrieved:`, conditionData);
+        return conditionData;
+      }
+      return null;
+    } catch (error) {
+      console.error("Error fetching condition data:", error);
+      return null;
+    }
+  }, []);
+
+  // Function to fetch message directly from the database
+  const fetchMessageData = useCallback(async (messageId: string, userId: string) => {
+    try {
+      console.log(`[useMessageDetail] Fetching message data for message ${messageId}`);
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('id', messageId)
+        .single();
+        
+      if (error) throw error;
+      
+      console.log(`[useMessageDetail] Message data retrieved:`, data);
+      return data as unknown as Message;
+    } catch (error) {
+      console.error("Error fetching message data:", error);
+      throw error;
+    }
+  }, []);
+
   // Function to refresh condition and deadline data
   const refreshConditionData = useCallback(async () => {
     if (!messageId) return;
     
     try {
       console.log(`[useMessageDetail] Refreshing condition data for message ${messageId}`);
-      const conditionData = await getConditionByMessageId(messageId);
+      const conditionData = await fetchConditionData(messageId);
       
       if (conditionData) {
         setCondition(conditionData);
@@ -70,51 +108,107 @@ export function useMessageDetail(messageId: string | undefined, onError: () => v
     } catch (error) {
       console.error("Error refreshing condition data:", error);
     }
-  }, [messageId, fetchDeadline]);
+  }, [messageId, fetchConditionData, fetchDeadline]);
 
-  // Memoize the fetch function to prevent it from being recreated on every render
-  const fetchMessage = useCallback(async () => {
+  // Main fetch function - now optimized to load data in parallel
+  const fetchData = useCallback(async () => {
     if (!userId || !messageId || hasAttemptedFetch) return;
     
     setIsLoading(true);
     setHasAttemptedFetch(true);
     
     try {
-      const { data, error } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('id', messageId)
-        .single();
+      // Start fetching message and condition data in parallel
+      const messagePromise = fetchMessageData(messageId, userId);
+      const conditionPromise = fetchConditionData(messageId);
+      
+      // First, get the message data so we can show the basic UI right away
+      try {
+        const messageData = await messagePromise;
+        setMessage(messageData);
+        console.log(`[useMessageDetail] Message data set, UI can now render`);
         
-      if (error) throw error;
+        // We can lower the loading state once we have the basic message
+        // This allows the UI to show the message while still loading other data
+        setIsLoading(false);
+      } catch (messageError) {
+        console.error("Error fetching message:", messageError);
+        toast({
+          title: "Error",
+          description: "Failed to load the message",
+          variant: "destructive"
+        });
+        onError();
+        return;
+      }
       
-      setMessage(data as unknown as Message);
+      // Now get the condition data
+      try {
+        const conditionData = await conditionPromise;
+        
+        if (conditionData) {
+          console.log(`[useMessageDetail] Processing condition data`);
+          setCondition(conditionData);
+          setIsArmed(conditionData.active);
+          setConditionId(conditionData.id);
+          setLastCheckIn(conditionData.last_checked || null);
+          
+          // Set recipients from condition data if available
+          if (conditionData.recipients && Array.isArray(conditionData.recipients)) {
+            setRecipients(conditionData.recipients);
+          }
+          
+          // Finally, if the condition is active, fetch the deadline
+          if (conditionData.active) {
+            try {
+              console.log(`[useMessageDetail] Fetching deadline for active condition`);
+              const deadlineDate = await fetchDeadline(conditionData.id);
+              if (deadlineDate) {
+                console.log(`[useMessageDetail] Setting deadline: ${deadlineDate.toISOString()}`);
+                setDeadline(new Date(deadlineDate.getTime()));
+              }
+            } catch (deadlineError) {
+              console.error("Error fetching deadline:", deadlineError);
+              // Non-critical error, UI can still function
+            }
+          }
+        } else {
+          console.log(`[useMessageDetail] No condition data found`);
+        }
+      } catch (conditionError) {
+        console.error("Error fetching condition:", conditionError);
+        // Non-critical error, UI can still show the message
+      }
       
-      // Initial fetch of condition data
-      await refreshConditionData();
     } catch (error: any) {
-      console.error("Error fetching message:", error);
+      console.error("Fatal error in fetchData:", error);
       toast({
         title: "Error",
-        description: "Failed to load the message",
+        description: "Failed to load message details",
         variant: "destructive"
       });
       onError();
     } finally {
+      // Ensure loading is set to false in all cases
       setIsLoading(false);
     }
-  }, [userId, messageId, hasAttemptedFetch, refreshConditionData, onError]);
+  }, [userId, messageId, hasAttemptedFetch, fetchMessageData, fetchConditionData, fetchDeadline, onError]);
 
   // Use effect with the memoized fetch function
   useEffect(() => {
-    fetchMessage();
-  }, [fetchMessage]);
+    fetchData();
+  }, [fetchData]);
 
   // Add listener for condition updates
   useEffect(() => {
     const handleConditionUpdated = (event: Event) => {
       if (event instanceof CustomEvent) {
         console.log(`[useMessageDetail] Received conditions-updated event for ${messageId}, refreshing data...`, event.detail);
+        
+        // Clear any cached data
+        if (messageId) {
+          invalidateConditionsCache();
+        }
         
         // Refresh condition data to get the latest information
         refreshConditionData();
@@ -140,6 +234,6 @@ export function useMessageDetail(messageId: string | undefined, onError: () => v
     recipients,
     setIsArmed,
     lastCheckIn,
-    refreshCount  // Add refresh counter to the return object
+    refreshCount
   };
 }

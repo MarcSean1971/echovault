@@ -21,7 +21,7 @@ export default function MessageDetail() {
   // Use memoized callback for error navigation to prevent recreation on each render
   const handleError = useCallback(() => navigate("/messages"), [navigate]);
 
-  // Use our custom hook to fetch the message data
+  // Use our custom hook to fetch the message data - now optimized for parallel loading
   const { 
     message, 
     isLoading, 
@@ -35,7 +35,7 @@ export default function MessageDetail() {
     refreshCount
   } = useMessageDetail(id, handleError);
   
-  // Get message delivery status
+  // Get message delivery status - loads independently
   const { isDelivered, lastDelivered, viewCount, isLoading: isLoadingDelivery } = useMessageDeliveryStatus(id || '');
   
   // Use our custom hook for message actions
@@ -53,17 +53,10 @@ export default function MessageDetail() {
   // Get the recipient rendering function
   const { renderRecipients } = MessageRecipientProvider({ recipients });
 
-  // Show initial loading state for very minimal time
-  // MODIFIED: Removed longer loading stages to make UI appear immediately
+  // Show content immediately without artificial delays
   useEffect(() => {
-    const initialTimer = setTimeout(() => {
-      setLoadingMessage("Ready");
-      // Immediately stop showing loading screen after basic data is fetched
-    }, 100); // Drastically reduced from 200ms
-    
-    return () => {
-      clearTimeout(initialTimer);
-    };
+    // No artificial delays - let content render immediately
+    setLoadingMessage("Ready");
   }, []);
 
   // Listen for condition updates to refresh data
@@ -107,8 +100,9 @@ export default function MessageDetail() {
     }
   }, [refreshCount]);
 
-  // Only show loading state for initial data fetch, not for video processing
-  if (isLoading) {
+  // Only show loading state if there's no message data at all
+  // This will allow earlier rendering of partial content
+  if (isLoading && !message) {
     return <MessageLoading message={loadingMessage} />;
   }
 

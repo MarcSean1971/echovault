@@ -14,6 +14,7 @@ import { Edit, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface MessageDetailContentProps {
   message: Message;
@@ -79,10 +80,7 @@ export function MessageDetailContent({
   const deliveryId = searchParams.get('delivery');
   const recipientEmail = searchParams.get('recipient');
 
-  if (isLoading) {
-    return <MessageLoading />;
-  }
-
+  // Full loading state is only displayed if we have no message at all
   if (!message) {
     return <MessageNotFound />;
   }
@@ -90,7 +88,7 @@ export function MessageDetailContent({
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
       <div className="space-y-6">
-        {/* Message Content */}
+        {/* Message Content - Always render immediately with available data */}
         <MainContentSection 
           message={message}
           isArmed={isArmed}
@@ -112,6 +110,8 @@ export function MessageDetailContent({
           isLoadingDelivery={isLoadingDelivery}
           refreshTrigger={refreshTrigger}
           deadline={deadline}
+          // Pass loading status for progressive loading
+          isLoading={isLoading}
         />
         
         {/* Actions Card */}
