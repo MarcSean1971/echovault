@@ -15,7 +15,10 @@ export function useMessageCardActions() {
     try {
       // The messageDetailService.handleArmMessage expects a conditionId and a setIsArmed callback
       // We need to provide a dummy callback since we'll refresh the data anyway
-      const deadlineDate = await serviceArmMessage(conditionId);
+      const deadlineDate = await serviceArmMessage(conditionId, () => {
+        // This is a temporary state update function that will be replaced
+        // when the UI refreshes from the database
+      });
       
       // Refresh conditions data to update UI components
       await refreshConditions();
@@ -41,7 +44,10 @@ export function useMessageCardActions() {
     try {
       // The messageDetailService.handleDisarmMessage expects a conditionId and a setIsArmed callback
       // We need to provide a dummy callback since we'll refresh the data anyway
-      await serviceDisarmMessage(conditionId);
+      await serviceDisarmMessage(conditionId, () => {
+        // This is a temporary state update function that will be replaced
+        // when the UI refreshes from the database
+      });
       
       // Refresh conditions data to update UI components
       await refreshConditions();
