@@ -18,14 +18,14 @@ export function VideoContentSection({
   // Track when component mounts to trigger early video loading
   const [isMounted, setIsMounted] = useState(false);
   
-  // Mark component as mounted to start video loading process
+  // Mark component as mounted to start video loading process immediately
   useEffect(() => {
-    console.log("[VideoContentSection] Component mounted, ready to display video");
+    console.log("[VideoContentSection] Component mounted, immediately displaying video container");
     setIsMounted(true);
     
     // Log the transcription status for debugging
     if (transcription) {
-      console.log("[VideoContentSection] Transcription available, will display after video");
+      console.log("[VideoContentSection] Transcription available, displaying alongside video");
     }
   }, [transcription]);
   
@@ -34,12 +34,12 @@ export function VideoContentSection({
   
   return (
     <>
-      {/* First show video content with progressive loading - this loads quickly */}
+      {/* First show video content with progressive loading - this loads quickly with a placeholder */}
       <div className="mb-6">
         <VideoMessageContent message={message} />
       </div>
       
-      {/* Then show transcription if available - this loads quickly */}
+      {/* Show transcription immediately if available - this is just text */}
       {transcription && (
         <div className="mt-6 mb-4">
           <h3 className="text-sm font-medium mb-2">Video Transcription</h3>
@@ -49,7 +49,7 @@ export function VideoContentSection({
         </div>
       )}
       
-      {/* Show additional text if available - also loads quickly */}
+      {/* Show additional text immediately if available - also just text */}
       {displayText && (
         <div className="mt-6">
           <h3 className="text-sm font-medium mb-2">Additional Notes</h3>

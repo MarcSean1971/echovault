@@ -14,9 +14,9 @@ export function VideoMessageContent({ message }: { message: Message }) {
   const [posterCreated, setPosterCreated] = useState(false);
   const [loadingStage, setLoadingStage] = useState<'initial' | 'poster' | 'full'>('initial');
   
-  // Parse the video content immediately but load the full video progressively
+  // Parse the video content immediately and start progressive loading ASAP
   useEffect(() => {
-    console.log("[VideoMessageContent] Component mounted, starting progressive loading");
+    console.log("[VideoMessageContent] Component mounted, starting progressive loading IMMEDIATELY");
     
     // First check video_content field, then fall back to content if needed
     const contentToUse = message.video_content || message.content;
@@ -29,10 +29,6 @@ export function VideoMessageContent({ message }: { message: Message }) {
     }
     
     try {
-      // Set up a loading state indicator
-      setIsLoading(true);
-      setLoadingStage('initial');
-      
       // Parse video data from message content - this happens immediately
       console.log("[VideoMessageContent] Parsing video content");
       const { videoData, transcription: extractedTranscription } = parseVideoContent(contentToUse);
@@ -42,10 +38,10 @@ export function VideoMessageContent({ message }: { message: Message }) {
       
       if (videoData) {
         try {
-          // STEP 1: Create a tiny video poster first for immediate display
-          console.log("[VideoMessageContent] Creating poster image");
+          // STEP 1: Create a placeholder immediately while we work on the poster
           setLoadingStage('poster');
           
+          // STEP 2: Immediately start creating poster
           const createPoster = async () => {
             try {
               // Create minimal blob for poster/thumbnail
@@ -68,14 +64,13 @@ export function VideoMessageContent({ message }: { message: Message }) {
             }
           };
           
-          // Start creating poster immediately
+          // Start creating poster immediately without delay
           createPoster();
           
-          // STEP 2: Now load the full video in the background with low priority
+          // STEP 3: Load full video in the background
           console.log("[VideoMessageContent] Starting to load full video in background");
           setLoadingStage('full');
           
-          // Use requestIdleCallback if available, otherwise setTimeout with a small delay
           const loadFullVideo = () => {
             try {
               console.log("[VideoMessageContent] Processing full video data");
@@ -103,11 +98,10 @@ export function VideoMessageContent({ message }: { message: Message }) {
           if ('requestIdleCallback' in window) {
             // Use requestIdleCallback with a timeout to ensure it eventually runs
             // @ts-ignore - TypeScript might not recognize this API
-            window.requestIdleCallback(() => loadFullVideo(), { timeout: 2000 });
+            window.requestIdleCallback(() => loadFullVideo(), { timeout: 1000 });
           } else {
             // Fallback to setTimeout with a slight delay to prioritize other content
-            // Use a small delay to ensure the UI renders first
-            setTimeout(loadFullVideo, 100);
+            setTimeout(loadFullVideo, 10); // Reduced from 100ms to be near-immediate
           }
         } catch (e) {
           console.error("[VideoMessageContent] Error processing video data:", e);
@@ -147,7 +141,7 @@ export function VideoMessageContent({ message }: { message: Message }) {
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
           </svg>
-          <div>Loading video content...</div>
+          <div>Loading video preview...</div>
         </div>
       </div>
     );
@@ -185,7 +179,7 @@ export function VideoMessageContent({ message }: { message: Message }) {
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              <span className="animate-pulse">Loading full video...</span>
+              <span>Loading full video...</span>
             </div>
           </div>
         )}

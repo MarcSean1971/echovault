@@ -53,22 +53,16 @@ export default function MessageDetail() {
   // Get the recipient rendering function
   const { renderRecipients } = MessageRecipientProvider({ recipients });
 
-  // Update loading message to give user feedback during longer loads
-  // MODIFIED: Reduced timers to show UI faster
+  // Show initial loading state for very minimal time
+  // MODIFIED: Removed longer loading stages to make UI appear immediately
   useEffect(() => {
-    // Show initial metadata loading message only briefly
     const initialTimer = setTimeout(() => {
-      setLoadingMessage("Loading message content...");
-    }, 200);
-    
-    // Only show video loading message if loading takes more than 500ms
-    const videoTimer = setTimeout(() => {
-      setLoadingMessage("Processing media content...");
-    }, 500);
+      setLoadingMessage("Ready");
+      // Immediately stop showing loading screen after basic data is fetched
+    }, 100); // Drastically reduced from 200ms
     
     return () => {
       clearTimeout(initialTimer);
-      clearTimeout(videoTimer);
     };
   }, []);
 
@@ -113,6 +107,7 @@ export default function MessageDetail() {
     }
   }, [refreshCount]);
 
+  // Only show loading state for initial data fetch, not for video processing
   if (isLoading) {
     return <MessageLoading message={loadingMessage} />;
   }
