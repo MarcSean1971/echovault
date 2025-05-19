@@ -1,4 +1,3 @@
-
 import { getAuthClient } from "@/lib/supabaseClient";
 import { Message } from "@/types/message";
 import { FileAttachment } from "@/components/FileUploader";
