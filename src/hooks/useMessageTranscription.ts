@@ -9,7 +9,7 @@ export function useMessageTranscription(message: Message) {
   const [error, setError] = useState<string | null>(null);
   
   useEffect(() => {
-    // Skip processing for non-video messages
+    // Skip processing for non-video messages or if we don't have a message
     if (!message || message.message_type !== 'video') {
       setTranscription(null);
       setIsLoading(false);
@@ -17,11 +17,10 @@ export function useMessageTranscription(message: Message) {
       return;
     }
     
-    // Set to loading but don't block UI
+    // Set to loading
     setIsLoading(true);
     setError(null);
     
-    // Process immediately to avoid delays
     try {
       // Check if we already have a transcription in message.text_content
       if (message.text_content && message.text_content.toLowerCase().includes("transcript")) {

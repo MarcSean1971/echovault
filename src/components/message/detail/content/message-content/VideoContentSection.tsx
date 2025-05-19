@@ -1,11 +1,10 @@
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { Message } from "@/types/message";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Play, RefreshCw } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
-import { Progress } from "@/components/ui/progress";
 
 interface VideoContentSectionProps {
   message: Message;
@@ -19,49 +18,27 @@ export function VideoContentSection({
   transcription 
 }: VideoContentSectionProps) {
   // States for managing video loading
-  const [showVideo, setShowVideo] = useState(false);
   const [loadingError, setLoadingError] = useState<string | null>(null);
   
   // Use the text_content directly if available, otherwise use additionalText from the hook
   const displayText = message.text_content || additionalText;
   
-  // Function to trigger video loading only when user chooses to
-  const handleLoadVideo = () => {
-    setLoadingError(null);
-    setShowVideo(true);
-  };
-
   // Function to retry video loading if there was an error
   const handleRetry = () => {
     setLoadingError(null);
-    setShowVideo(false);
-    setTimeout(() => setShowVideo(true), 100); // Small delay before retry
   };
   
   return (
     <>
-      {/* Video placeholder or loaded video */}
+      {/* Video container with proper sizing */}
       <div className="mb-6 relative rounded-md overflow-hidden bg-black/5 hover:shadow-md">
-        {!showVideo ? (
-          // Show placeholder until user clicks to load
-          <div className="aspect-video bg-muted/30 flex items-center justify-center">
-            <Button 
-              variant="outline" 
-              className={`flex items-center gap-2 ${HOVER_TRANSITION}`}
-              onClick={handleLoadVideo}
-            >
-              <Play className="h-4 w-4" /> Load Video
-            </Button>
-          </div>
-        ) : (
-          // Lazy-load the actual video component only when needed
-          <div className="aspect-video">
-            <VideoPlayer 
-              message={message} 
-              onError={(error) => setLoadingError(error)} 
-            />
-          </div>
-        )}
+        {/* Video player loads automatically */}
+        <div className="aspect-video">
+          <VideoPlayer 
+            message={message} 
+            onError={(error) => setLoadingError(error)} 
+          />
+        </div>
 
         {/* Error handling with retry button */}
         {loadingError && (
@@ -102,42 +79,14 @@ export function VideoContentSection({
   );
 }
 
-// Simplified video player component with better loading states
+// Simplified video player component with proper width constraints
 function VideoPlayer({ message, onError }: { message: Message; onError: (error: string) => void }) {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [loadProgress, setLoadProgress] = useState(0);
-  const [processingTimedOut, setProcessingTimedOut] = useState(false);
   
-  // Setup a timer to increment progress artificially for user feedback
-  React.useEffect(() => {
-    if (!isLoading) return;
-    
-    let progressTimer: NodeJS.Timeout;
-    let timeoutTimer: NodeJS.Timeout;
-    
-    // Update progress every 300ms to simulate loading
-    progressTimer = setInterval(() => {
-      setLoadProgress(prev => {
-        // Slow down progress as it gets higher
-        const increment = prev < 30 ? 5 : prev < 70 ? 2 : 1;
-        return Math.min(prev + increment, 95);
-      });
-    }, 300);
-    
-    // Set a timeout for 15 seconds to prevent endless spinning
-    timeoutTimer = setTimeout(() => {
-      setProcessingTimedOut(true);
-      clearInterval(progressTimer);
-    }, 15000);
-    
-    // Process video content
+  // Process video content immediately when component mounts
+  useEffect(() => {
     processVideoContent();
-    
-    return () => {
-      clearInterval(progressTimer);
-      clearTimeout(timeoutTimer);
-    };
   }, [message]);
   
   // Extract video data from message
@@ -145,7 +94,6 @@ function VideoPlayer({ message, onError }: { message: Message; onError: (error: 
     try {
       // Reset states
       setIsLoading(true);
-      setLoadProgress(10);
       
       // Import dynamically to avoid slowing down initial page load
       const { parseVideoContent } = await import('@/services/messages/mediaService');
@@ -159,8 +107,6 @@ function VideoPlayer({ message, onError }: { message: Message; onError: (error: 
         return;
       }
       
-      setLoadProgress(30);
-      
       try {
         // Extract video data
         const { videoData } = parseVideoContent(contentToUse);
@@ -171,8 +117,6 @@ function VideoPlayer({ message, onError }: { message: Message; onError: (error: 
           return;
         }
         
-        setLoadProgress(60);
-        
         // Create blob URL from video data
         const binaryString = window.atob(videoData);
         const bytes = new Uint8Array(binaryString.length);
@@ -180,13 +124,10 @@ function VideoPlayer({ message, onError }: { message: Message; onError: (error: 
           bytes[i] = binaryString.charCodeAt(i);
         }
         
-        setLoadProgress(80);
-        
         const blob = new Blob([bytes], { type: 'video/webm' });
         const url = URL.createObjectURL(blob);
         
         setVideoUrl(url);
-        setLoadProgress(100);
         setIsLoading(false);
       } catch (e) {
         console.error("Error processing video:", e);
@@ -200,45 +141,10 @@ function VideoPlayer({ message, onError }: { message: Message; onError: (error: 
     }
   }, [message, onError]);
   
-  if (processingTimedOut) {
-    return (
-      <div className="w-full h-full flex items-center justify-center bg-muted/30 text-center p-4">
-        <div>
-          <p className="mb-2 text-muted-foreground">Video processing is taking longer than expected</p>
-          <Button 
-            variant="outline" 
-            onClick={() => {
-              setProcessingTimedOut(false);
-              setIsLoading(true);
-              setLoadProgress(0);
-              processVideoContent();
-            }}
-            className={HOVER_TRANSITION}
-          >
-            <RefreshCw className="h-4 w-4 mr-2" /> Try Again
-          </Button>
-        </div>
-      </div>
-    );
-  }
-  
   if (isLoading) {
     return (
-      <div className="w-full h-full flex flex-col items-center justify-center bg-muted/30 p-8">
-        <div className="w-full max-w-md space-y-4">
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-muted-foreground">Loading video...</span>
-            <span className="text-sm text-muted-foreground">{loadProgress}%</span>
-          </div>
-          <Progress 
-            value={loadProgress} 
-            className="h-2 w-full" 
-            indicatorClassName={loadProgress >= 95 ? "bg-green-500" : ""} 
-          />
-          <div className="flex justify-center">
-            <Spinner size="sm" className="border-blue-500" />
-          </div>
-        </div>
+      <div className="w-full h-full flex items-center justify-center bg-muted/30">
+        <Spinner size="md" className="text-primary" />
       </div>
     );
   }
