@@ -2,10 +2,11 @@
 import React, { useState, useCallback } from "react";
 import { Message } from "@/types/message";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
-import { RefreshCw, Play, Pause } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { VideoPlayerControls } from "@/components/message/FormSections/content/video/VideoPlayerControls";
 
 interface VideoContentSectionProps {
   message: Message;
@@ -187,6 +188,12 @@ function VideoPlayer({
     setIsPlaying(false);
   }, [setIsPlaying]);
   
+  // Handle clearing the video
+  const onClearVideo = useCallback(() => {
+    // This is just a placeholder since we don't need this functionality in the display view
+    console.log("Clear video requested but not implemented in display view");
+  }, []);
+  
   if (isLoading) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-muted/30">
@@ -214,32 +221,12 @@ function VideoPlayer({
         onEnded={handleVideoEnded}
       />
       
-      {/* Custom video controls */}
-      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity flex justify-between items-center w-full">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon"
-                type="button"
-                onClick={togglePlayback}
-                className="text-white hover:bg-white/20 transition-colors"
-                aria-label={isPlaying ? "Pause video" : "Play video"}
-              >
-                {isPlaying ? (
-                  <Pause className="h-5 w-5" />
-                ) : (
-                  <Play className="h-5 w-5" />
-                )}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>{isPlaying ? 'Pause video' : 'Play video'}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
+      {/* Custom video controls using the standardized VideoPlayerControls component */}
+      <VideoPlayerControls
+        isPlaying={isPlaying}
+        togglePlayback={togglePlayback}
+        onClearVideo={onClearVideo}
+      />
     </div>
   );
 }

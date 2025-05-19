@@ -78,38 +78,36 @@ export function ReminderSection({
         refreshInProgress={refreshInProgressRef.current}
       />
       
-      <div className="space-y-3 text-sm">
-        <ReminderStatus
-          isLoading={isLoading}
-          permissionError={permissionError}
-          hasReminders={hasReminders}
-          enhancedReminders={enhancedReminders}
-          refreshCount={refreshCount}
-          errorState={errorState}
+      <ReminderStatus
+        isLoading={isLoading}
+        permissionError={permissionError}
+        hasReminders={hasReminders}
+        enhancedReminders={enhancedReminders}
+        refreshCount={refreshCount}
+        errorState={errorState}
+      />
+      
+      {hasReminders && enhancedReminders.length > 0 && (
+        <TestReminderButton
+          onTestReminder={handleTestReminder}
+          isTestingReminder={isTestingReminder}
+          disabled={refreshInProgressRef.current}
         />
-        
-        {hasReminders && enhancedReminders.length > 0 && (
-          <TestReminderButton
-            onTestReminder={handleTestReminder}
-            isTestingReminder={isTestingReminder}
-            disabled={refreshInProgressRef.current}
-          />
-        )}
-        
-        {/* Show configured reminder times */}
-        <ReminderConfigTimes reminderMinutes={reminderMinutes} />
-        
-        {/* Show debug info in dev environment */}
-        <DebugInfo
-          isVisible={process.env.NODE_ENV === 'development'}
-          messageId={condition?.message_id}
-          conditionId={condition?.id}
-          lastRefreshed={lastRefreshed || 0}
-          refreshCount={refreshCount}
-          reminderMinutes={reminderMinutes}
-          permissionError={permissionError}
-        />
-      </div>
+      )}
+      
+      {/* Show configured reminder times */}
+      <ReminderConfigTimes reminderMinutes={reminderMinutes} />
+      
+      {/* Show debug info in dev environment */}
+      <DebugInfo
+        isVisible={process.env.NODE_ENV === 'development'}
+        messageId={condition?.message_id}
+        conditionId={condition?.id}
+        lastRefreshed={lastRefreshed || 0}
+        refreshCount={refreshCount}
+        reminderMinutes={reminderMinutes}
+        permissionError={permissionError}
+      />
       
       {/* Reminder History Dialog */}
       {condition?.message_id && (
