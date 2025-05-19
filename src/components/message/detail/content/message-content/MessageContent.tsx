@@ -4,7 +4,6 @@ import { Message } from "@/types/message";
 import { TextContentSection } from "./TextContentSection";
 import { VideoContentSection } from "./VideoContentSection";
 import { LocationSection } from "./LocationSection";
-import { WhatsAppSection } from "./WhatsAppSection";
 import { useMessageAdditionalText } from "@/hooks/useMessageAdditionalText";
 import { useMessageTranscription } from "@/hooks/useMessageTranscription";
 import { MessageAttachments } from "@/components/message/detail/MessageAttachments";
@@ -59,12 +58,7 @@ export function MessageContent({
         />
       )}
       
-      {/* WhatsApp section */}
-      <WhatsAppSection 
-        message={message} 
-        deliveryId={deliveryId} 
-        recipientEmail={recipientEmail} 
-      />
+      {/* WhatsApp section removed as requested */}
     </div>
   );
 }

@@ -1,4 +1,3 @@
-
 import React from "react";
 import { WhatsAppIntegration } from "../WhatsAppIntegration";
 import { Separator } from "@/components/ui/separator";
@@ -22,6 +21,9 @@ export function WhatsAppSection({
   recipientEmail,
   panicConfig 
 }: WhatsAppSectionProps) {
+  // Since this component is no longer used in MessageContent,
+  // we're just keeping it here for potential future use
+  // Component code kept intact for possible re-integration later
   // Use message.id if message is provided, otherwise use messageId prop
   const resolvedMessageId = message?.id || messageId;
 
