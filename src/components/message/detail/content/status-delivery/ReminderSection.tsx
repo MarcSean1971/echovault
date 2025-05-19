@@ -80,19 +80,22 @@ export function ReminderSection({
         refreshInProgress={refreshInProgressRef.current}
       />
       
-      {/* Display formatted reminders list moved from DeliverySettingsSection */}
+      {/* Display formatted reminders list with consistent text-sm styling */}
       {formattedAllReminders.length > 0 && (
         <div className="mb-3">
-          <ul className="list-disc pl-5 space-y-1 text-muted-foreground">
+          <div className="grid gap-2 text-sm">
             {formattedAllReminders.map((reminder, index) => (
-              <li key={index} className={reminder.includes("Final Delivery") ? "font-medium text-destructive" : ""}>
-                {reminder.includes("Final Delivery") && (
-                  <AlertTriangle className="inline-block h-3.5 w-3.5 mr-1 -mt-0.5" />
-                )}
-                {reminder}
-              </li>
+              <div key={index} className={`flex items-start ${reminder.includes("Final Delivery") ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+                <span className="mr-2 mt-0.5 flex-shrink-0">•</span>
+                <div className="flex items-center">
+                  {reminder.includes("Final Delivery") && (
+                    <AlertTriangle className="inline-block h-3.5 w-3.5 mr-1.5" />
+                  )}
+                  {reminder}
+                </div>
+              </div>
             ))}
-          </ul>
+          </div>
         </div>
       )}
       
