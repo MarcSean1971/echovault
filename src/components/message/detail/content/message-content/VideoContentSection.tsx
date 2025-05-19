@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Message } from "@/types/message";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { Button } from "@/components/ui/button";
@@ -38,7 +38,7 @@ export function VideoContentSection({
           <div className="aspect-video bg-muted/30 flex items-center justify-center">
             <Button 
               variant="outline" 
-              className="flex items-center gap-2"
+              className={`flex items-center gap-2 ${HOVER_TRANSITION}`}
               onClick={handleLoadVideo}
             >
               <Play className="h-4 w-4" /> Load Video
@@ -81,30 +81,7 @@ function LazyVideoLoader({ message }: { message: Message }) {
   const [isProcessing, setIsProcessing] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
-  useEffect(() => {
-    // Create a simple placeholder
-    const createPlaceholder = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = 320;
-      canvas.height = 240;
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.fillStyle = '#f0f0f0';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = 'rgba(0,0,0,0.2)';
-        ctx.beginPath();
-        ctx.arc(canvas.width/2, canvas.height/2, 40, 0, 2 * Math.PI);
-        ctx.fill();
-        ctx.fillStyle = 'white';
-        ctx.beginPath();
-        ctx.moveTo(canvas.width/2 - 15, canvas.height/2 - 20);
-        ctx.lineTo(canvas.width/2 - 15, canvas.height/2 + 20);
-        ctx.lineTo(canvas.width/2 + 25, canvas.height/2);
-        ctx.closePath();
-        ctx.fill();
-      }
-    };
-    
+  React.useEffect(() => {
     // Import dynamically to avoid slowing down initial page load
     import('@/services/messages/mediaService').then(module => {
       const { parseVideoContent } = module;

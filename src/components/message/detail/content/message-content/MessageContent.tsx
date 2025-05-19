@@ -2,7 +2,7 @@
 import React from "react";
 import { Message } from "@/types/message";
 import { TextContentSection } from "./TextContentSection";
-import { VideoContentSection } from "../VideoContentSection";
+import { VideoContentSection } from "./VideoContentSection";
 import { LocationSection } from "./LocationSection";
 import { WhatsAppSection } from "./WhatsAppSection";
 import { useMessageAdditionalText } from "@/hooks/useMessageAdditionalText";
