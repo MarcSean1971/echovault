@@ -286,21 +286,43 @@ export async function sendRecipientReminders(
             console.log(`Sending email to recipient ${recipient.name} at ${recipient.email} (attempt ${attempt + 1}/${maxRetries})`);
           }
           
+          // Create a delivery ID for access tracking
+          const deliveryId = `${messageId}-${recipient.id}-${Date.now()}`;
+          
           // Prepare email content based on type
           let emailSubject = '';
           let emailContent = '';
           
           if (isFinalDelivery) {
-            emailSubject = `IMPORTANT MESSAGE from ${senderName}: "${messageTitle}"`;
+            // UPDATED: Using emergency-style format for final deliveries
+            emailSubject = `⚠️ IMPORTANT MESSAGE from ${senderName}: "${messageTitle}"`;
+            
+            // Generate access URL for the message
+            const recipientEmail = encodeURIComponent(recipient.email);
+            const accessUrl = `https://echo-vault.app/access/message/${messageId}?delivery=${deliveryId}&recipient=${recipientEmail}`;
+            
             emailContent = `
-              <h2>IMPORTANT MESSAGE</h2>
-              <p>${senderName} has set up this message to be delivered to you: <strong>${messageTitle}</strong></p>
-              <p><a href="https://echo-vault.app/message/${messageId}?recipient=${recipient.id}" 
-                style="padding: 10px 20px; background-color: #0070f3; color: white; text-decoration: none; border-radius: 4px;">
-                View Message
-              </a></p>
+              <div style="max-width: 600px; margin: 0 auto; padding: 20px; font-family: Arial, sans-serif;">
+                <div style="background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; padding: 15px; margin-bottom: 20px; border-radius: 5px;">
+                  <h2 style="margin-top: 0;">⚠️ IMPORTANT MESSAGE DELIVERY</h2>
+                  <p>This is an automated delivery triggered by a deadman's switch.</p>
+                </div>
+                
+                <h2>Message from ${senderName}</h2>
+                <p>${senderName} has set up this message to be automatically delivered to you: <strong>${messageTitle}</strong></p>
+                
+                <div style="margin: 30px 0; text-align: center;">
+                  <a href="${accessUrl}" 
+                    style="background-color: #0070f3; color: white; padding: 12px 25px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">
+                    View The Message
+                  </a>
+                </div>
+                
+                <p style="color: #666; font-size: 0.9em;">This is an automated message from EchoVault's deadman's switch system.</p>
+              </div>
             `;
           } else {
+            // Standard reminder format
             emailSubject = `Reminder: Message "${messageTitle}" from ${senderName}`;
             emailContent = `
               <h2>Message Delivery Reminder</h2>

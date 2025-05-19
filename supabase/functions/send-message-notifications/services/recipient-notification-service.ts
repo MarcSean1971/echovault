@@ -79,7 +79,7 @@ export async function notifyRecipient(
             longitude: message.location_longitude,
             name: message.location_name
           },
-          isEmergency,
+          isEmergency || condition.condition_type === "no_check_in", // Treat deadman's switch as emergency
           "EchoVault",  // App name
           deliveryId,   // Pass the deliveryId to the email service
           message.attachments // Pass message attachments to email service
@@ -113,7 +113,7 @@ export async function notifyRecipient(
           recipient,
           message,
           debug,
-          isEmergency
+          isEmergency || condition.condition_type === "no_check_in" // Treat deadman's switch as emergency
         );
         
         whatsAppSuccess = whatsAppResult.success;
