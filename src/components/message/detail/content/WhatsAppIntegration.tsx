@@ -1,9 +1,11 @@
+
 import { useState, useEffect } from "react";
 import { WhatsAppHeader } from "./whatsapp/WhatsAppHeader";
 import { WhatsAppButtons } from "./whatsapp/WhatsAppButtons";
 import { WhatsAppCheckIn } from "./whatsapp/WhatsAppCheckIn";
 import { supabase } from "@/integrations/supabase/client";
 import { sendTestWhatsAppMessage } from "@/services/messages/whatsApp/core/messageService";
+
 interface WhatsAppIntegrationProps {
   messageId: string;
   panicConfig?: {
@@ -11,11 +13,13 @@ interface WhatsAppIntegrationProps {
     trigger_keyword?: string;
   };
 }
+
 export function WhatsAppIntegration({
   messageId,
   panicConfig
 }: WhatsAppIntegrationProps) {
   const [checkInCode, setCheckInCode] = useState<string | null>(null);
+
   useEffect(() => {
     // Fetch custom check-in code if it exists
     const fetchCheckInCode = async () => {
@@ -35,9 +39,28 @@ export function WhatsAppIntegration({
     };
     fetchCheckInCode();
   }, [messageId]);
+
   const handleSendTestWhatsApp = async () => {
     if (!messageId) return;
     await sendTestWhatsAppMessage(messageId);
   };
-  return;
+
+  // Return the JSX elements for the WhatsApp integration
+  return (
+    <div className="space-y-4">
+      <WhatsAppHeader />
+      
+      <div className="flex flex-col space-y-4">
+        <WhatsAppCheckIn 
+          messageId={messageId} 
+          checkInCode={checkInCode} 
+        />
+        
+        <WhatsAppButtons 
+          onSendTestMessage={handleSendTestWhatsApp}
+          panicConfig={panicConfig}
+        />
+      </div>
+    </div>
+  );
 }
