@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -94,11 +93,10 @@ export function MessageCardContent({
         </div>
       )}
 
-      {/* Panic trigger warning if applicable */}
+      {/* Panic trigger warning if applicable - keep icon but remove text */}
       {isPanicTrigger && (
         <div className="flex items-center mt-2 text-amber-600 text-xs">
           <AlertTriangle className={`h-3.5 w-3.5 mr-1.5 ${HOVER_TRANSITION}`} />
-          <span>Panic trigger message</span>
         </div>
       )}
 
