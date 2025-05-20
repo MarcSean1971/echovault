@@ -3,12 +3,12 @@ import { Message } from "@/types/message";
 import { FileAttachment } from "@/components/FileUploader";
 import { uploadAttachments } from "./fileService";
 
-// New optimized function to fetch only essential message card data
-export async function fetchMessageCardsData(messageType: string | null = null) {
+// New optimized function to fetch only essential message card data - removed messageType parameter
+export async function fetchMessageCardsData() {
   try {
     const client = await getAuthClient();
     
-    console.log("Fetching message cards data", messageType ? `with type: ${messageType}` : "all types");
+    console.log("Fetching message cards data, all types");
     
     let query = client
       .from('messages')
@@ -28,10 +28,6 @@ export async function fetchMessageCardsData(messageType: string | null = null) {
       `) // Exclude video_content field!
       .order('created_at', { ascending: false });
       
-    if (messageType) {
-      query = query.eq('message_type', messageType);
-    }
-    
     const { data, error } = await query;
     
     if (error) {

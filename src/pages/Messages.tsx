@@ -6,9 +6,7 @@ import { MessagesHeader } from "@/components/message/MessagesHeader";
 import { MessageCategories } from "@/components/message/MessageCategories";
 
 export default function Messages() {
-  const [messageType, setMessageType] = useState<string | null>(null);
-  
-  // Get message data using our custom hook
+  // Get message data using our custom hook - removed messageType parameter
   const { 
     messages, 
     panicMessages, 
@@ -16,7 +14,7 @@ export default function Messages() {
     isLoading, 
     reminderRefreshTrigger,
     forceRefresh 
-  } = useMessageList(messageType);
+  } = useMessageList();
   
   // State management for messages
   const [messagesState, setMessagesState] = useState(messages);
@@ -49,10 +47,7 @@ export default function Messages() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
-      <MessagesHeader 
-        messageType={messageType}
-        onFilterChange={setMessageType}
-      />
+      <MessagesHeader />
       
       <MessageCategories 
         panicMessages={panicMessages}

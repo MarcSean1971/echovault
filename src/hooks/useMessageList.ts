@@ -6,7 +6,7 @@ import { fetchMessageCardsData, fetchMessages } from "@/services/messages/messag
 import { fetchMessageConditions, invalidateConditionsCache } from "@/services/messages/conditionService";
 import { Message, MessageCondition } from "@/types/message";
 
-export function useMessageList(messageType: string | null) {
+export function useMessageList() {
   const { userId } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -15,7 +15,7 @@ export function useMessageList(messageType: string | null) {
   const [regularMessages, setRegularMessages] = useState<Message[]>([]);
   const [reminderRefreshTrigger, setReminderRefreshTrigger] = useState(0);
   
-  // Optimized data loading function
+  // Optimized data loading function - removed messageType parameter
   const loadData = useCallback(async () => {
     if (!userId) return;
     
@@ -24,9 +24,9 @@ export function useMessageList(messageType: string | null) {
     try {
       console.log("Fetching messages and conditions for user:", userId);
       
-      // Fetch messages and conditions in parallel - use the optimized fetchMessageCardsData function
+      // Fetch messages and conditions in parallel - removed messageType filter
       const [messageData, conditionsData] = await Promise.all([
-        fetchMessageCardsData(messageType),
+        fetchMessageCardsData(), // No longer passing messageType here
         fetchMessageConditions(userId)
       ]);
       
@@ -76,7 +76,7 @@ export function useMessageList(messageType: string | null) {
     } finally {
       setIsLoading(false);
     }
-  }, [userId, messageType]);
+  }, [userId]); // Removed messageType from dependencies
 
   // Force refresh function
   const forceRefresh = useCallback(() => {

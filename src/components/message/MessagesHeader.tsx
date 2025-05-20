@@ -4,14 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { BUTTON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
-import { MessageFilter } from "@/components/message/MessageFilter";
 
-interface MessagesHeaderProps {
-  messageType: string | null;
-  onFilterChange: (type: string | null) => void;
-}
-
-export function MessagesHeader({ messageType, onFilterChange }: MessagesHeaderProps) {
+export function MessagesHeader() {
   const navigate = useNavigate();
   
   return (
@@ -26,10 +20,7 @@ export function MessagesHeader({ messageType, onFilterChange }: MessagesHeaderPr
       </div>
       
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-        <MessageFilter 
-          messageType={messageType} 
-          onFilterChange={onFilterChange} 
-        />
+        <div className="flex-1"></div>
         <Button 
           onClick={() => navigate("/create-message")}
           className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default} gap-2 shadow-sm hover:shadow-md`}
