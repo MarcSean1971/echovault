@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { MessageCondition } from "@/types/message";
+import { mapDbConditionToMessageCondition } from "@/services/messages/conditions/helpers/map-helpers";
 
 // Define minimal types for header button data
 type HeaderButtonsData = {
@@ -71,7 +72,13 @@ export function useHeaderButtonsData(): HeaderButtonsData {
             id,
             message_id,
             condition_type,
-            active
+            active,
+            hours_threshold,
+            created_at,
+            updated_at,
+            recipients,
+            recurring_pattern,
+            panic_config
           `)
           .eq('active', true)
           .in('condition_type', ['no_check_in', 'recurring_check_in', 'inactivity_to_date', 'panic_trigger'])
@@ -90,14 +97,10 @@ export function useHeaderButtonsData(): HeaderButtonsData {
           c.active === true
         );
         
-        const panicMessageConditions = data.filter(c => 
-          c.condition_type === 'panic_trigger' && c.active === true
-        ).map(c => ({
-          id: c.id,
-          message_id: c.message_id,
-          condition_type: c.condition_type,
-          active: c.active
-        }));
+        // Use the proper mapping function for panic message conditions
+        const panicMessageConditions = data
+          .filter(c => c.condition_type === 'panic_trigger' && c.active === true)
+          .map(c => mapDbConditionToMessageCondition(c));
         
         // Update state
         setHasCheckInConditions(checkInConditions.length > 0);
