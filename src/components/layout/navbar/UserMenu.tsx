@@ -3,7 +3,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LogOut, User, Settings, Users } from "lucide-react";
+import { LogOut, User, Settings, Users, MessageSquare } from "lucide-react";
+import { ICON_HOVER_EFFECTS } from "@/utils/hoverEffects";
 
 interface UserMenuProps {
   userImage: string | null;
@@ -51,21 +52,27 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
+            <Link to="/messages" className="w-full cursor-pointer hover:opacity-90 transition-opacity">
+              <MessageSquare className={`mr-2 h-4 w-4 ${ICON_HOVER_EFFECTS.muted}`} />
+              <span>Messages</span>
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
             <Link to="/profile" className="w-full cursor-pointer hover:opacity-90 transition-opacity">
-              <User className="mr-2 h-4 w-4" />
+              <User className={`mr-2 h-4 w-4 ${ICON_HOVER_EFFECTS.muted}`} />
               <span>Profile</span>
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link to="/recipients" className="w-full cursor-pointer hover:opacity-90 transition-opacity">
-              <Users className="mr-2 h-4 w-4" />
+              <Users className={`mr-2 h-4 w-4 ${ICON_HOVER_EFFECTS.muted}`} />
               <span>Recipients</span>
             </Link>
           </DropdownMenuItem>
           {isAdmin && (
             <DropdownMenuItem asChild>
               <Link to="/admin" className="w-full cursor-pointer hover:opacity-90 transition-opacity">
-                <Settings className="mr-2 h-4 w-4" />
+                <Settings className={`mr-2 h-4 w-4 ${ICON_HOVER_EFFECTS.muted}`} />
                 <span>Admin Dashboard</span>
               </Link>
             </DropdownMenuItem>
@@ -73,7 +80,7 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer hover:opacity-90 transition-opacity">
-          <LogOut className="mr-2 h-4 w-4" />
+          <LogOut className={`mr-2 h-4 w-4 ${ICON_HOVER_EFFECTS.muted}`} />
           <span>Log out</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
