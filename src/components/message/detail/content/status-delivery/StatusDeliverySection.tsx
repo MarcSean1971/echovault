@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from 'react';
-import { getEffectiveDeadline, parseReminderMinutes } from '@/utils/reminderUtils';
+import { parseReminderMinutes } from '@/utils/reminderUtils';
+import { getEffectiveDeadline } from '@/utils/reminder/reminderUtils'; // Fixed import path
 import { MessageInfoSection } from './MessageInfoSection';
 import { DeliverySettingsSection } from './DeliverySettingsSection';
 import { ReminderSection } from './ReminderSection';
