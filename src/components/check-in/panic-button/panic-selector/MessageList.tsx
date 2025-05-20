@@ -2,6 +2,7 @@
 import { MessageCondition } from "@/types/message";
 import { MessageItem } from "./MessageItem";
 import { MessageDetails } from "../types";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface MessageListProps {
   messages: MessageCondition[];
@@ -33,7 +34,7 @@ export function MessageList({
   }
 
   return (
-    <div className="max-h-[60vh] overflow-y-auto py-4 space-y-2">
+    <div className={`max-h-[60vh] overflow-y-auto py-4 space-y-2 ${HOVER_TRANSITION}`}>
       {messages.map((message) => {
         const details = messageDetails[message.message_id];
         const attachmentInfo = details ? getAttachmentInfo(message.message_id) : null;
