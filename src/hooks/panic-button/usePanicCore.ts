@@ -79,7 +79,7 @@ export function usePanicCore(
       setTriggerInProgress,
       setCountDown,
       setIsSelectorOpen,
-      setSelectedMessageId
+      setSelectedMessageId,
     },
     panicMessages,
     getActiveMessageId,

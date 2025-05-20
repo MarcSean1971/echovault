@@ -1,2 +1,3 @@
 
-export * from './HeaderButtons';
+// Re-export the HeaderButtons component
+export { HeaderButtons } from './HeaderButtons';
