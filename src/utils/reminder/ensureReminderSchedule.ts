@@ -13,6 +13,7 @@ import { generateReminderSchedule } from "./reminderGenerator";
  * - After check-ins that update the condition's last_checked time
  * 
  * FIXED: Added better error handling and logging for improved debugging of permission issues
+ * CRITICAL FIX: Added proper handling of reminderMinutes values in all formats
  */
 export async function ensureReminderSchedule(
   conditionId: string,
@@ -64,6 +65,9 @@ export async function ensureReminderSchedule(
       return true;
     }
     
+    // CRITICAL FIX: Log the raw reminder_hours value from database for debugging
+    console.log("[ENSURE-REMINDERS] Raw reminder_hours from database:", condition.reminder_hours);
+    
     // First mark existing reminders as obsolete
     try {
       console.log(`[ENSURE-REMINDERS] Marking existing reminders as obsolete for message ${messageId}`);
@@ -74,7 +78,28 @@ export async function ensureReminderSchedule(
     }
     
     // Get reminder times (already in minutes in the database)
-    const reminderMinutes = parseReminderMinutes(condition.reminder_hours);
+    // CRITICAL FIX: Ensure we properly handle the reminder_hours value regardless of format
+    let reminderMinutes = [];
+    
+    if (condition.reminder_hours) {
+      // Handle both number[] and string[] formats
+      if (Array.isArray(condition.reminder_hours)) {
+        reminderMinutes = condition.reminder_hours.map(Number);
+      } else {
+        // Try to parse as JSON if it's a string
+        try {
+          const parsed = JSON.parse(condition.reminder_hours);
+          reminderMinutes = Array.isArray(parsed) ? parsed.map(Number) : [];
+        } catch (e) {
+          // If parsing fails, use parseReminderMinutes as fallback
+          reminderMinutes = parseReminderMinutes(condition.reminder_hours);
+        }
+      }
+    } else {
+      // Default to 24 hours (1440 minutes) if no reminders are set
+      reminderMinutes = [1440]; 
+    }
+    
     console.log("[ENSURE-REMINDERS] Parsed reminder minutes:", reminderMinutes);
     
     // Calculate effective deadline based on condition type

@@ -107,21 +107,24 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
       // Handle trigger conditions
       let conditionId = null;
       
-      // Log the current reminder minutes for debugging
-      console.log("Current reminder minutes values:", reminderMinutes);
+      // CRITICAL: Add comprehensive logging for the reminder minutes values
+      console.log("================================================================");
+      console.log("SUBMITTING EDIT WITH REMINDER MINUTES:", reminderMinutes);
+      console.log("REMINDER MINUTES TYPE:", typeof reminderMinutes);
+      console.log("IS ARRAY:", Array.isArray(reminderMinutes));
+      console.log("STRINGIFIED:", JSON.stringify(reminderMinutes));
+      console.log("================================================================");
       
       if (existingCondition) {
         console.log("Updating existing condition with delivery option:", deliveryOption);
         console.log("Reminder minutes before update:", reminderMinutes);
         
-        // CRITICAL FIX: Check if timing-related parameters have changed to determine if we need to regenerate reminders
-        const timingParamsChanged = hasTimingParamsChanged(existingCondition, {
-          hoursThreshold: finalHoursThreshold,
-          minutesThreshold,
-          reminderMinutes,
-          triggerDate: triggerDate ? triggerDate.toISOString() : null,
-          recurringPattern: finalRecurringPattern
-        });
+        // FIXED: Always consider timing params changed to force regeneration of reminders
+        const timingParamsChanged = true;
+        
+        // CRITICAL FIX: Create a deeply cloned copy of reminderMinutes to ensure we don't have reference issues
+        const reminderMinutesToSave = [...reminderMinutes];
+        console.log("Using reminder minutes for update:", reminderMinutesToSave);
         
         // Update existing condition - ensure reminder_hours gets the minutes values
         const updatedCondition = await updateMessageCondition(existingCondition.id, {
@@ -132,7 +135,7 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
           pin_code: pinCode || null,
           trigger_date: triggerDate ? triggerDate.toISOString() : null,
           panic_trigger_config: panicTriggerConfig,
-          reminder_hours: reminderMinutes, // Values are in minutes
+          reminder_hours: reminderMinutesToSave, // Send a copy to prevent mutations
           unlock_delay_hours: unlockDelay,
           expiry_hours: expiryHours,
           recipients: selectedRecipientObjects,
@@ -142,7 +145,7 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
         conditionId = existingCondition.id;
         
         // ENHANCED DEBUGGING: Log successful update
-        console.log("Update successful, new reminder minutes:", reminderMinutes);
+        console.log("Update successful, new reminder minutes:", reminderMinutesToSave);
         console.log("Full updated condition:", updatedCondition);
         
         // Force regenerate reminder schedule regardless of timing parameter changes if the condition is active
@@ -180,7 +183,7 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
             unlockDelayHours: unlockDelay,
             expiryHours,
             panicTriggerConfig,
-            reminderHours: reminderMinutes, // Values already in minutes
+            reminderHours: [...reminderMinutes], // Clone the array to prevent mutations
             checkInCode: checkInCode || undefined
           }
         );
@@ -220,85 +223,7 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
     }
   };
 
-  // Helper function to check if timing-related parameters have changed
-  const hasTimingParamsChanged = (
-    existingCondition: MessageCondition, 
-    newParams: {
-      hoursThreshold: number;
-      minutesThreshold: number;
-      reminderMinutes: number[];
-      triggerDate: string | null;
-      recurringPattern: any;
-    }
-  ): boolean => {
-    // Check hours threshold change
-    if (existingCondition.hours_threshold !== newParams.hoursThreshold) {
-      return true;
-    }
-    
-    // Check minutes threshold change
-    if (existingCondition.minutes_threshold !== newParams.minutesThreshold) {
-      return true;
-    }
-    
-    // IMPROVED: More robust reminder minutes comparison
-    // Check reminder hours change (deep comparison needed as it's an array)
-    const existingReminderMinutes = existingCondition.reminder_hours || [];
-    const newReminderMinutes = newParams.reminderMinutes || [];
-    
-    // Log for debugging
-    console.log("Comparing reminder arrays:", {
-      existing: existingReminderMinutes,
-      new: newReminderMinutes
-    });
-    
-    if (existingReminderMinutes.length !== newReminderMinutes.length) {
-      console.log("Different array lengths detected");
-      return true;
-    }
-    
-    // Sort both arrays to ensure we're comparing the same values
-    const sortedExisting = [...existingReminderMinutes].sort((a, b) => a - b);
-    const sortedNew = [...newReminderMinutes].sort((a, b) => a - b);
-    
-    // Compare each element
-    for (let i = 0; i < sortedExisting.length; i++) {
-      if (sortedExisting[i] !== sortedNew[i]) {
-        console.log(`Different values at index ${i}: ${sortedExisting[i]} vs ${sortedNew[i]}`);
-        return true;
-      }
-    }
-    
-    // Check trigger date change
-    const existingTriggerDate = existingCondition.trigger_date || null;
-    const newTriggerDate = newParams.triggerDate || null;
-    
-    if ((existingTriggerDate === null && newTriggerDate !== null) || 
-        (existingTriggerDate !== null && newTriggerDate === null)) {
-      return true;
-    }
-    
-    if (existingTriggerDate && newTriggerDate && 
-        new Date(existingTriggerDate).getTime() !== new Date(newTriggerDate).getTime()) {
-      return true;
-    }
-    
-    // Check recurring pattern change
-    const existingPattern = existingCondition.recurring_pattern;
-    const newPattern = newParams.recurringPattern;
-    
-    if ((existingPattern === null && newPattern !== null) || 
-        (existingPattern !== null && newPattern === null)) {
-      return true;
-    }
-    
-    if (existingPattern && newPattern && 
-        JSON.stringify(existingPattern) !== JSON.stringify(newPattern)) {
-      return true;
-    }
-    
-    return false;
-  };
+  // Helper function removed as we're always forcing reminder regeneration
 
   return {
     handleSubmit

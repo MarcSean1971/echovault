@@ -89,8 +89,9 @@ export const MessageFormProvider = ({ children }: { children: React.ReactNode })
   const [unlockDelay, setUnlockDelay] = useState(0);
   const [expiryHours, setExpiryHours] = useState(0);
   
-  // Reminders - now properly named as minutes
-  const [reminderMinutes, setReminderMinutes] = useState<number[]>([24 * 60]); // Default 24 hour reminder (converted to 1440 minutes)
+  // CRITICAL FIX: Default reminder - initialize as an empty array instead of with a default value
+  // This ensures we don't override values loaded from the database during initialization
+  const [reminderMinutes, setReminderMinutes] = useState<number[]>([]);
   
   // Custom check-in code
   const [checkInCode, setCheckInCode] = useState("");
