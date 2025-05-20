@@ -56,7 +56,8 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
     setIsSelectorOpen,
     selectedMessageId,
     setSelectedMessageId,
-    handlePanicMessageSelect
+    handlePanicMessageSelect,
+    executePanicTrigger
   } = usePanicButton(userId, panicMessage, panicMessages);
   
   // Force refresh conditions when component mounts and when lastRefresh changes
@@ -66,6 +67,18 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
       refreshConditions();
     }
   }, [userId, refreshConditions]);
+  
+  // Handle manual panic message selection with direct triggering
+  const handlePanicMessageDirectTrigger = (messageId: string) => {
+    console.log(`HeaderButtons: Directly triggering panic message: ${messageId}`);
+    handlePanicMessageSelect(messageId);
+    
+    // Create a custom event to directly trigger the panic
+    const event = new CustomEvent('panic-trigger-execute', { 
+      detail: { messageId } 
+    });
+    window.dispatchEvent(event);
+  };
   
   // Determine button styles based on screen size
   const buttonSizeClass = isMobile ? "text-xs" : "";
@@ -122,7 +135,7 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
           messages={panicMessages}
           isOpen={isSelectorOpen}
           onClose={() => setIsSelectorOpen(false)}
-          onSelect={handlePanicMessageSelect}
+          onSelect={handlePanicMessageDirectTrigger}
         />
       )}
     </>

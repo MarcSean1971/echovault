@@ -5,7 +5,7 @@ import { useState } from "react";
  * Hook for managing panic message selection
  */
 export function usePanicMessageSelector(
-  startCountdownFn: Function
+  startCountdownFn: (messageId: string) => void
 ) {
   const [isSelectorOpen, setIsSelectorOpen] = useState(false);
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
@@ -16,8 +16,8 @@ export function usePanicMessageSelector(
     setSelectedMessageId(messageId);
     setIsSelectorOpen(false);
     
-    // After selecting a message, proceed with starting the countdown
-    // Pass the messageId to the function so it knows which message to trigger
+    // After selecting a message, proceed with triggering it immediately
+    // This ensures the "Trigger Emergency" button works as expected
     startCountdownFn(messageId);
   };
 

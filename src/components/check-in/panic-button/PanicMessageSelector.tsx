@@ -86,8 +86,9 @@ export function PanicMessageSelector({
 
   const handleSelect = () => {
     if (selectedId) {
+      // Directly call onSelect which will now handle both the selection and triggering
+      console.log("PanicMessageSelector: Triggering emergency for message:", selectedId);
       onSelect(selectedId);
-      onClose();
     }
   };
 
@@ -190,7 +191,7 @@ export function PanicMessageSelector({
             variant="destructive" 
             onClick={handleSelect} 
             disabled={!selectedId || isLoading}
-            className={`${HOVER_TRANSITION}`}
+            className={`${HOVER_TRANSITION} hover:bg-red-700 transition-colors`}
           >
             <AlertCircle className="h-4 w-4 mr-2" />
             Trigger Emergency
