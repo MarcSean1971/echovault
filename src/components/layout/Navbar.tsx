@@ -6,7 +6,7 @@ import { Logo } from "./navbar/Logo";
 import { DesktopNav } from "./navbar/DesktopNav";
 import { MobileNav } from "./navbar/MobileNav";
 import { GuestNav } from "./navbar/GuestNav";
-import { HeaderButtons } from "./navbar/header-buttons";
+import { HeaderButtons } from "./navbar/header-buttons";  // Fixed import path
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface NavbarProps {
@@ -20,6 +20,9 @@ export default function Navbar({ isLoggedIn = false }: NavbarProps) {
   const { conditions } = useTriggerDashboard();
   const isMobile = useIsMobile();
 
+  console.log("Navbar rendering with conditions:", conditions?.length || 0);
+  console.log("Navbar userId:", userId);
+  
   // Determine user initials and image when user data is loaded
   useEffect(() => {
     if (profile) {
@@ -50,7 +53,7 @@ export default function Navbar({ isLoggedIn = false }: NavbarProps) {
         {authenticated && !isMobile && (
           <div className="flex-1 flex justify-center md:absolute md:left-1/2 md:transform md:-translate-x-1/2 z-20">
             <HeaderButtons 
-              conditions={conditions}
+              conditions={conditions || []}  {/* Ensure we never pass undefined */}
               userId={userId}
             />
           </div>
@@ -71,7 +74,7 @@ export default function Navbar({ isLoggedIn = false }: NavbarProps) {
         <div className="md:hidden border-t border-border/40 py-2">
           <div className="container mx-auto px-4 flex justify-center">
             <HeaderButtons 
-              conditions={conditions}
+              conditions={conditions || []}  {/* Ensure we never pass undefined */}
               userId={userId}
             />
           </div>

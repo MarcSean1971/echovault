@@ -23,7 +23,7 @@ export async function fetchConditionsFromDb(userId: string): Promise<MessageCond
   const now = Date.now();
   
   if (cachedData && (now - cachedData.timestamp) < CACHE_TTL) {
-    console.log(`[fetchConditionsFromDb] Using cached conditions for user: ${userId}`);
+    console.log(`[fetchConditionsFromDb] Using cached conditions for user: ${userId}, count: ${cachedData.conditions.length}`);
     return cachedData.conditions;
   }
   
@@ -31,6 +31,7 @@ export async function fetchConditionsFromDb(userId: string): Promise<MessageCond
   let client;
   try {
     client = await getAuthClient();
+    console.log("[fetchConditionsFromDb] Successfully obtained auth client");
   } catch (error) {
     console.error("[fetchConditionsFromDb] Error getting auth client:", error);
     throw new Error("Authentication error: Could not connect to the database");
@@ -95,8 +96,19 @@ export async function fetchConditionsFromDb(userId: string): Promise<MessageCond
 
     console.log(`[fetchConditionsFromDb] Successfully fetched ${data?.length || 0} conditions`);
     
+    // If no data, return empty array instead of null
+    if (!data || data.length === 0) {
+      // Cache empty result
+      conditionsCache.set(cacheKey, {
+        conditions: [],
+        timestamp: now
+      });
+      
+      return [];
+    }
+    
     // Map and cache the conditions
-    const conditions = (data || []).map(mapDbConditionToMessageCondition);
+    const conditions = data.map(mapDbConditionToMessageCondition);
     
     conditionsCache.set(cacheKey, {
       conditions,

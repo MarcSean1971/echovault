@@ -10,6 +10,7 @@ import { useHeaderCheckIn } from "@/hooks/useHeaderCheckIn";
 import { usePanicButton } from "@/hooks/usePanicButton";
 import { useDeadlineMeter } from "@/hooks/useDeadlineMeter";
 import { PanicMessageSelector } from "@/components/check-in/panic-button/PanicMessageSelector";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface HeaderButtonsProps {
   conditions: MessageCondition[];
@@ -27,11 +28,16 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
     refreshConditions 
   } = useTriggerDashboard();
 
+  console.log("HeaderButtons rendering with conditions:", conditions?.length || 0);
+  console.log("HeaderButtons userId:", userId);
+  
   // Find all panic messages from conditions - now including all panic messages
   // IMPORTANT: Changed to include all panic messages regardless of active state
   const panicMessages = conditions.filter(c => 
     c.condition_type === 'panic_trigger'
   );
+  
+  console.log("HeaderButtons found panicMessages:", panicMessages?.length || 0);
 
   // Get the first panic message as fallback for compatibility
   const panicMessage = panicMessages.length > 0 ? panicMessages[0] : null;
@@ -41,6 +47,8 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
     (c.condition_type === 'no_check_in' || c.condition_type === 'regular_check_in') && 
     c.active === true
   );
+  
+  console.log("HeaderButtons hasCheckInConditions:", hasCheckInConditions);
 
   // Use the custom hooks
   const { handleCheckIn } = useHeaderCheckIn(handleDashboardCheckIn, isChecking);
@@ -64,7 +72,7 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
   useEffect(() => {
     if (userId) {
       console.log("HeaderButtons refreshing conditions");
-      refreshConditions();
+      refreshConditions(userId);
     }
   }, [userId, refreshConditions]);
   
