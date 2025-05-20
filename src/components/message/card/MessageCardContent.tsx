@@ -1,8 +1,9 @@
+
 import React from "react";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { MessageCondition, Message } from "@/types/message";
-import { Clock, AlertTriangle, Bell, Video } from "lucide-react";
+import { Clock, Bell, Video } from "lucide-react";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { cn } from "@/lib/utils";
 
@@ -93,10 +94,10 @@ export function MessageCardContent({
         </div>
       )}
 
-      {/* Panic trigger warning if applicable - keep icon but remove text */}
+      {/* Panic trigger warning section - completely removed icon */}
       {isPanicTrigger && (
         <div className="flex items-center mt-2 text-amber-600 text-xs">
-          <AlertTriangle className={`h-3.5 w-3.5 mr-1.5 ${HOVER_TRANSITION}`} />
+          {/* AlertTriangle icon removed */}
         </div>
       )}
 
