@@ -18,13 +18,13 @@ export function MessageCardWrapper({
   messageId,
   children
 }: MessageCardWrapperProps) {
-  // Determine card color based on status
+  // Determine card color based on status - Enhanced shading
   const getCardClasses = () => {
     if (isArmed) {
-      return 'border-destructive/50 bg-gradient-to-br from-red-50 to-white';
+      return 'border-destructive/70 bg-gradient-to-br from-red-100 to-white shadow-sm shadow-red-100/50';
     } else {
-      // Ensure unarmed messages have a green border
-      return 'border-green-300 bg-gradient-to-br from-green-50 to-white';
+      // Enhanced green shading for unarmed messages
+      return 'border-green-400 bg-gradient-to-br from-green-100 to-white shadow-sm shadow-green-100/50';
     }
   };
 
@@ -33,7 +33,7 @@ export function MessageCardWrapper({
       key={messageId} 
       className={`overflow-hidden group transition-all duration-300 ${HOVER_TRANSITION} hover:shadow-md ${getCardClasses()}`}
     >
-      <CardHeader className={`pb-3 ${isArmed ? 'bg-red-50/20' : 'bg-green-50/20'}`}>
+      <CardHeader className={`pb-3 ${isArmed ? 'bg-red-100/30' : 'bg-green-100/30'}`}>
         {children.header}
       </CardHeader>
       <CardContent>

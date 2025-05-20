@@ -24,7 +24,7 @@ export function ArmButton({
         onClick={onDisarmMessage}
         disabled={isActionLoading}
         variant="outline"
-        iconClassName="text-green-600 transition-all group-hover:scale-110"
+        iconClassName={`text-green-600 transition-all group-hover:scale-110 ${HOVER_TRANSITION}`}
         tooltipText={isActionLoading ? "Disarming in progress..." : undefined}
       />
     );
@@ -37,7 +37,7 @@ export function ArmButton({
       onClick={onArmMessage}
       disabled={isActionLoading}
       variant="destructive"
-      iconClassName="transition-all group-hover:scale-110"
+      iconClassName={`transition-all group-hover:scale-110 ${HOVER_TRANSITION}`}
       tooltipText={isActionLoading ? "Arming in progress..." : undefined}
     />
   );

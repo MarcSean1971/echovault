@@ -3,6 +3,7 @@ import React from "react";
 import { useVideoPlayer } from "@/hooks/useVideoPlayer";
 import { Spinner } from "@/components/ui/spinner";
 import { VideoPlayerControls } from "@/components/message/FormSections/content/video/VideoPlayerControls";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface VideoPlayerProps {
   videoUrl: string | null;
@@ -42,11 +43,11 @@ export function VideoPlayer({ videoUrl, onError, isLoading }: VideoPlayerProps) 
   };
   
   return (
-    <div className="relative group h-full w-full bg-black">
+    <div className={`relative group h-full w-full bg-black ${HOVER_TRANSITION}`}>
       <video 
         ref={videoRef}
         src={videoUrl}
-        className="w-full h-full object-contain"
+        className={`w-full h-full object-contain ${HOVER_TRANSITION}`}
         preload="metadata"
         onLoadedData={handleVideoLoaded}
         onError={handleVideoError}
