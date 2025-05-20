@@ -17,6 +17,7 @@ export function usePanicMessageSelector(
     setIsSelectorOpen(false);
     
     // After selecting a message, proceed with starting the countdown
+    // Pass the messageId to the function so it knows which message to trigger
     startCountdownFn(messageId);
   };
 

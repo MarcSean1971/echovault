@@ -27,9 +27,10 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
     refreshConditions 
   } = useTriggerDashboard();
 
-  // Find all panic messages from conditions - now getting an array of messages
+  // Find all panic messages from conditions - now including all panic messages
+  // IMPORTANT: Changed to include all panic messages regardless of active state
   const panicMessages = conditions.filter(c => 
-    c.condition_type === 'panic_trigger' && c.active === true
+    c.condition_type === 'panic_trigger'
   );
 
   // Get the first panic message as fallback for compatibility
@@ -99,7 +100,7 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
           />
         )}
         
-        {/* Emergency Panic Button - only shown when active panic message exists */}
+        {/* Emergency Panic Button - show when ANY panic messages exist */}
         {panicMessages.length > 0 && (
           <PanicButton
             onClick={handlePanicButtonClick}

@@ -227,11 +227,18 @@ export function usePanicCore(
     executePanicTrigger
   ]);
   
-  // Handle panic message selection
+  // Handle panic message selection - FIXED: Now executes the trigger directly
   const handlePanicMessageSelect = useCallback((messageId: string) => {
+    console.log(`Selected panic message for immediate trigger: ${messageId}`);
     setSelectedMessageId(messageId);
     setIsSelectorOpen(false);
-  }, []);
+    
+    // Important change: Directly execute the panic trigger with the selected message
+    // This ensures the "Trigger Emergency" button in the selector works immediately
+    refreshLocationPermission().then(permission => {
+      executePanicTrigger(messageId);
+    });
+  }, [refreshLocationPermission, executePanicTrigger]);
   
   // Create new panic message
   const handleCreatePanicMessage = useCallback(() => {
