@@ -17,7 +17,6 @@ export function usePanicMessageSelector(
     setIsSelectorOpen(false);
     
     // After selecting a message, proceed with triggering it immediately
-    // This ensures the "Trigger Emergency" button works as expected
     startCountdownFn(messageId);
   };
 

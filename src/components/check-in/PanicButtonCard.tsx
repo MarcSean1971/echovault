@@ -59,20 +59,10 @@ export function PanicButtonCard({ userId, panicMessage, panicMessages, isCheckin
 
   // Debug info
   useEffect(() => {
-    if (panicMessage) {
-      console.log("Panic message loaded:", panicMessage);
-      if (panicMessage.panic_trigger_config) {
-        console.log("Panic config (panic_trigger_config):", panicMessage.panic_trigger_config);
-      }
-      if (panicMessage.panic_config) {
-        console.log("Panic config (panic_config):", panicMessage.panic_config);
-      }
-    }
-    
     if (panicMessages.length > 0) {
       console.log(`Found ${panicMessages.length} panic messages available`);
     }
-  }, [panicMessage, panicMessages]);
+  }, [panicMessages]);
 
   const hasMultipleMessages = panicMessages.length > 1;
 
@@ -122,7 +112,7 @@ export function PanicButtonCard({ userId, panicMessage, panicMessages, isCheckin
           errorState={errorState}
         />
         
-        {/* Message selection dialog */}
+        {/* Message selection dialog - now using simplified component */}
         {hasMultipleMessages && (
           <PanicMessageSelector 
             messages={panicMessages}

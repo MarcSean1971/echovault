@@ -1,11 +1,10 @@
 
-import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { AlertCircle } from "lucide-react";
 import { MessageCondition } from "@/types/message";
 import { MessageList } from "./panic-selector/MessageList";
 import { DialogActions } from "./panic-selector/DialogActions";
-import { useMessageDetails } from "./panic-selector/useMessageDetails";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface PanicMessageSelectorProps {
   messages: MessageCondition[];
@@ -21,7 +20,6 @@ export function PanicMessageSelector({
   onSelect 
 }: PanicMessageSelectorProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const { messageDetails, isLoading, getAttachmentInfo } = useMessageDetails(messages);
 
   const handleSelect = () => {
     if (selectedId) {
@@ -33,7 +31,7 @@ export function PanicMessageSelector({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className={`sm:max-w-md ${HOVER_TRANSITION}`}>
         <DialogHeader>
           <DialogTitle className="flex items-center text-red-500">
             <AlertCircle className="h-5 w-5 mr-2" />
@@ -48,17 +46,17 @@ export function PanicMessageSelector({
           messages={messages}
           selectedId={selectedId}
           setSelectedId={setSelectedId}
-          isLoading={isLoading}
-          messageDetails={messageDetails}
-          getAttachmentInfo={getAttachmentInfo}
         />
         
         <DialogActions
           onClose={onClose}
           onSelect={handleSelect}
-          isDisabled={!selectedId || isLoading}
+          isDisabled={!selectedId}
         />
       </DialogContent>
     </Dialog>
   );
 }
+
+// Add missing import
+import { useState } from "react";
