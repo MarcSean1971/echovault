@@ -16,10 +16,10 @@ export function VideoErrorDisplay({ error, onRetry }: VideoErrorDisplayProps) {
       <Button 
         variant="outline" 
         size="sm"
-        className="bg-white/20 text-white hover:bg-white/30"
+        className={`bg-white/20 text-white hover:bg-white/30 ${HOVER_TRANSITION}`}
         onClick={onRetry}
       >
-        <RefreshCw className="h-4 w-4 mr-2" /> Try Again
+        <RefreshCw className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} /> Try Again
       </Button>
     </div>
   );

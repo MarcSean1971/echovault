@@ -15,7 +15,7 @@ export function VideoTextDisplay({ transcription, displayText }: VideoTextDispla
         <div className="mt-6 mb-4">
           <h3 className="text-sm font-medium mb-2">Video Transcription</h3>
           <div className={`p-3 bg-muted/40 rounded-md ${HOVER_TRANSITION}`}>
-            <p className="whitespace-pre-wrap">{transcription}</p>
+            <p className={`whitespace-pre-wrap ${HOVER_TRANSITION}`}>{transcription}</p>
           </div>
         </div>
       )}

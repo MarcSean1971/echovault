@@ -7,11 +7,13 @@ import { useEffect, useState } from "react";
 /**
  * Main hook for the dashboard trigger system
  * Combines data fetching, check-in functionality, and navigation
+ * Fixed to avoid circular dependencies and handle errors properly
  */
 export function useTriggerDashboard() {
   const navigate = useNavigate();
   const { handleCheckIn } = useCheckIn();
   const [lastRefresh, setLastRefresh] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
   
   const {
     messages,
@@ -31,20 +33,26 @@ export function useTriggerDashboard() {
     if (!userId) return false;
     
     console.log("Performing check-in from dashboard");
-    const success = await handleCheckIn();
-    
-    if (success === true) {
-      console.log("Check-in successful, refreshing conditions");
-      // Refresh conditions data to get updated deadlines
-      await refreshConditions();
+    try {
+      const success = await handleCheckIn();
       
-      // Update last check-in time
-      setLastCheckIn(new Date().toISOString());
+      if (success === true) {
+        console.log("Check-in successful, refreshing conditions");
+        // Refresh conditions data to get updated deadlines
+        await refreshConditions();
+        
+        // Update last check-in time
+        setLastCheckIn(new Date().toISOString());
+        
+        return true;
+      }
       
-      return true;
+      return false;
+    } catch (error) {
+      console.error("Error during check-in:", error);
+      setLoadError("Failed to perform check-in. Please try again.");
+      return false;
     }
-    
-    return false;
   };
   
   // Listen for condition updates via the custom event
@@ -52,8 +60,12 @@ export function useTriggerDashboard() {
     const handleConditionsUpdated = async (event: Event) => {
       if (event instanceof CustomEvent) {
         console.log("useTriggerDashboard received conditions-updated event");
-        setLastRefresh(event.detail.updatedAt);
-        await refreshConditions();
+        setLastRefresh(event.detail.updatedAt || new Date().toISOString());
+        try {
+          await refreshConditions();
+        } catch (error) {
+          console.error("Error refreshing after conditions-updated event:", error);
+        }
       }
     };
     
@@ -73,6 +85,7 @@ export function useTriggerDashboard() {
     nextDeadline,
     lastCheckIn,
     isLoading,
+    loadError,
     lastRefresh,
     handleCheckIn: handleDashboardCheckIn,
     navigate,
