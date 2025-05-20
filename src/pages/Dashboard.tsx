@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock, MessageSquare, Users, Shield, AlertCircle } from "lucide-react";
@@ -71,7 +72,7 @@ export default function Dashboard() {
             ) : (
               <Clock className="h-5 w-5 text-green-500" />
             )}
-            Dead Man's Switch Status
+            Trigger Switch Status
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -141,7 +142,7 @@ export default function Dashboard() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Shield className="h-5 w-5" />
-              Dead Man's Switch
+              Trigger Switch
             </CardTitle>
           </CardHeader>
           <CardContent>

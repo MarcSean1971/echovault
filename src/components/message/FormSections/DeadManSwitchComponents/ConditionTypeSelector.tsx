@@ -35,7 +35,7 @@ export function ConditionTypeSelector({
           value="no_check_in"
           id="no-check-in"
           label="Send if I don't check in"
-          description="Classic dead man's switch - requires regular check-ins to prevent delivery"
+          description="Classic trigger switch - requires regular check-ins to prevent delivery"
           icon={AlertCircle}
           tooltipText="Message will be sent if you don't check in before the deadline."
         />

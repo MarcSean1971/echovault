@@ -44,7 +44,7 @@ export function MessageCategories({
         </div>
       )}
       
-      {/* Display regular messages (deadman's switch) */}
+      {/* Display regular messages (Trigger Switch) - Updated text here */}
       <div className={panicMessages.length > 0 ? "mt-6 animate-fade-in" : "animate-fade-in"}>
         {panicMessages.length > 0 && (
           <h2 className="text-xl font-semibold mb-4 flex items-center">
@@ -52,7 +52,7 @@ export function MessageCategories({
               <path d="M12 .75a8.25 8.25 0 00-4.135 15.39c.686.398 1.115 1.008 1.134 1.623a.75.75 0 00.577.706c.352.083.71.148 1.074.195.323.041.6-.218.6-.544v-4.661a6.75 6.75 0 1113.5 0v4.661c0 .326.277.585.6.544.364-.047.722-.112 1.074-.195a.75.75 0 00.577-.706c.02-.615.448-1.225 1.134-1.623A8.25 8.25 0 0012 .75z" />
               <path fillRule="evenodd" d="M9.75 15.75a.75.75 0 01.75-.75h3a.75.75 0 010 1.5h-3a.75.75 0 01-.75-.75z" clipRule="evenodd" />
             </svg>
-            Deadman's Switch Messages
+            Trigger Switch Messages
           </h2>
         )}
         <MessageGrid 

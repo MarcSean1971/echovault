@@ -25,7 +25,7 @@ export function SwitchToggle({
               onCheckedChange={setEnableDeadManSwitch}
             />
             <Label htmlFor="dead-man-switch">
-              Enable dead man's switch
+              Enable trigger switch
             </Label>
           </div>
         </CardContent>
@@ -36,7 +36,7 @@ export function SwitchToggle({
   return (
     <div className="flex items-center justify-between">
       <Label htmlFor="dead-man-switch-enabled" className="font-medium text-lg">
-        Dead Man's Switch
+        Trigger Switch
       </Label>
       <Switch
         id="dead-man-switch-enabled"

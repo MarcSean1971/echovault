@@ -43,7 +43,7 @@ export function useCheckIn() {
       
       toast({
         title: "Check-In Successful",
-        description: "Your Dead Man's Switch has been reset."
+        description: "Your Trigger Switch has been reset."
       });
       
       return true;

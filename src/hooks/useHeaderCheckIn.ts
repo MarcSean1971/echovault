@@ -38,7 +38,7 @@ export function useHeaderCheckIn(
       // Show an immediate toast for better UX feedback
       toast({
         title: "Checking in...",
-        description: "Resetting your Dead Man's Switch timers"
+        description: "Resetting your Trigger Switch timers"
       });
 
       // Perform the actual check-in
@@ -58,7 +58,7 @@ export function useHeaderCheckIn(
         // Show success message
         toast({
           title: "Check-In Successful",
-          description: "Your Dead Man's Switch has been reset."
+          description: "Your Trigger Switch has been reset."
         });
         
         // If we have a dashboard check-in function, call it but don't wait for it

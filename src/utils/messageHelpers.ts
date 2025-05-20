@@ -15,7 +15,7 @@ export const getConditionType = (condition: any) => {
   
   switch (condition.condition_type) {
     case 'no_check_in':
-      return "Dead Man's Switch";
+      return "Trigger Switch"; // Changed from "Dead Man's Switch"
     case 'panic_trigger':
       return "Panic Trigger";
     case 'inactivity_to_date':

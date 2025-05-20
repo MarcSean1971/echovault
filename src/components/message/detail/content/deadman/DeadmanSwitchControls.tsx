@@ -104,7 +104,7 @@ export function DeadmanSwitchControls({
       
       toast({
         title: "Forcing message delivery",
-        description: "Manually triggering deadman's switch...",
+        description: "Manually triggering trigger switch...",
         duration: 3000,
       });
       
