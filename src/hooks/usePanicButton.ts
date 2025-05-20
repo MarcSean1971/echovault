@@ -115,7 +115,8 @@ export function usePanicButton(
     handlePanicButtonClick,
     handlePanicMessageSelect,
     handleCreatePanicMessage,
-    getKeepArmedValue
+    getKeepArmedValue,
+    executePanicTrigger  // Make sure we destructure the executePanicTrigger function
   } = panicCore;
   
   // For compatibility with existing components, export these state setters
@@ -140,6 +141,7 @@ export function usePanicButton(
     setIsSelectorOpen,
     selectedMessageId,
     setSelectedMessageId,
-    inCancelWindow
+    inCancelWindow,
+    executePanicTrigger  // Add the executePanicTrigger function to the returned object
   };
 }
