@@ -75,6 +75,7 @@ export async function ensureReminderSchedule(
     
     // Get reminder times (already in minutes in the database)
     const reminderMinutes = parseReminderMinutes(condition.reminder_hours);
+    console.log("[ENSURE-REMINDERS] Parsed reminder minutes:", reminderMinutes);
     
     // Calculate effective deadline based on condition type
     const effectiveDeadline = getEffectiveDeadline(condition);

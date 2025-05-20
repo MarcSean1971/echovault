@@ -17,11 +17,21 @@ export function ReminderSettings({
   maxMinutes
 }: ReminderSettingsProps) {
   const handleAddReminder = (minutes: number) => {
+    // IMPORTANT FIX: Create a new array to ensure React detects the change
     setReminderMinutes([...reminderMinutes, minutes].sort((a, b) => a - b));
+    
+    // Debug log
+    console.log("Added reminder minutes:", minutes);
+    console.log("Updated reminder array:", [...reminderMinutes, minutes].sort((a, b) => a - b));
   };
   
   const handleRemoveReminder = (minutes: number) => {
+    // IMPORTANT FIX: Create a new array to ensure React detects the change
     setReminderMinutes(reminderMinutes.filter(m => m !== minutes));
+    
+    // Debug log
+    console.log("Removed reminder minutes:", minutes);
+    console.log("Updated reminder array:", reminderMinutes.filter(m => m !== minutes));
   };
 
   return (

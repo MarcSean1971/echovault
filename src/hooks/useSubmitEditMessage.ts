@@ -106,8 +106,13 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
       
       // Handle trigger conditions
       let conditionId = null;
+      
+      // Log the current reminder minutes for debugging
+      console.log("Current reminder minutes values:", reminderMinutes);
+      
       if (existingCondition) {
         console.log("Updating existing condition with delivery option:", deliveryOption);
+        console.log("Reminder minutes before update:", reminderMinutes);
         
         // CRITICAL FIX: Check if timing-related parameters have changed to determine if we need to regenerate reminders
         const timingParamsChanged = hasTimingParamsChanged(existingCondition, {
@@ -118,7 +123,7 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
           recurringPattern: finalRecurringPattern
         });
         
-        // Update existing condition
+        // Update existing condition - ensure reminder_hours gets the minutes values
         const updatedCondition = await updateMessageCondition(existingCondition.id, {
           condition_type: conditionType,
           hours_threshold: finalHoursThreshold,
@@ -127,7 +132,7 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
           pin_code: pinCode || null,
           trigger_date: triggerDate ? triggerDate.toISOString() : null,
           panic_trigger_config: panicTriggerConfig,
-          reminder_hours: reminderMinutes, // Values already in minutes
+          reminder_hours: reminderMinutes, // Values are in minutes
           unlock_delay_hours: unlockDelay,
           expiry_hours: expiryHours,
           recipients: selectedRecipientObjects,
@@ -136,20 +141,30 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
         
         conditionId = existingCondition.id;
         
-        // Only regenerate reminder schedule if the condition is active AND timing parameters changed
-        if (existingCondition.active && timingParamsChanged) {
-          console.log("Condition is active and timing parameters changed, regenerating reminder schedule");
+        // ENHANCED DEBUGGING: Log successful update
+        console.log("Update successful, new reminder minutes:", reminderMinutes);
+        console.log("Full updated condition:", updatedCondition);
+        
+        // Force regenerate reminder schedule regardless of timing parameter changes if the condition is active
+        if (existingCondition.active) {
+          console.log("Condition is active, regenerating reminder schedule");
           try {
             await ensureReminderSchedule(conditionId, message.id);
             console.log("Successfully updated reminder schedule after edit");
           } catch (scheduleError) {
             console.error("Error ensuring reminder schedule:", scheduleError);
+            toast({
+              title: "Warning",
+              description: "There was an error updating reminder notifications. Please try again.",
+              variant: "destructive"
+            });
           }
         } else {
-          console.log("Skipping reminder schedule update - condition inactive or timing parameters unchanged");
+          console.log("Skipping reminder schedule update - condition inactive");
         }
       } else {
         console.log("Creating new condition with delivery option:", deliveryOption);
+        console.log("Initial reminder minutes:", reminderMinutes);
         
         // Create new condition - reminder schedule will not be created due to changes in createConditionInDb
         const newCondition = await createMessageCondition(
@@ -226,11 +241,19 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
       return true;
     }
     
+    // IMPROVED: More robust reminder minutes comparison
     // Check reminder hours change (deep comparison needed as it's an array)
     const existingReminderMinutes = existingCondition.reminder_hours || [];
     const newReminderMinutes = newParams.reminderMinutes || [];
     
+    // Log for debugging
+    console.log("Comparing reminder arrays:", {
+      existing: existingReminderMinutes,
+      new: newReminderMinutes
+    });
+    
     if (existingReminderMinutes.length !== newReminderMinutes.length) {
+      console.log("Different array lengths detected");
       return true;
     }
     
@@ -238,8 +261,10 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
     const sortedExisting = [...existingReminderMinutes].sort((a, b) => a - b);
     const sortedNew = [...newReminderMinutes].sort((a, b) => a - b);
     
+    // Compare each element
     for (let i = 0; i < sortedExisting.length; i++) {
       if (sortedExisting[i] !== sortedNew[i]) {
+        console.log(`Different values at index ${i}: ${sortedExisting[i]} vs ${sortedNew[i]}`);
         return true;
       }
     }
