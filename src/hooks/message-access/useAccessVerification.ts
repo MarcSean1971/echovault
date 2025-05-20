@@ -167,6 +167,11 @@ export const useAccessVerification = ({
         
         // First, verify the delivery record with additional logging
         console.log(`Querying delivered_messages for delivery_id: ${deliveryId} and message_id: ${messageId}`);
+        
+        // CRITICAL FIX: Use text-based filter instead of equality check to handle type conversions
+        // This handles the case where delivery_id is stored as TEXT but compared with a UUID
+        const textQuery = `delivery_id::text = '${deliveryId}'::text`;
+        
         const { data: deliveryData, error: deliveryError } = await supabase
           .from('delivered_messages')
           .select(`
@@ -179,7 +184,7 @@ export const useAccessVerification = ({
             condition_id,
             delivered_at
           `)
-          .eq('delivery_id', deliveryId)
+          .or(textQuery)
           .eq('message_id', messageId);
         
         // Handle no results or error
@@ -195,11 +200,12 @@ export const useAccessVerification = ({
           console.error('No delivery record found for the provided parameters');
           console.error(`Checked with: delivery_id=${deliveryId}, message_id=${messageId}`);
           
-          // Additional diagnostic query to check for similar records
+          // Try a more permissive query
+          const altQuery = `delivery_id::text LIKE '%${deliveryId}%'`;
           const { data: similarRecords } = await supabase
             .from('delivered_messages')
             .select('delivery_id, message_id')
-            .or(`delivery_id.eq.${deliveryId},message_id.eq.${messageId}`);
+            .or(altQuery);
             
           if (similarRecords && similarRecords.length > 0) {
             console.log("Found similar records:", similarRecords);

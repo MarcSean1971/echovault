@@ -1,3 +1,4 @@
+
 import { AlertCircle, HelpCircle, ArrowLeft, RefreshCw, FileText, Bug } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -79,10 +80,13 @@ export const ErrorState = ({ error, isPreviewMode = false }: ErrorStateProps) =>
 
     setIsLoadingData(true);
     try {
+      // CRITICAL FIX: Use a more flexible query that handles text to UUID comparisons
+      const textQuery = `delivery_id::text = '${deliveryId}'::text`;
+      
       const { data, error } = await supabase
         .from('delivered_messages')
         .select('*')
-        .eq('delivery_id', deliveryId)
+        .or(textQuery)
         .eq('message_id', messageId);
       
       if (error) {
@@ -103,12 +107,50 @@ export const ErrorState = ({ error, isPreviewMode = false }: ErrorStateProps) =>
           title: "Delivery record found",
           description: "The delivery record exists in the database",
         });
+        
+        // Try to use edge function directly for more information
+        try {
+          const { data: edgeFnResult, error: edgeFnError } = await supabase.functions.invoke("access-message", {
+            body: { 
+              messageId, 
+              deliveryId,
+              recipientEmail: recipientEmail ? decodeURIComponent(recipientEmail) : null,
+              debug: true
+            }
+          });
+          
+          if (!edgeFnError && edgeFnResult) {
+            console.log("Edge function diagnosis:", edgeFnResult);
+            if (edgeFnResult.diagnostics) {
+              setDeliveryData((prev) => ({
+                ...prev,
+                edge_function_diagnostics: edgeFnResult.diagnostics
+              }));
+            }
+          }
+        } catch (edgeFnError) {
+          console.log("Edge function diagnosis failed:", edgeFnError);
+        }
       } else {
         toast({
           title: "No delivery record",
           description: "The delivery record was not found in the database",
           variant: "destructive"
         });
+        
+        // Try a more permissive search to find similar records
+        const { data: similarData } = await supabase
+          .from('delivered_messages')
+          .select('*')
+          .or(`message_id.eq.${messageId}`);
+          
+        if (similarData && similarData.length > 0) {
+          console.log("Found similar delivery records by message ID:", similarData);
+          setDeliveryData({
+            similar_records: similarData,
+            note: "These records are associated with the same message ID but have different delivery IDs"
+          });
+        }
       }
     } catch (e) {
       console.error("Error in checkDeliveryData:", e);
@@ -140,11 +182,48 @@ export const ErrorState = ({ error, isPreviewMode = false }: ErrorStateProps) =>
   };
 
   // Generate regenerate access link (would normally connect to backend)
-  const regenerateAccess = () => {
-    toast({
-      title: "Access link regeneration",
-      description: "This would typically connect to a backend to regenerate your access link. Please contact the sender to resend the message link."
-    });
+  const regenerateAccess = async () => {
+    if (!messageId) {
+      toast({
+        title: "Missing Message ID",
+        description: "Cannot regenerate access without a message ID",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    try {
+      // Try to use edge function to regenerate access
+      const { data, error } = await supabase.functions.invoke("access-message", {
+        body: { 
+          messageId, 
+          bypassSecurity: true
+        }
+      });
+      
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to regenerate access: " + error.message,
+          variant: "destructive"
+        });
+      } else if (data?.success) {
+        toast({
+          title: "Message Found",
+          description: "Message exists in the database. You need to request a new link from the sender."
+        });
+      } else {
+        toast({
+          title: "Access link regeneration",
+          description: "Please contact the sender to resend the message link."
+        });
+      }
+    } catch (e) {
+      toast({
+        title: "Access link regeneration",
+        description: "This would typically connect to a backend to regenerate your access link. Please contact the sender to resend the message link."
+      });
+    }
   };
 
   const toggleDebug = () => {

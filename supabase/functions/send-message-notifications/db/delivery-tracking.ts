@@ -25,7 +25,7 @@ export async function recordMessageDelivery(
     const { data: existingRecord, error: checkError } = await supabase
       .from("delivered_messages")
       .select("id")
-      .eq("delivery_id", deliveryId)
+      .filter('delivery_id', 'eq', deliveryId)
       .maybeSingle();
       
     if (checkError && checkError.code !== "42P01") {

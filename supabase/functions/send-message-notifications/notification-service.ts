@@ -128,6 +128,7 @@ export async function sendMessageNotification(
       // Create delivery record for each recipient BEFORE sending notification
       // This ensures the delivery record exists when the recipient clicks the link
       try {
+        // Generate a unique delivery ID - CRITICAL FIX: This is stored as TEXT in the database
         const deliveryId = crypto.randomUUID();
         console.log(`Creating delivery record for message ${message.id}, recipient ${recipient.id}, deliveryId ${deliveryId}`);
         

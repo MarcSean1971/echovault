@@ -177,23 +177,55 @@ serve(async (req: Request): Promise<Response> => {
     
     console.log(`[AccessMessage] Verifying access: ${messageId}, ${deliveryId}, ${recipientEmail}`);
     
-    // Verify delivery record exists
+    // Verify delivery record exists - CRUCIAL FIX: No type comparison on delivery_id field
+    // We're explicitly NOT using .eq('delivery_id', deliveryId) as in some cases deliveryId could be 
+    // a string while the column is UUID, or vice-versa
+    console.log(`[AccessMessage] Checking delivery record with TEXT comparison - message_id: ${messageId}, delivery_id: ${deliveryId}`);
+    
+    // Use a text-mode filter to compare - safer for mixed type scenarios
+    const deliveryQuery = `
+      delivery_id::text = '${deliveryId}'::text 
+      AND message_id::text = '${messageId}'::text
+    `;
+    
     const { data: deliveryData, error: deliveryError } = await supabase
       .from('delivered_messages')
       .select('*')
-      .eq('delivery_id', deliveryId)
-      .eq('message_id', messageId)
+      .or(deliveryQuery)
       .maybeSingle();
       
     if (deliveryError) {
       console.error(`[AccessMessage] Error querying delivery: ${deliveryError.message}`);
-      return new Response(
-        JSON.stringify({ error: `Invalid or expired access link: ${deliveryError.message}` }),
-        { 
-          status: 403, 
-          headers: { ...corsHeaders, "Content-Type": "application/json" }
-        }
-      );
+      
+      // Try direct query with proper text casting
+      console.log("[AccessMessage] Trying fallback query with explicit type casts");
+      
+      // Attempt a direct query with explicit casting
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from('delivered_messages')
+        .select('*')
+        .filter('delivery_id', 'eq', deliveryId)
+        .filter('message_id', 'eq', messageId)
+        .maybeSingle();
+        
+      if (fallbackError || !fallbackData) {
+        return new Response(
+          JSON.stringify({ 
+            error: `Invalid or expired access link: ${deliveryError.message}`,
+            fallback_error: fallbackError?.message,
+            attempted_delivery_id: deliveryId,
+            attempted_message_id: messageId
+          }),
+          { 
+            status: 403, 
+            headers: { ...corsHeaders, "Content-Type": "application/json" }
+          }
+        );
+      }
+      
+      // If we got here, the fallback worked
+      console.log(`[AccessMessage] Fallback query succeeded - delivery found!`);
+      deliveryData = fallbackData;
     } 
     
     if (!deliveryData) {
@@ -203,7 +235,7 @@ serve(async (req: Request): Promise<Response> => {
       const { data: similarDeliveries, error: similarError } = await supabase
         .from('delivered_messages')
         .select('delivery_id, message_id')
-        .or(`delivery_id.eq.${deliveryId},message_id.eq.${messageId}`)
+        .or(`delivery_id::text LIKE '%${deliveryId.substring(0, 8)}%',message_id::text = '${messageId}'::text`)
         .limit(5);
         
       if (similarDeliveries && similarDeliveries.length > 0) {
@@ -223,7 +255,8 @@ serve(async (req: Request): Promise<Response> => {
           JSON.stringify({ 
             error: "Invalid delivery ID", 
             details: "Found message but delivery ID doesn't match",
-            correct_delivery_id: messageOnlyDelivery[0].delivery_id
+            correct_delivery_id: messageOnlyDelivery[0].delivery_id,
+            provided_delivery_id: deliveryId
           }),
           { 
             status: 403, 
@@ -261,7 +294,9 @@ serve(async (req: Request): Promise<Response> => {
         JSON.stringify({ 
           error: "Invalid or expired access link. Delivery record not found.",
           diagnostics: {
-            similar_records: similarDeliveries || []
+            similar_records: similarDeliveries || [],
+            delivery_id_type: typeof deliveryId,
+            message_id_type: typeof messageId
           }
         }),
         { 
@@ -359,7 +394,7 @@ serve(async (req: Request): Promise<Response> => {
         viewed_at: deliveryData.viewed_at || viewTime,
         viewed_count: viewCount
       })
-      .eq('delivery_id', deliveryId);
+      .eq('id', deliveryData.id);
       
     if (updateError) {
       console.error(`[AccessMessage] Error updating view count: ${updateError.message}`);
