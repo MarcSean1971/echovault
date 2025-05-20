@@ -2,11 +2,13 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { MessageCondition } from "@/types/message";
 
 // Define minimal types for header button data
 type HeaderButtonsData = {
   hasCheckInConditions: boolean;
   hasPanicMessages: boolean;
+  panicMessages: MessageCondition[];
   isLoading: boolean;
   userId: string | null;
 }
@@ -23,6 +25,7 @@ export function useHeaderButtonsData(): HeaderButtonsData {
   const { userId } = useAuth();
   const [hasCheckInConditions, setHasCheckInConditions] = useState<boolean>(false);
   const [hasPanicMessages, setHasPanicMessages] = useState<boolean>(false);
+  const [panicMessages, setPanicMessages] = useState<MessageCondition[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   
   // Try to load from cache immediately for instant UI
@@ -36,6 +39,9 @@ export function useHeaderButtonsData(): HeaderButtonsData {
         if (Date.now() - timestamp < CACHE_EXPIRY) {
           setHasCheckInConditions(data.hasCheckInConditions);
           setHasPanicMessages(data.hasPanicMessages);
+          if (data.panicMessages) {
+            setPanicMessages(data.panicMessages);
+          }
           setIsLoading(false);
           console.log("Used cached header buttons data");
         }
@@ -62,6 +68,8 @@ export function useHeaderButtonsData(): HeaderButtonsData {
         const { data, error } = await supabase
           .from('message_conditions')
           .select(`
+            id,
+            message_id,
             condition_type,
             active
           `)
@@ -82,20 +90,27 @@ export function useHeaderButtonsData(): HeaderButtonsData {
           c.active === true
         );
         
-        const panicMessages = data.filter(c => 
+        const panicMessageConditions = data.filter(c => 
           c.condition_type === 'panic_trigger' && c.active === true
-        );
+        ).map(c => ({
+          id: c.id,
+          message_id: c.message_id,
+          condition_type: c.condition_type,
+          active: c.active
+        }));
         
         // Update state
         setHasCheckInConditions(checkInConditions.length > 0);
-        setHasPanicMessages(panicMessages.length > 0);
+        setHasPanicMessages(panicMessageConditions.length > 0);
+        setPanicMessages(panicMessageConditions);
         
         // Cache the results
         try {
           localStorage.setItem(CACHE_KEY, JSON.stringify({
             data: {
               hasCheckInConditions: checkInConditions.length > 0,
-              hasPanicMessages: panicMessages.length > 0
+              hasPanicMessages: panicMessageConditions.length > 0,
+              panicMessages: panicMessageConditions
             },
             timestamp: Date.now()
           }));
@@ -117,6 +132,7 @@ export function useHeaderButtonsData(): HeaderButtonsData {
   return {
     hasCheckInConditions,
     hasPanicMessages,
+    panicMessages,
     isLoading,
     userId
   };

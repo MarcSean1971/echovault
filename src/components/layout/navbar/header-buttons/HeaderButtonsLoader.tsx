@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 export function HeaderButtonsLoader() {
-  const { hasCheckInConditions, hasPanicMessages, isLoading, userId } = useHeaderButtonsData();
+  const { hasCheckInConditions, hasPanicMessages, panicMessages, isLoading, userId } = useHeaderButtonsData();
   // We'll use simplified conditions for rendering the buttons
   const [showHeaderButtons, setShowHeaderButtons] = useState(false);
   
@@ -32,11 +32,10 @@ export function HeaderButtonsLoader() {
     );
   }
 
-  // Pass minimal flag conditions to the actual buttons component
-  // This way, HeaderButtons doesn't need to do expensive data loading
+  // Pass both the flag conditions and actual panic messages to the HeaderButtons
   return (
     <HeaderButtons
-      conditions={[]}  // Empty array - we're not actually using the full conditions
+      conditions={panicMessages}
       userId={userId}
       showCheckInButton={hasCheckInConditions}
       showPanicButton={hasPanicMessages}
