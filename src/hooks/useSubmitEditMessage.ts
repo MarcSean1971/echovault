@@ -107,27 +107,24 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
       // Handle trigger conditions
       let conditionId = null;
       
-      // CRITICAL: Add comprehensive logging for the reminder minutes values
-      console.log("================================================================");
-      console.log("SUBMITTING EDIT WITH REMINDER MINUTES:", reminderMinutes);
-      console.log("REMINDER MINUTES TYPE:", typeof reminderMinutes);
-      console.log("IS ARRAY:", Array.isArray(reminderMinutes));
-      console.log("STRINGIFIED:", JSON.stringify(reminderMinutes));
-      console.log("================================================================");
+      // CRITICAL: Add comprehensive logging for verification
+      console.log("=== REMINDER VALUES BEFORE DATABASE UPDATE ===");
+      console.log("reminderMinutes (original):", reminderMinutes);
+      console.log("reminderMinutes type:", typeof reminderMinutes);
+      console.log("reminderMinutes is Array:", Array.isArray(reminderMinutes));
+      
+      // Create a validated copy of reminder minutes with proper type conversion
+      const validatedReminderMinutes = Array.isArray(reminderMinutes) 
+        ? reminderMinutes.map(Number) 
+        : [1440]; // Default to 24h if not valid array
+      
+      console.log("validatedReminderMinutes (fixed):", validatedReminderMinutes);
       
       if (existingCondition) {
-        console.log("Updating existing condition with delivery option:", deliveryOption);
-        console.log("Reminder minutes before update:", reminderMinutes);
+        console.log("[EditMessage] Updating existing condition ID:", existingCondition.id);
         
-        // FIXED: Always consider timing params changed to force regeneration of reminders
-        const timingParamsChanged = true;
-        
-        // CRITICAL FIX: Create a deeply cloned copy of reminderMinutes to ensure we don't have reference issues
-        const reminderMinutesToSave = [...reminderMinutes];
-        console.log("Using reminder minutes for update:", reminderMinutesToSave);
-        
-        // Update existing condition - ensure reminder_hours gets the minutes values
-        const updatedCondition = await updateMessageCondition(existingCondition.id, {
+        // Update existing condition - ensure reminder_hours gets the validated minutes values
+        const updateData = {
           condition_type: conditionType,
           hours_threshold: finalHoursThreshold,
           minutes_threshold: minutesThreshold,
@@ -135,41 +132,53 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
           pin_code: pinCode || null,
           trigger_date: triggerDate ? triggerDate.toISOString() : null,
           panic_trigger_config: panicTriggerConfig,
-          reminder_hours: reminderMinutesToSave, // Send a copy to prevent mutations
+          reminder_hours: validatedReminderMinutes, // Send validated array
           unlock_delay_hours: unlockDelay,
           expiry_hours: expiryHours,
           recipients: selectedRecipientObjects,
           check_in_code: checkInCode || null
-        });
+        };
+        
+        console.log("[EditMessage] Condition update data:", JSON.stringify(updateData));
+        
+        const updatedCondition = await updateMessageCondition(existingCondition.id, updateData);
+        
+        console.log("[EditMessage] Update response:", updatedCondition);
         
         conditionId = existingCondition.id;
         
-        // ENHANCED DEBUGGING: Log successful update
-        console.log("Update successful, new reminder minutes:", reminderMinutesToSave);
-        console.log("Full updated condition:", updatedCondition);
+        // Additional verification after update to confirm the data was saved correctly
+        try {
+          const { data: verifyData } = await supabase
+            .from('message_conditions')
+            .select('reminder_hours')
+            .eq('id', conditionId)
+            .single();
+            
+          console.log("[EditMessage] Verification - saved reminder_hours:", verifyData?.reminder_hours);
+        } catch (verifyError) {
+          console.error("[EditMessage] Verification error:", verifyError);
+        }
         
-        // Force regenerate reminder schedule regardless of timing parameter changes if the condition is active
+        // Force regenerate reminder schedule
         if (existingCondition.active) {
-          console.log("Condition is active, regenerating reminder schedule");
+          console.log("[EditMessage] Regenerating reminder schedule for active condition");
           try {
             await ensureReminderSchedule(conditionId, message.id);
-            console.log("Successfully updated reminder schedule after edit");
+            console.log("[EditMessage] Successfully updated reminder schedule");
           } catch (scheduleError) {
-            console.error("Error ensuring reminder schedule:", scheduleError);
+            console.error("[EditMessage] Error ensuring reminder schedule:", scheduleError);
             toast({
               title: "Warning",
               description: "There was an error updating reminder notifications. Please try again.",
               variant: "destructive"
             });
           }
-        } else {
-          console.log("Skipping reminder schedule update - condition inactive");
         }
       } else {
-        console.log("Creating new condition with delivery option:", deliveryOption);
-        console.log("Initial reminder minutes:", reminderMinutes);
+        console.log("[EditMessage] Creating new condition with reminderMinutes:", validatedReminderMinutes);
         
-        // Create new condition - reminder schedule will not be created due to changes in createConditionInDb
+        // Create new condition
         const newCondition = await createMessageCondition(
           message.id,
           conditionType as TriggerType,
@@ -183,19 +192,18 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
             unlockDelayHours: unlockDelay,
             expiryHours,
             panicTriggerConfig,
-            reminderHours: [...reminderMinutes], // Clone the array to prevent mutations
+            reminderHours: validatedReminderMinutes, // Use validated array
             checkInCode: checkInCode || undefined
           }
         );
         
         if (newCondition && newCondition.id) {
           conditionId = newCondition.id;
-          console.log("New condition created, but reminders will only be generated when armed");
+          console.log("[EditMessage] New condition created with ID:", conditionId);
         }
       }
       
       // Dispatch a custom event to trigger UI refresh before navigating away
-      console.log("Message updated, dispatching conditions-updated event");
       window.dispatchEvent(new CustomEvent('conditions-updated', { 
         detail: { 
           messageId: message.id, 
@@ -211,7 +219,7 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
       
       navigate(`/message/${message.id}`);
     } catch (error: any) {
-      console.error("Error updating message:", error);
+      console.error("[EditMessage] Error updating message:", error);
       toast({
         title: "Error",
         description: error.message || "Failed to update the message",
@@ -222,8 +230,6 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
       setShowUploadDialog(false);
     }
   };
-
-  // Helper function removed as we're always forcing reminder regeneration
 
   return {
     handleSubmit

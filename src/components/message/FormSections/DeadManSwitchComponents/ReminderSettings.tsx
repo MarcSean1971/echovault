@@ -22,25 +22,29 @@ export function ReminderSettings({
   const handleAddReminder = (minutes: number) => {
     // Create a new array to ensure React detects the change
     const newArray = [...reminderMinutes, minutes].sort((a, b) => a - b);
-    setReminderMinutes(newArray);
-    setLastUpdate(`added-${minutes}-${new Date().getTime()}`);
     
     // Enhanced debug logs
-    console.log("Added reminder minutes:", minutes);
-    console.log("Updated reminder array:", newArray);
-    console.log("Current reminder state before update:", reminderMinutes);
+    console.log("[ReminderSettings] Current minutes before adding:", reminderMinutes);
+    console.log("[ReminderSettings] Adding minutes:", minutes);
+    console.log("[ReminderSettings] New sorted array:", newArray);
+    
+    // Update the state with the new array
+    setReminderMinutes(newArray);
+    setLastUpdate(`added-${minutes}-${new Date().getTime()}`);
   };
   
   const handleRemoveReminder = (minutes: number) => {
     // Create a new array to ensure React detects the change
     const newArray = reminderMinutes.filter(m => m !== minutes);
-    setReminderMinutes(newArray);
-    setLastUpdate(`removed-${minutes}-${new Date().getTime()}`);
     
     // Enhanced debug logs
-    console.log("Removed reminder minutes:", minutes);
-    console.log("Updated reminder array:", newArray);
-    console.log("Current reminder state before update:", reminderMinutes);
+    console.log("[ReminderSettings] Current minutes before removing:", reminderMinutes);
+    console.log("[ReminderSettings] Removing minutes:", minutes);
+    console.log("[ReminderSettings] New filtered array:", newArray);
+    
+    // Update the state with the new array
+    setReminderMinutes(newArray);
+    setLastUpdate(`removed-${minutes}-${new Date().getTime()}`);
   };
 
   return (

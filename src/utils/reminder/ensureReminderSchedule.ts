@@ -12,15 +12,14 @@ import { generateReminderSchedule } from "./reminderGenerator";
  * - When a message condition is updated/edited
  * - After check-ins that update the condition's last_checked time
  * 
- * FIXED: Added better error handling and logging for improved debugging of permission issues
- * CRITICAL FIX: Added proper handling of reminderMinutes values in all formats
+ * FIXED: Enhanced error handling, logging, and proper handling of reminder minutes values
  */
 export async function ensureReminderSchedule(
   conditionId: string,
   messageId?: string
 ): Promise<boolean> {
   try {
-    console.log(`[ENSURE-REMINDERS] Ensuring reminder schedule for condition ${conditionId}`);
+    console.log(`[ENSURE-REMINDERS] Ensuring reminder schedule for condition ${conditionId}, message ${messageId || 'unknown'}`);
     
     // Fetch condition if messageId isn't provided
     let condition;
@@ -65,8 +64,10 @@ export async function ensureReminderSchedule(
       return true;
     }
     
-    // CRITICAL FIX: Log the raw reminder_hours value from database for debugging
+    // FIXED: Enhanced logging of database values
     console.log("[ENSURE-REMINDERS] Raw reminder_hours from database:", condition.reminder_hours);
+    console.log("[ENSURE-REMINDERS] Type of reminder_hours:", typeof condition.reminder_hours);
+    console.log("[ENSURE-REMINDERS] Is Array:", Array.isArray(condition.reminder_hours));
     
     // First mark existing reminders as obsolete
     try {
@@ -77,30 +78,56 @@ export async function ensureReminderSchedule(
       // Continue execution to attempt creating new reminders even if marking obsolete fails
     }
     
-    // Get reminder times (already in minutes in the database)
-    // CRITICAL FIX: Ensure we properly handle the reminder_hours value regardless of format
-    let reminderMinutes = [];
+    // FIXED: Improved reminder minutes handling
+    let reminderMinutes: number[] = [];
     
-    if (condition.reminder_hours) {
-      // Handle both number[] and string[] formats
-      if (Array.isArray(condition.reminder_hours)) {
-        reminderMinutes = condition.reminder_hours.map(Number);
-      } else {
-        // Try to parse as JSON if it's a string
+    // Direct array handling - most efficient
+    if (condition.reminder_hours && Array.isArray(condition.reminder_hours)) {
+      reminderMinutes = condition.reminder_hours.map(Number);
+      console.log("[ENSURE-REMINDERS] Using direct array values:", reminderMinutes);
+    } 
+    // String or JSON string handling
+    else if (condition.reminder_hours) {
+      // Try to parse as JSON if it's a string representation of an array
+      if (typeof condition.reminder_hours === 'string') {
         try {
           const parsed = JSON.parse(condition.reminder_hours);
-          reminderMinutes = Array.isArray(parsed) ? parsed.map(Number) : [];
+          if (Array.isArray(parsed)) {
+            reminderMinutes = parsed.map(Number);
+            console.log("[ENSURE-REMINDERS] Parsed from JSON string:", reminderMinutes);
+          } else {
+            reminderMinutes = [Number(condition.reminder_hours)];
+            console.log("[ENSURE-REMINDERS] Converted single string value:", reminderMinutes);
+          }
         } catch (e) {
-          // If parsing fails, use parseReminderMinutes as fallback
+          // If parsing fails, use fallback parser
           reminderMinutes = parseReminderMinutes(condition.reminder_hours);
+          console.log("[ENSURE-REMINDERS] Used fallback parser:", reminderMinutes);
         }
+      } 
+      // Handle non-string, non-array values (should be rare)
+      else {
+        console.log("[ENSURE-REMINDERS] Using non-standard reminder value type:", condition.reminder_hours);
+        reminderMinutes = [1440]; // Default to 24 hours as fallback
       }
     } else {
       // Default to 24 hours (1440 minutes) if no reminders are set
-      reminderMinutes = [1440]; 
+      console.log("[ENSURE-REMINDERS] No reminder values found, using default");
+      reminderMinutes = [1440];
     }
     
-    console.log("[ENSURE-REMINDERS] Parsed reminder minutes:", reminderMinutes);
+    // Validate all entries are numbers and remove any NaN values
+    reminderMinutes = reminderMinutes
+      .map(Number)
+      .filter(min => !isNaN(min) && min > 0);
+      
+    // If we ended up with an empty array after filtering, use default
+    if (reminderMinutes.length === 0) {
+      console.log("[ENSURE-REMINDERS] No valid reminder values after filtering, using default");
+      reminderMinutes = [1440];
+    }
+    
+    console.log("[ENSURE-REMINDERS] Final reminder minutes to use:", reminderMinutes);
     
     // Calculate effective deadline based on condition type
     const effectiveDeadline = getEffectiveDeadline(condition);
@@ -111,7 +138,6 @@ export async function ensureReminderSchedule(
     }
     
     console.log(`[ENSURE-REMINDERS] Determined deadline: ${effectiveDeadline.toISOString()}`);
-    console.log(`[ENSURE-REMINDERS] Using reminder minutes: ${JSON.stringify(reminderMinutes)}`);
     
     // Generate reminder schedule
     try {

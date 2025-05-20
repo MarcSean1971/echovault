@@ -1,13 +1,30 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { createOrUpdateReminderSchedule } from "../../reminder"; // Changed from ../../reminderService to ../../reminder
+import { createOrUpdateReminderSchedule } from "../../reminder"; 
 import { parseReminderMinutes } from "@/utils/reminderUtils";
 
 /**
  * Updates a condition in the database
+ * FIXED: Proper handling of reminder_hours array values
  */
 export async function updateConditionInDb(conditionId: string, updateData: any) {
   try {
+    console.log("[updateConditionInDb] Starting update with data:", JSON.stringify(updateData, null, 2));
+    
+    // Ensure reminder_hours is properly formatted for database storage
+    if (updateData.reminder_hours) {
+      // Ensure we have an array of numbers
+      if (Array.isArray(updateData.reminder_hours)) {
+        // Convert all elements to numbers to ensure consistent data type
+        updateData.reminder_hours = updateData.reminder_hours.map(Number);
+        console.log("[updateConditionInDb] Normalized reminder_hours:", updateData.reminder_hours);
+      } else {
+        console.warn("[updateConditionInDb] reminder_hours is not an array, using default");
+        updateData.reminder_hours = [1440]; // Default to 24 hours if not an array
+      }
+    }
+    
+    // Perform the update
     const { data, error } = await supabase
       .from('message_conditions')
       .update(updateData)
@@ -16,14 +33,21 @@ export async function updateConditionInDb(conditionId: string, updateData: any) 
       .single();
 
     if (error) {
-      console.error("Error updating condition:", error);
+      console.error("[updateConditionInDb] Error updating condition:", error);
       throw error;
     }
+    
+    console.log("[updateConditionInDb] Update successful, returned data:", data);
     
     // When condition is updated, update the reminder schedule
     if (data) {
       try {
-        const reminderMinutes = parseReminderMinutes(data.reminder_hours);
+        // Get the updated reminder minutes, making sure we use the most up-to-date values
+        const reminderMinutes = Array.isArray(data.reminder_hours) 
+          ? data.reminder_hours.map(Number)
+          : parseReminderMinutes(data.reminder_hours);
+        
+        console.log("[updateConditionInDb] Using reminder minutes for schedule:", reminderMinutes);
         
         await createOrUpdateReminderSchedule({
           messageId: data.message_id,
@@ -36,14 +60,14 @@ export async function updateConditionInDb(conditionId: string, updateData: any) 
           minutesThreshold: data.minutes_threshold
         });
       } catch (scheduleError) {
-        console.error("Error updating reminder schedule:", scheduleError);
+        console.error("[updateConditionInDb] Error updating reminder schedule:", scheduleError);
         // Don't throw, just log - we don't want to fail the condition update
       }
     }
 
     return data;
   } catch (error) {
-    console.error("Error in updateConditionInDb:", error);
+    console.error("[updateConditionInDb] Error:", error);
     throw error;
   }
 }
@@ -63,7 +87,7 @@ export async function updateConditionsLastChecked(conditionIds: string[]) {
       .select();
 
     if (error) {
-      console.error("Error updating last_checked:", error);
+      console.error("[updateConditionsLastChecked] Error updating last_checked:", error);
       throw error;
     }
     
@@ -71,7 +95,12 @@ export async function updateConditionsLastChecked(conditionIds: string[]) {
     if (data && data.length > 0) {
       for (const condition of data) {
         try {
-          const reminderMinutes = parseReminderMinutes(condition.reminder_hours);
+          // Use Array.isArray check directly
+          const reminderMinutes = Array.isArray(condition.reminder_hours) 
+            ? condition.reminder_hours.map(Number)
+            : parseReminderMinutes(condition.reminder_hours);
+          
+          console.log("[updateConditionsLastChecked] Using reminder minutes:", reminderMinutes);
           
           await createOrUpdateReminderSchedule({
             messageId: condition.message_id,
@@ -84,14 +113,14 @@ export async function updateConditionsLastChecked(conditionIds: string[]) {
             minutesThreshold: condition.minutes_threshold
           });
         } catch (scheduleError) {
-          console.error(`Error updating reminder schedule for condition ${condition.id}:`, scheduleError);
+          console.error(`[updateConditionsLastChecked] Error updating reminder schedule for condition ${condition.id}:`, scheduleError);
         }
       }
     }
 
     return data;
   } catch (error) {
-    console.error("Error in updateConditionsLastChecked:", error);
+    console.error("[updateConditionsLastChecked] Error:", error);
     throw error;
   }
 }
