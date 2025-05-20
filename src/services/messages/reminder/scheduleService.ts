@@ -1,4 +1,3 @@
-
 /**
  * Service functions for creating and managing reminder schedules
  */
@@ -12,9 +11,10 @@ import { ReminderScheduleParams, ReminderResult } from "./types";
  * Create or update reminder schedule - uses upsert with the unique constraint
  * Updated to properly handle RLS security constraints
  */
-export async function createOrUpdateReminderSchedule(params: ReminderScheduleParams): Promise<boolean> {
+export async function createOrUpdateReminderSchedule(params: ReminderScheduleParams, isEdit: boolean = false): Promise<boolean> {
   try {
     console.log("[REMINDER-SERVICE] Creating or updating reminder schedule for:", params);
+    console.log("[REMINDER-SERVICE] Is this an edit operation?", isEdit);
     
     // Mark existing reminders as obsolete first (safety measure)
     await markRemindersAsObsolete(params.messageId, params.conditionId);
@@ -66,7 +66,8 @@ export async function createOrUpdateReminderSchedule(params: ReminderSchedulePar
     }));
     
     // Trigger notification processing through cascading function calls
-    triggerNotificationProcessing(params.messageId);
+    // CRITICAL FIX: Do NOT force send notifications if this is an edit operation!
+    triggerNotificationProcessing(params.messageId, !isEdit);
     
     return true;
   } catch (error) {
@@ -144,35 +145,37 @@ function calculateScheduleTimes(params: ReminderScheduleParams): any[] {
 /**
  * Trigger notification processing through cascading function calls
  * with built-in retry strategy for reliability
+ * FIXED: Added shouldForceSend parameter to control when notifications are forced
  */
-async function triggerNotificationProcessing(messageId: string): Promise<void> {
-  // CRITICAL FIX: Directly trigger notification processing MULTIPLE TIMES to ensure immediate delivery
-  // First attempt - immediate
+async function triggerNotificationProcessing(messageId: string, shouldForceSend: boolean = false): Promise<void> {
+  // Log whether we're forcing send or not
+  console.log(`[REMINDER-SERVICE] Triggering notification processing for ${messageId} with forceSend=${shouldForceSend}`);
+  
+  // CRITICAL FIX: Only force send when explicitly requested
   try {
-    console.log("[REMINDER-SERVICE] Triggering immediate notification processing");
     const { error: triggerError } = await supabase.functions.invoke("send-reminder-emails", {
       body: { 
         messageId: messageId,
         debug: true,
-        forceSend: true,
-        source: "reminder-schedule-direct-trigger"
+        forceSend: shouldForceSend, // Only force send when specifically requested
+        source: shouldForceSend ? "reminder-schedule-direct-trigger" : "reminder-schedule-update"
       }
     });
     
     if (triggerError) {
       console.warn("[REMINDER-SERVICE] Error triggering notification processing:", triggerError);
     } else {
-      console.log("[REMINDER-SERVICE] Successfully triggered notification processing");
+      console.log(`[REMINDER-SERVICE] Successfully triggered notification processing (forceSend=${shouldForceSend})`);
       
-      // If successful, also call the second function as a backup
+      // If successful, also call the second function as a backup, but respect the forceSend flag
       try {
         console.log("[REMINDER-SERVICE] Also triggering message notifications function");
         await supabase.functions.invoke("send-message-notifications", {
           body: { 
             messageId: messageId,
             debug: true,
-            forceSend: true,
-            source: "reminder-schedule-backup-trigger"
+            forceSend: shouldForceSend, // Respect the same forceSend setting
+            source: shouldForceSend ? "reminder-schedule-backup-trigger" : "reminder-schedule-backup-update"
           }
         });
       } catch (backupError) {
@@ -182,43 +185,45 @@ async function triggerNotificationProcessing(messageId: string): Promise<void> {
   } catch (triggerError) {
     console.warn("[REMINDER-SERVICE] Exception triggering notification processing:", triggerError);
     
-    // Second attempt after 2 seconds if first fails
+    // Second attempt after 2 seconds if first fails, but respect the forceSend flag
     setTimeout(async () => {
       try {
-        console.log("[REMINDER-SERVICE] Retry #1: Triggering notification processing");
+        console.log(`[REMINDER-SERVICE] Retry #1: Triggering notification processing (forceSend=${shouldForceSend})`);
         await supabase.functions.invoke("send-reminder-emails", {
           body: { 
             messageId: messageId,
             debug: true,
-            forceSend: true,
-            source: "retry-trigger-1"
+            forceSend: shouldForceSend, // Respect the shouldForceSend flag
+            source: shouldForceSend ? "retry-trigger-1" : "retry-update-1"
           }
         });
       } catch (retryError) {
         console.warn("[REMINDER-SERVICE] Retry #1 failed:", retryError);
         
-        // Third attempt after 5 more seconds (7s total)
+        // Third attempt after 5 more seconds (7s total), but respect the forceSend flag
         setTimeout(async () => {
           try {
-            console.log("[REMINDER-SERVICE] Retry #2: Final attempt at triggering notification");
+            console.log(`[REMINDER-SERVICE] Retry #2: Final attempt at triggering notification (forceSend=${shouldForceSend})`);
             await supabase.functions.invoke("send-reminder-emails", {
               body: { 
                 messageId: messageId,
                 debug: true,
-                forceSend: true,
-                source: "retry-trigger-2"
+                forceSend: shouldForceSend, // Respect the shouldForceSend flag
+                source: shouldForceSend ? "retry-trigger-2" : "retry-update-2"
               }
             });
           } catch (finalError) {
             console.error("[REMINDER-SERVICE] All trigger attempts failed:", finalError);
             
-            // Show UI notification about trigger failure
-            toast({
-              title: "Warning",
-              description: "Reminder was scheduled but email trigger failed. Emails may be delayed.",
-              variant: "destructive",
-              duration: 10000
-            });
+            // Show UI notification about trigger failure only if we were trying to force send
+            if (shouldForceSend) {
+              toast({
+                title: "Warning",
+                description: "Reminder was scheduled but email trigger failed. Emails may be delayed.",
+                variant: "destructive",
+                duration: 10000
+              });
+            }
           }
         }, 5000);
       }

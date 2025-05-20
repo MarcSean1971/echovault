@@ -13,44 +13,54 @@ import { generateReminderSchedule } from "./reminderGenerator";
  * - After check-ins that update the condition's last_checked time
  * 
  * FIXED: Enhanced error handling, logging, and proper handling of reminder minutes values
+ * FIXED: Added isEdit parameter to avoid sending notifications during edits
  */
 export async function ensureReminderSchedule(
-  conditionId: string,
-  messageId?: string
+  conditionIdOrMessageId: string,
+  isEdit: boolean = false
 ): Promise<boolean> {
   try {
-    console.log(`[ENSURE-REMINDERS] Ensuring reminder schedule for condition ${conditionId}, message ${messageId || 'unknown'}`);
+    console.log(`[ENSURE-REMINDERS] Ensuring reminder schedule for ${conditionIdOrMessageId}, isEdit=${isEdit}`);
     
-    // Fetch condition if messageId isn't provided
     let condition;
-    if (!messageId) {
-      const { data, error } = await supabase
+    let messageId: string;
+    let conditionId: string;
+    
+    // Check if the input looks like a UUID (likely a condition ID)
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(conditionIdOrMessageId);
+    
+    if (isUUID) {
+      // Try to fetch as condition ID first
+      const { data: conditionData, error: conditionError } = await supabase
         .from('message_conditions')
         .select('*')
-        .eq('id', conditionId)
+        .eq('id', conditionIdOrMessageId)
         .single();
         
-      if (error) {
-        console.error("[ENSURE-REMINDERS] Error fetching condition:", error);
-        return false;
+      if (conditionError || !conditionData) {
+        // If not found as condition ID, try as message ID
+        const { data: messageConditionData, error: messageError } = await supabase
+          .from('message_conditions')
+          .select('*')
+          .eq('message_id', conditionIdOrMessageId)
+          .single();
+          
+        if (messageError || !messageConditionData) {
+          console.error("[ENSURE-REMINDERS] Could not find condition or message:", messageError || conditionError);
+          return false;
+        }
+        
+        condition = messageConditionData;
+        messageId = conditionIdOrMessageId;
+        conditionId = condition.id;
+      } else {
+        condition = conditionData;
+        conditionId = condition.id;
+        messageId = condition.message_id;
       }
-      
-      condition = data;
-      messageId = condition.message_id;
     } else {
-      const { data, error } = await supabase
-        .from('message_conditions')
-        .select('*')
-        .eq('id', conditionId)
-        .eq('message_id', messageId)
-        .single();
-        
-      if (error) {
-        console.error("[ENSURE-REMINDERS] Error fetching condition:", error);
-        return false;
-      }
-      
-      condition = data;
+      console.error("[ENSURE-REMINDERS] Invalid ID format:", conditionIdOrMessageId);
+      return false;
     }
     
     if (!condition) {
@@ -145,7 +155,8 @@ export async function ensureReminderSchedule(
         messageId,
         conditionId,
         effectiveDeadline,
-        reminderMinutes
+        reminderMinutes,
+        isEdit // Pass the isEdit flag to distinguish between edit and new/arm operations
       );
       
       if (result) {
@@ -169,7 +180,7 @@ export async function ensureReminderSchedule(
             body: { 
               messageId, 
               debug: true, 
-              forceSend: false,
+              forceSend: false, // Never force send from backup method
               action: "regenerate-schedule" 
             }
           });
