@@ -1,7 +1,7 @@
 
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Menu, Home, MessageSquare, Users, Bell, Settings, LogOut } from "lucide-react";
+import { Menu, Home, MessageSquare, Users, Settings, LogOut } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
@@ -64,14 +64,6 @@ export function MobileNav({ userImage, initials }: MobileNavProps) {
               )}>
                 <Users className="h-5 w-5" />
                 <span>Recipients</span>
-              </Link>
-              
-              <Link to="/check-in" className={cn(
-                "flex items-center gap-3 w-full p-3 rounded-lg font-medium transition-all duration-200 hover:bg-accent/10",
-                isActive("/check-in") && "bg-accent/15 text-accent"
-              )}>
-                <Bell className="h-5 w-5" />
-                <span>Check In</span>
               </Link>
               
               <Link to="/profile" className={cn(

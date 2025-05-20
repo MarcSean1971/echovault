@@ -36,7 +36,6 @@ const MessageDetailPage = lazy(() => import("@/pages/MessageDetail"));
 const MessageEdit = lazy(() => import("@/pages/MessageEdit"));
 const ProfilePage = lazy(() => import("@/pages/Profile"));
 const RecipientsPage = lazy(() => import("@/pages/Recipients"));
-const CheckInPage = lazy(() => import("@/pages/CheckIn"));
 const AdminPage = lazy(() => import("@/pages/Admin"));
 const PublicMessageAccess = lazy(() => import("@/pages/PublicMessageAccess"));
 const DiagnosticAccess = lazy(() => import("@/pages/DiagnosticAccess"));
@@ -82,7 +81,6 @@ export default function App() {
                 <Route path="message/:id/edit" element={<MessageEdit />} />
                 <Route path="profile" element={<ProfilePage />} />
                 <Route path="recipients" element={<RecipientsPage />} />
-                <Route path="check-in" element={<CheckInPage />} />
                 <Route path="admin" element={<AdminPage />} />
               </Route>
               

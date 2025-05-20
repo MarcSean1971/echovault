@@ -103,8 +103,8 @@ export function usePanicButtonHeader(userId: string | null | undefined) {
             setIsConfirming(false);
             setTriggerInProgress(false);
             
-            // Navigate to check-in page after successful trigger
-            navigate('/check-in');
+            // Navigate to messages page after successful trigger instead of check-in
+            navigate('/messages');
           }
         }, 1000);
         
