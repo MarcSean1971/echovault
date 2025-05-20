@@ -57,6 +57,7 @@ export function VideoPlayer({ videoUrl, onError, isLoading }: VideoPlayerProps) 
         isPlaying={isPlaying}
         togglePlayback={togglePlayback}
         onClearVideo={onClearVideo}
+        hideDeleteButton={true}
       />
     </div>
   );

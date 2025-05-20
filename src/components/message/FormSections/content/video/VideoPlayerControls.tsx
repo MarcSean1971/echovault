@@ -9,12 +9,14 @@ interface VideoPlayerControlsProps {
   isPlaying: boolean;
   togglePlayback: () => void;
   onClearVideo: () => void;
+  hideDeleteButton?: boolean;
 }
 
 export function VideoPlayerControls({
   isPlaying,
   togglePlayback,
-  onClearVideo
+  onClearVideo,
+  hideDeleteButton = false
 }: VideoPlayerControlsProps) {
   // Handle play button click with a stopPropagation to prevent event bubbling
   const handlePlayPauseClick = (e: React.MouseEvent) => {
@@ -49,30 +51,33 @@ export function VideoPlayerControls({
         </Tooltip>
       </TooltipProvider>
       
-      <div className="flex items-center gap-2">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation(); // Prevent event bubbling
-                  onClearVideo();
-                }}
-                className={`text-white hover:bg-white/20 ${HOVER_TRANSITION}`}
-                aria-label="Delete video"
-              >
-                <Trash2 className="h-5 w-5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Delete video</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
+      {/* Only show delete button if not hidden */}
+      {!hideDeleteButton && (
+        <div className="flex items-center gap-2">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation(); // Prevent event bubbling
+                    onClearVideo();
+                  }}
+                  className={`text-white hover:bg-white/20 ${HOVER_TRANSITION}`}
+                  aria-label="Delete video"
+                >
+                  <Trash2 className="h-5 w-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Delete video</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      )}
     </div>
   );
 }
