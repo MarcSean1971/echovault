@@ -6,12 +6,16 @@ interface MessageItemProps {
   message: MessageCondition;
   isSelected: boolean;
   onSelect: (messageId: string) => void;
+  messageTitle?: string;
+  messageContent?: string;
 }
 
 export function MessageItem({ 
   message, 
   isSelected, 
-  onSelect 
+  onSelect,
+  messageTitle = "Emergency Message",
+  messageContent
 }: MessageItemProps) {
   // Calculate recipient count from the condition directly
   const recipientCount = message.recipients?.length || 0;
@@ -25,7 +29,13 @@ export function MessageItem({
       } ${HOVER_TRANSITION}`}
       onClick={() => onSelect(message.message_id)}
     >
-      <div className="font-medium">Emergency Message</div>
+      <div className="font-medium">{messageTitle}</div>
+      
+      {messageContent && (
+        <div className="text-sm text-gray-600 mt-1 line-clamp-2 break-words">
+          {messageContent}
+        </div>
+      )}
       
       {/* Display recipient count which we already have */}
       <div className="text-xs text-gray-400 mt-1">

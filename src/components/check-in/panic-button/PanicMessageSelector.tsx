@@ -5,6 +5,8 @@ import { MessageCondition } from "@/types/message";
 import { MessageList } from "./panic-selector/MessageList";
 import { DialogActions } from "./panic-selector/DialogActions";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PanicMessageSelectorProps {
   messages: MessageCondition[];
@@ -20,6 +22,45 @@ export function PanicMessageSelector({
   onSelect 
 }: PanicMessageSelectorProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [messageTitles, setMessageTitles] = useState<Record<string, string>>({});
+  const [messageContents, setMessageContents] = useState<Record<string, string>>({});
+
+  // Fetch message titles and content when dialog opens
+  useEffect(() => {
+    const fetchMessageDetails = async () => {
+      if (!isOpen || messages.length === 0) return;
+      
+      const messageIds = messages.map(m => m.message_id);
+      
+      try {
+        const { data, error } = await supabase
+          .from("messages")
+          .select("id, title, text_content")
+          .in("id", messageIds);
+          
+        if (error) {
+          console.error("Error fetching message details:", error);
+          return;
+        }
+        
+        // Transform data into maps for quick lookup
+        const titles: Record<string, string> = {};
+        const contents: Record<string, string> = {};
+        
+        data.forEach(msg => {
+          titles[msg.id] = msg.title || "Emergency Message";
+          contents[msg.id] = msg.text_content || "";
+        });
+        
+        setMessageTitles(titles);
+        setMessageContents(contents);
+      } catch (error) {
+        console.error("Error in fetchMessageDetails:", error);
+      }
+    };
+    
+    fetchMessageDetails();
+  }, [isOpen, messages]);
 
   const handleSelect = () => {
     if (selectedId) {
@@ -46,6 +87,8 @@ export function PanicMessageSelector({
           messages={messages}
           selectedId={selectedId}
           setSelectedId={setSelectedId}
+          messageTitles={messageTitles}
+          messageContents={messageContents}
         />
         
         <DialogActions
@@ -57,6 +100,3 @@ export function PanicMessageSelector({
     </Dialog>
   );
 }
-
-// Add missing import
-import { useState } from "react";
