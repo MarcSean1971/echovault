@@ -44,6 +44,18 @@ export function HeaderButtons({
     inCancelWindow
   } = usePanicButtonHeader(userId);
   
+  // Filter the panic messages for the selector
+  const panicMessages = conditions.filter(c => c.condition_type === 'panic_trigger' && c.active === true);
+  const hasPanicMessages = panicMessages.length > 0;
+  const hasMultipleMessages = panicMessages.length > 1;
+  
+  // When panic button is clicked and there are multiple messages, show selector
+  useEffect(() => {
+    if (isConfirming && hasMultipleMessages) {
+      setIsSelectorOpen(true);
+    }
+  }, [isConfirming, hasMultipleMessages, setIsSelectorOpen]);
+  
   // Determine button styles based on screen size
   const buttonSizeClass = isMobile ? "text-xs" : "";
   const buttonPaddingClass = isMobile ? "px-2 py-1" : "px-6 py-2";
@@ -94,9 +106,9 @@ export function HeaderButtons({
       </div>
 
       {/* Panic Message Selector - shown when there are multiple panic messages */}
-      {conditions.length > 1 && isSelectorOpen && (
+      {hasMultipleMessages && isSelectorOpen && (
         <PanicMessageSelector
-          messages={conditions.filter(c => c.condition_type === 'panic_trigger')}
+          messages={panicMessages}
           isOpen={isSelectorOpen}
           onClose={() => setIsSelectorOpen(false)}
           onSelect={handlePanicMessageSelect}
