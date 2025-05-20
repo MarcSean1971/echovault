@@ -84,7 +84,7 @@ export function VideoContentSection({
   );
 }
 
-// Optimized video player component with proper custom controls
+// Optimized video player component with fixed play/pause functionality
 function VideoPlayer({ 
   message, 
   onError, 
@@ -140,6 +140,8 @@ function VideoPlayer({
           const blob = new Blob([bytes], { type: 'video/webm' });
           const url = URL.createObjectURL(blob);
           
+          // Log successful video URL creation for debugging
+          console.log("Video loaded successfully:", url);
           setVideoUrl(url);
         } catch (e) {
           console.error("Error processing video:", e);
@@ -167,17 +169,24 @@ function VideoPlayer({
   // Handle video playback
   const videoRef = React.useRef<HTMLVideoElement>(null);
   
-  // Toggle video playback
+  // Toggle video playback - Fixed to ensure proper operation
   const togglePlayback = useCallback(() => {
-    if (!videoRef.current) return;
+    if (!videoRef.current) {
+      console.error("Video element reference is null");
+      return;
+    }
+    
+    console.log("Toggle playback called, current state:", isPlaying);
     
     if (isPlaying) {
+      console.log("Pausing video");
       videoRef.current.pause();
       setIsPlaying(false);
     } else {
+      console.log("Playing video");
       videoRef.current.play().catch(err => {
         console.error("Error playing video:", err);
-        onError("Error playing video");
+        onError("Error playing video: " + (err.message || "Unknown error"));
       });
       setIsPlaying(true);
     }
@@ -185,8 +194,20 @@ function VideoPlayer({
   
   // Handle video ended event
   const handleVideoEnded = useCallback(() => {
+    console.log("Video playback ended");
     setIsPlaying(false);
   }, [setIsPlaying]);
+  
+  // Handle video loaded event
+  const handleVideoLoaded = useCallback(() => {
+    console.log("Video loaded and ready to play");
+  }, []);
+  
+  // Handle video error event
+  const handleVideoError = useCallback((e: React.SyntheticEvent<HTMLVideoElement, Event>) => {
+    console.error("Video error:", e);
+    onError("Error loading video");
+  }, [onError]);
   
   // Handle clearing the video
   const onClearVideo = useCallback(() => {
@@ -217,7 +238,8 @@ function VideoPlayer({
         src={videoUrl}
         className="w-full h-full object-contain"
         preload="metadata"
-        onError={() => onError("Error playing video")}
+        onLoadedData={handleVideoLoaded}
+        onError={handleVideoError}
         onEnded={handleVideoEnded}
       />
       

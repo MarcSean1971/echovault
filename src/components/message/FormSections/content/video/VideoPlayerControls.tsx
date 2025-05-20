@@ -16,6 +16,13 @@ export function VideoPlayerControls({
   togglePlayback,
   onClearVideo
 }: VideoPlayerControlsProps) {
+  // Handle play button click with a stopPropagation to prevent event bubbling
+  const handlePlayPauseClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent event bubbling
+    console.log("Play/Pause button clicked");
+    togglePlayback();
+  };
+
   return (
     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity flex justify-between items-center w-full">
       <TooltipProvider>
@@ -25,7 +32,7 @@ export function VideoPlayerControls({
               variant="ghost" 
               size="icon"
               type="button"
-              onClick={togglePlayback}
+              onClick={handlePlayPauseClick}
               className={`text-white hover:bg-white/20 ${HOVER_TRANSITION}`}
               aria-label={isPlaying ? "Pause video" : "Play video"}
             >
@@ -50,7 +57,10 @@ export function VideoPlayerControls({
                 variant="ghost"
                 size="icon"
                 type="button"
-                onClick={onClearVideo}
+                onClick={(e) => {
+                  e.stopPropagation(); // Prevent event bubbling
+                  onClearVideo();
+                }}
                 className={`text-white hover:bg-white/20 ${HOVER_TRANSITION}`}
                 aria-label="Delete video"
               >
