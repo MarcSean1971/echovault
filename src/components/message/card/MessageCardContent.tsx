@@ -55,10 +55,10 @@ export function MessageCardContent({
 
   return (
     <div className="space-y-3">
-      {/* Message preview text - now consistent for all message types */}
+      {/* Message preview text - now with consistent height of minimum 2 lines */}
       <div className="text-sm leading-relaxed text-gray-600">
-        <p className="line-clamp-2">
-          {messagePreview}
+        <p className="line-clamp-2 min-h-[2.5rem]">
+          {messagePreview || "\u00A0"}
         </p>
       </div>
 
