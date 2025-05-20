@@ -5,90 +5,44 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { MessagesButton } from "./MessagesButton";
 import { CheckInButton } from "./CheckInButton";
 import { PanicButton } from "./PanicButton";
-import { useTriggerDashboard } from "@/hooks/useTriggerDashboard";
 import { useHeaderCheckIn } from "@/hooks/useHeaderCheckIn";
-import { usePanicButton } from "@/hooks/usePanicButton";
-import { useDeadlineMeter } from "@/hooks/useDeadlineMeter";
+import { usePanicButtonHeader } from "@/hooks/usePanicButtonHeader";
 import { PanicMessageSelector } from "@/components/check-in/panic-button/PanicMessageSelector";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface HeaderButtonsProps {
   conditions: MessageCondition[];
   userId: string | null;
+  // New props for optimized rendering
+  showCheckInButton?: boolean;
+  showPanicButton?: boolean;
 }
 
-export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
+export function HeaderButtons({ 
+  conditions, 
+  userId, 
+  showCheckInButton = false, 
+  showPanicButton = false 
+}: HeaderButtonsProps) {
   const isMobile = useIsMobile();
   
-  // Get dashboard functionality
-  const { 
-    handleCheckIn: handleDashboardCheckIn, 
-    isLoading: isChecking, 
-    nextDeadline, 
-    refreshConditions 
-  } = useTriggerDashboard();
-
-  console.log("HeaderButtons rendering with conditions:", conditions?.length || 0);
-  console.log("HeaderButtons userId:", userId);
+  // Simplified check-in functionality
+  const { handleCheckIn, isChecking } = useHeaderCheckIn();
   
-  // Find all panic messages from conditions - now including all panic messages
-  // IMPORTANT: Changed to include all panic messages regardless of active state
-  const panicMessages = conditions.filter(c => 
-    c.condition_type === 'panic_trigger'
-  );
-  
-  console.log("HeaderButtons found panicMessages:", panicMessages?.length || 0);
-
-  // Get the first panic message as fallback for compatibility
-  const panicMessage = panicMessages.length > 0 ? panicMessages[0] : null;
-
-  // Find check-in related conditions - only count active conditions
-  const hasCheckInConditions = conditions.some(c => 
-    (c.condition_type === 'no_check_in' || c.condition_type === 'regular_check_in') && 
-    c.active === true
-  );
-  
-  console.log("HeaderButtons hasCheckInConditions:", hasCheckInConditions);
-
-  // Use the custom hooks
-  const { handleCheckIn } = useHeaderCheckIn(handleDashboardCheckIn, isChecking);
-  const { isUrgent, isVeryUrgent } = useDeadlineMeter(nextDeadline);
+  // Use our lightweight panic button hook
   const { 
     panicMode, 
     isConfirming, 
     countDown, 
     triggerInProgress,
     handlePanicButtonClick,
-    inCancelWindow,
     isSelectorOpen,
     setIsSelectorOpen,
     selectedMessageId,
     setSelectedMessageId,
     handlePanicMessageSelect,
-    executePanicTrigger
-  } = usePanicButton(userId, panicMessage, panicMessages);
-  
-  // Force refresh conditions when component mounts and when lastRefresh changes
-  useEffect(() => {
-    if (userId) {
-      console.log("HeaderButtons refreshing conditions");
-      refreshConditions();
-    }
-  }, [userId, refreshConditions]);
-  
-  // Create a wrapper function to handle direct trigger with messageId
-  const handlePanicMessageDirectTrigger = () => {
-    if (selectedMessageId) {
-      console.log(`HeaderButtons: Directly triggering panic message: ${selectedMessageId}`);
-      handlePanicMessageSelect(selectedMessageId);
-      
-      // Create a custom event to directly trigger the panic
-      const event = new CustomEvent('panic-trigger-execute', { 
-        detail: { messageId: selectedMessageId } 
-      });
-      window.dispatchEvent(event);
-    }
-  };
+    inCancelWindow
+  } = usePanicButtonHeader(userId);
   
   // Determine button styles based on screen size
   const buttonSizeClass = isMobile ? "text-xs" : "";
@@ -112,7 +66,7 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
         />
         
         {/* Check In Now button - only show when active check-in conditions exist */}
-        {hasCheckInConditions && (
+        {showCheckInButton && (
           <CheckInButton
             onClick={handleCheckIn}
             isDisabled={isChecking || panicMode}
@@ -124,7 +78,7 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
         )}
         
         {/* Emergency Panic Button - show when ANY panic messages exist */}
-        {panicMessages.length > 0 && (
+        {showPanicButton && (
           <PanicButton
             onClick={handlePanicButtonClick}
             isDisabled={isChecking || (panicMode && !inCancelWindow) || (triggerInProgress && !inCancelWindow)}
@@ -140,15 +94,12 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
       </div>
 
       {/* Panic Message Selector - shown when there are multiple panic messages */}
-      {panicMessages.length > 1 && (
+      {conditions.length > 1 && isSelectorOpen && (
         <PanicMessageSelector
-          messages={panicMessages}
+          messages={conditions.filter(c => c.condition_type === 'panic_trigger')}
           isOpen={isSelectorOpen}
           onClose={() => setIsSelectorOpen(false)}
-          onSelect={(messageId) => {
-            setSelectedMessageId(messageId);
-            handlePanicMessageDirectTrigger();
-          }}
+          onSelect={handlePanicMessageSelect}
         />
       )}
     </>

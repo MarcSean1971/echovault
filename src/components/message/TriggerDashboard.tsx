@@ -6,6 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { useEffect } from "react";
 
 export function TriggerDashboard() {
   const {
@@ -26,15 +27,30 @@ export function TriggerDashboard() {
     // Don't return anything (void)
   };
   
-  console.log("TriggerDashboard rendering with conditions:", conditions?.length || 0);
-  console.log("TriggerDashboard userId:", userId);
-  
   // Create a wrapper function for refreshing conditions that handles the userId
   const handleRefreshConditions = () => {
     if (userId) {
       refreshConditions();
     }
   };
+  
+  // Listen for conditions-updated events from the header to refresh data
+  useEffect(() => {
+    const handleConditionsUpdated = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      
+      // Check if the event came from the header
+      if (customEvent.detail?.source === 'header-check-in') {
+        console.log("Dashboard detected header check-in, refreshing conditions");
+        handleRefreshConditions();
+      }
+    };
+    
+    window.addEventListener('conditions-updated', handleConditionsUpdated);
+    return () => {
+      window.removeEventListener('conditions-updated', handleConditionsUpdated);
+    };
+  }, [userId]);
   
   // Show error state with retry option
   if (loadError) {
