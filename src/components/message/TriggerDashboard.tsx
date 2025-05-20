@@ -29,6 +29,13 @@ export function TriggerDashboard() {
   console.log("TriggerDashboard rendering with conditions:", conditions?.length || 0);
   console.log("TriggerDashboard userId:", userId);
   
+  // Create a wrapper function for refreshing conditions that handles the userId
+  const handleRefreshConditions = () => {
+    if (userId) {
+      refreshConditions();
+    }
+  };
+  
   // Show error state with retry option
   if (loadError) {
     return (
@@ -39,7 +46,7 @@ export function TriggerDashboard() {
           <AlertDescription>{loadError}</AlertDescription>
           <Button 
             className={`mt-4 ${HOVER_TRANSITION}`} 
-            onClick={() => userId && refreshConditions(userId)}
+            onClick={handleRefreshConditions}
             variant="outline"
           >
             Retry
@@ -63,7 +70,7 @@ export function TriggerDashboard() {
         messages={messages}
         isLoading={isLoading}
         userId={userId}
-        onRefreshConditions={() => userId && refreshConditions(userId)}
+        onRefreshConditions={handleRefreshConditions}
       />
     </div>
   );

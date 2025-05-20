@@ -13,9 +13,10 @@ export function useConditionRefresh() {
   const MAX_RETRIES = 3;
   
   // Create a memoized refresh function
-  const refreshConditions = useCallback(async (userId?: string) => {
+  const refreshConditions = useCallback(async () => {
+    const userId = localStorage.getItem('lastUserId');
     if (!userId) {
-      console.log("useConditionRefresh: No userId provided, cannot refresh");
+      console.log("useConditionRefresh: No userId available in storage, cannot refresh");
       return null;
     }
     
@@ -62,7 +63,7 @@ export function useConditionRefresh() {
         
         // Wait for a short delay before retrying
         setTimeout(() => {
-          refreshConditions(userId);
+          refreshConditions();
         }, 1000 * (retryCount + 1)); // Exponential backoff
       } else {
         toast({

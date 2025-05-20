@@ -2,7 +2,7 @@
 import { useNavigate } from "react-router-dom";
 import { useDashboardData } from "./useDashboardData";
 import { useCheckIn } from "./useCheckIn";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 /**
  * Main hook for the dashboard trigger system
@@ -25,8 +25,13 @@ export function useTriggerDashboard() {
     setLastCheckIn,
     isLoading,
     userId,
-    refreshConditions
+    refreshConditions: refreshDashboardConditions
   } = useDashboardData();
+
+  // Create a wrapper for refreshConditions that doesn't need arguments
+  const refreshConditions = useCallback(() => {
+    return refreshDashboardConditions();
+  }, [refreshDashboardConditions]);
 
   // Handle check-in with refreshed deadline
   const handleDashboardCheckIn = async (): Promise<boolean> => {
@@ -74,6 +79,13 @@ export function useTriggerDashboard() {
       window.removeEventListener('conditions-updated', handleConditionsUpdated);
     };
   }, [refreshConditions]);
+
+  // Store userId in localStorage for component recovery
+  useEffect(() => {
+    if (userId) {
+      localStorage.setItem('lastUserId', userId);
+    }
+  }, [userId]);
 
   // Log deadline information to help with debugging
   console.log("useTriggerDashboard - current nextDeadline:", nextDeadline);

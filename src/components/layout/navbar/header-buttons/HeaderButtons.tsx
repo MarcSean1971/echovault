@@ -72,20 +72,22 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
   useEffect(() => {
     if (userId) {
       console.log("HeaderButtons refreshing conditions");
-      refreshConditions(userId);
+      refreshConditions();
     }
   }, [userId, refreshConditions]);
   
-  // Handle manual panic message selection with direct triggering
-  const handlePanicMessageDirectTrigger = (messageId: string) => {
-    console.log(`HeaderButtons: Directly triggering panic message: ${messageId}`);
-    handlePanicMessageSelect(messageId);
-    
-    // Create a custom event to directly trigger the panic
-    const event = new CustomEvent('panic-trigger-execute', { 
-      detail: { messageId } 
-    });
-    window.dispatchEvent(event);
+  // Create a wrapper function to handle direct trigger with messageId
+  const handlePanicMessageDirectTrigger = () => {
+    if (selectedMessageId) {
+      console.log(`HeaderButtons: Directly triggering panic message: ${selectedMessageId}`);
+      handlePanicMessageSelect(selectedMessageId);
+      
+      // Create a custom event to directly trigger the panic
+      const event = new CustomEvent('panic-trigger-execute', { 
+        detail: { messageId: selectedMessageId } 
+      });
+      window.dispatchEvent(event);
+    }
   };
   
   // Determine button styles based on screen size
@@ -143,7 +145,10 @@ export function HeaderButtons({ conditions, userId }: HeaderButtonsProps) {
           messages={panicMessages}
           isOpen={isSelectorOpen}
           onClose={() => setIsSelectorOpen(false)}
-          onSelect={handlePanicMessageDirectTrigger}
+          onSelect={(messageId) => {
+            setSelectedMessageId(messageId);
+            handlePanicMessageDirectTrigger();
+          }}
         />
       )}
     </>
