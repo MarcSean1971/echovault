@@ -111,7 +111,7 @@ export function useMessageCard(messageId: string) {
         if (eventMessageId === messageId && conditionId) {
           console.log(`[MessageCard] Background reminder generation for message ${eventMessageId}`);
           // Generate reminders in the background
-          ensureReminderSchedule(conditionId, messageId).catch(error => {
+          ensureReminderSchedule(conditionId, false).catch(error => { // Fix: Pass boolean instead of string
             console.error("[MessageCard] Error in background reminder generation:", error);
           });
         }

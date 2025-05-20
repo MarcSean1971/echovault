@@ -1,4 +1,3 @@
-
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -164,7 +163,7 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
         if (existingCondition.active) {
           console.log("[EditMessage] Regenerating reminder schedule for active condition");
           try {
-            await ensureReminderSchedule(conditionId, message.id);
+            await ensureReminderSchedule(conditionId, true); // Fix: Pass boolean instead of string
             console.log("[EditMessage] Successfully updated reminder schedule");
           } catch (scheduleError) {
             console.error("[EditMessage] Error ensuring reminder schedule:", scheduleError);

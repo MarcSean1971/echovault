@@ -17,9 +17,9 @@ export interface ReminderScheduleParams {
   messageId: string;
   conditionId: string;
   conditionType: string;
-  triggerDate: string | null;
+  triggerDate?: string | null;
   reminderMinutes: number[];
-  lastChecked: string | null;
+  lastChecked?: string | null;
   hoursThreshold?: number;
   minutesThreshold?: number;
 }

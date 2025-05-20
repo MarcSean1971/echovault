@@ -44,7 +44,8 @@ export async function generateReminderSchedule(
       conditionId,
       triggerDate: deadlineDate.toISOString(),
       reminderMinutes: reminderMinutes,
-      conditionType: 'standard'
+      conditionType: 'standard',
+      lastChecked: null // Add the missing lastChecked property
     };
     
     // Create or update the reminder schedule
@@ -108,7 +109,8 @@ export async function generateCheckInReminderSchedule(
       reminderMinutes: reminderMinutes,
       lastChecked: lastCheckedDate.toISOString(),
       hoursThreshold,
-      minutesThreshold
+      minutesThreshold,
+      triggerDate: virtualDeadline.toISOString() // Add the missing triggerDate property
     };
     
     // Create or update the reminder schedule

@@ -70,7 +70,7 @@ export function useArmOperations() {
       // CRITICAL FIX: Directly ensure reminder schedule is created
       // This is the key fix to make sure reminders are always generated
       console.log(`[useArmOperations] Directly ensuring reminder schedule for condition ${conditionId}`);
-      await ensureReminderSchedule(conditionId, actualMessageId);
+      await ensureReminderSchedule(conditionId, false); // Fix: Pass boolean instead of string
       
       // Fire a background event to handle reminder generation without blocking UI
       setTimeout(() => {
