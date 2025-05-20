@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { ensureReminderSchedule } from "@/utils/reminder/ensureReminderSchedule";
+import { getCurrentLocation } from "@/services/location/mapboxService";
 
 /**
  * Perform a check-in for a condition
@@ -63,6 +64,16 @@ export async function performUserCheckIn(userId: string): Promise<boolean> {
     console.log(`[CHECK-IN] Performing user check-in for user ${userId}`);
     const now = new Date().toISOString();
     
+    // Try to get user's current location
+    let locationData = null;
+    try {
+      locationData = await getCurrentLocation();
+      console.log("[CHECK-IN] User location obtained:", locationData);
+    } catch (locationError) {
+      console.log("[CHECK-IN] Could not get user location:", locationError);
+      // Continue with check-in even if location acquisition fails
+    }
+    
     // Fetch all active check-in type conditions for the user
     const { data: conditions, error: fetchError } = await supabase
       .from("message_conditions")
@@ -97,6 +108,37 @@ export async function performUserCheckIn(userId: string): Promise<boolean> {
     }
     
     console.log(`[CHECK-IN] Successfully updated ${conditions.length} conditions`);
+    
+    // Record location data if available
+    if (locationData && userId) {
+      try {
+        const deviceInfo = {
+          userAgent: navigator.userAgent,
+          platform: navigator.platform,
+          timestamp: now
+        };
+        
+        const { error: locationError } = await supabase
+          .from("check_in_locations")
+          .insert({
+            user_id: userId,
+            latitude: locationData.latitude,
+            longitude: locationData.longitude,
+            location_name: locationData.address,
+            device_info: JSON.stringify(deviceInfo)
+          });
+          
+        if (locationError) {
+          console.error("[CHECK-IN] Error recording location:", locationError);
+          // Continue execution even if location recording fails
+        } else {
+          console.log("[CHECK-IN] Successfully recorded check-in location");
+        }
+      } catch (locationInsertError) {
+        console.error("[CHECK-IN] Error inserting location data:", locationInsertError);
+        // Non-fatal error, continue execution
+      }
+    }
     
     // Regenerate reminder schedules for all updated conditions
     let regenerationSuccessCount = 0;
