@@ -49,6 +49,7 @@ export async function updateConditionInDb(conditionId: string, updateData: any) 
         
         console.log("[updateConditionInDb] Using reminder minutes for schedule:", reminderMinutes);
         
+        // CRITICAL FIX: Pass true as isEdit parameter to prevent immediate notifications
         await createOrUpdateReminderSchedule({
           messageId: data.message_id,
           conditionId: data.id,
@@ -58,7 +59,7 @@ export async function updateConditionInDb(conditionId: string, updateData: any) 
           lastChecked: data.last_checked,
           hoursThreshold: data.hours_threshold,
           minutesThreshold: data.minutes_threshold
-        });
+        }, true); // FIXED: Added isEdit=true here to prevent notifications on edit
       } catch (scheduleError) {
         console.error("[updateConditionInDb] Error updating reminder schedule:", scheduleError);
         // Don't throw, just log - we don't want to fail the condition update

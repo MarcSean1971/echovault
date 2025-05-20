@@ -53,17 +53,18 @@ export async function trackMessageNotification(messageId: string, conditionId: s
 
 /**
  * Update reminder times for condition - ensures we don't miss any reminders
- * FIXED: Added deduplication to prevent multiple emails
+ * FIXED: Added isEditOperation parameter and deduplication to prevent multiple emails
  */
 export async function markRemindersObsolete(
   conditionId: string,
-  messageId: string
+  messageId: string,
+  isEditOperation: boolean = false
 ): Promise<boolean> {
   try {
     const supabase = supabaseClient();
     
     // Enhanced logging to track usage
-    console.log(`[REMINDER-TRACKING] Marking reminders as obsolete for condition ${conditionId}, message ${messageId}`);
+    console.log(`[REMINDER-TRACKING] Marking reminders as obsolete for condition ${conditionId}, message ${messageId}, isEdit: ${isEditOperation}`);
     
     // IMPORTANT FIX: Always use message_id in the query (this was the root cause)
     const { error, count } = await supabase
@@ -106,10 +107,16 @@ export async function markRemindersObsolete(
         recipient: 'system',
         delivery_channel: 'immediate-check',
         delivery_status: 'processing',
-        response_data: { source: "markRemindersObsolete", time: new Date().toISOString() }
+        response_data: { source: "markRemindersObsolete", time: new Date().toISOString(), isEdit: isEditOperation }
       });
       
-      // CONTROLLED IMMEDIATE CHECK: Only proceed if no recent notification
+      // CRITICAL FIX: Skip immediate check completely if this is an edit operation
+      if (isEditOperation) {
+        console.log("[REMINDER-TRACKING] Skipping immediate reminder check because this is an edit operation");
+        return true; // Skip the immediate check completely
+      }
+      
+      // CONTROLLED IMMEDIATE CHECK: Only proceed if no recent notification and not an edit
       console.log("[REMINDER-TRACKING] Running immediate reminder check for message:", messageId);
       await supabase.functions.invoke("send-reminder-emails", {
         body: {

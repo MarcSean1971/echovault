@@ -77,16 +77,18 @@ export async function updateNextReminderTime(
 /**
  * Mark reminders as obsolete when creating a new schedule
  * Using service role client to bypass RLS
+ * FIXED: Added isEditOperation parameter to control notification behavior
  */
 export async function markRemindersObsolete(
   conditionId: string,
-  messageId: string
+  messageId: string,
+  isEditOperation: boolean = false
 ): Promise<boolean> {
   try {
     const supabase = supabaseClient();
     
     // Enhanced logging to track usage
-    console.log(`[REMINDER-TRACKING] Marking reminders as obsolete for condition ${conditionId}, message ${messageId}`);
+    console.log(`[REMINDER-TRACKING] Marking reminders as obsolete for condition ${conditionId}, message ${messageId}, isEdit: ${isEditOperation}`);
     
     // IMPORTANT FIX: Always use message_id in the query (this was the root cause)
     const { error, count } = await supabase
@@ -129,8 +131,14 @@ export async function markRemindersObsolete(
         recipient: 'system',
         delivery_channel: 'immediate-check',
         delivery_status: 'processing',
-        response_data: { source: "markRemindersObsolete", time: new Date().toISOString() }
+        response_data: { source: "markRemindersObsolete", time: new Date().toISOString(), isEdit: isEditOperation }
       });
+      
+      // CRITICAL FIX: Skip immediate check if this is an edit operation
+      if (isEditOperation) {
+        console.log("[REMINDER-TRACKING] Skipping immediate reminder check because this is an edit operation");
+        return true; // Skip the immediate check
+      }
       
       // REMOVED: The direct function call that was causing duplicate notifications
     } catch (checkError) {

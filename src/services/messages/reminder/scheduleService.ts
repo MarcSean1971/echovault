@@ -1,3 +1,4 @@
+
 /**
  * Service functions for creating and managing reminder schedules
  */
@@ -17,7 +18,8 @@ export async function createOrUpdateReminderSchedule(params: ReminderSchedulePar
     console.log("[REMINDER-SERVICE] Is this an edit operation?", isEdit);
     
     // Mark existing reminders as obsolete first (safety measure)
-    await markRemindersAsObsolete(params.messageId, params.conditionId);
+    // CRITICAL FIX: Pass the isEdit flag to markRemindersAsObsolete
+    await markRemindersAsObsolete(params.messageId, params.conditionId, isEdit);
     
     // Calculate scheduled times
     const scheduleTimes = calculateScheduleTimes(params);
