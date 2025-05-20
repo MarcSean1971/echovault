@@ -33,7 +33,7 @@ export function MessageInfoSection({
             Message Information
           </div>
         }
-        defaultOpen={true}
+        defaultOpen={false}
       >
         <div className="space-y-2 text-sm">
           <div className="grid grid-cols-3 gap-1">
@@ -77,7 +77,7 @@ export function MessageInfoSection({
               Check-In Information
             </div>
           }
-          defaultOpen={true}
+          defaultOpen={false}
           value="check-in"
         >
           <div className="space-y-2 text-sm">

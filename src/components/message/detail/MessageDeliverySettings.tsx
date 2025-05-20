@@ -93,7 +93,7 @@ export function MessageDeliverySettings({
               Security Settings
             </div>
           }
-          defaultOpen={true}
+          defaultOpen={false}
           className="mt-1"
         >
           <div className="grid grid-cols-1 gap-1 text-sm">

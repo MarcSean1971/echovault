@@ -32,7 +32,7 @@ export function RecipientsSection({
           Recipients
         </div>
       }
-      defaultOpen={true}
+      defaultOpen={false}
     >
       {/* Use renderRecipients function if provided, otherwise use default MessageRecipientsList */}
       {renderRecipients ? renderRecipients() : <MessageRecipientsList recipients={recipients} />}

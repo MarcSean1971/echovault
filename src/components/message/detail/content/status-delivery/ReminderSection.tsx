@@ -75,7 +75,7 @@ export function ReminderSection({
           Reminder Information
         </div>
       }
-      defaultOpen={true}
+      defaultOpen={false}
     >
       {/* Display formatted reminders list with consistent text-sm styling */}
       {formattedAllReminders.length > 0 && (

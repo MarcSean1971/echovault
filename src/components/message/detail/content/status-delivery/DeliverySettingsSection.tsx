@@ -102,7 +102,7 @@ export function DeliverySettingsSection({
           Delivery Settings
         </div>
       }
-      defaultOpen={true}
+      defaultOpen={false}
     >
       <MessageDeliverySettings 
         condition={condition} 
