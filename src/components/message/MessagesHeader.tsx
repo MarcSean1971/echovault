@@ -19,8 +19,7 @@ export function MessagesHeader() {
         </p>
       </div>
       
-      <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
-        <div className="flex-1"></div>
+      <div className="flex flex-col md:flex-row md:items-center justify-start mb-8 gap-4">
         <Button 
           onClick={() => navigate("/create-message")}
           className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default} gap-2 shadow-sm hover:shadow-md`}
@@ -29,6 +28,7 @@ export function MessagesHeader() {
           <PlusCircle className={`h-5 w-5 ${HOVER_TRANSITION}`} />
           Create New Message
         </Button>
+        <div className="flex-1"></div>
       </div>
     </>
   );
