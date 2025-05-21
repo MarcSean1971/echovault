@@ -1,5 +1,5 @@
 
-import React, { memo } from "react";
+import React, { memo, useMemo } from "react";
 import { Message } from "@/types/message";
 import { formatDate } from "@/utils/messageFormatUtils";
 import { MessageCardHeader } from "./card/MessageCardHeader";
@@ -56,59 +56,86 @@ function MessageCardInner({ message, onDelete, reminderInfo }: MessageCardProps)
     refreshCounter
   );
 
+  // Memoize header, content and footer to reduce re-renders
+  const header = useMemo(() => (
+    <MessageCardHeader 
+      message={message} 
+      isArmed={isArmed} 
+      formatDate={formatDate}
+      isPanicTrigger={isPanicTrigger}
+    />
+  ), [message, isArmed, isPanicTrigger]);
+  
+  const content = useMemo(() => (
+    <MessageCardContent 
+      message={message} 
+      isArmed={isArmed} 
+      deadline={deadline} 
+      condition={condition}
+      transcription={transcription}
+      isPanicTrigger={isPanicTrigger}
+      lastCheckIn={formattedCheckIn}
+      rawCheckInTime={rawCheckInTime}
+      nextReminder={formattedNextReminder}
+      rawNextReminderTime={nextReminder}
+      deadlineProgress={deadlineProgress}
+      timeLeft={timeLeft}
+      upcomingReminders={upcomingReminders}
+    />
+  ), [
+    message,
+    isArmed,
+    deadline,
+    condition,
+    transcription,
+    isPanicTrigger,
+    formattedCheckIn,
+    rawCheckInTime,
+    formattedNextReminder,
+    nextReminder,
+    deadlineProgress,
+    timeLeft,
+    upcomingReminders
+  ]);
+  
+  const footer = useMemo(() => (
+    <MessageCardActions
+      messageId={message.id}
+      condition={condition}
+      isArmed={isArmed}
+      isLoading={actionIsLoading} 
+      onArmMessage={onArmMessage}
+      onDisarmMessage={onDisarmMessage}
+    />
+  ), [message.id, condition, isArmed, actionIsLoading, onArmMessage, onDisarmMessage]);
+
   return (
     <MessageCardWrapper isArmed={isArmed} messageId={message.id}>
       {{
-        header: (
-          <MessageCardHeader 
-            message={message} 
-            isArmed={isArmed} 
-            formatDate={formatDate}
-            isPanicTrigger={isPanicTrigger}
-          />
-        ),
-        content: (
-          <MessageCardContent 
-            message={message} 
-            isArmed={isArmed} 
-            deadline={deadline} 
-            condition={condition}
-            transcription={transcription}
-            isPanicTrigger={isPanicTrigger}
-            lastCheckIn={formattedCheckIn}
-            rawCheckInTime={rawCheckInTime}
-            nextReminder={formattedNextReminder}
-            rawNextReminderTime={nextReminder}
-            deadlineProgress={deadlineProgress}
-            timeLeft={timeLeft}
-            upcomingReminders={upcomingReminders}
-          />
-        ),
-        footer: (
-          <MessageCardActions
-            messageId={message.id}
-            condition={condition}
-            isArmed={isArmed}
-            isLoading={actionIsLoading} 
-            onArmMessage={onArmMessage}
-            onDisarmMessage={onDisarmMessage}
-          />
-        )
+        header,
+        content,
+        footer
       }}
     </MessageCardWrapper>
   );
 }
 
-// Memoize the component with a custom comparison function to ensure updates when needed
+// Memoize the component with a custom comparison function
 export const MessageCard = memo(MessageCardInner, (prevProps, nextProps) => {
   // Always re-render if message IDs are different
   if (prevProps.message.id !== nextProps.message.id) return false;
   
-  // Check if reminder info has changed
+  // Check if reminder info has changed substantially
   const prevReminder = prevProps.reminderInfo?.formattedNextReminder;
   const nextReminder = nextProps.reminderInfo?.formattedNextReminder;
+  
+  // Only trigger re-render if reminders have changed
   if (prevReminder !== nextReminder) return false;
   
-  // Default to standard memo behavior for other properties
+  // Check if reminder count has changed
+  if ((prevProps.reminderInfo?.upcomingReminders?.length || 0) !== 
+      (nextProps.reminderInfo?.upcomingReminders?.length || 0)) return false;
+  
+  // Don't re-render for minor updates that might cause flickering
   return true;
 });

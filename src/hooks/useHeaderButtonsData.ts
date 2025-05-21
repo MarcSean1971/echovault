@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { MessageCondition } from "@/types/message";
@@ -21,6 +21,7 @@ const CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes in milliseconds
 /**
  * Lightweight hook specifically for header buttons data
  * Uses optimistic UI and minimal data loading
+ * Now properly listens to conditions-updated events
  */
 export function useHeaderButtonsData(): HeaderButtonsData {
   const { userId } = useAuth();
@@ -28,6 +29,7 @@ export function useHeaderButtonsData(): HeaderButtonsData {
   const [hasPanicMessages, setHasPanicMessages] = useState<boolean>(false);
   const [panicMessages, setPanicMessages] = useState<MessageCondition[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const loadingRef = useRef<boolean>(false);
   
   // Try to load from cache immediately for instant UI
   useEffect(() => {
@@ -53,16 +55,22 @@ export function useHeaderButtonsData(): HeaderButtonsData {
     }
   }, []);
   
-  // Function to load header data from database
-  const loadHeaderData = async () => {
+  // Function to load header data from database with debouncing
+  const loadHeaderData = async (force: boolean = false) => {
     // Skip if no userId (not logged in)
     if (!userId) {
       setIsLoading(false);
       return;
     }
     
+    // Prevent concurrent loads
+    if (loadingRef.current && !force) {
+      return;
+    }
+    
     try {
       setIsLoading(true);
+      loadingRef.current = true;
       console.log("Loading header buttons data for user:", userId);
 
       // Make a single efficient database query that just counts conditions by type
@@ -125,6 +133,7 @@ export function useHeaderButtonsData(): HeaderButtonsData {
       console.error("Error in header data loading:", error);
     } finally {
       setIsLoading(false);
+      loadingRef.current = false;
     }
   };
 
@@ -133,28 +142,43 @@ export function useHeaderButtonsData(): HeaderButtonsData {
     // Initial data load when component mounts or userId changes
     loadHeaderData();
     
-    // Listen for message condition updates (like arming/disarming)
+    // Using a debounce for conditions-updated events to prevent multiple rapid updates
+    let debounceTimer: number | null = null;
+    
+    // Listen for all relevant events that should trigger a refresh
     const handleConditionsUpdated = (event: Event) => {
       const customEvent = event as CustomEvent;
       console.log("Header buttons detected conditions-updated event:", customEvent.detail);
       
-      // Invalidate cache
-      try {
-        localStorage.removeItem(CACHE_KEY);
-      } catch (error) {
-        console.error("Error clearing cache:", error);
+      // Clear previous timeout if it exists
+      if (debounceTimer) {
+        window.clearTimeout(debounceTimer);
+        debounceTimer = null;
       }
       
-      // Reload header data
-      loadHeaderData();
+      // Set a new timeout
+      debounceTimer = window.setTimeout(() => {
+        // Invalidate cache
+        try {
+          localStorage.removeItem(CACHE_KEY);
+        } catch (error) {
+          console.error("Error clearing cache:", error);
+        }
+        
+        // Reload header data
+        loadHeaderData(true);
+      }, 300);
     };
     
     // Add event listener for condition updates
     window.addEventListener('conditions-updated', handleConditionsUpdated);
     
-    // Clean up event listener on unmount
+    // Clean up event listener and timeout on unmount
     return () => {
       window.removeEventListener('conditions-updated', handleConditionsUpdated);
+      if (debounceTimer) {
+        window.clearTimeout(debounceTimer);
+      }
     };
   }, [userId]);
 

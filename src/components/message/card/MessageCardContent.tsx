@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { memo } from "react";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { MessageCondition, Message } from "@/types/message";
@@ -23,7 +23,8 @@ interface MessageCardContentProps {
   upcomingReminders: string[];
 }
 
-export function MessageCardContent({
+// Use React.memo with a custom comparison function to reduce unnecessary re-renders
+export const MessageCardContent = memo(function MessageCardContent({
   message,
   isArmed,
   deadline,
@@ -94,10 +95,10 @@ export function MessageCardContent({
         </div>
       )}
 
-      {/* Panic trigger warning section - completely removed icon */}
+      {/* Panic trigger warning section */}
       {isPanicTrigger && (
         <div className="flex items-center mt-2 text-amber-600 text-xs">
-          {/* AlertTriangle icon removed */}
+          {/* Empty div to maintain spacing */}
         </div>
       )}
 
@@ -116,7 +117,7 @@ export function MessageCardContent({
             <Bell className="h-3 w-3 mr-1" /> 
             Next reminder:
           </span>
-          <span>{nextReminder}</span>
+          <span className="truncate">{nextReminder}</span>
         </div>
       )}
       
@@ -130,4 +131,27 @@ export function MessageCardContent({
       )}
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  // Custom comparison function to prevent unnecessary re-renders
+  
+  // Always re-render if armed status changes
+  if (prevProps.isArmed !== nextProps.isArmed) return false;
+  
+  // Always re-render if message changes
+  if (prevProps.message.id !== nextProps.message.id) return false;
+  
+  // Re-render when deadline progress significantly changes (not for every small change)
+  if (Math.abs(prevProps.deadlineProgress - nextProps.deadlineProgress) > 5) return false;
+  
+  // Re-render when time display changes minutes
+  if (prevProps.timeLeft?.substring(0, 5) !== nextProps.timeLeft?.substring(0, 5)) return false;
+  
+  // Re-render when reminders change
+  if (prevProps.nextReminder !== nextProps.nextReminder) return false;
+  
+  // Check if the length of upcoming reminders changed
+  if ((prevProps.upcomingReminders?.length || 0) !== (nextProps.upcomingReminders?.length || 0)) return false;
+  
+  // Don't re-render for small changes like seconds updating
+  return true;
+});
