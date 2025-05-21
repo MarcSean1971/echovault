@@ -181,4 +181,3 @@ export const sendEmailToRecipient = (
     data.attachments // Pass attachments
   );
 };
-

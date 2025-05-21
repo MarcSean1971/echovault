@@ -1,3 +1,4 @@
+
 import { supabaseClient } from "../supabase-client.ts";
 import { sendEmail } from "./email-service.ts";
 
@@ -83,15 +84,6 @@ export async function sendCreatorReminder(
       }];
     }
     
-    // Calculate hours and minutes for display
-    const hours = Math.floor(hoursUntilDeadline);
-    const minutes = Math.floor((hoursUntilDeadline % 1) * 60);
-    
-    // Format time remaining
-    const timeRemaining = hours > 0 
-      ? `${hours} hours, ${minutes} minutes`
-      : `${minutes} minutes`;
-    
     // Send email to creator
     for (const email of emailList) {
       try {
@@ -99,17 +91,90 @@ export async function sendCreatorReminder(
           console.log(`Sending email to creator at ${email}`);
         }
         
-        // FIXED: Using a proper check-in reminder template with clear subject
+        // UPDATED: Using a beautiful, modern template matching the welcome email design
         await sendEmail({
           to: email,
-          subject: `ACTION REQUIRED: Check-in Reminder for "${messageTitle}"`,
+          subject: `Alert: Action Required for "${messageTitle}"`,
           html: `
-            <h2>Check-in Reminder</h2>
-            <p>Your message <strong>"${messageTitle}"</strong> requires a check-in.</p>
-            <p>You have <strong>${timeRemaining}</strong> remaining before the message will be automatically delivered.</p>
-            <p>To prevent automatic delivery, please check in now:</p>
-            <p><a href="https://echo-vault.app/check-in" style="padding: 10px 20px; background-color: #0070f3; color: white; text-decoration: none; border-radius: 4px;">Check In Now</a></p>
-            <p>If you do not check in before the deadline (${new Date(deadlineDate).toLocaleString()}), your message will be automatically sent to all recipients.</p>
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <meta http-equiv="X-UA-Compatible" content="ie=edge">
+              <title>Alert Notification from EchoVault</title>
+              <style>
+                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+                * { 
+                  margin: 0;
+                  padding: 0;
+                  box-sizing: border-box;
+                }
+                body {
+                  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+                  color: #334155;
+                  line-height: 1.5;
+                  background-color: #f8fafc;
+                  padding: 24px;
+                }
+              </style>
+            </head>
+            <body>
+              <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);">
+                <div style="background-color: #9b87f5; padding: 30px; border-radius: 0; margin-bottom: 30px; text-align: center;">
+                  <h1 style="color: #ffffff; margin-top: 0; font-size: 28px;">EchoVault</h1>
+                  <p style="font-size: 18px; margin-bottom: 0; color: #ffffff;">Alert Notification</p>
+                </div>
+                
+                <div style="padding: 32px;">
+                  <h2 style="color: #1e293b; font-size: 22px; margin-bottom: 20px; font-weight: 600;">Action Required</h2>
+                  
+                  <p style="color: #475569; margin-bottom: 20px; font-size: 16px;">
+                    An alert message titled <strong>"${messageTitle}"</strong> is about to be sent via EchoVault.
+                  </p>
+                  
+                  <p style="color: #475569; margin-bottom: 20px; font-size: 16px;">
+                    Please check in now to prevent automatic delivery.
+                  </p>
+                  
+                  <div style="background-color: #f8fafc; border-left: 4px solid #9b87f5; padding: 20px; margin: 25px 0; border-radius: 4px;">
+                    <h3 style="margin-top: 0; color: #6E59A5;">What is EchoVault?</h3>
+                    <p style="margin-bottom: 10px; line-height: 1.6;">
+                      EchoVault is a secure digital vault that ensures important messages and documents reach the right people at the right time. It helps people share critical information that only gets released when specific conditions are met:
+                    </p>
+                    <ul style="margin-bottom: 0;">
+                      <li style="margin-bottom: 8px;">When someone hasn't checked in for a specified period</li>
+                      <li style="margin-bottom: 8px;">On a scheduled future date</li>
+                      <li style="margin-bottom: 8px;">In emergency situations</li>
+                      <li style="margin-bottom: 0;">With group confirmation requirements</li>
+                    </ul>
+                  </div>
+                  
+                  <div style="text-align: center; margin: 32px 0;">
+                    <a href="https://echo-vault.app/check-in" style="display: inline-block; background-color: #9b87f5; color: white; font-weight: 600; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-size: 16px; transition: all 0.2s ease;">
+                      Check In Now
+                    </a>
+                  </div>
+                  
+                  <p style="color: #64748b; font-size: 14px; margin-top: 24px;">
+                    If the button doesn't work, copy and paste this link into your browser:
+                  </p>
+                  <p style="background-color: #f1f5f9; padding: 12px; border-radius: 6px; margin-top: 8px; font-size: 14px; word-break: break-all;">
+                    <a href="https://echo-vault.app/check-in" style="color: #9b87f5; text-decoration: none;">https://echo-vault.app/check-in</a>
+                  </p>
+                </div>
+                
+                <div style="padding: 24px; background-color: #f1f5f9; text-align: center; border-top: 1px solid #e2e8f0;">
+                  <p style="color: #64748b; font-size: 14px;">
+                    This is an automated message. Please do not reply to this email.
+                  </p>
+                  <p style="color: #64748b; font-size: 14px; margin-top: 8px;">
+                    © ${new Date().getFullYear()} EchoVault - Secure Message Delivery
+                  </p>
+                </div>
+              </div>
+            </body>
+            </html>
           `
         });
         
