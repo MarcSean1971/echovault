@@ -5,6 +5,8 @@ import { Menu, Home, MessageSquare, Users, Settings, LogOut } from "lucide-react
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface MobileNavProps {
   userImage: string | null;
@@ -27,6 +29,16 @@ export function MobileNav({ userImage, initials }: MobileNavProps) {
   
   return (
     <div className="flex md:hidden items-center space-x-2">
+      <Avatar className={`h-8 w-8 ${HOVER_TRANSITION}`}>
+        {userImage ? (
+          <AvatarImage src={userImage} alt="Profile" />
+        ) : (
+          <AvatarFallback className="bg-primary/10 text-primary">
+            {initials}
+          </AvatarFallback>
+        )}
+      </Avatar>
+
       <Sheet>
         <SheetTrigger asChild>
           <Button variant="ghost" size="icon" className="rounded-full hover:bg-accent/10 transition-all duration-200">
