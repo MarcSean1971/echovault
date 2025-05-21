@@ -26,16 +26,26 @@ export function MessageHeader({
 
   return (
     <div className="space-y-4">
+      <Button 
+        variant="ghost" 
+        onClick={() => navigate("/messages")}
+        className={`mb-6 hover:bg-muted/80 hover:text-foreground ${HOVER_TRANSITION}`}
+      >
+        <ArrowLeft className="mr-2 h-4 w-4" /> Back to Messages
+      </Button>
+      
+      {/* Message Status with Arm/Disarm Button */}
       <div className="flex items-center justify-between">
-        <Button 
-          variant="ghost" 
-          onClick={() => navigate("/messages")}
-          className={`mb-0 hover:bg-muted/80 hover:text-foreground ${HOVER_TRANSITION}`}
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back to Messages
-        </Button>
+        {/* Message Title with Icon */}
+        <div className="flex items-start gap-3">
+          <div className="mt-1 text-muted-foreground">
+            {getMessageIcon(message.message_type)}
+          </div>
+          <h2 className="text-2xl font-semibold leading-tight break-words">
+            {message.title}
+          </h2>
+        </div>
         
-        {/* Arm/Disarm Button with Status Badge */}
         <div className="flex items-center gap-2">
           <StatusBadge status={isArmed ? "armed" : "disarmed"} size="md">
             {isArmed ? "Armed" : "Disarmed"}
@@ -63,16 +73,6 @@ export function MessageHeader({
             </Button>
           )}
         </div>
-      </div>
-      
-      {/* Message Title with Icon */}
-      <div className="flex items-start gap-3">
-        <div className="mt-1 text-muted-foreground">
-          {getMessageIcon(message.message_type)}
-        </div>
-        <h2 className="text-2xl font-semibold leading-tight break-words">
-          {message.title}
-        </h2>
       </div>
     </div>
   );
