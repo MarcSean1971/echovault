@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ProfileData, ProfileUpdateData } from "@/services/profileService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { toast } from "@/components/ui/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -48,10 +48,7 @@ export function ProfileForm({ profile, onSubmit }: ProfileFormProps) {
       <form onSubmit={form.handleSubmit(onSubmit)}>
         <Card className="mb-8">
           <CardHeader>
-            <CardTitle>Personal Information</CardTitle>
-            <CardDescription>
-              Update your personal information. This information will be used in communications.
-            </CardDescription>
+            {/* Title and description removed as requested */}
           </CardHeader>
           <CardContent className="space-y-4">
             <FormField
