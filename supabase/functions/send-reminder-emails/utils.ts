@@ -1,43 +1,34 @@
 
 /**
- * Format a deadline time for display
+ * Format a deadline time string into a human-readable format
  */
-export function formatDeadlineTime(deadlineISOString: string): string {
+export function formatDeadlineTime(dateString: string): string {
   try {
-    const deadline = new Date(deadlineISOString);
-    
-    // Format the date in a user-friendly way
-    const formattedDate = deadline.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', { 
+      weekday: 'short', 
+      month: 'short', 
+      day: 'numeric', 
+      hour: '2-digit', 
+      minute: '2-digit',
+      timeZoneName: 'short'
     });
-    
-    // Format the time
-    const formattedTime = deadline.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-    
-    return `${formattedDate} at ${formattedTime}`;
   } catch (error) {
     console.error("Error formatting deadline time:", error);
-    return deadlineISOString;
+    return dateString; // Return the original string if formatting fails
   }
 }
 
 /**
- * Create a Supabase client with admin privileges
+ * Get Twilio credentials from environment variables
  */
-export function createAdminClient() {
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+export function getTwilioCredentials() {
+  const accountSid = Deno.env.get("TWILIO_ACCOUNT_SID");
+  const authToken = Deno.env.get("TWILIO_AUTH_TOKEN");
   
-  if (!supabaseUrl || !supabaseServiceKey) {
-    throw new Error("SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is not set");
+  if (!accountSid || !authToken) {
+    throw new Error("Twilio credentials missing. Please check TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN environment variables.");
   }
   
-  // We'll implement this in the supabase-client.ts file
-  return null;
+  return { accountSid, authToken };
 }
