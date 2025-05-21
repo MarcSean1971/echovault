@@ -163,50 +163,52 @@ export default function Recipients() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold">Trusted Recipients</h1>
-        <div className="space-x-2">
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" /> Add Recipient
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add New Recipient</DialogTitle>
-              </DialogHeader>
-              <RecipientForm 
-                onSubmit={handleAddRecipient}
-                isLoading={isLoading}
-                onCancel={() => setIsDialogOpen(false)}
-              />
-            </DialogContent>
-          </Dialog>
+      <div className="max-w-2xl mx-auto">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-3xl font-bold">Trusted Recipients</h1>
+          <div className="space-x-2">
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" /> Add Recipient
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add New Recipient</DialogTitle>
+                </DialogHeader>
+                <RecipientForm 
+                  onSubmit={handleAddRecipient}
+                  isLoading={isLoading}
+                  onCancel={() => setIsDialogOpen(false)}
+                />
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
+
+        {/* Edit Recipient Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Recipient</DialogTitle>
+            </DialogHeader>
+            <RecipientForm 
+              initialData={editRecipient}
+              onSubmit={handleEditRecipient}
+              isLoading={isLoading}
+              onCancel={handleCloseEditDialog}
+            />
+          </DialogContent>
+        </Dialog>
+
+        <RecipientsList
+          recipients={recipients}
+          isLoading={isInitialLoading}
+          onEditRecipient={handleOpenEditDialog}
+          onRemoveRecipient={handleRemoveRecipient}
+        />
       </div>
-
-      {/* Edit Recipient Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Recipient</DialogTitle>
-          </DialogHeader>
-          <RecipientForm 
-            initialData={editRecipient}
-            onSubmit={handleEditRecipient}
-            isLoading={isLoading}
-            onCancel={handleCloseEditDialog}
-          />
-        </DialogContent>
-      </Dialog>
-
-      <RecipientsList
-        recipients={recipients}
-        isLoading={isInitialLoading}
-        onEditRecipient={handleOpenEditDialog}
-        onRemoveRecipient={handleRemoveRecipient}
-      />
     </div>
   );
 }
