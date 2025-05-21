@@ -42,7 +42,7 @@ interface MessageDetailContentProps {
   viewCount?: number | null;
   isLoadingDelivery?: boolean;
   refreshTrigger?: number;
-  backButton: React.ReactNode; // Add new prop for back button
+  backButton: React.ReactNode; // Back button prop
 }
 
 export function MessageDetailContent({
@@ -71,7 +71,7 @@ export function MessageDetailContent({
   viewCount,
   isLoadingDelivery,
   refreshTrigger,
-  backButton // Add back button prop
+  backButton // Back button prop
 }: MessageDetailContentProps) {
   // Add state for delete confirmation
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -88,61 +88,63 @@ export function MessageDetailContent({
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
-      <div className="space-y-6">
-        {/* Back button placed at the top of the page */}
-        {backButton}
-        
-        {/* Message Content - Always render immediately with available data */}
-        <MainContentSection 
-          message={message}
-          isArmed={isArmed}
-          isActionLoading={isActionLoading}
-          condition={condition}
-          formatDate={formatDate}
-          renderConditionType={renderConditionType}
-          handleDisarmMessage={handleDisarmMessage}
-          handleArmMessage={handleArmMessage}
-          deliveryId={deliveryId}
-          recipientEmail={recipientEmail}
-          recipients={recipients}
-          onSendTestMessage={onSendTestMessage}
-          lastCheckIn={lastCheckIn}
-          checkInCode={checkInCode}
-          lastDelivered={lastDelivered}
-          isDelivered={isDelivered}
-          viewCount={viewCount}
-          isLoadingDelivery={isLoadingDelivery}
-          refreshTrigger={refreshTrigger}
-          deadline={deadline}
-          // Pass loading status for progressive loading
-          isLoading={isLoading}
-        />
-        
-        {/* Actions Card */}
-        <Card className="overflow-hidden border border-border/50 shadow-sm">
-          <CardContent className="p-6">
-            <div className="flex justify-end gap-3">
-              <Button
-                variant="outline"
-                onClick={() => navigate(`/message/${message.id}/edit`)}
-                disabled={isArmed || isActionLoading}
-                className={`${HOVER_TRANSITION}`}
-              >
-                <Edit className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} /> Edit
-              </Button>
-              
-              <Button
-                variant="outline"
-                onClick={() => setShowDeleteConfirm(true)}
-                disabled={isArmed || isActionLoading}
-                className={`text-destructive border-destructive hover:bg-destructive/20 hover:text-destructive ${HOVER_TRANSITION}`}
-              >
-                <Trash2 className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} /> Delete
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+    <div className="container mx-auto px-4 py-8">
+      {/* Back button at the left side, matching Edit page placement */}
+      {backButton}
+      
+      <div className="max-w-3xl mx-auto">
+        <div className="space-y-6">
+          {/* Message Content - Always render immediately with available data */}
+          <MainContentSection 
+            message={message}
+            isArmed={isArmed}
+            isActionLoading={isActionLoading}
+            condition={condition}
+            formatDate={formatDate}
+            renderConditionType={renderConditionType}
+            handleDisarmMessage={handleDisarmMessage}
+            handleArmMessage={handleArmMessage}
+            deliveryId={deliveryId}
+            recipientEmail={recipientEmail}
+            recipients={recipients}
+            onSendTestMessage={onSendTestMessage}
+            lastCheckIn={lastCheckIn}
+            checkInCode={checkInCode}
+            lastDelivered={lastDelivered}
+            isDelivered={isDelivered}
+            viewCount={viewCount}
+            isLoadingDelivery={isLoadingDelivery}
+            refreshTrigger={refreshTrigger}
+            deadline={deadline}
+            // Pass loading status for progressive loading
+            isLoading={isLoading}
+          />
+          
+          {/* Actions Card */}
+          <Card className="overflow-hidden border border-border/50 shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => navigate(`/message/${message.id}/edit`)}
+                  disabled={isArmed || isActionLoading}
+                  className={`${HOVER_TRANSITION}`}
+                >
+                  <Edit className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} /> Edit
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  onClick={() => setShowDeleteConfirm(true)}
+                  disabled={isArmed || isActionLoading}
+                  className={`text-destructive border-destructive hover:bg-destructive/20 hover:text-destructive ${HOVER_TRANSITION}`}
+                >
+                  <Trash2 className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} /> Delete
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
       
       <SendTestMessageDialog 
