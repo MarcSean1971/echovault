@@ -29,7 +29,7 @@ export function MobileNav({ userImage, initials }: MobileNavProps) {
   
   return (
     <div className="flex md:hidden items-center space-x-2">
-      <Avatar className={`h-8 w-8 ${HOVER_TRANSITION}`}>
+      <Avatar className={`h-10 w-10 border-2 border-border/60 shadow-sm ${HOVER_TRANSITION}`}>
         {userImage ? (
           <AvatarImage src={userImage} alt="Profile" />
         ) : (

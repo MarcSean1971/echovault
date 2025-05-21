@@ -27,15 +27,15 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <div 
-          className="relative h-10 w-10 rounded-full border border-border cursor-pointer focus:outline-none hover:opacity-90 transition-opacity"
+          className="relative h-12 w-12 rounded-full border-2 border-border/60 cursor-pointer focus:outline-none hover:border-primary/40 transition-all duration-200 shadow-sm hover:shadow-md"
           role="button"
           tabIndex={0}
         >
-          <Avatar className="h-9 w-9 rounded-full">
+          <Avatar className="h-11 w-11 rounded-full">
             {userImage ? (
               <AvatarImage src={userImage} alt="Profile picture" />
             ) : (
-              <AvatarFallback>
+              <AvatarFallback className="bg-primary/10 text-primary">
                 {initials}
               </AvatarFallback>
             )}
