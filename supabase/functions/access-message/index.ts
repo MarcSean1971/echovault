@@ -188,7 +188,8 @@ serve(async (req: Request): Promise<Response> => {
       AND message_id::text = '${messageId}'::text
     `;
     
-    const { data: deliveryData, error: deliveryError } = await supabase
+    // CRITICAL FIX: Change const to let for deliveryData to allow reassignment in the fallback logic
+    let { data: deliveryData, error: deliveryError } = await supabase
       .from('delivered_messages')
       .select('*')
       .or(deliveryQuery)
