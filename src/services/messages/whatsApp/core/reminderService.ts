@@ -8,7 +8,7 @@ import { toast } from "@/components/ui/use-toast";
  */
 export async function triggerManualReminder(messageId: string, forceSend: boolean = true, testMode: boolean = true) {
   try {
-    console.log(`Triggering manual reminder check for message ${messageId}, forceSend: ${forceSend}, testMode: ${testMode}`);
+    console.log(`[REMINDER-SERVICE] Triggering manual reminder for message ${messageId}, forceSend: ${forceSend}, testMode: ${testMode}`);
 
     toast({
       title: "Reminder Check Triggered",
@@ -28,11 +28,27 @@ export async function triggerManualReminder(messageId: string, forceSend: boolea
         response_data: { triggered_at: new Date().toISOString(), forceSend, testMode }
       });
     } catch (logError) {
-      console.warn("Error logging manual trigger:", logError);
+      console.warn("[REMINDER-SERVICE] Error logging manual trigger:", logError);
       // Non-fatal, continue
     }
 
-    // First attempt - call reminder emails function
+    // Get the message creator's user_id for better tracking
+    let userId = null;
+    try {
+      const { data: messageData } = await supabase
+        .from("messages")
+        .select("user_id")
+        .eq("id", messageId)
+        .single();
+      
+      userId = messageData?.user_id;
+      console.log(`[REMINDER-SERVICE] Message creator user_id: ${userId}`);
+    } catch (error) {
+      console.warn("[REMINDER-SERVICE] Could not get message user_id:", error);
+      // Non-fatal, continue
+    }
+
+    // First attempt - call reminder emails function directly
     let primarySuccess = false;
     try {
       const { data: reminderData, error: reminderError } = await supabase.functions.invoke("send-reminder-emails", {
@@ -42,25 +58,26 @@ export async function triggerManualReminder(messageId: string, forceSend: boolea
           forceSend: true, // CRITICAL FIX: Always force send for manual triggers
           source: "manual-ui-trigger",
           testMode: true, // CRITICAL FIX: Always use test mode for manual triggers
-          action: "test-delivery" // Specify that this is a test delivery
+          action: "test-delivery", // Specify that this is a test delivery
+          userId: userId // Pass the user ID if available
         }
       });
       
       if (reminderError) {
-        console.error("Error triggering reminder:", reminderError);
+        console.error("[REMINDER-SERVICE] Error triggering reminder:", reminderError);
         // Don't throw yet, we'll try the backup method
       } else {
-        console.log("Reminder response from primary function:", reminderData);
+        console.log("[REMINDER-SERVICE] Reminder response from primary function:", reminderData);
         primarySuccess = true;
       }
     } catch (primaryError) {
-      console.error("Exception triggering primary reminder function:", primaryError);
+      console.error("[REMINDER-SERVICE] Exception triggering primary reminder function:", primaryError);
       // Don't throw yet, we'll try the backup method
     }
 
     // Second attempt - try notification function as backup if primary failed
     if (!primarySuccess) {
-      console.log("Primary reminder function failed, trying backup function...");
+      console.log("[REMINDER-SERVICE] Primary reminder function failed, trying backup function...");
       const { data, error } = await supabase.functions.invoke("send-message-notifications", {
         body: {
           messageId: messageId,
@@ -68,17 +85,18 @@ export async function triggerManualReminder(messageId: string, forceSend: boolea
           forceSend: true, // CRITICAL FIX: Always force send for backup method too
           source: "manual-ui-trigger-backup",
           testMode: true, // CRITICAL FIX: Always use test mode for backup method
-          action: "test-delivery" // Specify that this is a test delivery
+          action: "test-delivery", // Specify that this is a test delivery
+          userId: userId // Pass the user ID if available
         }
       });
 
       if (error) {
-        console.error("Error triggering backup reminder:", error);
+        console.error("[REMINDER-SERVICE] Error triggering backup reminder:", error);
         
         // Both methods failed - show error
         toast({
           title: "Error Triggering Reminder",
-          description: `Both reminder methods failed. Error: ${error.message || "Unknown error"}. Please try again or check server logs.`,
+          description: `Both reminder methods failed. Please try again or check with support.`,
           variant: "destructive",
           duration: 5000,
         });
@@ -86,7 +104,7 @@ export async function triggerManualReminder(messageId: string, forceSend: boolea
         throw error;
       }
 
-      console.log("Reminder response from backup function:", data);
+      console.log("[REMINDER-SERVICE] Reminder response from backup function:", data);
     }
 
     // For successful reminder delivery, show a more specific success toast
@@ -111,7 +129,7 @@ export async function triggerManualReminder(messageId: string, forceSend: boolea
           response_data: { completed_at: new Date().toISOString(), testMode }
         });
       } catch (logError) {
-        console.warn("Error logging manual trigger completion:", logError);
+        console.warn("[REMINDER-SERVICE] Error logging manual trigger completion:", logError);
       }
       
       return {
@@ -125,11 +143,11 @@ export async function triggerManualReminder(messageId: string, forceSend: boolea
       error: "No successful reminder method - this should not happen"
     };
   } catch (error: any) {
-    console.error("Error in triggerManualReminder:", error);
+    console.error("[REMINDER-SERVICE] Error in triggerManualReminder:", error);
     
     toast({
       title: "Error",
-      description: error.message || "An unknown error occurred",
+      description: error.message || "An unknown error occurred while sending the test reminder.",
       variant: "destructive", 
       duration: 5000,
     });

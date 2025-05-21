@@ -26,7 +26,7 @@ export function useReminderManager({ messageId, refreshTrigger }: ReminderManage
       // Rate limiting implementation - prevent refreshes more than once every 2 seconds
       const now = Date.now();
       if (now - lastRefreshTimeRef.current < 2000 || refreshInProgressRef.current) {
-        console.log(`[ReminderSection] Refresh rate limited - last refresh ${now - lastRefreshTimeRef.current}ms ago`);
+        console.log(`[ReminderManager] Refresh rate limited - last refresh ${now - lastRefreshTimeRef.current}ms ago`);
         return;
       }
       
@@ -55,7 +55,7 @@ export function useReminderManager({ messageId, refreshTrigger }: ReminderManage
       }, 2000);
       
     } catch (error) {
-      console.error("Error forcing refresh:", error);
+      console.error("[ReminderManager] Error forcing refresh:", error);
       setErrorState("Failed to refresh reminder data");
       refreshInProgressRef.current = false;
     }
@@ -63,34 +63,48 @@ export function useReminderManager({ messageId, refreshTrigger }: ReminderManage
   
   // Handle manual test of reminder delivery
   const handleTestReminder = async () => {
-    if (!messageId) return;
+    if (!messageId) {
+      toast({
+        title: "Error",
+        description: "Message ID is required to send a test reminder",
+        variant: "destructive",
+        duration: 3000,
+      });
+      return;
+    }
     
     setIsTestingReminder(true);
     testButtonClickedRef.current = true;
     
     try {
-      // CRITICAL FIX: Explicitly setting both parameters to true
-      await triggerManualReminder(messageId, true, true);
+      console.log(`[ReminderManager] Sending test reminder for message ${messageId}`);
       
-      toast({
-        title: "Test Reminder Sent",
-        description: "Check your email shortly for the test reminder.",
-        duration: 5000,
-      });
+      // CRITICAL FIX: Always pass true for both parameters to ensure test reminders are sent
+      const result = await triggerManualReminder(messageId, true, true);
+      
+      if (result.success) {
+        toast({
+          title: "Test Reminder Sent",
+          description: "Check your email shortly for the test reminder.",
+          duration: 5000,
+        });
+      } else {
+        throw new Error(result.error || "Failed to send test reminder");
+      }
       
       // Single refresh after a delay instead of multiple refreshes
       setTimeout(() => {
-        console.log(`[ReminderSection] Performing single refresh after test reminder`);
+        console.log(`[ReminderManager] Performing single refresh after test reminder`);
         handleForceRefresh();
       }, 2000);
       
-    } catch (error) {
-      console.error("Error testing reminder:", error);
+    } catch (error: any) {
+      console.error("[ReminderManager] Error testing reminder:", error);
       setErrorState("Failed to test reminder");
       
       toast({
         title: "Error Sending Reminder",
-        description: "Failed to send test reminder. Please try again.",
+        description: error.message || "Failed to send test reminder. Please try again.",
         variant: "destructive",
         duration: 5000,
       });
@@ -114,12 +128,12 @@ export function useReminderManager({ messageId, refreshTrigger }: ReminderManage
         }
         
         // Log specific event details for debugging
-        console.log(`[ReminderSection] Received relevant conditions-updated event: ${eventDetail.action || 'update'}`);
+        console.log(`[ReminderManager] Received relevant conditions-updated event: ${eventDetail.action || 'update'}`);
         
         // Use rate limiting for event-triggered refreshes
         const now = Date.now();
         if (now - lastRefreshTimeRef.current < 5000 || refreshInProgressRef.current) {
-          console.log(`[ReminderSection] Event-triggered refresh skipped due to rate limiting`);
+          console.log(`[ReminderManager] Event-triggered refresh skipped due to rate limiting`);
           return;
         }
         
@@ -135,11 +149,11 @@ export function useReminderManager({ messageId, refreshTrigger }: ReminderManage
   // Listen for external refresh trigger changes
   useEffect(() => {
     if (refreshTrigger && refreshTrigger > 0) {
-      console.log(`[ReminderSection] External refresh trigger changed: ${refreshTrigger}`);
+      console.log(`[ReminderManager] External refresh trigger changed: ${refreshTrigger}`);
       // Use the same rate limiting for external triggers
       const now = Date.now();
       if (now - lastRefreshTimeRef.current < 3000 || refreshInProgressRef.current) {
-        console.log(`[ReminderSection] External refresh skipped due to rate limiting`);
+        console.log(`[ReminderManager] External refresh skipped due to rate limiting`);
         return;
       }
       
