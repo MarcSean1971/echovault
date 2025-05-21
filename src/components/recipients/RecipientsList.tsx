@@ -2,6 +2,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RecipientCard } from "./RecipientCard";
 import { Recipient } from "@/types/message";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface RecipientsListProps {
   recipients: Recipient[];
@@ -17,7 +18,7 @@ export function RecipientsList({
   onRemoveRecipient 
 }: RecipientsListProps) {
   return (
-    <Card>
+    <Card className={HOVER_TRANSITION}>
       <CardHeader>
         <CardTitle>Your Trusted Contacts</CardTitle>
       </CardHeader>

@@ -2,6 +2,7 @@
 import { Button } from "@/components/ui/button";
 import { Recipient } from "@/types/message";
 import { Edit, Trash, User } from "lucide-react";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface RecipientCardProps {
   recipient: Recipient;
@@ -11,7 +12,7 @@ interface RecipientCardProps {
 
 export function RecipientCard({ recipient, onEdit, onDelete }: RecipientCardProps) {
   return (
-    <div className="flex items-center justify-between p-4 border rounded-md">
+    <div className="flex items-center justify-between p-4 border rounded-md hover:shadow-md transition-shadow">
       <div className="flex items-center space-x-4">
         <div className="bg-primary/10 p-2 rounded-full">
           <User className="h-5 w-5 text-primary" />
@@ -29,6 +30,7 @@ export function RecipientCard({ recipient, onEdit, onDelete }: RecipientCardProp
           variant="ghost"
           size="icon"
           onClick={() => onEdit(recipient)}
+          className={HOVER_TRANSITION}
         >
           <Edit className="h-4 w-4" />
         </Button>
@@ -36,6 +38,7 @@ export function RecipientCard({ recipient, onEdit, onDelete }: RecipientCardProp
           variant="ghost"
           size="icon"
           onClick={() => onDelete(recipient.id)}
+          className={HOVER_TRANSITION}
         >
           <Trash className="h-4 w-4" />
         </Button>
