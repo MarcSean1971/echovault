@@ -34,10 +34,11 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
           <Avatar className="h-9 w-9 rounded-full">
             {userImage ? (
               <AvatarImage src={userImage} alt="Profile picture" />
-            ) : null}
-            <AvatarFallback>
-              {initials}
-            </AvatarFallback>
+            ) : (
+              <AvatarFallback>
+                {initials}
+              </AvatarFallback>
+            )}
           </Avatar>
         </div>
       </DropdownMenuTrigger>
