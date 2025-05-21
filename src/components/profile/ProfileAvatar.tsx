@@ -82,7 +82,7 @@ export function ProfileAvatar({ avatarUrl, initials, onAvatarUpdate }: ProfileAv
         onMouseLeave={() => setIsHovering(false)}
       >
         <Avatar 
-          className={`h-24 w-24 ${!isUploading && "cursor-pointer"}`}
+          className={`h-24 w-24 ${!isUploading && "cursor-pointer"} ${HOVER_TRANSITION}`}
           onClick={handleAvatarClick}
         >
           {avatarUrl ? (
@@ -100,14 +100,14 @@ export function ProfileAvatar({ avatarUrl, initials, onAvatarUpdate }: ProfileAv
             className={`absolute inset-0 bg-black/50 rounded-full flex items-center justify-center ${HOVER_TRANSITION}`}
             onClick={handleAvatarClick}
           >
-            <Upload className="text-white h-8 w-8" />
+            <Upload className={`text-white h-8 w-8 ${HOVER_TRANSITION}`} />
           </div>
         )}
 
         {/* Loading overlay */}
         {isUploading && (
           <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
-            <Loader2 className="text-white h-8 w-8 animate-spin" />
+            <Loader2 className={`text-white h-8 w-8 animate-spin ${HOVER_TRANSITION}`} />
           </div>
         )}
 

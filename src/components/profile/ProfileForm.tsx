@@ -54,35 +54,33 @@ export function ProfileForm({ profile, onSubmit }: ProfileFormProps) {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="first_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>First name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="First name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="last_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Last name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Last name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="first_name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>First name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="First name" {...field} className={HOVER_TRANSITION} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="last_name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Last name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Last name" {...field} className={HOVER_TRANSITION} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             
             <FormField
               control={form.control}
@@ -91,7 +89,7 @@ export function ProfileForm({ profile, onSubmit }: ProfileFormProps) {
                 <FormItem>
                   <FormLabel>Backup Email</FormLabel>
                   <FormControl>
-                    <Input type="email" placeholder="backup@example.com" {...field} />
+                    <Input type="email" placeholder="backup@example.com" {...field} className={HOVER_TRANSITION} />
                   </FormControl>
                   <FormDescription>
                     A secondary email that can be used if your primary email is unavailable.
@@ -108,7 +106,7 @@ export function ProfileForm({ profile, onSubmit }: ProfileFormProps) {
                 <FormItem>
                   <FormLabel>WhatsApp Number</FormLabel>
                   <FormControl>
-                    <Input placeholder="+1 234 567 8900" {...field} />
+                    <Input placeholder="+1 234 567 8900" {...field} className={HOVER_TRANSITION} />
                   </FormControl>
                   <FormDescription>
                     Your WhatsApp number with country code (e.g., +1 for USA)
@@ -125,7 +123,7 @@ export function ProfileForm({ profile, onSubmit }: ProfileFormProps) {
                 <FormItem>
                   <FormLabel>Backup Contact Number</FormLabel>
                   <FormControl>
-                    <Input placeholder="+1 234 567 8900" {...field} />
+                    <Input placeholder="+1 234 567 8900" {...field} className={HOVER_TRANSITION} />
                   </FormControl>
                   <FormDescription>
                     An alternative phone number where you can be reached
