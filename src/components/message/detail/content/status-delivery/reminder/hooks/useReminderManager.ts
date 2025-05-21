@@ -69,8 +69,14 @@ export function useReminderManager({ messageId, refreshTrigger }: ReminderManage
     testButtonClickedRef.current = true;
     
     try {
-      // Updated to explicitly set testMode=true
+      // CRITICAL FIX: Explicitly setting both parameters to true
       await triggerManualReminder(messageId, true, true);
+      
+      toast({
+        title: "Test Reminder Sent",
+        description: "Check your email shortly for the test reminder.",
+        duration: 5000,
+      });
       
       // Single refresh after a delay instead of multiple refreshes
       setTimeout(() => {
@@ -81,6 +87,13 @@ export function useReminderManager({ messageId, refreshTrigger }: ReminderManage
     } catch (error) {
       console.error("Error testing reminder:", error);
       setErrorState("Failed to test reminder");
+      
+      toast({
+        title: "Error Sending Reminder",
+        description: "Failed to send test reminder. Please try again.",
+        variant: "destructive",
+        duration: 5000,
+      });
     } finally {
       setIsTestingReminder(false);
     }

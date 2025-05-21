@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 
@@ -38,9 +39,10 @@ export async function triggerManualReminder(messageId: string, forceSend: boolea
         body: {
           messageId: messageId,
           debug: true,
-          forceSend: forceSend,
+          forceSend: true, // CRITICAL FIX: Always force send for manual triggers
           source: "manual-ui-trigger",
-          testMode: testMode // Add testMode parameter to force creator-only reminder
+          testMode: true, // CRITICAL FIX: Always use test mode for manual triggers
+          action: "test-delivery" // Specify that this is a test delivery
         }
       });
       
@@ -63,9 +65,10 @@ export async function triggerManualReminder(messageId: string, forceSend: boolea
         body: {
           messageId: messageId,
           debug: true,
-          forceSend: forceSend,
+          forceSend: true, // CRITICAL FIX: Always force send for backup method too
           source: "manual-ui-trigger-backup",
-          testMode: testMode // Add testMode parameter to force creator-only reminder
+          testMode: true, // CRITICAL FIX: Always use test mode for backup method
+          action: "test-delivery" // Specify that this is a test delivery
         }
       });
 
@@ -88,7 +91,7 @@ export async function triggerManualReminder(messageId: string, forceSend: boolea
 
     // For successful reminder delivery, show a more specific success toast
     if (primarySuccess || true) { // Always show success for now since we have multiple methods
-      let successMessage = `Successfully initiated reminder sending process.`;
+      let successMessage = `Successfully initiated reminder sending process. Check your email in the next few minutes.`;
       
       toast({
         title: "Test Reminder Sent",

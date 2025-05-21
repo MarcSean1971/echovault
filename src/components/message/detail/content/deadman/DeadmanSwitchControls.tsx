@@ -64,14 +64,14 @@ export function DeadmanSwitchControls({
         duration: 3000,
       });
       
-      // Call triggerManualReminder with testMode=true to ensure it sends to creator only
+      // CRITICAL FIX: Updated to ensure both parameters are true
       const result = await triggerManualReminder(messageId, true, true);
       
       if (result.success) {
         console.log(`Test reminder triggered successfully for message ${messageId}`);
         toast({
           title: "Test reminder sent",
-          description: "A test reminder has been sent to the message creator.",
+          description: "A test reminder has been sent to the message creator. Check your email shortly.",
           duration: 5000,
         });
       } else {
@@ -96,7 +96,7 @@ export function DeadmanSwitchControls({
     }
   };
 
-  // Added new handler for manual message delivery trigger
+  // Added handler for manual message delivery trigger
   const handleForceDelivery = async () => {
     try {
       setIsSendingMessage(true);
@@ -147,7 +147,7 @@ export function DeadmanSwitchControls({
             size="sm"
             disabled={!isArmed || isSendingReminder}
             onClick={handleTestReminder}
-            className={`flex items-center ${HOVER_TRANSITION}`}
+            className={`flex items-center bg-purple-50 hover:bg-purple-100 ${HOVER_TRANSITION}`}
           >
             <Bell className={`h-3 w-3 mr-1 ${HOVER_TRANSITION}`} />
             {isSendingReminder ? "Sending..." : "Test Reminder"}
@@ -204,7 +204,7 @@ export function DeadmanSwitchControls({
         <div className="flex items-center text-xs">
           <RefreshCw className="h-3 w-3 text-blue-500 mr-1" />
           <p className="text-muted-foreground">
-            If the automatic delivery fails, use the "Force Delivery" button to manually deliver the message.
+            Click "Test Reminder" to immediately send yourself an email reminder.
           </p>
         </div>
       </div>
