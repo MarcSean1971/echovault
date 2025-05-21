@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from "react";
-import { useMessageCondition } from "@/hooks/useMessageCondition";
+import { useMessageCondition } from "@/hooks/message-condition";
 import { useMessageCardActions } from "@/hooks/useMessageCardActions";
 import { ensureReminderSchedule } from "@/utils/reminder/ensureReminderSchedule";
 
