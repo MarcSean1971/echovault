@@ -15,7 +15,7 @@ interface MobileNavProps {
 
 export function MobileNav({ userImage, initials }: MobileNavProps) {
   const location = useLocation();
-  const { signOut } = useAuth();
+  const { signOut, user } = useAuth();
 
   // Check if a path is active
   const isActive = (path: string) => location.pathname === path;
@@ -26,6 +26,9 @@ export function MobileNav({ userImage, initials }: MobileNavProps) {
     console.log("Sign out clicked");
     await signOut();
   };
+  
+  // Check if user has admin access
+  const isAdmin = user?.email === "marc.s@seelenbinderconsulting.com";
   
   return (
     <div className="flex md:hidden items-center space-x-2">
@@ -77,6 +80,17 @@ export function MobileNav({ userImage, initials }: MobileNavProps) {
                 <Users className="h-5 w-5" />
                 <span>Recipients</span>
               </Link>
+              
+              {/* Add Admin Dashboard link for admin users */}
+              {isAdmin && (
+                <Link to="/admin" className={cn(
+                  "flex items-center gap-3 w-full p-3 rounded-lg font-medium transition-all duration-200 hover:bg-accent/10",
+                  isActive("/admin") && "bg-accent/15 text-accent"
+                )}>
+                  <Settings className="h-5 w-5" />
+                  <span>Admin Dashboard</span>
+                </Link>
+              )}
               
               <Link to="/profile" className={cn(
                 "flex items-center gap-3 w-full p-3 rounded-lg font-medium transition-all duration-200 hover:bg-accent/10",
