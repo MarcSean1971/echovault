@@ -2,6 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { ensureReminderSchedule } from "@/utils/reminder/ensureReminderSchedule";
 import { getCurrentLocation } from "@/services/location/mapboxService";
+import { invalidateReminderCache } from "@/utils/reminder/reminderFetcher";
 
 /**
  * Perform a check-in for a condition
@@ -11,6 +12,15 @@ export async function performCheckIn(conditionId: string): Promise<boolean> {
   try {
     console.log(`[CHECK-IN] Performing check-in for condition ${conditionId}`);
     const now = new Date().toISOString();
+    
+    // First get the condition's message_id for cache invalidation
+    const { data: condition, error: getError } = await supabase
+      .from("message_conditions")
+      .select("message_id")
+      .eq("id", conditionId)
+      .single();
+      
+    const messageId = condition?.message_id;
     
     // Update the last_checked timestamp
     const { error } = await supabase
@@ -27,10 +37,17 @@ export async function performCheckIn(conditionId: string): Promise<boolean> {
     
     console.log("[CHECK-IN] Check-in successful, regenerating reminder schedule");
     
+    // CRITICAL FIX: Explicitly invalidate reminder cache
+    if (messageId) {
+      console.log(`[CHECK-IN] Invalidating reminder cache for message ${messageId}`);
+      invalidateReminderCache([messageId]);
+    }
+    
     // After successful check-in, update the reminder schedule
     // This is crucial for no_check_in conditions where the deadline shifts
     try {
-      await ensureReminderSchedule(conditionId);
+      // Pass false to ensure isEdit=false - we want immediate checks
+      await ensureReminderSchedule(conditionId, false);
       // Add improved logging to track success/failure
       console.log("[CHECK-IN] Successfully regenerated reminder schedule");
     } catch (scheduleError) {
@@ -43,10 +60,28 @@ export async function performCheckIn(conditionId: string): Promise<boolean> {
     window.dispatchEvent(new CustomEvent('conditions-updated', { 
       detail: { 
         conditionId,
+        messageId,
         updatedAt: now,
         action: 'check-in'
       }
     }));
+    
+    // CRITICAL FIX: Trigger reminder processing directly after a check-in
+    // This ensures reminders are sent without waiting for cron jobs
+    try {
+      console.log("[CHECK-IN] Triggering immediate reminder processing");
+      await supabase.functions.invoke("send-reminder-emails", {
+        body: { 
+          messageId: messageId,
+          debug: true,
+          forceSend: false,
+          source: "post-check-in-trigger"
+        }
+      });
+    } catch (processingError) {
+      console.error("[CHECK-IN] Error triggering immediate reminder processing:", processingError);
+      // Non-fatal error, continue execution
+    }
     
     return true;
   } catch (error) {

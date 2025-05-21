@@ -21,7 +21,6 @@ export async function generateReminderSchedule(
   console.log(`[REMINDER-GENERATOR] isEdit: ${isEdit}`);
   
   try {
-    // MODIFIED: Allow empty reminder arrays - don't set defaults
     // Log the reminder minutes for debugging
     console.log(`[REMINDER-GENERATOR] Using ${reminderMinutes.length} reminder times:`, reminderMinutes);
     console.log(`[REMINDER-GENERATOR] Deadline: ${deadlineDate.toISOString()}`);
@@ -73,8 +72,6 @@ export async function generateCheckInReminderSchedule(
     console.log(`[REMINDER-GENERATOR] Generating check-in reminder schedule for message ${messageId}`);
     console.log(`[REMINDER-GENERATOR] isEdit: ${isEdit}`);
     console.log(`[REMINDER-GENERATOR] Last checked: ${lastCheckedDate.toISOString()}`);
-    
-    // MODIFIED: Allow empty reminder arrays - don't set defaults
     
     // Calculate virtual deadline based on last check-in + threshold
     const virtualDeadline = new Date(lastCheckedDate);

@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useActionToasts } from "./useActionToasts";
 import { useConditionUpdates } from "./useConditionUpdates";
 import { ensureReminderSchedule } from "@/utils/reminder/ensureReminderSchedule";
+import { invalidateReminderCache } from "@/utils/reminder/reminderFetcher";
 
 /**
  * Hook for handling arming message operations
@@ -33,17 +34,20 @@ export function useArmOperations() {
       // First, get the current condition to extract messageId for later use
       const { data: currentCondition, error: fetchError } = await supabase
         .from("message_conditions")
-        .select("message_id")
+        .select("message_id, condition_type")
         .eq("id", conditionId)
         .single();
         
       if (fetchError) throw fetchError;
       
       const messageId = currentCondition?.message_id;
+      const conditionType = currentCondition?.condition_type;
       
       // Immediately invalidate cache to force a refresh on next query
       if (messageId) {
         invalidateCache(messageId);
+        // Also invalidate reminder cache
+        invalidateReminderCache([messageId]);
       }
       
       // Emit an optimistic update event immediately
@@ -70,7 +74,9 @@ export function useArmOperations() {
       // CRITICAL FIX: Directly ensure reminder schedule is created
       // This is the key fix to make sure reminders are always generated
       console.log(`[useArmOperations] Directly ensuring reminder schedule for condition ${conditionId}`);
-      await ensureReminderSchedule(conditionId, false); // Fix: Pass boolean instead of string
+      
+      // Set isEdit to false explicitly for arming operations to force notification checks
+      await ensureReminderSchedule(conditionId, false);
       
       // Fire a background event to handle reminder generation without blocking UI
       setTimeout(() => {

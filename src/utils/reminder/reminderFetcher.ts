@@ -17,7 +17,7 @@ const reminderCache: {
   }
 } = {};
 
-// Cache TTL - 30 seconds
+// REDUCED Cache TTL to 30 seconds for more responsive updates
 const CACHE_TTL = 30 * 1000;
 
 /**
@@ -144,7 +144,7 @@ export function invalidateReminderCache(messageIds?: string[]) {
         delete reminderCache[key];
       }
     });
-    console.log(`[REMINDER-FETCHER] Invalidated reminder cache for specific messages`);
+    console.log(`[REMINDER-FETCHER] Invalidated reminder cache for specific messages: ${messageIds.join(', ')}`);
   } else {
     // Clear the entire cache
     Object.keys(reminderCache).forEach(key => {
@@ -160,8 +160,10 @@ if (typeof window !== 'undefined') {
     if (event instanceof CustomEvent) {
       const detail = event.detail || {};
       if (detail.messageId) {
+        console.log(`[REMINDER-FETCHER] Event triggered cache invalidation for message ${detail.messageId}`);
         invalidateReminderCache([detail.messageId]);
       } else {
+        console.log(`[REMINDER-FETCHER] Event triggered full cache invalidation`);
         invalidateReminderCache();
       }
     }

@@ -17,10 +17,11 @@ export function useConditionEvents(
     if (event instanceof CustomEvent) {
       const detail = event.detail || {};
       const eventMessageId = detail.messageId;
+      const action = detail.action;
       
       // If event is for this specific message or it's a global update
       if (!eventMessageId || eventMessageId === messageId) {
-        console.log(`[MessageCard ${messageId}] Received conditions-updated event, reloading`);
+        console.log(`[MessageCard ${messageId}] Received conditions-updated event, action: ${action || 'update'}, reloading`);
         
         // Clear cache for this message
         invalidateCache();
