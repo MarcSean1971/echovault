@@ -1,6 +1,7 @@
 
 /**
  * Send a WhatsApp message for a reminder
+ * This connects to WhatsApp API or a service like Twilio to send WhatsApp messages
  */
 export async function sendWhatsApp(message: any, condition: any): Promise<boolean> {
   try {

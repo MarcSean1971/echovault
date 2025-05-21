@@ -21,17 +21,12 @@ export async function generateReminderSchedule(
   console.log(`[REMINDER-GENERATOR] isEdit: ${isEdit}`);
   
   try {
-    // Make sure we have at least one reminder time
-    if (reminderMinutes.length === 0) {
-      console.warn(`[REMINDER-GENERATOR] No reminder minutes provided for message ${messageId}, using default`);
-      reminderMinutes = [24 * 60]; // Default to 24 hours (1440 minutes) before deadline
-    }
-    
+    // MODIFIED: Allow empty reminder arrays - don't set defaults
     // Log the reminder minutes for debugging
     console.log(`[REMINDER-GENERATOR] Using ${reminderMinutes.length} reminder times:`, reminderMinutes);
     console.log(`[REMINDER-GENERATOR] Deadline: ${deadlineDate.toISOString()}`);
     
-    // Ensure reminder minutes are unique and sorted
+    // Ensure reminder minutes are unique and sorted if any exist
     const uniqueReminderMinutes = Array.from(new Set(reminderMinutes)).sort((a, b) => a - b);
     if (uniqueReminderMinutes.length !== reminderMinutes.length) {
       console.log(`[REMINDER-GENERATOR] Removed duplicate reminder minutes: ${reminderMinutes.length} -> ${uniqueReminderMinutes.length}`);
@@ -45,7 +40,7 @@ export async function generateReminderSchedule(
       triggerDate: deadlineDate.toISOString(),
       reminderMinutes: reminderMinutes,
       conditionType: 'standard',
-      lastChecked: null // Add the missing lastChecked property
+      lastChecked: null
     };
     
     // Create or update the reminder schedule
@@ -79,11 +74,7 @@ export async function generateCheckInReminderSchedule(
     console.log(`[REMINDER-GENERATOR] isEdit: ${isEdit}`);
     console.log(`[REMINDER-GENERATOR] Last checked: ${lastCheckedDate.toISOString()}`);
     
-    // Make sure we have at least one reminder
-    if (reminderMinutes.length === 0) {
-      console.warn(`[REMINDER-GENERATOR] No reminder minutes provided for message ${messageId}, using default`);
-      reminderMinutes = [24 * 60]; // Default to 24 hours (1440 minutes) before deadline if none specified
-    }
+    // MODIFIED: Allow empty reminder arrays - don't set defaults
     
     // Calculate virtual deadline based on last check-in + threshold
     const virtualDeadline = new Date(lastCheckedDate);
@@ -94,7 +85,7 @@ export async function generateCheckInReminderSchedule(
     console.log(`[REMINDER-GENERATOR] Virtual deadline: ${virtualDeadline.toISOString()}`);
     console.log(`[REMINDER-GENERATOR] Reminder minutes: ${JSON.stringify(reminderMinutes)}`);
     
-    // Ensure reminder minutes are unique and sorted
+    // Ensure reminder minutes are unique and sorted if any exist
     const uniqueReminderMinutes = Array.from(new Set(reminderMinutes)).sort((a, b) => a - b);
     if (uniqueReminderMinutes.length !== reminderMinutes.length) {
       console.log(`[REMINDER-GENERATOR] Removed duplicate reminder minutes: ${reminderMinutes.length} -> ${uniqueReminderMinutes.length}`);
@@ -110,7 +101,7 @@ export async function generateCheckInReminderSchedule(
       lastChecked: lastCheckedDate.toISOString(),
       hoursThreshold,
       minutesThreshold,
-      triggerDate: virtualDeadline.toISOString() // Add the missing triggerDate property
+      triggerDate: virtualDeadline.toISOString()
     };
     
     // Create or update the reminder schedule

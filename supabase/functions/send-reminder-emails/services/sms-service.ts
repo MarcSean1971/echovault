@@ -1,6 +1,7 @@
 
 /**
  * Send an SMS reminder for an upcoming message
+ * This connects to Twilio or another SMS provider to send SMS notifications
  */
 export async function sendSms(message: any, condition: any): Promise<boolean> {
   try {

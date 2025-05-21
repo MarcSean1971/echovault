@@ -8,6 +8,7 @@ import { markRemindersAsObsolete } from '../reminderUtils';
 
 /**
  * Generate and store reminder schedule for a message
+ * MODIFIED: Allow empty reminder arrays
  */
 export async function generateReminderSchedule(
   messageId: string,
@@ -21,11 +22,6 @@ export async function generateReminderSchedule(
       return false;
     }
     
-    if (!reminderMinutes || reminderMinutes.length === 0) {
-      console.error(`[REMINDER-GENERATOR] Cannot generate reminder schedule for message ${messageId} - no reminder minutes provided`);
-      return false;
-    }
-    
     console.log(`[REMINDER-GENERATOR] Generating reminder schedule for message ${messageId}, condition ${conditionId}`);
     console.log(`[REMINDER-GENERATOR] Trigger date: ${triggerDate.toISOString()}`);
     console.log(`[REMINDER-GENERATOR] Reminder minutes (count: ${reminderMinutes.length}): ${JSON.stringify(reminderMinutes)}`);
@@ -35,6 +31,23 @@ export async function generateReminderSchedule(
     if (!markResult) {
       console.warn(`[REMINDER-GENERATOR] Warning: Failed to mark existing reminders as obsolete for message ${messageId}`);
       // Continue despite warning, as we still want to try creating new reminders
+    }
+    
+    // If no reminders to generate, just create the final delivery timestamp
+    if (reminderMinutes.length === 0) {
+      console.log(`[REMINDER-GENERATOR] No reminders provided, only creating final delivery entry`);
+      
+      const finalDeliveryEntry = {
+        message_id: messageId,
+        condition_id: conditionId,
+        scheduled_at: triggerDate.toISOString(),
+        reminder_type: 'final_delivery',
+        status: 'pending',
+        delivery_priority: 'critical', // Mark as critical priority
+        retry_strategy: 'aggressive' // Use aggressive retry strategy
+      };
+      
+      return await storeReminderSchedule(messageId, conditionId, [finalDeliveryEntry]);
     }
     
     // Generate reminder timestamps - ensure we iterate through all reminder minutes

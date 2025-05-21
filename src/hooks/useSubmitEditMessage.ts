@@ -1,3 +1,4 @@
+
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -112,10 +113,10 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
       console.log("reminderMinutes type:", typeof reminderMinutes);
       console.log("reminderMinutes is Array:", Array.isArray(reminderMinutes));
       
-      // Create a validated copy of reminder minutes with proper type conversion
+      // Create a validated copy of reminder minutes with proper type conversion - allow empty arrays
       const validatedReminderMinutes = Array.isArray(reminderMinutes) 
-        ? reminderMinutes.map(Number) 
-        : [1440]; // Default to 24h if not valid array
+        ? reminderMinutes.map(Number).filter(min => !isNaN(min) && min > 0)
+        : [];
       
       console.log("validatedReminderMinutes (fixed):", validatedReminderMinutes);
       

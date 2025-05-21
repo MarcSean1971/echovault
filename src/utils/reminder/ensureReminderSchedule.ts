@@ -14,6 +14,7 @@ import { generateReminderSchedule } from "./reminderGenerator";
  * 
  * FIXED: Enhanced error handling, logging, and proper handling of reminder minutes values
  * FIXED: Added isEdit parameter to avoid sending notifications during edits
+ * MODIFIED: Allow empty reminder arrays - don't set defaults
  */
 export async function ensureReminderSchedule(
   conditionIdOrMessageId: string,
@@ -88,7 +89,7 @@ export async function ensureReminderSchedule(
       // Continue execution to attempt creating new reminders even if marking obsolete fails
     }
     
-    // FIXED: Improved reminder minutes handling
+    // FIXED: Improved reminder minutes handling - allow empty arrays
     let reminderMinutes: number[] = [];
     
     // Direct array handling - most efficient
@@ -118,12 +119,12 @@ export async function ensureReminderSchedule(
       // Handle non-string, non-array values (should be rare)
       else {
         console.log("[ENSURE-REMINDERS] Using non-standard reminder value type:", condition.reminder_hours);
-        reminderMinutes = [1440]; // Default to 24 hours as fallback
+        reminderMinutes = [];
       }
     } else {
-      // Default to 24 hours (1440 minutes) if no reminders are set
-      console.log("[ENSURE-REMINDERS] No reminder values found, using default");
-      reminderMinutes = [1440];
+      // MODIFIED: Use empty array instead of default
+      console.log("[ENSURE-REMINDERS] No reminder values found, using empty array");
+      reminderMinutes = [];
     }
     
     // Validate all entries are numbers and remove any NaN values
@@ -131,12 +132,7 @@ export async function ensureReminderSchedule(
       .map(Number)
       .filter(min => !isNaN(min) && min > 0);
       
-    // If we ended up with an empty array after filtering, use default
-    if (reminderMinutes.length === 0) {
-      console.log("[ENSURE-REMINDERS] No valid reminder values after filtering, using default");
-      reminderMinutes = [1440];
-    }
-    
+    // MODIFIED: Allow empty arrays - don't set defaults
     console.log("[ENSURE-REMINDERS] Final reminder minutes to use:", reminderMinutes);
     
     // Calculate effective deadline based on condition type

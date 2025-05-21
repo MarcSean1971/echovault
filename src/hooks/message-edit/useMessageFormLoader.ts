@@ -122,7 +122,7 @@ export function useMessageFormLoader(message: Message) {
             setDeliveryOption("once");
           }
           
-          // CRITICAL FIX: Enhanced reminder_hours handling with logging and validation
+          // MODIFIED: Reminder hours handling - don't set defaults
           console.log("[MessageFormLoader] LOADING REMINDER VALUES FROM DB:", messageCondition.reminder_hours);
           
           if (messageCondition.reminder_hours) {
@@ -134,13 +134,8 @@ export function useMessageFormLoader(message: Message) {
               // Filter out any NaN or 0 values
               const validMinutes = minuteValues.filter(min => !isNaN(min) && min > 0);
               
-              if (validMinutes.length > 0) {
-                console.log("[MessageFormLoader] Using valid parsed reminder minutes:", validMinutes);
-                setReminderMinutes(validMinutes);
-              } else {
-                console.log("[MessageFormLoader] No valid reminder values found in array, using default");
-                setReminderMinutes([1440]); // Default to 24 hours (1440 minutes)
-              }
+              console.log("[MessageFormLoader] Using valid parsed reminder minutes:", validMinutes);
+              setReminderMinutes(validMinutes);
             } 
             // Handle string values (like JSON)
             else if (typeof messageCondition.reminder_hours === 'string') {
@@ -154,13 +149,8 @@ export function useMessageFormLoader(message: Message) {
                   // Filter out any NaN or 0 values
                   const validMinutes = minuteValues.filter(min => !isNaN(min) && min > 0);
                   
-                  if (validMinutes.length > 0) {
-                    console.log("[MessageFormLoader] Using valid JSON parsed reminder minutes:", validMinutes);
-                    setReminderMinutes(validMinutes);
-                  } else {
-                    console.log("[MessageFormLoader] No valid values in JSON array, using default");
-                    setReminderMinutes([1440]); // Default to 24 hours
-                  }
+                  console.log("[MessageFormLoader] Using valid JSON parsed reminder minutes:", validMinutes);
+                  setReminderMinutes(validMinutes);
                 } else {
                   // Single value in JSON
                   const singleValue = Number(parsed);
@@ -168,13 +158,13 @@ export function useMessageFormLoader(message: Message) {
                     console.log("[MessageFormLoader] Using single JSON parsed value:", [singleValue]);
                     setReminderMinutes([singleValue]);
                   } else {
-                    console.log("[MessageFormLoader] Invalid single JSON value, using default");
-                    setReminderMinutes([1440]); // Default to 24 hours
+                    console.log("[MessageFormLoader] Invalid single JSON value, using empty array");
+                    setReminderMinutes([]);
                   }
                 }
               } catch (e) {
                 console.error("[MessageFormLoader] Failed to parse reminder_hours string:", e);
-                setReminderMinutes([1440]); // Default to 24 hours
+                setReminderMinutes([]);
               }
             }
             // Handle numeric values
@@ -183,27 +173,27 @@ export function useMessageFormLoader(message: Message) {
                 console.log("[MessageFormLoader] Using numeric reminder value:", [messageCondition.reminder_hours]);
                 setReminderMinutes([messageCondition.reminder_hours]);
               } else {
-                console.log("[MessageFormLoader] Invalid numeric value, using default");
-                setReminderMinutes([1440]); // Default to 24 hours
+                console.log("[MessageFormLoader] Invalid numeric value, using empty array");
+                setReminderMinutes([]);
               }
             }
             // Fallback for unknown types
             else {
-              console.log("[MessageFormLoader] Unknown reminder_hours type, using default");
-              setReminderMinutes([1440]); // Default to 24 hours
+              console.log("[MessageFormLoader] Unknown reminder_hours type, using empty array");
+              setReminderMinutes([]);
             }
           } else {
-            // No reminder_hours set, use default
-            console.log("[MessageFormLoader] No reminders found, setting default");
-            setReminderMinutes([1440]); // Default to 24 hours
+            // No reminder_hours set, use empty array instead of default
+            console.log("[MessageFormLoader] No reminders found, setting empty array");
+            setReminderMinutes([]);
           }
           
           // Set custom check-in code
           setCheckInCode(messageCondition.check_in_code || "");
         } else {
-          // No existing condition, set default reminder (24 hours = 1440 minutes)
-          console.log("[MessageFormLoader] No condition found, setting default reminder");
-          setReminderMinutes([1440]);
+          // No existing condition, set empty reminder array instead of default
+          console.log("[MessageFormLoader] No condition found, setting empty reminder array");
+          setReminderMinutes([]);
         }
         
         // Load all recipients for selection
