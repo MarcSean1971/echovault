@@ -1,13 +1,9 @@
-
 import { Card, CardContent } from "@/components/ui/card";
 import { Users, UserCheck, UserPlus } from "lucide-react";
+import { UserStatsData } from "./types/admin";
 
 interface UserStatsProps {
-  stats: {
-    totalUsers: number;
-    activeUsers: number;
-    newUsers: number;
-  };
+  stats: UserStatsData;
   loading: boolean;
 }
 

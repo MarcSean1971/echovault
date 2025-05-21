@@ -117,20 +117,23 @@ export default function UserTable({ filter }: UserTableProps) {
                       <div className="flex gap-2">
                         <Button 
                           size="sm" 
-                          variant="ghost" 
+                          variant="ghost"
                           onClick={() => handleViewUser(user)}
+                          className="hover:bg-primary/10 transition-colors"
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
                         <Button 
                           size="sm" 
                           variant="ghost"
+                          className="hover:bg-primary/10 transition-colors"
                         >
                           <Lock className="h-4 w-4" />
                         </Button>
                         <Button 
                           size="sm" 
                           variant="ghost"
+                          className="hover:bg-primary/10 transition-colors"
                         >
                           <UserX className="h-4 w-4" />
                         </Button>

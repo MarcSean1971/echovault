@@ -4,14 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import UserTable from "./UserTable";
-import UserStats from "./UserStats";
+import UserStatsSection from "./UserStatsSection";
 import { supabase } from "@/integrations/supabase/client";
-
-interface UserStatsData {
-  totalUsers: number;
-  activeUsers: number;
-  newUsers: number;
-}
+import { UserStatsData } from "./types/admin";
 
 export default function UserManagement() {
   const [loading, setLoading] = useState(true);
@@ -68,50 +63,60 @@ export default function UserManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h3 className="text-xl font-semibold">User Management</h3>
-          <p className="text-muted-foreground">Manage user accounts and permissions</p>
-        </div>
-      </div>
-
-      <UserStats stats={userStats} loading={loading} />
-
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg">Users</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="all" className="w-full">
-            <TabsList className="mb-4 w-full sm:w-auto">
-              <TabsTrigger value="all" className="flex-1 sm:flex-none">
-                All Users
-                <Badge variant="secondary" className="ml-2">{userStats.totalUsers}</Badge>
-              </TabsTrigger>
-              <TabsTrigger value="active" className="flex-1 sm:flex-none">
-                Active
-                <Badge variant="secondary" className="ml-2">{userStats.activeUsers}</Badge>
-              </TabsTrigger>
-              <TabsTrigger value="new" className="flex-1 sm:flex-none">
-                New
-                <Badge variant="secondary" className="ml-2">{userStats.newUsers}</Badge>
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="all" className="mt-0">
-              <UserTable filter="all" />
-            </TabsContent>
-            
-            <TabsContent value="active" className="mt-0">
-              <UserTable filter="active" />
-            </TabsContent>
-            
-            <TabsContent value="new" className="mt-0">
-              <UserTable filter="new" />
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+      <UserManagementHeader />
+      <UserStatsSection stats={userStats} loading={loading} />
+      <UserTabsCard userStats={userStats} />
     </div>
+  );
+}
+
+function UserManagementHeader() {
+  return (
+    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div>
+        <h3 className="text-xl font-semibold">User Management</h3>
+        <p className="text-muted-foreground">Manage user accounts and permissions</p>
+      </div>
+    </div>
+  );
+}
+
+function UserTabsCard({ userStats }: { userStats: UserStatsData }) {
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-lg">Users</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Tabs defaultValue="all" className="w-full">
+          <TabsList className="mb-4 w-full sm:w-auto">
+            <TabsTrigger value="all" className="flex-1 sm:flex-none">
+              All Users
+              <Badge variant="secondary" className="ml-2">{userStats.totalUsers}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="active" className="flex-1 sm:flex-none">
+              Active
+              <Badge variant="secondary" className="ml-2">{userStats.activeUsers}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="new" className="flex-1 sm:flex-none">
+              New
+              <Badge variant="secondary" className="ml-2">{userStats.newUsers}</Badge>
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="all" className="mt-0">
+            <UserTable filter="all" />
+          </TabsContent>
+          
+          <TabsContent value="active" className="mt-0">
+            <UserTable filter="active" />
+          </TabsContent>
+          
+          <TabsContent value="new" className="mt-0">
+            <UserTable filter="new" />
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
   );
 }
