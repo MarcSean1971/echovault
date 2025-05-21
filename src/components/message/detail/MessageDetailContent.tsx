@@ -6,7 +6,7 @@ import { MessageNotFound } from "./MessageNotFound";
 import { SendTestMessageDialog } from "./SendTestMessageDialog";
 import { useSearchParams } from "react-router-dom";
 import { MainContentSection } from "./content/MainContentSection";
-import { StatusDeliverySection } from "./content/StatusDeliverySection";
+import { StatusDeliverySection } from "./content/status-delivery/StatusDeliverySection";
 import { RecipientsSection } from "./content/RecipientsSection";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,8 @@ import { useNavigate } from "react-router-dom";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { Skeleton } from "@/components/ui/skeleton";
+import { MessageHeader } from "./MessageHeader"; // Added missing import
+import { MessageContent } from "./content/message-content"; // Added missing import
 
 interface MessageDetailContentProps {
   message: Message;
@@ -175,16 +177,12 @@ export function MessageDetailContent({
                 "Recipients"
               )}
               {recipients && recipients.length > 0 ? (
-                <div className="space-y-1">
-                  {recipients.map((recipient) => (
-                    <div key={recipient.id} className="p-2 border rounded-md flex justify-between items-center">
-                      <div>
-                        <div className="font-medium">{recipient.name}</div>
-                        <div className="text-sm text-muted-foreground">{recipient.email}</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <RecipientsSection
+                  recipients={recipients}
+                  isArmed={isArmed}
+                  isActionLoading={isActionLoading}
+                  onSendTestMessage={onSendTestMessage}
+                />
               ) : (
                 <p className="text-muted-foreground text-sm">No recipients</p>
               )}
