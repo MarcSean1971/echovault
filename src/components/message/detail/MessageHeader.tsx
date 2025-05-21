@@ -55,7 +55,7 @@ export function MessageHeader({
               variant="outline"
               onClick={handleArmMessage}
               disabled={isActionLoading}
-              className="text-destructive hover:bg-destructive/20 hover:text-destructive border-destructive"
+              className="text-purple-600 hover:bg-purple-100 hover:text-purple-700 border-purple-200"
               size="sm"
             >
               <Bell className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} /> Arm

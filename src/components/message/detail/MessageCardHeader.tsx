@@ -18,7 +18,7 @@ export function MessageCardHeader({ message, formatDate }: MessageCardHeaderProp
             <MessageTypeIcon messageType={message.message_type} />
           </div>
           <div className="min-h-[3rem] flex flex-col justify-center">
-            <h1 className={`text-xl md:text-2xl font-semibold line-clamp-2 leading-tight ${HOVER_TRANSITION}`}>
+            <h1 className={`text-xl md:text-2xl font-semibold line-clamp-2 leading-tight ${HOVER_TRANSITION} text-purple-900`}>
               {message.title}
             </h1>
           </div>

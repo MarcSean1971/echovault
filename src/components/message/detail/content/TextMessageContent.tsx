@@ -45,7 +45,7 @@ export function TextMessageContent({ message, content }: TextMessageContentProps
   
   return (
     cleanedContent ? (
-      <div className={`whitespace-pre-wrap prose dark:prose-invert max-w-none text-sm md:text-base ${HOVER_TRANSITION}`}>
+      <div className={`whitespace-pre-wrap prose dark:prose-invert max-w-none text-sm md:text-base ${HOVER_TRANSITION} prose-headings:text-purple-900 prose-a:text-purple-600 hover:prose-a:text-purple-700`}>
         {cleanedContent}
       </div>
     ) : (

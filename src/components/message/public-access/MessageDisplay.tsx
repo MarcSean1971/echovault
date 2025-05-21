@@ -94,22 +94,22 @@ export const MessageDisplay = ({
       )}
       
       <Card className="overflow-hidden border shadow-sm">
-        {/* Message Header - Shows immediately */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6 text-white">
+        {/* Message Header - Shows immediately - CHANGED COLOR SCHEME TO PURPLE */}
+        <div className="bg-gradient-to-r from-purple-600 to-purple-700 p-6 text-white">
           <h1 className="text-2xl font-bold mb-2">{message.title}</h1>
-          <div className="flex items-center text-blue-100 text-sm">
+          <div className="flex items-center text-purple-100 text-sm">
             <Calendar className={`h-4 w-4 mr-1 ${HOVER_TRANSITION}`} />
             <span>{formatMessageDate(message.created_at)}</span>
           </div>
         </div>
         
-        {/* Security Badge - Shows immediately */}
-        <div className="bg-blue-50 px-6 py-2 border-b border-blue-100">
+        {/* Security Badge - Shows immediately - CHANGED COLOR SCHEME TO PURPLE */}
+        <div className="bg-purple-50 px-6 py-2 border-b border-purple-100">
           <div className="flex items-center">
-            <Shield className={`h-4 w-4 text-blue-600 mr-2 ${HOVER_TRANSITION}`} />
-            <span className="text-sm font-medium text-blue-700">Secure Message</span>
+            <Shield className={`h-4 w-4 text-purple-600 mr-2 ${HOVER_TRANSITION}`} />
+            <span className="text-sm font-medium text-purple-700">Secure Message</span>
             
-            <Badge variant="outline" className="ml-auto border-blue-200 text-blue-700">
+            <Badge variant="outline" className="ml-auto border-purple-200 text-purple-700">
               <Clock className={`h-3 w-3 mr-1 ${HOVER_TRANSITION}`} /> {message.expires_at ? 'Expires' : 'No Expiration'}
             </Badge>
           </div>
@@ -122,11 +122,11 @@ export const MessageDisplay = ({
           </div>
         </div>
         
-        {/* Footer - Shows immediately */}
+        {/* Footer - Shows immediately - CHANGED COLOR SCHEME TO PURPLE */}
         <div className="bg-gray-50 px-6 py-4 text-sm text-gray-500 border-t">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <Shield className={`h-4 w-4 mr-2 text-blue-500 ${HOVER_TRANSITION}`} />
+              <Shield className={`h-4 w-4 mr-2 text-purple-500 ${HOVER_TRANSITION}`} />
               <span>This message was delivered securely</span>
             </div>
             
