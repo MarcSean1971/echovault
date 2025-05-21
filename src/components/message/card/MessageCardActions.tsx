@@ -75,10 +75,10 @@ export function MessageCardActions({
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={() => navigate(`/message/${messageId}`)}
-              className={`hover:bg-primary/10 hover:text-primary group ${HOVER_TRANSITION}`}
+              className={`text-primary border-primary/30 hover:border-primary hover:bg-primary/10 hover:text-primary group ${HOVER_TRANSITION}`}
             >
               <span className="hidden sm:inline mr-1.5">View</span> 
               <ArrowRight className={`h-4 w-4 ${iconHoverEffect}`} />
