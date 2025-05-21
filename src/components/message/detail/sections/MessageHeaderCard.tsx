@@ -2,7 +2,7 @@
 import React from "react";
 import { Message } from "@/types/message";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { MessageCardHeader } from "../MessageCardHeader";
+import { MessageHeader } from "@/components/message/detail/MessageHeader";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface MessageHeaderCardProps {
