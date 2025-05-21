@@ -8,6 +8,7 @@ import {
   updateMessageCondition,
   createMessageCondition 
 } from "@/services/messages/conditionService";
+import { notifyRecipientsAddedToMessage } from "@/services/messages/notificationService";
 import { useAttachmentHandler } from "./message-edit/useAttachmentHandler";
 import { useContentHandler } from "./message-edit/useContentHandler";
 import { useTimeThresholdHandler } from "./message-edit/useTimeThresholdHandler";
@@ -119,6 +120,17 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
         : [];
       
       console.log("validatedReminderMinutes (fixed):", validatedReminderMinutes);
+
+      // Determine if we need to notify any new recipients
+      let newRecipients = selectedRecipientObjects;
+      
+      // If there's an existing condition, find recipients that aren't in it yet
+      if (existingCondition && existingCondition.recipients) {
+        const existingRecipientIds = (existingCondition.recipients as any[]).map(r => r.id);
+        newRecipients = selectedRecipientObjects.filter(
+          recipient => !existingRecipientIds.includes(recipient.id)
+        );
+      }
       
       if (existingCondition) {
         console.log("[EditMessage] Updating existing condition ID:", existingCondition.id);
@@ -200,7 +212,15 @@ export function useSubmitEditMessage(message: Message, existingCondition: Messag
         if (newCondition && newCondition.id) {
           conditionId = newCondition.id;
           console.log("[EditMessage] New condition created with ID:", conditionId);
+          
+          // All recipients are new when creating a new condition
+          newRecipients = selectedRecipientObjects;
         }
+      }
+      
+      // If we found new recipients, send them welcome notifications
+      if (newRecipients && newRecipients.length > 0) {
+        await notifyRecipientsAddedToMessage(message.id, newRecipients, title);
       }
       
       // Dispatch a custom event to trigger UI refresh before navigating away

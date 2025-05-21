@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/components/ui/use-toast";
 import { createMessage } from "@/services/messages";
 import { createMessageCondition } from "@/services/messages/conditionService";
+import { notifyRecipientsAddedToMessage } from "@/services/messages/notificationService";
 import { useMessageForm } from "@/components/message/MessageFormContext";
 import { useFormValidation } from "@/hooks/useFormValidation";
 import { simulateUploadProgress } from "@/utils/uploadProgress";
@@ -144,7 +145,8 @@ export function useFormActions() {
           // Values are already stored as minutes, no need to convert
           console.log("Using reminder minutes:", reminderMinutes);
           
-          await createMessageCondition(
+          // Create message condition with recipients
+          const newCondition = await createMessageCondition(
             message.id,
             conditionType as TriggerType,
             {
@@ -177,6 +179,13 @@ export function useFormActions() {
             title: "Trigger configured",
             description: "Message trigger has been set up successfully"
           });
+          
+          // Send welcome notifications to recipients who have opted in
+          await notifyRecipientsAddedToMessage(
+            message.id,
+            recipients,
+            title
+          );
         } catch (error: any) {
           console.error("Error creating trigger condition:", error);
           toast({

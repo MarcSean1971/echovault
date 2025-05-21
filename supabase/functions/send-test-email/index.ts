@@ -51,7 +51,7 @@ const handler = async (req: Request): Promise<Response> => {
     
     // Choose the appropriate email template based on the request type
     const htmlContent = isWelcomeEmail 
-      ? generateWelcomeEmail(recipientName, appName)
+      ? generateWelcomeEmail(recipientName, appName, senderName, messageTitle)
       : generateTestEmail(recipientName, senderName, messageTitle, appName);
 
     const emailSubject = isWelcomeEmail
@@ -134,7 +134,7 @@ function generateTestEmail(recipientName: string, senderName: string, messageTit
   `;
 }
 
-function generateWelcomeEmail(recipientName: string, appName: string): string {
+function generateWelcomeEmail(recipientName: string, appName: string, senderName: string, messageTitle: string): string {
   const signupUrl = "https://echo-vault.app/register"; // Replace with actual signup URL
   
   return `
@@ -147,7 +147,7 @@ function generateWelcomeEmail(recipientName: string, appName: string): string {
       <h2 style="color: #333; font-size: 22px; margin-bottom: 20px;">Hello ${recipientName || "there"},</h2>
       
       <p style="font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
-        You've been added as a recipient for secure time-sensitive messages with ${appName}. Someone close to you has trusted you with potentially important information that will only be shared under specific conditions.
+        <strong>${senderName}</strong> has added you as a recipient for the secure message "<strong>${messageTitle}</strong>" with ${appName}.
       </p>
       
       <div style="background-color: #f8fafc; border-left: 4px solid #9b87f5; padding: 20px; margin: 25px 0; border-radius: 4px;">
@@ -175,7 +175,7 @@ function generateWelcomeEmail(recipientName: string, appName: string): string {
       </div>
       
       <div style="border-top: 1px solid #e5e5e5; padding-top: 25px; font-size: 14px; color: #666; text-align: center;">
-        <p>If you have any questions, please contact the person who added you as a recipient.</p>
+        <p>If you have any questions, please contact ${senderName} who added you as a recipient.</p>
         <p>© ${new Date().getFullYear()} ${appName} • Secure Time-Sensitive Messaging</p>
       </div>
     </div>
