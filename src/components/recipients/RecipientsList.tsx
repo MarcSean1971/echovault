@@ -1,5 +1,5 @@
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { RecipientCard } from "./RecipientCard";
 import { Recipient } from "@/types/message";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
@@ -19,10 +19,7 @@ export function RecipientsList({
 }: RecipientsListProps) {
   return (
     <Card className={HOVER_TRANSITION}>
-      <CardHeader>
-        <CardTitle>Your Trusted Contacts</CardTitle>
-      </CardHeader>
-      <CardContent>
+      <CardContent className="pt-6">
         {isLoading ? (
           <div className="text-center py-6">
             <p className="text-muted-foreground">Loading recipients...</p>
