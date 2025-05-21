@@ -1,7 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
-import { corsHeaders } from "../_shared/cors.ts";
+import { corsHeaders } from "../shared/utils/cors-headers.ts";
 import { recordReminderSent, updateNextReminderTime, markRemindersObsolete } from "./db/reminder-tracking.ts";
 import { getMessageAndCondition } from "./db/message-queries.ts";
 import { sendEmail } from "./services/email-service.ts";
