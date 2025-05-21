@@ -5,7 +5,6 @@ import { getEffectiveDeadline } from '@/utils/reminder/reminderUtils'; // Fixed 
 import { MessageInfoSection } from './MessageInfoSection';
 import { DeliverySettingsSection } from './DeliverySettingsSection';
 import { ReminderSection } from './ReminderSection';
-import { RecipientsSection } from '../RecipientsSection';
 
 interface StatusDeliverySectionProps {
   message: any;
@@ -21,7 +20,7 @@ interface StatusDeliverySectionProps {
   isDelivered?: boolean;
   viewCount?: number | null;
   isLoadingDelivery?: boolean;
-  // New props for Recipients section
+  // We're removing these props as Recipients are now in their own section
   recipients?: any[];
   isActionLoading?: boolean;
   onSendTestMessage?: () => void;
@@ -41,12 +40,7 @@ export function StatusDeliverySection({
   lastDelivered,
   isDelivered,
   viewCount,
-  isLoadingDelivery,
-  // New props for Recipients section
-  recipients = [],
-  isActionLoading = false,
-  onSendTestMessage = () => {},
-  renderRecipients
+  isLoadingDelivery
 }: StatusDeliverySectionProps) {
   const [effectiveDeadline, setEffectiveDeadline] = useState<Date | null>(null);
   const [formattedReminders, setFormattedReminders] = useState<string[]>([]);
@@ -97,16 +91,7 @@ export function StatusDeliverySection({
         formattedAllReminders={formattedReminders}
       />
       
-      {/* Recipients section moved here for consistent spacing */}
-      {recipients && recipients.length > 0 && (
-        <RecipientsSection
-          recipients={recipients}
-          isArmed={isArmed}
-          isActionLoading={isActionLoading}
-          onSendTestMessage={onSendTestMessage}
-          renderRecipients={renderRecipients}
-        />
-      )}
+      {/* Recipients section removed from here - it's now a top-level section */}
     </div>
   );
 }

@@ -1,9 +1,6 @@
 
 import React from "react";
-import { Users } from "lucide-react";
 import { MessageRecipientsList } from "../MessageRecipientsList";
-import { ICON_HOVER_EFFECTS } from "@/utils/hoverEffects";
-import { AccordionSection } from "@/components/message/detail/AccordionSection";
 
 interface RecipientsSectionProps {
   recipients: any[];
@@ -25,17 +22,9 @@ export function RecipientsSection({
   }
   
   return (
-    <AccordionSection
-      title={
-        <div className="flex items-center">
-          <Users className={`h-4 w-4 mr-1.5 ${ICON_HOVER_EFFECTS.muted}`} />
-          Recipients
-        </div>
-      }
-      defaultOpen={false}
-    >
-      {/* Use renderRecipients function if provided, otherwise use default MessageRecipientsList */}
+    <>
+      {/* The parent component now handles the accordion and header */}
       {renderRecipients ? renderRecipients() : <MessageRecipientsList recipients={recipients} />}
-    </AccordionSection>
+    </>
   );
 }

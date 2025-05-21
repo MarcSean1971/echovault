@@ -10,7 +10,7 @@ import { StatusDeliverySection } from "./content/StatusDeliverySection";
 import { RecipientsSection } from "./content/RecipientsSection";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2 } from "lucide-react";
+import { Edit, FileText, Settings, Trash2, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
@@ -87,6 +87,13 @@ export function MessageDetailContent({
     return <MessageNotFound />;
   }
 
+  const renderSectionHeader = (icon: React.ReactNode, title: string) => (
+    <div className="flex items-center space-x-2 mb-4 pb-2 border-b">
+      {icon}
+      <h2 className="text-lg font-medium">{title}</h2>
+    </div>
+  );
+
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Back button at the left side, matching Edit page placement */}
@@ -94,31 +101,95 @@ export function MessageDetailContent({
       
       <div className="max-w-3xl mx-auto">
         <div className="space-y-6">
-          {/* Message Content - Always render immediately with available data */}
-          <MainContentSection 
-            message={message}
-            isArmed={isArmed}
-            isActionLoading={isActionLoading}
-            condition={condition}
-            formatDate={formatDate}
-            renderConditionType={renderConditionType}
-            handleDisarmMessage={handleDisarmMessage}
-            handleArmMessage={handleArmMessage}
-            deliveryId={deliveryId}
-            recipientEmail={recipientEmail}
-            recipients={recipients}
-            onSendTestMessage={onSendTestMessage}
-            lastCheckIn={lastCheckIn}
-            checkInCode={checkInCode}
-            lastDelivered={lastDelivered}
-            isDelivered={isDelivered}
-            viewCount={viewCount}
-            isLoadingDelivery={isLoadingDelivery}
-            refreshTrigger={refreshTrigger}
-            deadline={deadline}
-            // Pass loading status for progressive loading
-            isLoading={isLoading}
-          />
+          {/* Message Header with Arm/Disarm button */}
+          <Card className="overflow-hidden border border-border/50 shadow-sm">
+            <CardContent className="p-6">
+              <MessageHeader
+                message={message}
+                isArmed={isArmed}
+                isActionLoading={isActionLoading}
+                handleDisarmMessage={handleDisarmMessage}
+                handleArmMessage={handleArmMessage}
+              />
+            </CardContent>
+          </Card>
+
+          {/* SECTION 1: Message Content */}
+          <Card className="overflow-hidden border border-border/50 shadow-sm">
+            <CardContent className="p-6">
+              {renderSectionHeader(
+                <FileText className={`h-5 w-5 text-muted-foreground ${HOVER_TRANSITION}`} />, 
+                "Message Content"
+              )}
+              {isLoading ? (
+                <Skeleton className="h-24 w-full" />
+              ) : (
+                <div className="space-y-4">
+                  <MessageContent 
+                    message={message} 
+                    deliveryId={deliveryId} 
+                    recipientEmail={recipientEmail} 
+                  />
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          
+          {/* SECTION 2: Trigger Settings */}
+          <Card className="overflow-hidden border border-border/50 shadow-sm">
+            <CardContent className="p-6">
+              {renderSectionHeader(
+                <Settings className={`h-5 w-5 text-muted-foreground ${HOVER_TRANSITION}`} />, 
+                "Trigger Settings"
+              )}
+              {!condition ? (
+                <div className="space-y-4">
+                  <Skeleton className="h-6 w-1/4" />
+                  <Skeleton className="h-16 w-full" />
+                </div>
+              ) : (
+                <StatusDeliverySection
+                  message={message}
+                  condition={condition}
+                  formatDate={formatDate}
+                  renderConditionType={renderConditionType}
+                  isArmed={isArmed}
+                  refreshTrigger={refreshTrigger}
+                  deadline={deadline}
+                  lastCheckIn={lastCheckIn}
+                  checkInCode={checkInCode}
+                  lastDelivered={lastDelivered}
+                  isDelivered={isDelivered}
+                  viewCount={viewCount}
+                  isLoadingDelivery={isLoadingDelivery}
+                />
+              )}
+            </CardContent>
+          </Card>
+          
+          {/* SECTION 3: Recipients */}
+          <Card className="overflow-hidden border border-border/50 shadow-sm">
+            <CardContent className="p-6">
+              {renderSectionHeader(
+                <Users className={`h-5 w-5 text-muted-foreground ${HOVER_TRANSITION}`} />, 
+                "Recipients"
+              )}
+              {recipients && recipients.length > 0 ? (
+                <div className="space-y-1">
+                  {recipients.map((recipient) => (
+                    <div key={recipient.id} className="p-2 border rounded-md flex justify-between items-center">
+                      <div>
+                        <div className="font-medium">{recipient.name}</div>
+                        <div className="text-sm text-muted-foreground">{recipient.email}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-muted-foreground text-sm">No recipients</p>
+              )}
+            </CardContent>
+          </Card>
           
           {/* Actions Card */}
           <Card className="overflow-hidden border border-border/50 shadow-sm">
