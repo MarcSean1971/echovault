@@ -84,7 +84,7 @@ export function MessageDetailContent({
       {backButton}
       
       <div className="max-w-3xl mx-auto">
-        <div className="space-y-6">
+        <div className="space-y-4"> {/* Reduced from space-y-6 to space-y-4 for consistent spacing */}
           {/* Message Header with Arm/Disarm button */}
           <MessageHeaderCard 
             message={message}

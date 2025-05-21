@@ -62,7 +62,7 @@ export function StatusDeliverySection({
   const reminderMinutes = parseReminderMinutes(condition?.reminder_hours);
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-4"> {/* Reduced from space-y-6 to space-y-4 */}
       <MessageInfoSection
         message={message}
         formatDate={formatDate}
@@ -90,8 +90,6 @@ export function StatusDeliverySection({
         refreshTrigger={refreshTrigger}
         formattedAllReminders={formattedReminders}
       />
-      
-      {/* Recipients section removed from here - it's now a top-level section */}
     </div>
   );
 }

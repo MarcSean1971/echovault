@@ -34,6 +34,10 @@ export function MessageContentSection({
           <FileText className={`h-5 w-5 text-muted-foreground ${HOVER_TRANSITION}`} />, 
           "Message Content"
         )}
+        
+        {/* Display message title prominently */}
+        <h3 className="font-semibold text-xl mb-4 text-purple-900">{message.title}</h3>
+        
         {isLoading ? (
           <Skeleton className="h-24 w-full" />
         ) : (

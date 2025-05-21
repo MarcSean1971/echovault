@@ -25,14 +25,14 @@ export function MessageHeader({
     <div className="space-y-4">
       {/* Message Status with Arm/Disarm Button */}
       <div className="flex items-center justify-between">
-        {/* Message Title with Icon */}
-        <div className="flex items-start gap-3">
-          <div className="mt-1 text-muted-foreground">
+        {/* Message Icon */}
+        <div className="flex items-center gap-3">
+          <div className="text-muted-foreground">
             {getMessageIcon(message.message_type)}
           </div>
-          <h2 className="text-2xl font-semibold leading-tight break-words">
-            {message.title}
-          </h2>
+          <div className="text-sm text-muted-foreground">
+            {message.message_type === "text" ? "Text Message" : "Video Message"}
+          </div>
         </div>
         
         <div className="flex items-center gap-2">
