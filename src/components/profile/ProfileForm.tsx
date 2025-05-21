@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ProfileData, ProfileUpdateData } from "@/services/profileService";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { toast } from "@/components/ui/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -47,9 +47,6 @@ export function ProfileForm({ profile, onSubmit }: ProfileFormProps) {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)}>
         <Card className="mb-8">
-          <CardHeader>
-            {/* Title and description removed as requested */}
-          </CardHeader>
           <CardContent className="space-y-4">
             <FormField
               control={form.control}
