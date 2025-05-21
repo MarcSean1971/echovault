@@ -12,6 +12,8 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { toast } from "@/components/ui/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { User } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { BUTTON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 // Form validation schema
 const profileSchema = z.object({
@@ -28,6 +30,7 @@ export default function Profile() {
   const { userId, getInitials } = useAuth();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const isMobile = useIsMobile();
 
   // Set up the form
   const form = useForm<ProfileFormValues>({
@@ -116,8 +119,17 @@ export default function Profile() {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-2xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">Your Profile</h1>
+        <div className="mb-8 animate-fade-in">
+          <div className={`flex ${isMobile ? 'flex-col gap-4' : 'flex-row items-center justify-between'} mb-2`}>
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 text-transparent bg-clip-text">
+                Your Profile
+              </h1>
+              <p className="text-muted-foreground mt-1">
+                Manage your personal information and contact details
+              </p>
+            </div>
+          </div>
         </div>
         
         <div className="flex items-center justify-center mb-8">
@@ -232,8 +244,12 @@ export default function Profile() {
                     )}
                   />
                 </CardContent>
-                <CardFooter>
-                  <Button type="submit" className="ml-auto">
+                <CardFooter className={isMobile ? "" : "flex justify-end"}>
+                  <Button 
+                    type="submit" 
+                    className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default} gap-2 shadow-sm hover:shadow-md ${isMobile ? 'w-full' : ''}`}
+                    size={isMobile ? "default" : "lg"}
+                  >
                     Save Changes
                   </Button>
                 </CardFooter>
