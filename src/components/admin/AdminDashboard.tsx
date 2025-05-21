@@ -91,9 +91,9 @@ export default function AdminDashboard() {
   }, []);
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
+    <div className="space-y-6 animate-fade-in">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">Admin Dashboard</h2>
+        <h2 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/70 text-transparent bg-clip-text">Admin Dashboard</h2>
         <p className="text-muted-foreground">
           Overview of system statistics and management tools.
         </p>
