@@ -41,8 +41,8 @@ export async function getMessageRecipients(messageId: string): Promise<{
       return { recipients: null, panicConfig: null, error: "No recipients found" };
     }
     
-    // Cast to proper type for type safety
-    const typedRecipients = recipients as Recipient[];
+    // Properly cast JSON data to our Recipient type with explicit type assertion
+    const typedRecipients = recipients as unknown as Recipient[];
     
     return { 
       recipients: typedRecipients, 

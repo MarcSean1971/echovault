@@ -87,7 +87,8 @@ export async function sendTestNotification(messageId: string) {
       return;
     }
     
-    const recipients = condition.recipients as Recipient[];
+    // Properly cast the JSON data to our Recipient type
+    const recipients = condition.recipients as unknown as Recipient[];
     
     // Get the message details
     const { data: message, error: messageError } = await supabase
