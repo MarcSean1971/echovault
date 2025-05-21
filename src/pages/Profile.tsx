@@ -7,7 +7,7 @@ import { ProfileForm } from "@/components/profile/ProfileForm";
 import { ProfileLoading } from "@/components/profile/ProfileLoading";
 
 export default function Profile() {
-  const { profile, isLoading, handleSubmit, initials } = useProfileData();
+  const { profile, isLoading, handleSubmit, initials, handleAvatarUpdate } = useProfileData();
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -17,6 +17,7 @@ export default function Profile() {
         <ProfileAvatar 
           avatarUrl={profile?.avatar_url || null}
           initials={initials}
+          onAvatarUpdate={handleAvatarUpdate}
         />
         
         {isLoading ? (

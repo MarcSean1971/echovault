@@ -69,10 +69,20 @@ export function useProfileData() {
     }
   };
 
+  // Handle avatar update
+  const handleAvatarUpdate = (avatarUrl: string) => {
+    if (profile) {
+      setProfile({
+        ...profile,
+        avatar_url: avatarUrl
+      });
+    }
+  };
+
   // Get user initials for avatar
   const initials = profile ? 
     `${(profile.first_name?.[0] || "")}${(profile.last_name?.[0] || "")}`.toUpperCase() : 
     getInitials();
 
-  return { profile, isLoading, handleSubmit, initials };
+  return { profile, isLoading, handleSubmit, initials, handleAvatarUpdate };
 }
