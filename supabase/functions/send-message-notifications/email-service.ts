@@ -1,3 +1,4 @@
+
 // Import necessary modules
 import { Resend } from "npm:resend@2.0.0";
 import { generateAccessUrl } from "./utils/url-generator.ts";
@@ -50,111 +51,11 @@ export async function sendEmailNotification(
     // Check if APP_DOMAIN is set
     const appDomain = Deno.env.get("APP_DOMAIN");
     console.log(`APP_DOMAIN environment variable is ${appDomain ? "set to: " + appDomain : "not set"}`);
-    
-    // Format file sizes for display
-    const formatFileSize = (bytes: number): string => {
-      if (bytes < 1024) return bytes + ' bytes';
-      else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
-      else return (bytes / 1048576).toFixed(1) + ' MB';
-    };
-    
-    // Process attachments for display
-    let attachmentsSection = '';
-    if (attachments && attachments.length > 0) {
-      const attachmentItems = attachments.map(att => {
-        return `<div style="display: flex; align-items: center; margin-bottom: 8px; padding: 8px; background-color: #f5f7fa; border-radius: 6px;">
-          <div style="flex-shrink: 0; width: 32px; height: 32px; margin-right: 12px; background-color: #e2e8f0; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #64748b;">
-            <span style="font-size: 14px;">📄</span>
-          </div>
-          <div style="flex-grow: 1; overflow: hidden;">
-            <p style="margin: 0; font-weight: 500; color: #334155; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${att.name}</p>
-            <p style="margin: 2px 0 0 0; font-size: 12px; color: #64748b;">${formatFileSize(att.size)}</p>
-          </div>
-        </div>`;
-      }).join('');
-            
-      attachmentsSection = `
-        <div style="margin: 24px 0; padding: 16px; background-color: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
-          <p style="margin: 0 0 12px 0; font-weight: 600; color: #334155; display: flex; align-items: center;">
-            <span style="margin-right: 8px;">📎</span> 
-            ${attachments.length} Attachment${attachments.length > 1 ? 's' : ''}
-          </p>
-          ${attachmentItems}
-        </div>
-      `;
-    }
 
-    // Parse messageContent to handle video content properly
-    let displayContent = messageContent;
-    if (messageContent) {
-      try {
-        // Try to parse as JSON to extract video content properly
-        const contentObj = JSON.parse(messageContent);
-        
-        // If this is video content, don't display raw JSON
-        if (contentObj.videoData || contentObj.transcription) {
-          // Just show transcription if available, skip raw video data
-          displayContent = contentObj.transcription ? 
-            `<p style="margin-top: 12px;">Video message with transcription:</p>
-             <div style="background-color: #f8fafc; padding: 16px; border-radius: 8px; margin: 12px 0; border-left: 4px solid #cbd5e1;">
-               <p style="color: #334155; font-style: italic;">${contentObj.transcription}</p>
-             </div>` : 
-            "<p style=\"margin-top: 12px;\">This message contains a video that you can view by clicking the button below.</p>";
-            
-          // If there's additional text with the video, include it
-          if (contentObj.additionalText) {
-            displayContent += `
-              <div style="margin-top: 16px;">
-                <p style="margin-bottom: 8px; font-weight: 500; color: #334155;">Additional message:</p>
-                <p style="color: #334155;">${contentObj.additionalText}</p>
-              </div>
-            `;
-          }
-        }
-      } catch (e) {
-        // Not JSON or parsing failed, use content as is
-        console.log("Not JSON content, using as plain text");
-      }
-    }
-
-    // Set emergency styling if needed
-    const subjectPrefix = isEmergency ? `⚠️ EMERGENCY: ` : "";
-    const emergencyBanner = isEmergency 
-      ? `<div style="background-color: #fee2e2; border-left: 4px solid #ef4444; padding: 16px; margin-bottom: 24px; border-radius: 6px;">
-          <p style="margin: 0; font-weight: 600; color: #b91c1c; display: flex; align-items: center;">
-            <span style="margin-right: 8px; font-size: 20px;">⚠️</span>
-            EMERGENCY MESSAGE
-          </p>
-          <p style="margin: 8px 0 0 0; color: #7f1d1d;">
-            This message requires your immediate attention.
-          </p>
-        </div>`
-      : "";
-      
-    // Add location information if available and sharing is enabled
-    let locationHtml = "";
-    if (location.share_location === true && 
-        location.latitude !== null && 
-        location.longitude !== null) {
-      
-      const locationName = location.name ? location.name : `${location.latitude}, ${location.longitude}`;
-      
-      locationHtml = `
-        <div style="margin: 24px 0; padding: 16px; background-color: #f0f9ff; border-radius: 8px; border: 1px solid #bae6fd;">
-          <p style="margin: 0 0 8px 0; font-weight: 600; color: #0369a1; display: flex; align-items: center;">
-            <span style="margin-right: 8px;">📍</span> 
-            Shared Location
-          </p>
-          <p style="margin: 0 0 12px 0; color: #0c4a6e;">${locationName}</p>
-          <a href="https://maps.google.com/?q=${location.latitude},${location.longitude}" 
-             style="display: inline-block; padding: 8px 16px; background-color: #0284c7; color: white; text-decoration: none; border-radius: 4px; font-weight: 500;">
-            View on Google Maps
-          </a>
-        </div>
-      `;
-    }
+    // Set subject type based on emergency status but don't use "EMERGENCY" phrase
+    const subjectPrefix = isEmergency ? `Alert: ` : "";
     
-    // Send the email with a modern, responsive template
+    // Send the email with a modern, responsive template similar to the welcome email
     const emailResponse = await resend.emails.send({
       from: `${appName} <notifications@echo-vault.app>`,
       to: [recipientEmail],
@@ -185,31 +86,33 @@ export async function sendEmailNotification(
         </head>
         <body>
           <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);">
-            <div style="background-color: #2563eb; padding: 24px; text-align: center;">
-              <h1 style="color: #ffffff; font-size: 24px; font-weight: 700;">${appName}</h1>
+            <div style="background-color: #9b87f5; padding: 30px; border-radius: 0; margin-bottom: 30px; text-align: center;">
+              <h1 style="color: #ffffff; margin-top: 0; font-size: 28px;">${appName}</h1>
+              <p style="font-size: 18px; margin-bottom: 0; color: #ffffff;">Alert Notification</p>
             </div>
             
             <div style="padding: 32px;">
-              ${emergencyBanner}
+              <h2 style="color: #1e293b; font-size: 22px; margin-bottom: 20px; font-weight: 600;">${messageTitle}</h2>
               
-              <h2 style="color: #1e293b; font-size: 22px; margin-bottom: 16px; font-weight: 600;">${messageTitle}</h2>
-              
-              <p style="color: #475569; margin-bottom: 16px; font-size: 16px;">
+              <p style="color: #475569; margin-bottom: 20px; font-size: 16px;">
                 <strong>${senderName}</strong> has sent you a secure message.
               </p>
               
-              ${displayContent ? `
-              <div style="background-color: #f8fafc; padding: 16px; border-radius: 8px; margin-bottom: 24px; border-left: 4px solid #cbd5e1;">
-                ${displayContent}
+              <div style="background-color: #f8fafc; border-left: 4px solid #9b87f5; padding: 20px; margin: 25px 0; border-radius: 4px;">
+                <h3 style="margin-top: 0; color: #6E59A5;">What is ${appName}?</h3>
+                <p style="margin-bottom: 10px; line-height: 1.6;">
+                  ${appName} is a secure digital vault that ensures important messages and documents reach the right people at the right time. It helps people share critical information that only gets released when specific conditions are met:
+                </p>
+                <ul style="margin-bottom: 0;">
+                  <li style="margin-bottom: 8px;">When someone hasn't checked in for a specified period</li>
+                  <li style="margin-bottom: 8px;">On a scheduled future date</li>
+                  <li style="margin-bottom: 8px;">In emergency situations</li>
+                  <li style="margin-bottom: 0;">With group confirmation requirements</li>
+                </ul>
               </div>
-              ` : ''}
-              
-              ${locationHtml}
-              
-              ${attachmentsSection}
               
               <div style="text-align: center; margin: 32px 0;">
-                <a href="${accessUrl}" style="display: inline-block; background-color: #2563eb; color: white; font-weight: 600; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-size: 16px; transition: all 0.2s ease;">
+                <a href="${accessUrl}" style="display: inline-block; background-color: #9b87f5; color: white; font-weight: 600; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-size: 16px; transition: all 0.2s ease;">
                   View Secure Message
                 </a>
               </div>
@@ -218,7 +121,7 @@ export async function sendEmailNotification(
                 If the button doesn't work, copy and paste this link into your browser:
               </p>
               <p style="background-color: #f1f5f9; padding: 12px; border-radius: 6px; margin-top: 8px; font-size: 14px; word-break: break-all;">
-                <a href="${accessUrl}" style="color: #2563eb; text-decoration: none;">${accessUrl}</a>
+                <a href="${accessUrl}" style="color: #9b87f5; text-decoration: none;">${accessUrl}</a>
               </p>
             </div>
             
@@ -227,7 +130,7 @@ export async function sendEmailNotification(
                 This is an automated message. Please do not reply to this email.
               </p>
               <p style="color: #64748b; font-size: 14px; margin-top: 8px;">
-                Powered by ${appName} - Secure Message Delivery
+                © ${new Date().getFullYear()} ${appName} - Secure Message Delivery
               </p>
             </div>
           </div>
@@ -278,3 +181,4 @@ export const sendEmailToRecipient = (
     data.attachments // Pass attachments
   );
 };
+
