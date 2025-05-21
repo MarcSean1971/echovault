@@ -3,12 +3,14 @@ import { Button } from "@/components/ui/button";
 import { DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { useState, useEffect } from "react";
 import { Recipient } from "@/types/message";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface RecipientFormProps {
   initialData?: Recipient | null;
-  onSubmit: (name: string, email: string, phone: string) => Promise<void>;
+  onSubmit: (name: string, email: string, phone: string, notifyOnAdd: boolean) => Promise<void>;
   isLoading: boolean;
   onCancel: () => void;
 }
@@ -17,6 +19,7 @@ export function RecipientForm({ initialData, onSubmit, isLoading, onCancel }: Re
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [notifyOnAdd, setNotifyOnAdd] = useState(true);
 
   // Load initial data if provided (for editing)
   useEffect(() => {
@@ -24,12 +27,13 @@ export function RecipientForm({ initialData, onSubmit, isLoading, onCancel }: Re
       setName(initialData.name);
       setEmail(initialData.email);
       setPhone(initialData.phone || "");
+      setNotifyOnAdd(initialData.notify_on_add !== false); // Default to true if undefined
     }
   }, [initialData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await onSubmit(name, email, phone);
+    await onSubmit(name, email, phone, notifyOnAdd);
   };
 
   const isEditing = !!initialData;
@@ -69,6 +73,17 @@ export function RecipientForm({ initialData, onSubmit, isLoading, onCancel }: Re
             onChange={(e) => setPhone(e.target.value)}
             placeholder="555-1234"
           />
+        </div>
+        <div className="flex items-center space-x-2 pt-2">
+          <Switch 
+            id="notify-toggle" 
+            checked={notifyOnAdd} 
+            onCheckedChange={setNotifyOnAdd}
+            className={HOVER_TRANSITION}
+          />
+          <Label htmlFor="notify-toggle" className="text-sm text-muted-foreground cursor-pointer">
+            Send welcome email when added to messages
+          </Label>
         </div>
       </div>
       <DialogFooter>

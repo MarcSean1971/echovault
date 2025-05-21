@@ -1,13 +1,18 @@
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { RecipientForm } from "./RecipientForm";
 import { Recipient } from "@/types/message";
 
 interface EditRecipientDialogProps {
   isOpen: boolean;
-  onOpenChange: (isOpen: boolean) => void;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (name: string, email: string, phone: string, notifyOnAdd: boolean) => Promise<void>;
   recipient: Recipient | null;
-  onSubmit: (name: string, email: string, phone: string) => Promise<void>;
   isLoading: boolean;
   onCancel: () => void;
 }
@@ -15,18 +20,18 @@ interface EditRecipientDialogProps {
 export function EditRecipientDialog({
   isOpen,
   onOpenChange,
-  recipient,
   onSubmit,
+  recipient,
   isLoading,
   onCancel
 }: EditRecipientDialogProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Edit Recipient</DialogTitle>
+          <DialogTitle>{recipient ? "Edit" : "Add"} Recipient</DialogTitle>
         </DialogHeader>
-        <RecipientForm 
+        <RecipientForm
           initialData={recipient}
           onSubmit={onSubmit}
           isLoading={isLoading}

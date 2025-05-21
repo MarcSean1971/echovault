@@ -12,7 +12,7 @@ export function useRecipientOperations(setRecipients: React.Dispatch<React.SetSt
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editRecipient, setEditRecipient] = useState<Recipient | null>(null);
 
-  const handleAddRecipient = async (name: string, email: string, phone: string) => {
+  const handleAddRecipient = async (name: string, email: string, phone: string, notifyOnAdd: boolean) => {
     if (!userId) {
       toast({
         title: "Authentication error",
@@ -30,7 +30,8 @@ export function useRecipientOperations(setRecipients: React.Dispatch<React.SetSt
         userId,
         name,
         email,
-        phone || undefined
+        phone || undefined,
+        notifyOnAdd
       );
       
       setRecipients(prevRecipients => [...prevRecipients, newRecipient]);
@@ -53,7 +54,7 @@ export function useRecipientOperations(setRecipients: React.Dispatch<React.SetSt
     }
   };
 
-  const handleEditRecipient = async (name: string, email: string, phone: string) => {
+  const handleEditRecipient = async (name: string, email: string, phone: string, notifyOnAdd: boolean) => {
     if (!editRecipient || !userId) return;
     
     setIsLoading(true);
@@ -62,7 +63,8 @@ export function useRecipientOperations(setRecipients: React.Dispatch<React.SetSt
       const updatedRecipient = await updateRecipient(editRecipient.id, {
         name,
         email,
-        phone: phone || undefined
+        phone: phone || undefined,
+        notify_on_add: notifyOnAdd
       });
       
       setRecipients(prevRecipients => 
