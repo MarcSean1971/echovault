@@ -13,6 +13,7 @@ interface ActionButtonProps {
   variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
   tooltipText?: string;
   iconClassName?: string;
+  className?: string; // Added className prop to the interface
 }
 
 export function ActionButton({
@@ -22,14 +23,15 @@ export function ActionButton({
   disabled = false,
   variant = "outline",
   tooltipText,
-  iconClassName = ""
+  iconClassName = "",
+  className = "" // Added default value for className
 }: ActionButtonProps) {
   const iconHoverEffect = "transition-transform group-hover:scale-110";
   
   const button = (
     <Button
       variant={variant}
-      className={`w-full group ${HOVER_TRANSITION}`}
+      className={`w-full group ${HOVER_TRANSITION} ${className}`} // Added className to Button
       onClick={onClick}
       disabled={disabled}
     >
