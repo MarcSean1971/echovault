@@ -1,7 +1,6 @@
 
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Bell, BellOff } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Bell, BellOff } from "lucide-react";
 import { Message } from "@/types/message";
 import { getMessageIcon } from "@/utils/messageFormatUtils";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
@@ -22,18 +21,8 @@ export function MessageHeader({
   handleDisarmMessage,
   handleArmMessage,
 }: MessageHeaderProps) {
-  const navigate = useNavigate();
-
   return (
     <div className="space-y-4">
-      <Button 
-        variant="ghost" 
-        onClick={() => navigate("/messages")}
-        className={`mb-6 hover:bg-muted/80 hover:text-foreground ${HOVER_TRANSITION}`}
-      >
-        <ArrowLeft className="mr-2 h-4 w-4" /> Back to Messages
-      </Button>
-      
       {/* Message Status with Arm/Disarm Button */}
       <div className="flex items-center justify-between">
         {/* Message Title with Icon */}

@@ -1,6 +1,6 @@
 
 import { useParams } from "react-router-dom";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { MessageLoading } from "@/components/message/detail/MessageLoading";
 import { MessageNotFound } from "@/components/message/detail/MessageNotFound";
@@ -12,6 +12,9 @@ import { useMessageActions } from "@/hooks/useMessageActions";
 import { useMessageDeliveryStatus } from "@/hooks/useMessageDeliveryStatus";
 import { triggerDeadmanSwitch } from "@/services/messages/whatsApp";
 import { toast } from "@/components/ui/use-toast";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 export default function MessageDetail() {
   const { id } = useParams<{ id: string }>();
@@ -58,6 +61,17 @@ export default function MessageDetail() {
   
   // Get the recipient rendering function
   const { renderRecipients } = MessageRecipientProvider({ recipients });
+  
+  // Back button component
+  const backButton = (
+    <Button 
+      variant="ghost" 
+      onClick={() => navigate("/messages")}
+      className={`mb-6 hover:bg-muted/80 hover:text-foreground ${HOVER_TRANSITION}`}
+    >
+      <ArrowLeft className="mr-2 h-4 w-4" /> Back to Messages
+    </Button>
+  );
   
   // Set up event listeners for conditions and deadline
   useEffect(() => {
@@ -128,6 +142,7 @@ export default function MessageDetail() {
       viewCount={viewCount}
       isLoadingDelivery={isLoadingDelivery}
       refreshTrigger={refreshCount}
+      backButton={backButton}
     />
   );
 }

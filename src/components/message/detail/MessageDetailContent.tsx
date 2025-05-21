@@ -42,6 +42,7 @@ interface MessageDetailContentProps {
   viewCount?: number | null;
   isLoadingDelivery?: boolean;
   refreshTrigger?: number;
+  backButton: React.ReactNode; // Add new prop for back button
 }
 
 export function MessageDetailContent({
@@ -69,7 +70,8 @@ export function MessageDetailContent({
   isDelivered,
   viewCount,
   isLoadingDelivery,
-  refreshTrigger
+  refreshTrigger,
+  backButton // Add back button prop
 }: MessageDetailContentProps) {
   // Add state for delete confirmation
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -88,6 +90,9 @@ export function MessageDetailContent({
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
       <div className="space-y-6">
+        {/* Back button placed at the top of the page */}
+        {backButton}
+        
         {/* Message Content - Always render immediately with available data */}
         <MainContentSection 
           message={message}
