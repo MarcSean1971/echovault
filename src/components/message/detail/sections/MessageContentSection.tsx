@@ -30,12 +30,8 @@ export function MessageContentSection({
           "Message Content"
         )}
         
-        {/* Title label matching the Edit page style */}
-        <div className="space-y-2 mb-2">
-          <Label htmlFor="message-content-title" className={`${HOVER_TRANSITION}`}>Title</Label>
-        </div>
+        <Label htmlFor="message-content-title">Title <span className="text-destructive">*</span></Label>
         
-        {/* Title exactly matching the Edit page style */}
         <h2 id="message-content-title" className="text-xl font-medium mb-4">{message.title}</h2>
         
         {isLoading ? (
