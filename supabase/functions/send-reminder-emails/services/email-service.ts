@@ -1,43 +1,65 @@
 
-import { Resend } from "npm:resend@2.0.0";
+/**
+ * Email service for sending notifications
+ */
 
-interface EmailData {
+interface EmailOptions {
   to: string;
   subject: string;
   html: string;
+  from: string;
   text?: string;
-  from?: string;
 }
 
-export async function sendEmail(emailData: EmailData): Promise<boolean> {
+/**
+ * Send an email using the configured email service
+ */
+export async function sendEmail(options: EmailOptions): Promise<boolean> {
   try {
-    const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
-    
-    if (!resend) {
-      console.error("Resend initialization failed: API key may be missing");
+    // Check if we're in debug mode (no actual emails sent)
+    const debugMode = Deno.env.get("DEBUG_MODE") === "true";
+    if (debugMode) {
+      console.log(`[DEBUG] Would send email to ${options.to} with subject "${options.subject}"`);
+      return true;
+    }
+  
+    // Get the API key for the email service
+    const apiKey = Deno.env.get("RESEND_API_KEY");
+    if (!apiKey) {
+      console.error("No RESEND_API_KEY found in environment variables");
       return false;
     }
     
-    console.log(`Sending email to ${emailData.to}`);
-    console.log(`Subject: ${emailData.subject}`);
+    // Prepare the email payload
+    const payload = {
+      from: options.from,
+      to: [options.to],
+      subject: options.subject,
+      html: options.html,
+      text: options.text || null
+    };
     
-    const { data, error } = await resend.emails.send({
-      from: emailData.from || "EchoVault <notifications@echo-vault.app>",
-      to: [emailData.to],
-      subject: emailData.subject,
-      html: emailData.html,
-      text: emailData.text || emailData.html.replace(/<[^>]*>/g, '')
+    // Send the email using the Resend API
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${apiKey}`
+      },
+      body: JSON.stringify(payload)
     });
     
-    if (error) {
-      console.error("Resend API error:", error);
-      throw error;
+    const result = await response.json();
+    
+    if (!response.ok) {
+      console.error("Error sending email:", result);
+      return false;
     }
     
-    console.log("Email sent successfully:", data?.id);
+    console.log("Email sent successfully:", result);
     return true;
   } catch (error) {
-    console.error("Error sending email:", error);
-    throw error;
+    console.error("Error in sendEmail:", error);
+    return false;
   }
 }
