@@ -149,6 +149,10 @@ export async function sendCreatorReminder(
       // Non-fatal error, continue sending
     }
     
+    // Get app domain from environment or use default for button URL
+    const appDomain = Deno.env.get("APP_DOMAIN") || "https://echo-vault.app";
+    const messageDetailUrl = `${appDomain}/message/${messageId}`;
+    
     // Construct the email with enhanced styling to match final delivery emails
     const subject = `ACTION REQUIRED: Check-in for "${messageTitle}"`;
     const html = `
@@ -261,7 +265,8 @@ export async function sendCreatorReminder(
                           <tr>
                             <td style="font-family: sans-serif; font-size: 14px; vertical-align: top;" valign="top">
                               <div style="text-align: center; margin-bottom: 24px;">
-                                <img src="https://res.cloudinary.com/dv73yf1in/image/upload/v1714384473/echo-vault/logo-purple_ttknsn.png" alt="EchoVault Logo" style="width: 120px; height: auto;">
+                                <!-- FIXED: Updated logo URL to directly use a reliable public URL -->
+                                <img src="https://echovault-public.s3.amazonaws.com/logo-purple.png" alt="EchoVault Logo" style="width: 120px; height: auto;">
                               </div>
                               <h2 style="color: #9b87f5; font-family: sans-serif; font-weight: 700; line-height: 1.4; margin: 0; margin-bottom: 20px; font-size: 24px; text-align: center;">Check-in Required</h2>
                               <p style="font-family: sans-serif; font-size: 14px; font-weight: normal; margin: 0; margin-bottom: 15px;">Hello ${creatorName},</p>
@@ -275,7 +280,8 @@ export async function sendCreatorReminder(
                                         <tbody>
                                           <tr>
                                             <td style="font-family: sans-serif; font-size: 14px; vertical-align: top; border-radius: 5px; text-align: center; background-color: #9b87f5;" valign="top" align="center" bgcolor="#9b87f5">
-                                              <a href="#" target="_blank" style="border: solid 1px #9b87f5; border-radius: 5px; box-sizing: border-box; cursor: pointer; display: inline-block; font-size: 14px; font-weight: bold; margin: 0; padding: 12px 25px; text-decoration: none; text-transform: capitalize; background-color: #9b87f5; border-color: #9b87f5; color: #ffffff;">Log In To Check In</a>
+                                              <!-- FIXED: Added actual URL to the message detail page -->
+                                              <a href="${messageDetailUrl}" target="_blank" style="border: solid 1px #9b87f5; border-radius: 5px; box-sizing: border-box; cursor: pointer; display: inline-block; font-size: 14px; font-weight: bold; margin: 0; padding: 12px 25px; text-decoration: none; text-transform: capitalize; background-color: #9b87f5; border-color: #9b87f5; color: #ffffff;">Log In To Check In</a>
                                             </td>
                                           </tr>
                                         </tbody>
