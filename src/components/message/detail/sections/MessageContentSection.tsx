@@ -23,7 +23,7 @@ export function MessageContentSection({
   recipientEmail
 }: MessageContentSectionProps) {
   return (
-    <Card className="overflow-hidden border border-border/50 shadow-sm">
+    <Card className="overflow-hidden border border-border/50 shadow-sm rounded-t-none border-t-0">
       <CardContent className="p-6">
         {renderSectionHeader(
           <FileText className={`h-5 w-5 text-muted-foreground ${HOVER_TRANSITION}`} />, 

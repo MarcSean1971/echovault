@@ -24,7 +24,7 @@ export function MessageHeaderCard({
   handleArmMessage
 }: MessageHeaderCardProps) {
   return (
-    <Card className="overflow-hidden border border-border/50 shadow-sm">
+    <Card className="overflow-hidden border border-border/50 shadow-sm rounded-b-none">
       <CardHeader className="bg-purple-50 border-b border-purple-100 flex flex-row items-center justify-between">
         <CardTitle className={`text-2xl font-semibold ${HOVER_TRANSITION}`}>
           View Message Details
@@ -58,7 +58,7 @@ export function MessageHeaderCard({
           )}
         </div>
       </CardHeader>
-      <CardContent className="p-6">
+      <CardContent className="p-6 pb-5">
         <MessageHeader
           message={message}
           isArmed={isArmed}

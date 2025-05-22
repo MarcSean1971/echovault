@@ -84,23 +84,25 @@ export function MessageDetailContent({
       {backButton}
       
       <div className="max-w-3xl mx-auto">
-        <div className="space-y-4"> {/* Reduced from space-y-6 to space-y-4 for consistent spacing */}
-          {/* Message Header with Arm/Disarm button */}
-          <MessageHeaderCard 
-            message={message}
-            isArmed={isArmed}
-            isActionLoading={isActionLoading}
-            handleDisarmMessage={handleDisarmMessage}
-            handleArmMessage={handleArmMessage}
-          />
-
-          {/* SECTION 1: Message Content */}
-          <MessageContentSection 
-            message={message} 
-            isLoading={isLoading}
-            deliveryId={deliveryId}
-            recipientEmail={recipientEmail}
-          />
+        <div className="space-y-4"> {/* Space between main content sections */}
+          {/* Combined Header and Content with no space between them */}
+          <div className="space-y-0"> {/* No space between these two specific components */}
+            <MessageHeaderCard 
+              message={message}
+              isArmed={isArmed}
+              isActionLoading={isActionLoading}
+              handleDisarmMessage={handleDisarmMessage}
+              handleArmMessage={handleArmMessage}
+            />
+            
+            {/* SECTION 1: Message Content - now directly attached to header with no gap */}
+            <MessageContentSection 
+              message={message} 
+              isLoading={isLoading}
+              deliveryId={deliveryId}
+              recipientEmail={recipientEmail}
+            />
+          </div>
           
           {/* SECTION 2: Trigger Settings */}
           <TriggerSettingsSection 
