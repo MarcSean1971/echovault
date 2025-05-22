@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Message } from "@/types/message";
 import { MessageLoading } from "./MessageLoading";
@@ -37,7 +36,7 @@ interface MessageDetailContentProps {
   viewCount?: number | null;
   isLoadingDelivery?: boolean;
   refreshTrigger?: number;
-  backButton: React.ReactNode; // Back button prop
+  backButton: React.ReactNode;
 }
 
 export function MessageDetailContent({
@@ -68,12 +67,10 @@ export function MessageDetailContent({
   refreshTrigger,
   backButton
 }: MessageDetailContentProps) {
-  // Get delivery ID and recipient email from URL for attachment access
   const [searchParams] = useSearchParams();
   const deliveryId = searchParams.get('delivery');
   const recipientEmail = searchParams.get('recipient');
 
-  // Full loading state is only displayed if we have no message at all
   if (!message) {
     return <MessageNotFound />;
   }
@@ -84,7 +81,7 @@ export function MessageDetailContent({
       {backButton}
       
       <div className="max-w-3xl mx-auto">
-        <div className="space-y-4"> {/* Reduced from space-y-6 to space-y-4 for consistent spacing */}
+        <div className="space-y-4">
           {/* Message Header with Arm/Disarm button */}
           <MessageHeaderCard 
             message={message}
