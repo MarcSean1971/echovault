@@ -25,7 +25,7 @@ export function MessageHeaderCard({
 }: MessageHeaderCardProps) {
   return (
     <Card className="overflow-hidden border border-border/50 shadow-sm rounded-b-none">
-      <CardHeader className="bg-purple-50 border-b border-purple-100 flex flex-row items-center justify-between">
+      <CardHeader className="bg-purple-50 border-b border-purple-100 flex flex-row items-center justify-between mb-4">
         <CardTitle className={`text-2xl font-semibold ${HOVER_TRANSITION}`}>
           View Message Details
         </CardTitle>
