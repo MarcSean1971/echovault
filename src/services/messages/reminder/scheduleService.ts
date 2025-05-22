@@ -69,7 +69,8 @@ export async function createOrUpdateReminderSchedule(params: ReminderSchedulePar
     
     // Trigger notification processing through cascading function calls
     // CRITICAL FIX: Do NOT force send notifications if this is an edit operation!
-    triggerNotificationProcessing(params.messageId, !isEdit);
+    // CRITICAL FIX: Also do not force send for arming operations
+    triggerNotificationProcessing(params.messageId, false); // FIXED: Always use false for forceSend flag
     
     return true;
   } catch (error) {

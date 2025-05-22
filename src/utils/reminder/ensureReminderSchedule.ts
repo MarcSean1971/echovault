@@ -86,7 +86,7 @@ export async function ensureReminderSchedule(
     // First mark existing reminders as obsolete
     try {
       console.log(`[ENSURE-REMINDERS] Marking existing reminders as obsolete for message ${messageId}`);
-      await markRemindersAsObsolete(messageId, conditionId);
+      await markRemindersAsObsolete(messageId, conditionId, isEdit);
     } catch (obsoleteError) {
       console.error("[ENSURE-REMINDERS] Error marking reminders as obsolete:", obsoleteError);
       // Continue execution to attempt creating new reminders even if marking obsolete fails
@@ -160,7 +160,7 @@ export async function ensureReminderSchedule(
           hoursThreshold,
           minutesThreshold,
           reminderMinutes,
-          isEdit // Pass isEdit flag
+          isEdit // Pass isEdit flag to prevent notifications during edits/arming
         );
         
         if (result) {
@@ -193,7 +193,7 @@ export async function ensureReminderSchedule(
           conditionId,
           effectiveDeadline,
           reminderMinutes,
-          isEdit // Pass the isEdit flag
+          isEdit // Pass the isEdit flag to prevent immediate notifications
         );
         
         if (result) {
@@ -218,7 +218,8 @@ export async function ensureReminderSchedule(
                 messageId, 
                 debug: true, 
                 forceSend: false, // Never force send from backup method
-                action: "regenerate-schedule" 
+                action: "regenerate-schedule",
+                isEdit: isEdit // Pass isEdit flag to prevent immediate notifications
               }
             });
             console.log("[ENSURE-REMINDERS] Successfully triggered edge function to regenerate reminders");

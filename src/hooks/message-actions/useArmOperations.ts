@@ -75,8 +75,9 @@ export function useArmOperations() {
       // This is the key fix to make sure reminders are always generated
       console.log(`[useArmOperations] Directly ensuring reminder schedule for condition ${conditionId}`);
       
-      // Set isEdit to false explicitly for arming operations to force notification checks
-      await ensureReminderSchedule(conditionId, false);
+      // IMPORTANT FIX: Pass isEdit=true and isArmOperation=true to prevent immediate notifications
+      // We're using isEdit=true here specifically to prevent immediate notifications
+      await ensureReminderSchedule(conditionId, true); // Changed to true to prevent immediate emails
       
       // Fire a background event to handle reminder generation without blocking UI
       setTimeout(() => {

@@ -1,12 +1,15 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Mark existing reminders obsolete - replaced by more specific function
  * FIXED: Improved error handling for permission issues
+ * FIXED: Added isEdit parameter to control notification processing
  */
 export async function markRemindersAsObsolete(
   messageId: string,
-  conditionId?: string
+  conditionId?: string,
+  isEdit: boolean = false
 ): Promise<boolean> {
   try {
     // Build query - target just the specific condition or all for this message
@@ -38,7 +41,8 @@ export async function markRemindersAsObsolete(
               messageId, 
               conditionId: conditionId || null,
               debug: true,
-              action: "mark-obsolete"
+              action: "mark-obsolete",
+              isEdit: isEdit // Pass the isEdit flag to prevent triggering notifications
             }
           });
           console.log("[REMINDER-UTILS] Successfully triggered edge function to mark reminders obsolete");
