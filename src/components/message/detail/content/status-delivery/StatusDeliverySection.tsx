@@ -5,6 +5,7 @@ import { getEffectiveDeadline } from '@/utils/reminder/reminderUtils'; // Fixed 
 import { MessageInfoSection } from './MessageInfoSection';
 import { DeliverySettingsSection } from './DeliverySettingsSection';
 import { ReminderSection } from './ReminderSection';
+import { SecuritySettingsSection } from './SecuritySettingsSection';
 
 interface StatusDeliverySectionProps {
   message: any;
@@ -81,6 +82,11 @@ export function StatusDeliverySection({
         isArmed={isArmed}
         refreshTrigger={refreshTrigger}
         onFormattedRemindersChange={setFormattedReminders}
+      />
+      
+      {/* Security Settings Section now appears outside the Delivery Settings */}
+      <SecuritySettingsSection
+        condition={condition}
       />
       
       <ReminderSection
