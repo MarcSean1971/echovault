@@ -23,7 +23,7 @@ export function MessageHeaderCard({
   return (
     <Card className="overflow-hidden border border-border/50 shadow-sm">
       <CardHeader className="bg-purple-50 border-b border-purple-100">
-        <CardTitle className={`text-2xl font-semibold text-purple-900 ${HOVER_TRANSITION}`}>
+        <CardTitle className={`text-2xl font-semibold ${HOVER_TRANSITION}`}>
           View Message Details
         </CardTitle>
       </CardHeader>
