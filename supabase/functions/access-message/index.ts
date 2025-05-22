@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { corsHeaders } from "./cors-headers.ts";
 import { supabaseClient } from "./supabase-client.ts";
@@ -209,23 +210,56 @@ serve(async (req: Request): Promise<Response> => {
         .maybeSingle();
         
       if (fallbackError || !fallbackData) {
-        return new Response(
-          JSON.stringify({ 
-            error: `Invalid or expired access link: ${deliveryError.message}`,
-            fallback_error: fallbackError?.message,
-            attempted_delivery_id: deliveryId,
-            attempted_message_id: messageId
-          }),
-          { 
-            status: 403, 
-            headers: { ...corsHeaders, "Content-Type": "application/json" }
+        // Try one more time with a different approach - filter with RPC
+        try {
+          console.log("[AccessMessage] Trying second fallback with text comparison");
+          
+          const { data: textCompareData, error: textCompareError } = await supabase
+            .from('delivered_messages')
+            .select('*')
+            .filter('message_id', 'eq', messageId)
+            .limit(10);
+            
+          // Manual search through results
+          if (!textCompareError && textCompareData && textCompareData.length > 0) {
+            console.log(`[AccessMessage] Found ${textCompareData.length} records with matching message_id`);
+            
+            // Find records where delivery_id as text matches the provided deliveryId
+            const matchingRecord = textCompareData.find(
+              record => String(record.delivery_id).trim() === String(deliveryId).trim()
+            );
+            
+            if (matchingRecord) {
+              console.log("[AccessMessage] Found matching record through text comparison");
+              deliveryData = matchingRecord;
+            } else {
+              console.log("[AccessMessage] No matching delivery_id found in text comparison results");
+            }
           }
-        );
+        } catch (secondFallbackError) {
+          console.error("[AccessMessage] Second fallback also failed:", secondFallbackError);
+        }
+        
+        // If we still don't have data, return an error
+        if (!deliveryData) {
+          return new Response(
+            JSON.stringify({ 
+              error: `Invalid or expired access link: ${deliveryError.message}`,
+              fallback_error: fallbackError?.message,
+              attempted_delivery_id: deliveryId,
+              attempted_message_id: messageId
+            }),
+            { 
+              status: 403, 
+              headers: { ...corsHeaders, "Content-Type": "application/json" }
+            }
+          );
+        }
+      } else {
+        // If we got here, the fallback worked
+        console.log(`[AccessMessage] Fallback query succeeded - delivery found!`);
+        deliveryData = fallbackData;
       }
-      
-      // If we got here, the fallback worked
-      console.log(`[AccessMessage] Fallback query succeeded - delivery found!`);
-      deliveryData = fallbackData;
     } 
     
     if (!deliveryData) {

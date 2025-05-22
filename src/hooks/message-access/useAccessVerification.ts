@@ -153,6 +153,10 @@ export const useAccessVerification = ({
             console.log("Edge function verification successful!");
             setDeliveryData(edgeFnResult.delivery);
             setConditionData(edgeFnResult.conditions);
+            setRecipientData({
+              id: edgeFnResult.delivery.recipient_id,
+              email: recipientEmail
+            });
             setIsLoading(false);
             return;
           } else if (edgeFnResult && edgeFnResult.error) {
@@ -165,6 +169,7 @@ export const useAccessVerification = ({
           // Continue to direct DB verification as fallback
         }
         
+        // Direct database verification as fallback
         // First, verify the delivery record with additional logging
         console.log(`Querying delivered_messages for delivery_id: ${deliveryId} and message_id: ${messageId}`);
         
