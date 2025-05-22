@@ -42,13 +42,13 @@ export const DelayedUnlock = ({ unlockTime, onUnlock }: DelayedUnlockProps) => {
     <div className="container mx-auto max-w-3xl px-4 py-8">
       <Card className="p-6">
         <div className="flex flex-col items-center justify-center text-center space-y-4 py-8">
-          <Clock className="h-12 w-12 text-amber-500" />
+          <Clock className="h-12 w-12 text-purple-500" />
           <h2 className="text-xl font-semibold">Message Unlock Delayed</h2>
           <p className="text-muted-foreground">
             This message has a time-delayed unlock. It will be available in:
           </p>
           
-          <div className="text-2xl font-mono font-semibold mt-2">
+          <div className="text-2xl font-mono font-semibold mt-2 text-purple-700">
             {remainingTime}
           </div>
           

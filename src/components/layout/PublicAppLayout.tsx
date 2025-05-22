@@ -11,10 +11,10 @@ export default function PublicAppLayout() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Simple header with just the logo */}
-      <header className="sticky top-0 z-30 w-full border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60 shadow-sm md:py-3 py-2">
+      <header className="sticky top-0 z-30 w-full border-b bg-purple-600 text-white md:py-3 py-2">
         <div className="container mx-auto px-4 flex items-center justify-between">
           <Logo />
-          <div className="text-sm text-muted-foreground">
+          <div className="text-sm text-purple-100">
             Secure Message Access
           </div>
         </div>

@@ -8,7 +8,7 @@ export const LoadingState = () => {
     <div className="container mx-auto max-w-3xl px-4 py-8">
       <Card className="overflow-hidden border shadow-sm">
         {/* Animated Header */}
-        <div className="bg-gradient-to-r from-blue-600/90 to-blue-700/90 p-6">
+        <div className="bg-gradient-to-r from-purple-600/90 to-purple-700/90 p-6">
           <Skeleton className="h-8 w-3/4 bg-white/20" />
           <div className="flex items-center mt-2">
             <Skeleton className="h-4 w-32 bg-white/20" />
@@ -16,9 +16,9 @@ export const LoadingState = () => {
         </div>
         
         {/* Security Badge */}
-        <div className="bg-blue-50 px-6 py-2 border-b border-blue-100 flex items-center">
-          <Shield className="h-4 w-4 text-blue-400 mr-2 animate-pulse" />
-          <Skeleton className="h-4 w-24 bg-blue-100" />
+        <div className="bg-purple-50 px-6 py-2 border-b border-purple-100 flex items-center">
+          <Shield className="h-4 w-4 text-purple-400 mr-2 animate-pulse" />
+          <Skeleton className="h-4 w-24 bg-purple-100" />
         </div>
         
         {/* Content Loading */}
@@ -62,7 +62,7 @@ export const LoadingState = () => {
       </Card>
       
       <div className="flex justify-center mt-4">
-        <p className="text-sm text-blue-600 animate-pulse font-medium">Loading secure message...</p>
+        <p className="text-sm text-purple-600 animate-pulse font-medium">Loading secure message...</p>
       </div>
     </div>
   );

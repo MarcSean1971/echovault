@@ -346,10 +346,10 @@ export const ErrorState = ({ error, isPreviewMode = false }: ErrorStateProps) =>
           )}
           
           {isPreviewMode && (
-            <div className="bg-blue-50 border border-blue-100 rounded-md p-4 w-full max-w-md">
+            <div className="bg-purple-50 border border-purple-100 rounded-md p-4 w-full max-w-md">
               <div className="flex items-start">
-                <HelpCircle className={`h-5 w-5 text-blue-500 mr-2 mt-0.5 flex-shrink-0 ${HOVER_TRANSITION}`} />
-                <div className="text-sm text-blue-700 text-left">
+                <HelpCircle className={`h-5 w-5 text-purple-500 mr-2 mt-0.5 flex-shrink-0 ${HOVER_TRANSITION}`} />
+                <div className="text-sm text-purple-700 text-left">
                   <p className="font-medium mb-1">Preview Mode Information:</p>
                   <ul className="list-disc pl-5 space-y-1">
                     <li>This is a test view using a simulated delivery ID</li>
@@ -364,10 +364,10 @@ export const ErrorState = ({ error, isPreviewMode = false }: ErrorStateProps) =>
           
           <Separator className="my-2" />
           
-          <div className="bg-blue-50 border border-blue-100 rounded-md p-4 w-full max-w-md">
+          <div className="bg-purple-50 border border-purple-100 rounded-md p-4 w-full max-w-md">
             <div className="flex items-start">
-              <HelpCircle className={`h-5 w-5 text-blue-500 mr-2 mt-0.5 flex-shrink-0 ${HOVER_TRANSITION}`} />
-              <div className="text-sm text-blue-700 text-left">
+              <HelpCircle className={`h-5 w-5 text-purple-500 mr-2 mt-0.5 flex-shrink-0 ${HOVER_TRANSITION}`} />
+              <div className="text-sm text-purple-700 text-left">
                 <p className="font-medium mb-1">Troubleshooting steps:</p>
                 <ul className="list-disc pl-5 space-y-1">
                   <li>Open the original email and click the link directly</li>
@@ -386,8 +386,8 @@ export const ErrorState = ({ error, isPreviewMode = false }: ErrorStateProps) =>
           
           <div className="flex flex-wrap gap-3 mt-2 justify-center">
             <Button 
-              onClick={retryAccess} 
-              className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default} flex items-center gap-2`}
+              onClick={retryAccess}
+              className={`bg-purple-600 hover:bg-purple-700 ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default} flex items-center gap-2`}
             >
               <RefreshCw className={`h-4 w-4 ${HOVER_TRANSITION}`} />
               Try Again
@@ -415,4 +415,4 @@ export const ErrorState = ({ error, isPreviewMode = false }: ErrorStateProps) =>
       </Card>
     </div>
   );
-}
+};
