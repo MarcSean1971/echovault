@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MessageContent } from "../content/message-content";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { renderSectionHeader } from "../helpers/renderSectionHeader";
 
 interface MessageContentSectionProps {
   message: Message;
@@ -20,13 +21,6 @@ export function MessageContentSection({
   deliveryId,
   recipientEmail
 }: MessageContentSectionProps) {
-  const renderSectionHeader = (icon: React.ReactNode, title: string) => (
-    <div className="flex items-center space-x-2 mb-4 pb-2 border-b">
-      {icon}
-      <h2 className="text-lg font-medium">{title}</h2>
-    </div>
-  );
-
   return (
     <Card className="overflow-hidden border border-border/50 shadow-sm">
       <CardContent className="p-6">
@@ -35,7 +29,7 @@ export function MessageContentSection({
           "Message Content"
         )}
         
-        {/* Display message title prominently */}
+        {/* Updated title styling to match the edit page */}
         <h3 className="font-semibold text-xl mb-4 text-purple-900">{message.title}</h3>
         
         {isLoading ? (

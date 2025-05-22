@@ -40,7 +40,7 @@ export function MessageContent({
         />
       )}
       
-      {/* Attachments section - render if available (SWAPPED ORDER - now before location) */}
+      {/* Attachments section - render if available */}
       {message.attachments && message.attachments.length > 0 && (
         <MessageAttachments
           message={message}
@@ -49,7 +49,7 @@ export function MessageContent({
         />
       )}
       
-      {/* Location section - render if available (SWAPPED ORDER - now after attachments) */}
+      {/* Location section - render if available */}
       {message.share_location && (
         <LocationSection 
           latitude={message.location_latitude} 
@@ -57,8 +57,6 @@ export function MessageContent({
           locationName={message.location_name} 
         />
       )}
-      
-      {/* WhatsApp section removed as requested */}
     </div>
   );
 }
