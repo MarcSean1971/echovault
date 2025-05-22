@@ -4,7 +4,7 @@ import { toast } from "@/components/ui/use-toast";
 
 /**
  * Trigger a manual reminder for a message
- * Enhanced with retry mechanism and multiple function calls
+ * Updated to prevent duplicate emails and use consistent template
  */
 export async function triggerManualReminder(messageId: string, forceSend: boolean = true, testMode: boolean = true) {
   try {
@@ -15,6 +15,34 @@ export async function triggerManualReminder(messageId: string, forceSend: boolea
       description: "Processing test reminder...",
       duration: 3000,
     });
+
+    // Implement deduplication - check if a reminder was recently sent for this message
+    try {
+      const fiveMinutesAgo = new Date();
+      fiveMinutesAgo.setMinutes(fiveMinutesAgo.getMinutes() - 5);
+      
+      const { data: recentReminders } = await supabase
+        .from('reminder_delivery_log')
+        .select('id, created_at')
+        .eq('message_id', messageId)
+        .eq('delivery_channel', 'manual')
+        .gte('created_at', fiveMinutesAgo.toISOString())
+        .limit(1);
+        
+      if (recentReminders && recentReminders.length > 0) {
+        console.log(`[REMINDER-SERVICE] Detected recent reminder sent at ${recentReminders[0].created_at}`);
+        toast({
+          title: "Reminder Already Triggered",
+          description: "A reminder was recently sent. Please wait a few minutes before trying again.",
+          variant: "purple",
+          duration: 5000, 
+        });
+        return { success: true, message: "Reminder was recently sent" };
+      }
+    } catch (checkError) {
+      console.warn("[REMINDER-SERVICE] Error checking for recent reminders:", checkError);
+      // Non-fatal, continue
+    }
 
     // Create a tracking record for this manual trigger request
     try {
@@ -48,99 +76,90 @@ export async function triggerManualReminder(messageId: string, forceSend: boolea
       // Non-fatal, continue
     }
 
-    // First attempt - call reminder emails function directly
+    // Primary attempt - use send-message-notifications for consistent template
+    console.log("[REMINDER-SERVICE] Triggering send-message-notifications for consistent template");
     let primarySuccess = false;
     try {
+      const { data: notificationData, error: notificationError } = await supabase.functions.invoke("send-message-notifications", {
+        body: {
+          messageId: messageId,
+          debug: true,
+          forceSend: true,
+          source: "manual-ui-trigger",
+          testMode: true,
+          action: "test-delivery",
+          userId: userId
+        }
+      });
+      
+      if (notificationError) {
+        console.error("[REMINDER-SERVICE] Error triggering notification:", notificationError);
+      } else {
+        console.log("[REMINDER-SERVICE] Notification response:", notificationData);
+        primarySuccess = true;
+      }
+    } catch (notificationError) {
+      console.error("[REMINDER-SERVICE] Exception triggering notification:", notificationError);
+    }
+
+    // Fallback attempt - only if primary failed
+    if (!primarySuccess) {
+      console.log("[REMINDER-SERVICE] Primary method failed, falling back to send-reminder-emails");
       const { data: reminderData, error: reminderError } = await supabase.functions.invoke("send-reminder-emails", {
         body: {
           messageId: messageId,
           debug: true,
-          forceSend: true, // CRITICAL FIX: Always force send for manual triggers
-          source: "manual-ui-trigger",
-          testMode: true, // CRITICAL FIX: Always use test mode for manual triggers
-          action: "test-delivery", // Specify that this is a test delivery
-          userId: userId // Pass the user ID if available
+          forceSend: true,
+          source: "manual-ui-trigger-fallback",
+          testMode: true,
+          action: "test-delivery",
+          userId: userId
         }
       });
       
       if (reminderError) {
-        console.error("[REMINDER-SERVICE] Error triggering reminder:", reminderError);
-        // Don't throw yet, we'll try the backup method
-      } else {
-        console.log("[REMINDER-SERVICE] Reminder response from primary function:", reminderData);
-        primarySuccess = true;
-      }
-    } catch (primaryError) {
-      console.error("[REMINDER-SERVICE] Exception triggering primary reminder function:", primaryError);
-      // Don't throw yet, we'll try the backup method
-    }
-
-    // Second attempt - try notification function as backup if primary failed
-    if (!primarySuccess) {
-      console.log("[REMINDER-SERVICE] Primary reminder function failed, trying backup function...");
-      const { data, error } = await supabase.functions.invoke("send-message-notifications", {
-        body: {
-          messageId: messageId,
-          debug: true,
-          forceSend: true, // CRITICAL FIX: Always force send for backup method too
-          source: "manual-ui-trigger-backup",
-          testMode: true, // CRITICAL FIX: Always use test mode for backup method
-          action: "test-delivery", // Specify that this is a test delivery
-          userId: userId // Pass the user ID if available
-        }
-      });
-
-      if (error) {
-        console.error("[REMINDER-SERVICE] Error triggering backup reminder:", error);
+        console.error("[REMINDER-SERVICE] Error triggering fallback reminder:", reminderError);
         
         // Both methods failed - show error
         toast({
           title: "Error Triggering Reminder",
-          description: `Both reminder methods failed. Please try again or check with support.`,
+          description: `All delivery methods failed. Please try again later.`,
           variant: "destructive",
           duration: 5000,
         });
         
-        throw error;
+        throw reminderError;
       }
 
-      console.log("[REMINDER-SERVICE] Reminder response from backup function:", data);
+      console.log("[REMINDER-SERVICE] Reminder response from fallback method:", reminderData);
     }
 
     // For successful reminder delivery, show a more specific success toast
-    if (primarySuccess || true) { // Always show success for now since we have multiple methods
-      let successMessage = `Successfully initiated reminder sending process. Check your email in the next few minutes.`;
-      
-      toast({
-        title: "Test Reminder Sent",
-        description: successMessage,
-        duration: 5000,
+    toast({
+      title: "Test Reminder Sent",
+      description: `Successfully initiated reminder sending process. Check your email in the next few minutes.`,
+      variant: "purple",
+      duration: 5000,
+    });
+    
+    // Create another tracking record to mark this as complete
+    try {
+      await supabase.from('reminder_delivery_log').insert({
+        reminder_id: `manual-trigger-complete-${Date.now()}`,
+        message_id: messageId,
+        condition_id: 'manual-trigger',
+        recipient: 'system',
+        delivery_channel: 'manual',
+        delivery_status: 'delivered',
+        response_data: { completed_at: new Date().toISOString(), testMode }
       });
-      
-      // Create another tracking record to mark this as complete
-      try {
-        await supabase.from('reminder_delivery_log').insert({
-          reminder_id: `manual-trigger-complete-${Date.now()}`,
-          message_id: messageId,
-          condition_id: 'manual-trigger',
-          recipient: 'system',
-          delivery_channel: 'manual',
-          delivery_status: 'delivered',
-          response_data: { completed_at: new Date().toISOString(), testMode }
-        });
-      } catch (logError) {
-        console.warn("[REMINDER-SERVICE] Error logging manual trigger completion:", logError);
-      }
-      
-      return {
-        success: true,
-        message: successMessage
-      };
+    } catch (logError) {
+      console.warn("[REMINDER-SERVICE] Error logging manual trigger completion:", logError);
     }
     
     return {
-      success: false,
-      error: "No successful reminder method - this should not happen"
+      success: true,
+      message: "Reminder sent successfully"
     };
   } catch (error: any) {
     console.error("[REMINDER-SERVICE] Error in triggerManualReminder:", error);

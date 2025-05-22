@@ -13,7 +13,7 @@ const alertVariants = cva(
         destructive:
           "border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive",
         purple: 
-          "border-purple-200 bg-purple-50 text-purple-800 [&>svg]:text-purple-500",
+          "border-purple-200 bg-purple-50 text-purple-800 [&>svg]:text-purple-500 hover:border-purple-300 transition-colors",
       },
     },
     defaultVariants: {

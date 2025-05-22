@@ -1,6 +1,7 @@
 
 /**
  * Email service for sending notifications
+ * UPDATED: Simplified to match the main email template
  */
 
 interface EmailOptions {
