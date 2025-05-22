@@ -1,3 +1,4 @@
+
 import { useParams } from "react-router-dom";
 import { useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -110,7 +111,7 @@ export default function MessageDetail() {
   }
 
   if (!message) {
-    return <MessageNotFound />;
+    return <MessageNotFound isInitialLoading={isLoading} />;
   }
 
   // Render the page with all available data immediately
