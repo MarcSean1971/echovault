@@ -121,7 +121,7 @@ export default function PublicMessageAccess() {
   
   // Show not found state when appropriate - only after loading is complete
   if (!message && initialLoadState === 'complete' && !isLoading) {
-    return <MessageNotFound isInitialLoading={initialLoadState === 'loading' || isLoading} />;
+    return <MessageNotFound isInitialLoading={isLoading} />;
   }
   
   // Render message content when everything is ready
