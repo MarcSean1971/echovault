@@ -25,7 +25,7 @@ export function MessageContentSection({
     <Card className="overflow-hidden border border-border/50 shadow-sm">
       <CardContent className="p-6">
         {renderSectionHeader(
-          <FileText className={`h-5 w-5 ${HOVER_TRANSITION}`} />, 
+          <FileText className={`h-5 w-5 text-muted-foreground ${HOVER_TRANSITION}`} />, 
           "Message Content"
         )}
         
