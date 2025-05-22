@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { corsHeaders } from "./cors-headers.ts";
 import { supabaseClient } from "./supabase-client.ts";
@@ -463,7 +462,7 @@ serve(async (req: Request): Promise<Response> => {
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error(`[AccessMessage] Unhandled error: ${error.message}`);
     console.error(error.stack);
     

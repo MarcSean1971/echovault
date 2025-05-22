@@ -1,4 +1,3 @@
-
 import { AlertCircle, HelpCircle, ArrowLeft, RefreshCw, FileText, Bug } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -240,12 +239,12 @@ export const ErrorState = ({ error, isPreviewMode = false }: ErrorStateProps) =>
         </div>
       )}
       
-      <Card className="p-6 border-red-200">
+      <Card className="p-6 border-purple-200">
         <div className="flex flex-col items-center justify-center text-center space-y-4 py-6">
-          <AlertCircle className={`h-12 w-12 text-red-500 ${HOVER_TRANSITION}`} />
+          <AlertCircle className={`h-12 w-12 text-purple-500 ${HOVER_TRANSITION}`} />
           <h2 className="text-xl font-semibold">Access Error</h2>
           
-          <Alert variant="destructive" className="mb-2">
+          <Alert variant="destructive" className="mb-2 bg-purple-50 border-purple-200 text-purple-800">
             <AlertTitle>Error accessing {isAttachmentError ? 'attachment' : 'message'}</AlertTitle>
             <AlertDescription>
               {isPreviewMode ? 'This is expected in preview mode. Use the Debug button for options.' : error}

@@ -59,7 +59,7 @@ export const useAccessVerification = ({
       }
       
       // For preview mode with delivery ID starting with preview- or test-, bypass the normal verification
-      const isTestDelivery = deliveryId.startsWith('preview-') || deliveryId.startsWith('test-');
+      const isTestDelivery = deliveryId?.startsWith('preview-') || deliveryId?.startsWith('test-');
       if (isPreviewMode || isTestDelivery) {
         console.log("Preview mode enabled, bypassing normal access verification");
         
@@ -140,7 +140,7 @@ export const useAccessVerification = ({
             body: { 
               messageId, 
               deliveryId,
-              recipientEmail: decodeURIComponent(recipientEmail)
+              recipientEmail: decodeURIComponent(recipientEmail || '')
             }
           });
           
