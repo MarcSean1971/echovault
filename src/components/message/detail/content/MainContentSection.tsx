@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Message } from "@/types/message";
 import { StatusDeliverySection } from "./StatusDeliverySection";
@@ -87,7 +86,7 @@ export function MainContentSection({
             "Message Content"
           )}
           
-          <Label htmlFor="message-title">Title <span className="text-destructive">*</span></Label>
+          <Label htmlFor="message-title">Title</Label>
           
           <h2 id="message-title" className="text-xl font-medium mb-4">{message.title}</h2>
           
