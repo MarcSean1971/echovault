@@ -1,6 +1,5 @@
 
 import { Message } from "@/types/message";
-import { getMessageIcon } from "@/utils/messageFormatUtils";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface MessageHeaderProps {
@@ -20,15 +19,7 @@ export function MessageHeader({
 }: MessageHeaderProps) {
   return (
     <div className="space-y-4">
-      {/* Message Icon */}
-      <div className="flex items-center gap-3">
-        <div className="text-muted-foreground">
-          {getMessageIcon(message.message_type)}
-        </div>
-        <div className="text-sm text-muted-foreground">
-          {message.message_type === "text" ? "Text Message" : "Video Message"}
-        </div>
-      </div>
+      {/* Empty space where message type icon used to be */}
     </div>
   );
 }
