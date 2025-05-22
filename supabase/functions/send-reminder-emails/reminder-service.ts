@@ -226,13 +226,42 @@ export async function processReminder(
     } else {
       // This is a regular reminder, not final delivery
       if (['no_check_in', 'recurring_check_in', 'inactivity_to_date'].includes(conditionData.condition_type)) {
+        // FIXED: Calculate the actual time until deadline instead of hardcoded 48 hours
+        // Calculate hours until deadline based on the condition's threshold and last check-in
+        let hoursUntilDeadline = 0;
+        
+        if (conditionData.last_checked) {
+          const lastCheckedDate = new Date(conditionData.last_checked);
+          const hoursThreshold = conditionData.hours_threshold || 0;
+          const minutesThreshold = conditionData.minutes_threshold || 0;
+          
+          // Calculate virtual deadline
+          const virtualDeadline = new Date(lastCheckedDate);
+          virtualDeadline.setHours(virtualDeadline.getHours() + hoursThreshold);
+          virtualDeadline.setMinutes(virtualDeadline.getMinutes() + minutesThreshold);
+          
+          // Calculate hours until that deadline
+          const now = new Date();
+          hoursUntilDeadline = (virtualDeadline.getTime() - now.getTime()) / (1000 * 60 * 60);
+          
+          if (debug) {
+            console.log(`Calculated ${hoursUntilDeadline.toFixed(2)} hours until deadline`);
+            console.log(`Last checked: ${lastCheckedDate.toISOString()}`);
+            console.log(`Hours threshold: ${hoursThreshold}, Minutes threshold: ${minutesThreshold}`);
+            console.log(`Virtual deadline: ${virtualDeadline.toISOString()}`);
+          }
+        } else {
+          console.warn(`No last_checked date for condition ${conditionData.id}, using default hours`);
+          hoursUntilDeadline = conditionData.hours_threshold || 48; // Fallback
+        }
+        
         // For check-in conditions, send reminder to creator
         results = await sendCreatorReminder(
           reminder.message_id,
           reminder.condition_id,
           messageData.title,
           messageData.user_id,
-          48, // Default hours until deadline
+          hoursUntilDeadline, // Use calculated time instead of hardcoded value
           reminder.scheduled_at,
           debug
         );
@@ -265,7 +294,7 @@ export async function processReminder(
               condition_id: reminder.condition_id,
               recipient: "system",
               delivery_channel: "system",
-              channel_order: 0, 
+              channel_order: 0,
               delivery_status: 'error',
               error_message: "No recipients configured for reminder"
             });
@@ -338,7 +367,7 @@ export async function processReminder(
         error_message: `System error: ${error.message || 'Unknown error in processReminder'}`
       });
     } catch (logError) {
-      console.error("Failed to log error in delivery log:", logError);
+      console.error("Failed to log delivery error:", logError);
     }
     
     return { 
@@ -347,3 +376,4 @@ export async function processReminder(
     };
   }
 }
+
