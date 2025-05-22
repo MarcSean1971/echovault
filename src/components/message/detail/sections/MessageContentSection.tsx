@@ -29,8 +29,8 @@ export function MessageContentSection({
           "Message Content"
         )}
         
-        {/* Display message title with consistent styling */}
-        <h3 className="font-medium text-xl mb-4">{message.title}</h3>
+        {/* Title exactly matching the Edit page style */}
+        <h2 className="text-xl font-medium mb-4">{message.title}</h2>
         
         {isLoading ? (
           <Skeleton className="h-24 w-full" />
