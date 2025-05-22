@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Message } from "@/types/message";
 import { StatusDeliverySection } from "./StatusDeliverySection";
@@ -85,8 +86,8 @@ export function MainContentSection({
             "Message Content"
           )}
           
-          {/* Display message title prominently with matching style */}
-          <h3 className="font-semibold text-xl mb-4 text-purple-900">{message.title}</h3>
+          {/* Updated message title styling to match the edit page - removed text-purple-900 class */}
+          <h3 className="font-medium text-xl mb-4">{message.title}</h3>
           
           <MessageContent 
             message={message} 
