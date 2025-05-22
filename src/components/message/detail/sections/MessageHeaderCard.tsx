@@ -58,7 +58,7 @@ export function MessageHeaderCard({
           )}
         </div>
       </CardHeader>
-      <CardContent className="p-6 pb-5">
+      <CardContent className="p-6 pb-3">
         <MessageHeader
           message={message}
           isArmed={isArmed}
