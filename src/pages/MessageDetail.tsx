@@ -118,7 +118,7 @@ export default function MessageDetail() {
   return (
     <MessageDetailContent
       message={message}
-      isLoading={false} // Never use skeleton loaders to block UI rendering
+      isLoading={false}
       isArmed={isArmed}
       isActionLoading={isActionLoading}
       deadline={deadline}
