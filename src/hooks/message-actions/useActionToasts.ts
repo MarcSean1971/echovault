@@ -8,7 +8,8 @@ export function useActionToasts() {
   const showArmSuccess = () => {
     toast({
       title: "Message armed",
-      description: "Your message has been armed and will trigger according to your settings"
+      description: "Your message has been armed and will trigger according to your settings",
+      variant: "purple"
     });
   };
   
@@ -23,7 +24,8 @@ export function useActionToasts() {
   const showDisarmSuccess = () => {
     toast({
       title: "Message disarmed",
-      description: "Your message has been disarmed and will not trigger"
+      description: "Your message has been disarmed and will not trigger",
+      variant: "purple"
     });
   };
   
