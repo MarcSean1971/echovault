@@ -86,7 +86,7 @@ export function MainContentSection({
             "Message Content"
           )}
           
-          {/* Updated message title styling to match the edit page - removed text-purple-900 class */}
+          {/* Display message title with consistent styling */}
           <h3 className="font-medium text-xl mb-4">{message.title}</h3>
           
           <MessageContent 
