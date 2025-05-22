@@ -1,6 +1,5 @@
 
 import { Message } from "@/types/message";
-import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface MessageHeaderProps {
   message: Message;
@@ -17,9 +16,6 @@ export function MessageHeader({
   handleDisarmMessage,
   handleArmMessage,
 }: MessageHeaderProps) {
-  return (
-    <div className="space-y-4">
-      {/* Empty space where message type icon used to be */}
-    </div>
-  );
+  // Return null instead of an empty div with spacing
+  return null;
 }
