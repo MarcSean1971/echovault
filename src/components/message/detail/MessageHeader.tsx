@@ -1,10 +1,7 @@
 
-import { Button } from "@/components/ui/button";
-import { Bell, BellOff } from "lucide-react";
 import { Message } from "@/types/message";
 import { getMessageIcon } from "@/utils/messageFormatUtils";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
-import { StatusBadge } from "@/components/ui/status-badge";
 
 interface MessageHeaderProps {
   message: Message;
@@ -23,44 +20,13 @@ export function MessageHeader({
 }: MessageHeaderProps) {
   return (
     <div className="space-y-4">
-      {/* Message Status with Arm/Disarm Button */}
-      <div className="flex items-center justify-between">
-        {/* Message Icon */}
-        <div className="flex items-center gap-3">
-          <div className="text-muted-foreground">
-            {getMessageIcon(message.message_type)}
-          </div>
-          <div className="text-sm text-muted-foreground">
-            {message.message_type === "text" ? "Text Message" : "Video Message"}
-          </div>
+      {/* Message Icon */}
+      <div className="flex items-center gap-3">
+        <div className="text-muted-foreground">
+          {getMessageIcon(message.message_type)}
         </div>
-        
-        <div className="flex items-center gap-2">
-          <StatusBadge status={isArmed ? "armed" : "disarmed"} size="md">
-            {isArmed ? "Armed" : "Disarmed"}
-          </StatusBadge>
-          
-          {isArmed ? (
-            <Button
-              variant="outline"
-              onClick={handleDisarmMessage}
-              disabled={isActionLoading}
-              className="text-green-600 hover:bg-green-100 hover:text-green-700"
-              size="sm"
-            >
-              <BellOff className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} /> Disarm
-            </Button>
-          ) : (
-            <Button
-              variant="outline"
-              onClick={handleArmMessage}
-              disabled={isActionLoading}
-              className="text-purple-600 hover:bg-purple-100 hover:text-purple-700 border-purple-200"
-              size="sm"
-            >
-              <Bell className={`h-4 w-4 mr-2 ${HOVER_TRANSITION}`} /> Arm
-            </Button>
-          )}
+        <div className="text-sm text-muted-foreground">
+          {message.message_type === "text" ? "Text Message" : "Video Message"}
         </div>
       </div>
     </div>
