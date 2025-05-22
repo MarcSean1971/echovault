@@ -22,7 +22,7 @@ export function MessageNotFound({ isInitialLoading = false }: MessageNotFoundPro
         <h1 className="text-2xl font-bold mb-4">Message not found</h1>
         <Button 
           onClick={() => navigate("/messages")}
-          className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default}`}
+          className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default} bg-purple-600 hover:bg-purple-700`}
         >
           Back to Messages
         </Button>
