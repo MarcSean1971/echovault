@@ -30,7 +30,7 @@ export function MessageContentSection({
           "Message Content"
         )}
         
-        <Label htmlFor="message-content-title">Title</Label>
+        <Label htmlFor="message-content-title" className="mt-2">Title</Label>
         
         <h2 id="message-content-title" className="text-xl font-medium mb-4">{message.title}</h2>
         
