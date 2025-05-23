@@ -96,8 +96,8 @@ export const MessageDisplay = ({
       )}
       
       <Card className="overflow-hidden border shadow-sm">
-        {/* Message Header - Shows immediately - CHANGED COLOR SCHEME TO PURPLE */}
-        <CardHeader className="bg-gradient-to-r from-purple-600 to-purple-700 p-6 text-white">
+        {/* Message Header - Shows immediately */}
+        <CardHeader className="bg-gradient-to-r from-purple-500 to-purple-600 p-6 text-white">
           <CardTitle className="text-2xl font-bold">{message.title}</CardTitle>
           <div className="flex items-center text-purple-100 text-sm">
             <Calendar className={`h-4 w-4 mr-1 ${HOVER_TRANSITION}`} />
@@ -105,7 +105,7 @@ export const MessageDisplay = ({
           </div>
         </CardHeader>
         
-        {/* Security Badge - Shows immediately - CHANGED COLOR SCHEME TO PURPLE */}
+        {/* Security Badge */}
         <div className="bg-purple-50 px-6 py-2 border-b border-purple-100">
           <div className="flex items-center">
             <Shield className={`h-4 w-4 text-purple-600 mr-2 ${HOVER_TRANSITION}`} />
@@ -117,14 +117,14 @@ export const MessageDisplay = ({
           </div>
         </div>
         
-        {/* Message Content - Show immediately without progressive loading */}
+        {/* Message Content */}
         <CardContent className="p-6">
           <div className="prose max-w-full">
             {message && <MessageContent message={message} deliveryId={deliveryId} recipientEmail={recipientEmail} />}
           </div>
         </CardContent>
         
-        {/* Footer - Updated to use purple color scheme instead of gray */}
+        {/* Footer */}
         <div className="bg-purple-50 px-6 py-4 text-sm text-purple-700 border-t border-purple-100">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
