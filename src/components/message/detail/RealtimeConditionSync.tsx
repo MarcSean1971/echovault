@@ -46,7 +46,7 @@ export function RealtimeConditionSync() {
     const channel = supabase
       .channel('message_conditions_changes')
       .on(
-        'postgres_changes',
+        'postgres_changes', // Use as string literal, not a type
         {
           event: 'UPDATE',
           schema: 'public',
