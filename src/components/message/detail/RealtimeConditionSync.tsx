@@ -17,8 +17,9 @@ export function RealtimeConditionSync() {
     console.log(`[RealtimeSync] Setting up Realtime subscription for message ${messageId}`);
     
     // Create a channel to listen for changes to the message_conditions table
+    // specifically for the current message
     const channel = supabase
-      .channel('message_conditions_changes')
+      .channel(`message_conditions_${messageId}`)
       .on(
         'postgres_changes',
         {

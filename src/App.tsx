@@ -6,12 +6,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { Analytics } from "@/utils/analytics";
 import { useErrorHandler } from "@/hooks/useErrorHandler";
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { PageLoader } from "@/components/ui/page-loader";
 import ProtectedLayout from "@/components/layout/ProtectedLayout";
 import { MainLayout } from "@/components/layout/MainLayout";
 import AppLayout from "@/components/layout/AppLayout";
 import PublicAppLayout from "@/components/layout/PublicAppLayout";
+import { enableRealtimeForConditions } from "@/services/messages/whatsApp/realtimeHelper";
 
 // Create a client for React Query
 const queryClient = new QueryClient({
