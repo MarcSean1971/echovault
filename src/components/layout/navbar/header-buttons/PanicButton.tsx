@@ -34,7 +34,7 @@ export function PanicButton({
       disabled={isDisabled}
       className={`bg-red-600 text-white ${buttonPaddingClass} ${buttonSizeClass} hover:bg-red-700 
         ${HOVER_TRANSITION} 
-        ${BUTTON_HOVER_EFFECTS.danger}
+        ${BUTTON_HOVER_EFFECTS.destructive}
         ${inCancelWindow ? "animate-pulse" : ""}`}
       size={isMobile ? "sm" : "lg"}
       style={{ backgroundColor: "#dc2626" }}
