@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Message } from "@/types/message";
 import { StatusDeliverySection } from "./StatusDeliverySection";
@@ -5,10 +6,12 @@ import { MessageHeader } from "../MessageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MessageContent } from "../content/message-content";
 import { Skeleton } from "@/components/ui/skeleton";
-import { FileText } from "lucide-react";
+import { FileText, Users } from "lucide-react";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { renderSectionHeader } from "../helpers/renderSectionHeader";
 import { Label } from "@/components/ui/label";
+import { AccordionSection } from "../AccordionSection";
+import { RecipientsSection } from "./RecipientsSection";
 
 interface MainContentSectionProps {
   message: Message;
@@ -98,7 +101,7 @@ export function MainContentSection({
         </CardContent>
       </Card>
       
-      {/* Status & Delivery Section - now includes Recipients */}
+      {/* Status & Delivery Section */}
       <Card className="overflow-hidden border border-border/50 shadow-sm">
         <CardContent className="p-6">
           {!condition ? (
@@ -121,11 +124,27 @@ export function MainContentSection({
               isDelivered={isDelivered}
               viewCount={viewCount}
               isLoadingDelivery={isLoadingDelivery}
+            />
+          )}
+        </CardContent>
+      </Card>
+      
+      {/* Recipients Section in its own card */}
+      {recipients && recipients.length > 0 && (
+        <Card className="overflow-hidden border border-border/50 shadow-sm">
+          <CardContent className="p-6">
+            {renderSectionHeader(
+              <Users className={`h-5 w-5 text-muted-foreground ${HOVER_TRANSITION}`} />,
+              "Recipients"
+            )}
+            
+            <RecipientsSection
               recipients={recipients}
+              isArmed={isArmed}
               isActionLoading={isActionLoading}
               onSendTestMessage={onSendTestMessage}
               renderRecipients={() => (
-                <div className="space-y-1">
+                <div className="space-y-1 mt-2">
                   {recipients.map((recipient) => (
                     <div key={recipient.id} className="p-2 border rounded-md flex justify-between items-center">
                       <div>
@@ -137,9 +156,9 @@ export function MainContentSection({
                 </div>
               )}
             />
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
