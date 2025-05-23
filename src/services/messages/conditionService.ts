@@ -8,7 +8,7 @@ import {
   deleteConditionFromDb,
   invalidateConditionsCache
 } from "./conditions/dbOperations";
-import { performCheckIn, getNextCheckInDeadline as getCheckInDeadlineFromService } from "./conditions/checkInService";
+import { performUserCheckIn, getNextCheckInDeadline as getCheckInDeadlineFromService } from "./conditions/checkInService";
 import { triggerPanicMessage } from "./conditions/panicTriggerService";
 import { getMessageStatus } from "./conditions/messageStatusService";
 import { armMessage, disarmMessage, getMessageDeadline } from "./conditions/messageArmingService";
@@ -67,8 +67,8 @@ export async function deleteMessageCondition(conditionId: string): Promise<void>
 // Re-export the new messageConditionService function
 export { getConditionByMessageId } from './conditions/messageConditionService';
 
-// Re-export check-in functions
-export { performCheckIn };
+// Re-export check-in functions with the correct name
+export { performUserCheckIn as performCheckIn };
 
 // Re-export the deadline calculation function from checkInService with a more specific name
 export { getCheckInDeadlineFromService as getConditionDeadline };
