@@ -59,15 +59,15 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
-            <Link to="/profile" className="w-full cursor-pointer hover:opacity-90 transition-opacity">
-              <User className={`mr-2 h-4 w-4 ${ICON_HOVER_EFFECTS.muted}`} />
-              <span>Profile</span>
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
             <Link to="/recipients" className="w-full cursor-pointer hover:opacity-90 transition-opacity">
               <Users className={`mr-2 h-4 w-4 ${ICON_HOVER_EFFECTS.muted}`} />
               <span>Recipients</span>
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link to="/profile" className="w-full cursor-pointer hover:opacity-90 transition-opacity">
+              <User className={`mr-2 h-4 w-4 ${ICON_HOVER_EFFECTS.muted}`} />
+              <span>Profile</span>
             </Link>
           </DropdownMenuItem>
           {isAdmin && (
