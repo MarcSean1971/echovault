@@ -140,11 +140,11 @@ export const MessageCardContent = memo(function MessageCardContent({
   // Always re-render if message changes
   if (prevProps.message.id !== nextProps.message.id) return false;
   
-  // Re-render when deadline progress significantly changes (not for every small change)
-  if (Math.abs(prevProps.deadlineProgress - nextProps.deadlineProgress) > 5) return false;
+  // Re-render when deadline progress significantly changes
+  if (Math.abs(prevProps.deadlineProgress - nextProps.deadlineProgress) > 2) return false;
   
-  // Re-render when time display changes minutes
-  if (prevProps.timeLeft?.substring(0, 5) !== nextProps.timeLeft?.substring(0, 5)) return false;
+  // Re-render when time display changes (including seconds)
+  if (prevProps.timeLeft !== nextProps.timeLeft) return false;
   
   // Re-render when reminders change
   if (prevProps.nextReminder !== nextProps.nextReminder) return false;
@@ -152,6 +152,6 @@ export const MessageCardContent = memo(function MessageCardContent({
   // Check if the length of upcoming reminders changed
   if ((prevProps.upcomingReminders?.length || 0) !== (nextProps.upcomingReminders?.length || 0)) return false;
   
-  // Don't re-render for small changes like seconds updating
+  // Default to not re-rendering
   return true;
 });

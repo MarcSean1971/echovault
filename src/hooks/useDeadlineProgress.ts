@@ -5,7 +5,7 @@ import { MessageCondition } from "@/types/message";
 
 /**
  * Custom hook to calculate deadline progress and format countdown
- * Optimized to reduce re-renders and prevent flickering
+ * Optimized for more frequent updates without sacrificing performance
  */
 export function useDeadlineProgress(
   isArmed: boolean, 
@@ -38,7 +38,7 @@ export function useDeadlineProgress(
     return `${hours}:${minutes}:${seconds}`;
   }, []);
   
-  // Update deadline progress and countdown with rate limiting
+  // Update deadline progress and countdown with more frequent updates
   useEffect(() => {
     if (isArmed && deadline && condition?.last_checked) {
       // Clear existing timer if any
@@ -51,8 +51,8 @@ export function useDeadlineProgress(
         const now = new Date();
         const currentTime = now.getTime();
         
-        // Rate limit updates to prevent flickering (only update if 1 second has passed)
-        if (currentTime - lastUpdateRef.current < 1000) {
+        // Reduce rate limiting to update more frequently (only 100ms throttle)
+        if (currentTime - lastUpdateRef.current < 100) {
           return;
         }
         
@@ -77,9 +77,9 @@ export function useDeadlineProgress(
       // Initial update
       updateProgress();
       
-      // Update progress and countdown timer every 5 seconds for better performance
+      // Update progress and countdown timer every 1 second for smoother visualization
       // Store the timer ID in the ref so we can clean it up properly
-      timerRef.current = window.setInterval(updateProgress, 5000);
+      timerRef.current = window.setInterval(updateProgress, 1000);
       
       return () => {
         if (timerRef.current !== null) {
