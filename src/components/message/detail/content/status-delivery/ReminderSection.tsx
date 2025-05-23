@@ -113,18 +113,7 @@ export function ReminderSection({
         errorState={errorState}
       />
       
-      {/* Test reminder button - re-added for easier testing */}
-      {condition?.message_id && hasReminders && (
-        <div className="mt-4">
-          <button 
-            onClick={() => handleTestReminder()}
-            disabled={isTestingReminder}
-            className={`text-xs px-2 py-1 rounded bg-blue-100 text-blue-800 hover:bg-blue-200 ${HOVER_TRANSITION}`}
-          >
-            {isTestingReminder ? "Testing..." : "Test Reminder Delivery"}
-          </button>
-        </div>
-      )}
+      {/* Test reminder button section removed */}
       
       {/* Reminder History Dialog - hidden but kept for functionality */}
       {condition?.message_id && (
@@ -137,3 +126,4 @@ export function ReminderSection({
     </AccordionSection>
   );
 }
+
