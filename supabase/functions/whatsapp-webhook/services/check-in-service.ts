@@ -21,7 +21,7 @@ export async function processCheckIn(userId: string, phoneNumber: string) {
     await supabase.functions.invoke("send-whatsapp", {
       body: {
         to: phoneNumber,
-        message: "✅ CHECK-IN SUCCESSFUL. Your dead man's switch has been reset."
+        message: "✅ CHECK-IN SUCCESSFUL. Your Trigger Switch has been reset."
       }
     });
     
