@@ -1,5 +1,6 @@
 
 import { createSupabaseAdmin } from "../../shared/supabase-client.ts";
+import { formatWhatsAppNumber } from "../../shared/utils/phone-formatter.ts";
 
 /**
  * Process a check-in from WhatsApp
@@ -33,6 +34,10 @@ export async function processCheckIn(userId: string, phoneNumber: string) {
     
     if (!conditions || conditions.length === 0) {
       console.log(`[WEBHOOK] No active conditions found for user ${userId}`);
+      
+      // Even if no conditions were found, send a confirmation message
+      await sendConfirmationMessage(phoneNumber, 0);
+      
       return { 
         status: "success", 
         message: "Check-in recorded, but no active conditions found",
@@ -57,8 +62,9 @@ export async function processCheckIn(userId: string, phoneNumber: string) {
       };
     }
     
-    // Send a confirmation message
-    // In a real-world scenario you would send a WhatsApp message here
+    // Send a confirmation message via WhatsApp
+    await sendConfirmationMessage(phoneNumber, conditions.length);
+    
     console.log(`[WEBHOOK] Successfully updated ${conditions.length} conditions for user ${userId}`);
     
     return { 
@@ -74,5 +80,49 @@ export async function processCheckIn(userId: string, phoneNumber: string) {
       message: error.message || "Unknown error processing check-in",
       code: "PROCESSING_ERROR"
     };
+  }
+}
+
+/**
+ * Send a confirmation message back to the user via WhatsApp
+ * @param phoneNumber The recipient's phone number
+ * @param conditionsUpdated Number of conditions that were updated
+ */
+async function sendConfirmationMessage(phoneNumber: string, conditionsUpdated: number) {
+  try {
+    // Format phone number for WhatsApp
+    const formattedPhone = formatWhatsAppNumber(phoneNumber);
+    
+    console.log(`[WEBHOOK] Sending check-in confirmation to ${formattedPhone}`);
+    
+    // Generate confirmation message based on conditions updated
+    let message = "✅ Your check-in has been recorded.";
+    
+    if (conditionsUpdated > 0) {
+      message += ` ${conditionsUpdated} condition${conditionsUpdated === 1 ? ' was' : 's were'} updated.`;
+    } else {
+      message += " No active conditions required updating.";
+    }
+    
+    // Call the send-whatsapp function
+    const supabase = createSupabaseAdmin();
+    const { data, error } = await supabase.functions.invoke("send-whatsapp", {
+      body: {
+        to: formattedPhone,
+        message: message,
+        useTemplate: false
+      }
+    });
+    
+    if (error) {
+      console.error(`[WEBHOOK] Error sending WhatsApp confirmation:`, error);
+      return false;
+    }
+    
+    console.log(`[WEBHOOK] WhatsApp confirmation sent successfully:`, data);
+    return true;
+  } catch (error) {
+    console.error(`[WEBHOOK] Error sending confirmation message:`, error);
+    return false;
   }
 }
