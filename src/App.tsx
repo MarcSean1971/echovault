@@ -96,6 +96,10 @@ export default function App() {
                 <Route index element={<HomePage />} />
                 <Route path="login" element={<LoginPage />} />
                 <Route path="register" element={<RegisterPage />} />
+              </Route>
+              
+              {/* Terms and Privacy pages - using AppLayout to show the header */}
+              <Route path="/" element={<AppLayout isLoggedIn={false} />}>
                 <Route path="terms" element={<TermsPage />} />
                 <Route path="privacy" element={<PrivacyPage />} />
               </Route>

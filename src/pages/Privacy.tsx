@@ -7,7 +7,7 @@ export default function Privacy() {
   return (
     <div className="container max-w-4xl mx-auto py-12 px-4">
       <div className="mb-8 flex items-center">
-        <Button variant="ghost" size="sm" asChild className="mr-4 hover:bg-accent/10 transition-colors">
+        <Button variant="ghost" size="sm" asChild className="mr-4 hover:bg-accent hover:text-accent-foreground active:translate-y-0.5">
           <Link to="/">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Home
