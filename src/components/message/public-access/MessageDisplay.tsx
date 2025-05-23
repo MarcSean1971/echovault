@@ -124,8 +124,8 @@ export const MessageDisplay = ({
           </div>
         </CardContent>
         
-        {/* Footer - Shows immediately - CHANGED COLOR SCHEME TO PURPLE */}
-        <div className="bg-gray-50 px-6 py-4 text-sm text-gray-500 border-t">
+        {/* Footer - Updated to use purple color scheme instead of gray */}
+        <div className="bg-purple-50 px-6 py-4 text-sm text-purple-700 border-t border-purple-100">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <Shield className={`h-4 w-4 mr-2 text-purple-500 ${HOVER_TRANSITION}`} />
