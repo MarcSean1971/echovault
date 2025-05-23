@@ -62,6 +62,16 @@ export function ReminderSection({
   // Transform string reminders to enhanced objects with required properties
   const enhancedReminders = enhanceReminders(upcomingReminders);
   
+  // For debugging
+  console.log("[ReminderSection] Rendering with:", {
+    upcomingReminders,
+    hasReminders,
+    isLoading,
+    formattedAllReminders,
+    enhancedCount: enhancedReminders.length,
+    refreshCount
+  });
+  
   // Don't show anything if not armed
   if (!isArmed) {
     return null;
@@ -72,10 +82,11 @@ export function ReminderSection({
       title={
         <div className="flex items-center">
           <Bell className={`h-4 w-4 mr-1.5 ${ICON_HOVER_EFFECTS.muted}`} />
-          Reminder Information
+          Reminder Information {hasReminders && `(${enhancedReminders.length})`}
         </div>
       }
-      defaultOpen={true} // CRITICAL FIX: Open by default so user sees the test button
+      defaultOpen={true} // Open by default so user sees the reminder information
+      value="reminders"
     >
       {/* Display formatted reminders list with consistent text-sm styling */}
       {formattedAllReminders.length > 0 && (
@@ -101,6 +112,19 @@ export function ReminderSection({
         refreshCount={refreshCount}
         errorState={errorState}
       />
+      
+      {/* Test reminder button - re-added for easier testing */}
+      {condition?.message_id && hasReminders && (
+        <div className="mt-4">
+          <button 
+            onClick={() => handleTestReminder(condition.message_id)}
+            disabled={isTestingReminder}
+            className={`text-xs px-2 py-1 rounded bg-blue-100 text-blue-800 hover:bg-blue-200 ${HOVER_TRANSITION}`}
+          >
+            {isTestingReminder ? "Testing..." : "Test Reminder Delivery"}
+          </button>
+        </div>
+      )}
       
       {/* Reminder History Dialog - hidden but kept for functionality */}
       {condition?.message_id && (

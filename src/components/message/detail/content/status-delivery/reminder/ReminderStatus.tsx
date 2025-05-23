@@ -62,5 +62,32 @@ export function ReminderStatus({
     );
   }
   
-  return null;
+  // CRITICAL FIX: Actually render reminders when they exist instead of returning null
+  return (
+    <div className="space-y-2">
+      <div className="grid grid-cols-3 gap-1 text-sm">
+        <span className="font-medium">Status:</span>
+        <span className="col-span-2 text-emerald-600 font-medium">
+          {enhancedReminders.length} reminder{enhancedReminders.length !== 1 ? 's' : ''} configured
+        </span>
+      </div>
+      
+      {/* Display the actual reminders */}
+      <div className="mt-2 space-y-1">
+        {enhancedReminders.map((reminder, index) => (
+          <div 
+            key={`${reminder.original}-${index}`}
+            className={`flex items-start rounded px-2 py-1 ${
+              reminder.isImportant 
+                ? 'bg-red-50 text-red-800' 
+                : 'bg-blue-50 text-blue-800'
+            }`}
+          >
+            <span className="mr-2 flex-shrink-0">•</span>
+            <span>{reminder.formattedText}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }

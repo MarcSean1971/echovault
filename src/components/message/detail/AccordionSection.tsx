@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ReactNode } from "react";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
@@ -19,8 +19,13 @@ export function AccordionSection({
   className = "",
   value = "item-1"
 }: AccordionSectionProps) {
-  // Use controlled state for the accordion
+  // Use controlled state for the accordion with defaultOpen as initial state
   const [isOpen, setIsOpen] = useState(defaultOpen);
+  
+  // Effect to properly handle defaultOpen prop changes
+  useEffect(() => {
+    setIsOpen(defaultOpen);
+  }, [defaultOpen]);
 
   // Handle click on the accordion trigger
   const handleAccordionClick = () => {
@@ -37,7 +42,7 @@ export function AccordionSection({
     >
       <AccordionItem value={value} className="border-none">
         <AccordionTrigger 
-          className={`py-3 px-2 rounded text-sm font-medium text-muted-foreground hover:bg-muted/50 ${HOVER_TRANSITION}`}
+          className={`py-3 px-2 rounded text-sm font-medium text-muted-foreground hover:bg-muted/50 ${HOVER_TRANSITION} w-full flex justify-between`}
           onClick={handleAccordionClick}
         >
           {title}
