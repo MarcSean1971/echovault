@@ -29,18 +29,18 @@ export function MessageInfoSection({
         <div className="space-y-2 text-sm">
           <div className="grid grid-cols-3 gap-1">
             <span className="font-medium">Created:</span>
-            <span className="col-span-2">{formatDate(message.created_at)}</span>
+            <span className="col-span-2 text-right">{formatDate(message.created_at)}</span>
           </div>
           
           {message.updated_at !== message.created_at && <div className="grid grid-cols-3 gap-1">
               <span className="font-medium">Last updated:</span>
-              <span className="col-span-2">{formatDate(message.updated_at)}</span>
+              <span className="col-span-2 text-right">{formatDate(message.updated_at)}</span>
             </div>}
           
           {/* Add Last Sent Information */}
           {lastDelivered && <div className="grid grid-cols-3 gap-1">
               <span className="font-medium">Last sent:</span>
-              <span className="col-span-2">
+              <span className="col-span-2 text-right">
                 {formatDate(lastDelivered)} · {formatDistanceToNow(new Date(lastDelivered), {
               addSuffix: true
             })}
@@ -50,7 +50,7 @@ export function MessageInfoSection({
           {/* Viewed Count Information */}
           {viewCount !== undefined && viewCount !== null && viewCount > 0 && <div className="grid grid-cols-3 gap-1">
               <span className="font-medium">View count:</span>
-              <span className="col-span-2">{viewCount}</span>
+              <span className="col-span-2 text-right">{viewCount}</span>
             </div>}
         </div>
       </AccordionSection>
