@@ -62,6 +62,7 @@ export function useReminderManager({ messageId, refreshTrigger }: ReminderManage
   };
   
   // Handle manual test of reminder delivery
+  // Fixed: Removed messageId parameter since we already have it from props
   const handleTestReminder = async () => {
     if (!messageId) {
       toast({

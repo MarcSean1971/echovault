@@ -117,7 +117,7 @@ export function ReminderSection({
       {condition?.message_id && hasReminders && (
         <div className="mt-4">
           <button 
-            onClick={() => handleTestReminder(condition.message_id)}
+            onClick={() => handleTestReminder()}
             disabled={isTestingReminder}
             className={`text-xs px-2 py-1 rounded bg-blue-100 text-blue-800 hover:bg-blue-200 ${HOVER_TRANSITION}`}
           >
