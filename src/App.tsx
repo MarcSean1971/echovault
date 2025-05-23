@@ -1,4 +1,3 @@
-
 import { Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -42,6 +41,18 @@ const DiagnosticAccess = lazy(() => import("@/pages/DiagnosticAccess"));
 
 export default function App() {
   useErrorHandler();
+  
+  // Enable Realtime functionality for WhatsApp check-ins
+  useEffect(() => {
+    // Try to enable Realtime for message_conditions table
+    enableRealtimeForConditions().then(success => {
+      if (success) {
+        console.log("[App] Realtime enabled for message_conditions table");
+      } else {
+        console.warn("[App] Could not enable Realtime for message_conditions table");
+      }
+    });
+  }, []);
   
   return (
     <QueryClientProvider client={queryClient}>

@@ -15,6 +15,7 @@ import { toast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { RealtimeConditionSync } from "@/components/message/detail/RealtimeConditionSync";
 
 export default function MessageDetail() {
   const { id } = useParams<{ id: string }>();
@@ -116,33 +117,38 @@ export default function MessageDetail() {
 
   // Render the page with all available data immediately
   return (
-    <MessageDetailContent
-      message={message}
-      isLoading={false} // Never use skeleton loaders to block UI rendering
-      isArmed={isArmed}
-      isActionLoading={isActionLoading}
-      deadline={deadline}
-      conditionId={conditionId}
-      condition={condition}
-      handleDisarmMessage={onDisarmMessage}
-      handleArmMessage={onArmMessage}
-      handleDelete={handleDelete}
-      formatDate={formatDate}
-      renderConditionType={() => getConditionType(condition)}
-      renderRecipients={renderRecipients}
-      recipients={recipients}
-      onSendTestMessage={onSendTestMessage}
-      showSendTestDialog={showSendTestDialog}
-      setShowSendTestDialog={setShowSendTestDialog}
-      handleSendTestMessages={handleSendTestMessages}
-      lastCheckIn={condition?.last_checked || null}
-      checkInCode={condition?.check_in_code || null}
-      lastDelivered={lastDelivered}
-      isDelivered={isDelivered}
-      viewCount={viewCount}
-      isLoadingDelivery={isLoadingDelivery}
-      refreshTrigger={refreshCount}
-      backButton={backButton}
-    />
+    <>
+      {/* Add the RealtimeConditionSync component to listen for WhatsApp check-ins */}
+      <RealtimeConditionSync />
+      
+      <MessageDetailContent
+        message={message}
+        isLoading={false} // Never use skeleton loaders to block UI rendering
+        isArmed={isArmed}
+        isActionLoading={isActionLoading}
+        deadline={deadline}
+        conditionId={conditionId}
+        condition={condition}
+        handleDisarmMessage={onDisarmMessage}
+        handleArmMessage={onArmMessage}
+        handleDelete={handleDelete}
+        formatDate={formatDate}
+        renderConditionType={() => getConditionType(condition)}
+        renderRecipients={renderRecipients}
+        recipients={recipients}
+        onSendTestMessage={onSendTestMessage}
+        showSendTestDialog={showSendTestDialog}
+        setShowSendTestDialog={setShowSendTestDialog}
+        handleSendTestMessages={handleSendTestMessages}
+        lastCheckIn={condition?.last_checked || null}
+        checkInCode={condition?.check_in_code || null}
+        lastDelivered={lastDelivered}
+        isDelivered={isDelivered}
+        viewCount={viewCount}
+        isLoadingDelivery={isLoadingDelivery}
+        refreshTrigger={refreshCount}
+        backButton={backButton}
+      />
+    </>
   );
 }
