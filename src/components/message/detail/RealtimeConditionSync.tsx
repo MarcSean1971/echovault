@@ -46,8 +46,7 @@ export function RealtimeConditionSync() {
     // with the channel created in realtimeHelper.ts
     const channel = supabase
       .channel('message_conditions_changes')
-      .on<MessageCondition>(
-        'postgres_changes', 
+      .on('postgres_changes', 
         { 
           event: 'UPDATE',
           schema: 'public',
