@@ -1,36 +1,35 @@
 
 /**
- * Format a phone number for WhatsApp
+ * Format a phone number for WhatsApp usage
  */
-export function formatWhatsAppNumber(phoneNumber: string): string {
-  // Remove any non-digit characters except + from the phone number
-  let normalizedNumber = phoneNumber.replace(/[^\d+]/g, '');
+export function formatWhatsAppNumber(phone: string): string {
+  if (!phone) return "";
   
-  // Ensure the number starts with a +
-  if (!normalizedNumber.startsWith('+')) {
-    normalizedNumber = `+${normalizedNumber}`;
+  // Remove any existing whatsapp: prefix
+  let cleaned = phone.replace("whatsapp:", "").trim();
+  
+  // Ensure it starts with +
+  if (!cleaned.startsWith('+')) {
+    cleaned = `+${cleaned.replace(/\D/g, '')}`;
   }
   
-  // Format for WhatsApp API: whatsapp:+{number}
-  return `whatsapp:${normalizedNumber}`;
+  // Return in proper WhatsApp format for Twilio
+  return `whatsapp:${cleaned}`;
 }
 
 /**
- * Normalize a phone number to international E.164 format
- * @param phoneNumber Phone number to normalize
- * @returns Normalized phone number with + prefix
+ * Format a phone number to standard E.164 format
  */
-export function normalizePhoneNumber(phoneNumber: string): string {
-  // Remove "whatsapp:" prefix if present
-  let number = phoneNumber.replace(/^whatsapp:/, '');
+export function formatE164PhoneNumber(phone: string): string {
+  if (!phone) return "";
   
-  // Remove any non-digit characters
-  number = number.replace(/[^\d+]/g, '');
+  // Remove any non-digit characters except +
+  let cleaned = phone.replace(/[^\d+]/g, '');
   
-  // Ensure number starts with +
-  if (!number.startsWith('+')) {
-    number = `+${number}`;
+  // Ensure it starts with +
+  if (!cleaned.startsWith('+')) {
+    cleaned = `+${cleaned}`;
   }
   
-  return number;
+  return cleaned;
 }

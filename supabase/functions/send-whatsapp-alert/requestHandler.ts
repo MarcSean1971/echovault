@@ -1,96 +1,117 @@
 
-import { createSuccessResponse, createErrorResponse } from "./utils.ts";
-import { sendTemplateMessage, sendStandardMessage } from "./twilioService.ts";
+import { corsHeaders } from "./utils.ts";
+import { sendWhatsAppMessage } from "../shared/services/whatsapp-service.ts";
 
-/**
- * Process an incoming WhatsApp alert request
- * @param req Request object
- * @returns Response object
- */
-export async function handleWhatsAppAlertRequest(req: Request) {
+// Handle WhatsApp alert requests
+export async function handleWhatsAppAlertRequest(req: Request): Promise<Response> {
   try {
-    // Parse the request body
-    let body;
-    try {
-      body = await req.json();
-    } catch (error) {
-      return createErrorResponse("Invalid JSON in request body", 400);
-    }
+    const body = await req.json();
     
-    // Get request parameters with defaults
-    const to = body.recipientPhone || "";
-    const templateSid = body.templateId || "HX4386568436c1f993dd47146448194dd8";
-    const languageCode = body.languageCode || "en_US";
-    const from = body.from || "whatsapp:+14155238886"; // Twilio WhatsApp sender
-    
-    // Extract template parameters or use defaults
-    const param1 = body.senderName || "Sender Name";
-    const param2 = body.recipientName || "Recipient Name";
-    const param3 = body.locationText || "Location Information";
-    const param4 = body.locationLink || "https://maps.example.com";
-    
-    console.log(`Sending template alert to ${to} using template ${templateSid} with language ${languageCode}`);
-    console.log(`Parameters: [${param1}, ${param2}, ${param3}, ${param4}]`);
+    // Extract parameters from request
+    const {
+      recipientPhone,
+      senderName,
+      recipientName,
+      locationText,
+      locationLink,
+      messageType = 'emergency',  // Default to emergency, but allow other types like check-in
+      templateId,  // Allow custom template override
+      templateParams // Allow custom params override
+    } = body;
     
     // Validate required parameters
-    if (!to) {
-      return createErrorResponse("Missing required 'recipientPhone' parameter", 400);
+    if (!recipientPhone) {
+      return createErrorResponse("Missing required parameter: recipientPhone");
     }
     
-    // Try sending template message first
-    const { response, responseData } = await sendTemplateMessage({
-      to,
-      from,
-      templateSid,
-      languageCode,
-      parameters: {
-        "1": param1,
-        "2": param2,
-        "3": param3,
-        "4": param4
-      }
-    });
+    let result;
     
-    // If template failed, try fallback to standard message
-    if (!response.ok && responseData?.message?.includes("template")) {
-      console.log("Template sending failed. Error:", responseData.message);
-      console.log("Attempting fallback to standard message...");
+    // Check if this is a check-in reminder template request
+    if (messageType === 'check-in') {
+      // For check-in reminders, use the check-in template
+      const checkInTemplateId = templateId || "HX48beb2c3b84ffbbed290f7f867ac0665";
       
-      // Prepare fallback message
-      const fallbackMessage = `EMERGENCY ALERT: ${param1} has sent you an emergency alert. They are at ${param3}. View on map: ${param4}`;
+      const params = templateParams || [
+        recipientName || "User",  // First name
+        body.messageTitle || "your message",  // Message title
+        body.timeRemaining || "soon",  // Time until deadline
+        body.checkInUrl || "https://app.yourdomain.com" // App URL
+      ];
       
-      // Send fallback message
-      const { response: fallbackResponse, responseData: fallbackData } = await sendStandardMessage({
-        to,
-        from,
-        message: fallbackMessage
-      });
-      
-      if (fallbackResponse.ok) {
-        return createSuccessResponse({
-          sid: fallbackData.sid,
-          status: fallbackData.status || "sent",
-          fallback: true,
-          originalError: responseData.message
-        });
-      }
-    }
-    
-    // Return success or error from the original response
-    if (response.ok) {
-      return createSuccessResponse({
-        sid: responseData.sid,
-        status: responseData.state || "sent"
+      result = await sendWhatsAppMessage({
+        to: recipientPhone,
+        useTemplate: true,
+        templateId: checkInTemplateId,
+        templateParams: params,
+        languageCode: body.languageCode || "en_US"
       });
     } else {
-      return createErrorResponse({
-        error: responseData.message || "Unknown error",
-        details: responseData
-      }, 500);
+      // Default to emergency template
+      const emergencyTemplateId = templateId || "HXa95959595"; // This should be your actual emergency template ID
+      
+      const params = templateParams || [
+        senderName || "Someone",
+        recipientName || "User",
+        locationText || "Unknown location",
+        locationLink || "No map link available"
+      ];
+      
+      result = await sendWhatsAppMessage({
+        to: recipientPhone,
+        useTemplate: true,
+        templateId: emergencyTemplateId,
+        templateParams: params,
+        languageCode: body.languageCode || "en_US"
+      });
+    }
+    
+    if (result.success) {
+      return createSuccessResponse({
+        success: true,
+        messageId: result.messageId,
+        templateType: messageType,
+        to: recipientPhone
+      });
+    } else {
+      return createErrorResponse(result.error || "Failed to send WhatsApp message");
     }
     
   } catch (error) {
-    console.error("Error in send-whatsapp-alert function:", error);
-    return createErrorResponse(error);
+    console.error("Error in handleWhatsAppAlertRequest:", error);
+    return createErrorResponse(error instanceof Error ? error.message : String(error));
   }
+}
+
+// Helper function to create a standardized error response
+function createErrorResponse(message: string, status: number = 400): Response {
+  return new Response(
+    JSON.stringify({
+      success: false,
+      error: message
+    }),
+    {
+      status: status,
+      headers: {
+        "Content-Type": "application/json",
+        ...corsHeaders
+      }
+    }
+  );
+}
+
+// Helper function to create a standardized success response
+function createSuccessResponse(data: any): Response {
+  return new Response(
+    JSON.stringify({
+      success: true,
+      ...data
+    }),
+    {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        ...corsHeaders
+      }
+    }
+  );
 }
