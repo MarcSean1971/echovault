@@ -50,7 +50,7 @@ export function MessageDeliverySettings({
         
         {condition.recurring_pattern && <div className="grid grid-cols-3 gap-1">
             <span className="font-medium">Recurring:</span>
-            <span className="col-span-2">
+            <span className="col-span-2 text-right">
               {condition.recurring_pattern.type} 
               {condition.recurring_pattern.interval > 1 ? ` (every ${condition.recurring_pattern.interval} ${condition.recurring_pattern.type.slice(0, -2)}s)` : ''}
             </span>
@@ -58,7 +58,7 @@ export function MessageDeliverySettings({
         
         {condition.trigger_date && <div className="grid grid-cols-3 gap-1">
             <span className="font-medium">Scheduled date:</span>
-            <span className="col-span-2">
+            <span className="col-span-2 text-right">
               {formatDate(condition.trigger_date)}
             </span>
           </div>}

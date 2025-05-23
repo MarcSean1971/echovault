@@ -25,14 +25,14 @@ export function SecuritySettingsSection({
         
         {condition.expiry_hours > 0 && <div className="grid grid-cols-3 gap-1">
             <span className="font-medium">Message Expiry:</span>
-            <span className="col-span-2">
+            <span className="col-span-2 text-right">
               {condition.expiry_hours} hours after delivery
             </span>
           </div>}
         
         {condition.unlock_delay_hours > 0 && <div className="grid grid-cols-3 gap-1">
             <span className="font-medium">Delay Settings:</span>
-            <span className="col-span-2">
+            <span className="col-span-2 text-right">
               {condition.unlock_delay_hours} hours after delivery
             </span>
           </div>}
