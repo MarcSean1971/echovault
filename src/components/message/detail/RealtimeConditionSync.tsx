@@ -2,6 +2,7 @@
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useParams } from "react-router-dom";
+import { RealtimeChannel } from "@supabase/supabase-js";
 
 /**
  * Interface for Message Condition data structure
@@ -46,7 +47,7 @@ export function RealtimeConditionSync() {
     const channel = supabase
       .channel('message_conditions_changes')
       .on(
-        'postgres_changes', // This is the correct event name for Supabase Realtime
+        'postgres_changes', 
         {
           event: 'UPDATE',
           schema: 'public',

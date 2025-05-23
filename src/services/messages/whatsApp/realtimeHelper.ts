@@ -1,5 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
+import { RealtimeChannel } from "@supabase/supabase-js";
 
 /**
  * Interface for Message Condition data structure
@@ -38,7 +39,7 @@ export async function enableRealtimeForConditions(): Promise<boolean> {
     // This is a global channel that all components can use with specific filters
     const channel = supabase.channel('message_conditions_changes')
       .on(
-        'postgres_changes', // This is the correct event name for Supabase Realtime
+        'postgres_changes', 
         {
           event: '*', // Listen for all events (INSERT, UPDATE, DELETE)
           schema: 'public',
