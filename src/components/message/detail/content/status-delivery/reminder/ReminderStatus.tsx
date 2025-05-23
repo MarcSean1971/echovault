@@ -64,8 +64,8 @@ export function ReminderStatus({
   
   // CRITICAL FIX: Actually render reminders when they exist instead of returning null
   return (
-    <div className="space-y-2">
-      <div className="grid grid-cols-3 gap-1 text-sm">
+    <>
+      <div className="grid grid-cols-3 gap-1 text-sm mb-2">
         <span className="font-medium">Status:</span>
         <span className="col-span-2 text-emerald-600 font-medium">
           {enhancedReminders.length} reminder{enhancedReminders.length !== 1 ? 's' : ''} configured
@@ -88,6 +88,6 @@ export function ReminderStatus({
           </div>
         ))}
       </div>
-    </div>
+    </>
   );
 }
