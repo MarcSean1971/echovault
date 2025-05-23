@@ -1,3 +1,4 @@
+
 import { supabaseClient } from "./supabase-client.ts";
 import { ReminderData, ReminderProcessingResult } from "./types/reminder-types.ts";
 import { sendCreatorReminder, sendRecipientReminders, ReminderResult } from "./services/reminder-sender.ts";
@@ -15,6 +16,7 @@ import {
   logDeliveryAttempt, 
   logFinalDeliveryStatus 
 } from "./services/condition-manager.ts";
+import { sendWhatsApp, getAppUrl, formatTimeUntilDeadline } from "./services/whatsapp-service.ts";
 
 /**
  * Process a single reminder
@@ -124,10 +126,38 @@ export async function processReminder(
           if (anyEmailFailed && debug) {
             console.log("Some email deliveries failed, will attempt secondary channel");
             
-            // Secondary channel implementation would go here
-            // This would call a WhatsApp delivery function
-            // const whatsappResults = await sendWhatsAppFinalDelivery(...);
-            // results = [...results, ...whatsappResults];
+            // Implement WhatsApp as secondary channel
+            try {
+              // Get app URL for the template
+              const appUrl = await getAppUrl();
+              
+              // Send WhatsApp message to each recipient who has a phone number
+              for (const recipient of conditionData.recipients) {
+                if (recipient.phone) {
+                  console.log(`Sending WhatsApp final delivery to ${recipient.name} at ${recipient.phone}`);
+                  
+                  const whatsAppResult = await sendWhatsApp(
+                    recipient,
+                    messageData,
+                    {
+                      timeUntilDeadline: "now", // Final delivery is happening now
+                      appUrl,
+                      debug
+                    }
+                  );
+                  
+                  results.push({
+                    success: whatsAppResult.success,
+                    recipient: recipient.name,
+                    channel: 'whatsapp',
+                    messageId: whatsAppResult.messageId,
+                    error: whatsAppResult.error
+                  });
+                }
+              }
+            } catch (whatsAppError) {
+              console.error("Error sending WhatsApp notifications:", whatsAppError);
+            }
           }
         } else {
           if (debug) console.log("No recipients configured for final delivery");
@@ -202,7 +232,7 @@ export async function processReminder(
         }
         
         // For check-in conditions, send reminder to creator
-        results = await sendCreatorReminder(
+        const emailResults = await sendCreatorReminder(
           reminder.message_id,
           reminder.condition_id,
           messageData.title,
@@ -211,6 +241,53 @@ export async function processReminder(
           reminder.scheduled_at,
           debug
         );
+        
+        results = [...results, ...emailResults];
+        
+        // Additionally, try to send WhatsApp reminder to creator if they have a phone number
+        try {
+          if (profileData && profileData.whatsapp_number) {
+            console.log(`Sending WhatsApp check-in reminder to creator at ${profileData.whatsapp_number}`);
+            
+            // Format deadline in human-readable format
+            const deadline = new Date();
+            deadline.setHours(deadline.getHours() + hoursUntilDeadline);
+            const timeUntilDeadline = formatTimeUntilDeadline(deadline);
+            
+            // Get app URL for the template
+            const appUrl = await getAppUrl();
+            
+            // Create a recipient object from profile data
+            const recipient = {
+              name: profileData.first_name + " " + profileData.last_name,
+              firstName: profileData.first_name,
+              phone: profileData.whatsapp_number
+            };
+            
+            const whatsAppResult = await sendWhatsApp(
+              recipient,
+              messageData,
+              {
+                timeUntilDeadline,
+                appUrl,
+                debug
+              }
+            );
+            
+            results.push({
+              success: whatsAppResult.success,
+              recipient: recipient.name,
+              channel: 'whatsapp',
+              messageId: whatsAppResult.messageId,
+              error: whatsAppResult.error
+            });
+          } else if (debug) {
+            console.log("No WhatsApp number found for creator, skipping WhatsApp reminder");
+          }
+        } catch (whatsAppError) {
+          console.error("Error sending WhatsApp reminder to creator:", whatsAppError);
+        }
+        
       } else {
         // For standard deadlines, remind recipients
         if (conditionData.recipients && conditionData.recipients.length > 0) {
