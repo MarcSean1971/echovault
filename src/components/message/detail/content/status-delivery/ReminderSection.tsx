@@ -6,10 +6,9 @@ import { ReminderHistoryDialog } from "@/components/message/detail/ReminderHisto
 import { ReminderStatus } from "./reminder/ReminderStatus";
 import { useReminderManager } from "./reminder/hooks/useReminderManager";
 import { enhanceReminders } from "./reminder/utils/reminderEnhancer";
-import { Bell, RefreshCw } from "lucide-react";
+import { Bell } from "lucide-react";
 import { AccordionSection } from "@/components/message/detail/AccordionSection";
 import { ICON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
-import { Button } from "@/components/ui/button";
 
 interface ReminderSectionProps {
   condition: any | null;
@@ -78,30 +77,6 @@ export function ReminderSection({
       }
       defaultOpen={true} // CRITICAL FIX: Open by default so user sees the test button
     >
-      {/* Manual Test Reminder Button - Added at top for visibility */}
-      <div className="mb-4 flex justify-end space-x-2">
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={handleTestReminder}
-          disabled={isTestingReminder}
-          className={`flex items-center ${HOVER_TRANSITION}`}
-        >
-          <Bell className="h-4 w-4 mr-1.5" />
-          {isTestingReminder ? "Sending..." : "Test Reminder Now"}
-        </Button>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          onClick={handleForceRefresh}
-          disabled={refreshInProgressRef.current}
-          className={`flex items-center ${HOVER_TRANSITION}`}
-        >
-          <RefreshCw className={`h-4 w-4 mr-1.5 ${refreshInProgressRef.current ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
-      </div>
-
       {/* Display formatted reminders list with consistent text-sm styling */}
       {formattedAllReminders.length > 0 && (
         <div className="mb-2">
