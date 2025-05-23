@@ -15,8 +15,11 @@ const recentNotifications = new Map<string, number>();
 interface NotificationOptions {
   isEmergency?: boolean;
   debug?: boolean;
-  deduplicationId?: string; // New property for tracking specific request
-  timestamp?: number;       // New property for time-based deduplication
+  deduplicationId?: string;
+  timestamp?: number;
+  forceSend?: boolean;       // ADDED: Force send option
+  bypassDeduplication?: boolean; // ADDED: Option to explicitly bypass deduplication
+  source?: string;           // ADDED: Source of the notification request
 }
 
 export async function sendMessageNotification(
@@ -24,7 +27,15 @@ export async function sendMessageNotification(
   options: NotificationOptions = {}
 ): Promise<{ success: boolean; error?: string; details?: any }> {
   const { message, condition } = data;
-  const { isEmergency = false, debug = false, deduplicationId, timestamp } = options;
+  const { 
+    isEmergency = false, 
+    debug = false, 
+    deduplicationId, 
+    timestamp, 
+    forceSend = false,
+    bypassDeduplication = false, 
+    source = 'api'
+  } = options;
   
   // Skip if no recipients
   if (!condition.recipients || condition.recipients.length === 0) {
@@ -37,6 +48,9 @@ export async function sendMessageNotification(
       console.log(`Processing message notification for message ${message.id}`);
       console.log(`Message condition type: ${condition.condition_type}`);
       console.log(`Is emergency flag: ${isEmergency}`);
+      console.log(`Force send flag: ${forceSend}`);
+      console.log(`Bypass deduplication flag: ${bypassDeduplication}`);
+      console.log(`Source: ${source}`);
       console.log(`Message title: "${message.title}"`);
       console.log(`Number of recipients: ${condition.recipients.length}`);
       console.log(`User ID: ${message.user_id}`);
@@ -45,12 +59,25 @@ export async function sendMessageNotification(
       console.log(`Condition data:`, JSON.stringify(condition, null, 2));
     }
     
-    // CRITICAL FIX: Add deduplication check
+    // Check if this is from WhatsApp selection
+    const isFromWhatsApp = source && (
+      source === 'whatsapp_trigger_single' || 
+      source === 'whatsapp_selection_single' || 
+      source === 'whatsapp_selection_all' ||
+      source === 'whatsapp_selection_fallback'
+    );
+    
+    if (isFromWhatsApp && debug) {
+      console.log(`CRITICAL: This is a WhatsApp-triggered notification from ${source}. Bypassing deduplication.`);
+    }
+    
+    // CRITICAL FIX: Add deduplication check, but bypass it for WhatsApp selections
     const now = Date.now();
     const lastNotificationTime = recentNotifications.get(message.id);
     
     // If this message was notified within the last 30 seconds, don't send another notification
-    if (lastNotificationTime && now - lastNotificationTime < 30000) {
+    // UNLESS it's a WhatsApp selection or bypassDeduplication is set to true
+    if (lastNotificationTime && now - lastNotificationTime < 30000 && !bypassDeduplication && !isFromWhatsApp) {
       if (debug) {
         console.log(`Message ${message.id} was already notified ${(now - lastNotificationTime) / 1000}s ago. Skipping duplicate notification.`);
       }

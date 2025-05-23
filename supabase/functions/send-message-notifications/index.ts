@@ -55,7 +55,8 @@ const handler = async (req: Request): Promise<Response> => {
       keepArmed = undefined, 
       forceSend = false, 
       source = 'api',
-      testMode = false // New parameter for test mode
+      testMode = false, // New parameter for test mode
+      bypassDeduplication = false // NEW: Parameter to explicitly bypass deduplication
     } = requestData;
     
     console.log(`===== SEND MESSAGE NOTIFICATIONS =====`);
@@ -64,8 +65,21 @@ const handler = async (req: Request): Promise<Response> => {
     console.log(`Processing message notifications${messageId ? ` for message ID: ${messageId}` : ''}`);
     console.log(`Is emergency notification: ${isEmergency ? 'YES' : 'No'}`);
     console.log(`Force send: ${forceSend ? 'YES' : 'No'}`);
+    console.log(`Bypass deduplication: ${bypassDeduplication ? 'YES' : 'No'}`); // NEW: Log bypass setting
     console.log(`Test mode: ${testMode ? 'YES' : 'No'}`);
     console.log(`Source: ${source}`);
+    
+    // Check if this is from WhatsApp selection
+    const isFromWhatsApp = source && (
+      source === 'whatsapp_trigger_single' || 
+      source === 'whatsapp_selection_single' || 
+      source === 'whatsapp_selection_all' ||
+      source === 'whatsapp_selection_fallback'
+    );
+    
+    if (isFromWhatsApp) {
+      console.log(`SPECIAL HANDLING: This is a WhatsApp-triggered notification from ${source}`);
+    }
     
     // New: Handle test mode specially
     if (testMode && messageId) {
@@ -108,7 +122,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
     
     // Get messages that need notification
-    const messagesToNotify = await getMessagesToNotify(messageId, forceSend);
+    const messagesToNotify = await getMessagesToNotify(messageId, forceSend || isFromWhatsApp); // FIXED: Force send for WhatsApp triggers
     console.log(`Found ${messagesToNotify.length} messages to notify out of ${messageId ? '1 requested' : 'all active conditions'}`);
     
     if (messagesToNotify.length === 0 && messageId) {
@@ -137,9 +151,9 @@ const handler = async (req: Request): Promise<Response> => {
           if (!conditionData.active) {
             console.log("Message condition is not active, that's why it wasn't included");
             
-            // If forceSend is true, we'll include it anyway
-            if (forceSend) {
-              console.log("Force send is enabled, trying to process this message anyway");
+            // If forceSend is true or this is from WhatsApp, we'll include it anyway
+            if (forceSend || isFromWhatsApp) {
+              console.log("Force send or WhatsApp trigger is enabled, trying to process this message anyway");
               
               // Get the full message and condition data
               const { data: fullMessageData } = await supabase
@@ -167,7 +181,8 @@ const handler = async (req: Request): Promise<Response> => {
                 await sendMessageNotification(forcedMessage, {
                   isEmergency,
                   debug: true, // Always enable debug mode for forced messages
-                  forceSend: true
+                  forceSend: true,
+                  bypassDeduplication: isFromWhatsApp || bypassDeduplication // FIXED: Bypass deduplication for WhatsApp
                 });
                 
                 return new Response(
@@ -175,7 +190,8 @@ const handler = async (req: Request): Promise<Response> => {
                     success: true, 
                     message: "Forced message notification processed",
                     messageId: messageId,
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date().toISOString(),
+                    source: source || "forced"
                   }),
                   {
                     status: 200,
@@ -252,7 +268,9 @@ const handler = async (req: Request): Promise<Response> => {
         sendMessageNotification(message, {
           isEmergency,
           debug: debug || isEmergency, // Always enable debug mode for emergency messages
-          forceSend
+          forceSend: forceSend || isFromWhatsApp, // FIXED: Force send for WhatsApp triggers
+          bypassDeduplication: isFromWhatsApp || bypassDeduplication, // FIXED: Bypass deduplication for WhatsApp
+          source: source // ADDED: Pass source to notification service
         })
       )
     );

@@ -69,19 +69,26 @@ export async function checkForPanicTrigger(messageBody: string, panicConditions:
     const { messageId, config } = matches[0];
     
     // Trigger the emergency message
-    const { data: triggerResult } = await supabase.functions.invoke("send-message-notifications", {
+    const { data: triggerResult, error } = await supabase.functions.invoke("send-message-notifications", {
       body: {
         messageId: messageId,
         isEmergency: true,
         debug: true,
-        whatsAppEnabled: config.methods?.includes('whatsapp') || false
+        forceSend: true, // Always force send for emergency triggers
+        whatsAppEnabled: config.methods?.includes('whatsapp') || false,
+        source: "whatsapp_trigger_single" // Identify the source as WhatsApp
       }
     });
+    
+    if (error) {
+      console.error(`[WEBHOOK] Error triggering emergency message: ${error.message}`);
+    }
     
     return {
       matched: true,
       messageId,
       triggerResult,
+      error,
       isMultiple: false
     };
   }
@@ -233,18 +240,69 @@ async function handleMessageSelection(userId: string, fromNumber: string, messag
       const results = [];
       
       for (const condition of panicConditions) {
-        const { data: triggerResult } = await supabase.functions.invoke("send-message-notifications", {
+        // FIXED: Add forceSend and source parameters for WhatsApp triggers
+        const { data: triggerResult, error } = await supabase.functions.invoke("send-message-notifications", {
           body: {
             messageId: condition.message_id,
             isEmergency: true,
             debug: true,
-            whatsAppEnabled: condition.panic_config?.methods?.includes('whatsapp') || false
+            forceSend: true, // ADDED: Always force send for WhatsApp triggers
+            whatsAppEnabled: condition.panic_config?.methods?.includes('whatsapp') || false,
+            source: "whatsapp_selection_all", // ADDED: Identify source as WhatsApp selection
+            bypassDeduplication: true // ADDED: Bypass deduplication logic
           }
         });
         
+        // IMPROVED: Error handling for 404 responses
+        if (error) {
+          console.error(`[WEBHOOK] Error triggering message ${condition.message_id}: ${error.message}`);
+          
+          // Try with fallback method if edge function call failed
+          try {
+            console.log(`[WEBHOOK] Attempting fallback trigger for message ${condition.message_id}`);
+            
+            // Create a reminder delivery record to track this attempt
+            await supabase
+              .from("reminder_delivery_log")
+              .insert({
+                reminder_id: `whatsapp-fallback-${Date.now()}`,
+                message_id: condition.message_id,
+                condition_id: condition.id,
+                recipient: 'whatsapp-selection',
+                delivery_channel: 'fallback-trigger',
+                delivery_status: 'processing',
+                response_data: {
+                  emergency: true, 
+                  triggered_by: userId,
+                  triggered_at: new Date().toISOString(),
+                  source: "whatsapp_selection_fallback"
+                }
+              });
+            
+            // Create a sent_reminders record which will trigger notifications via database trigger
+            const { error: sentError } = await supabase
+              .from("sent_reminders")
+              .insert({
+                message_id: condition.message_id,
+                condition_id: condition.id,
+                user_id: userId,
+                deadline: new Date().toISOString()
+              });
+              
+            if (sentError) {
+              console.error(`[WEBHOOK] Fallback trigger also failed: ${sentError.message}`);
+            } else {
+              console.log(`[WEBHOOK] Fallback trigger succeeded for message ${condition.message_id}`);
+            }
+          } catch (fallbackError) {
+            console.error(`[WEBHOOK] Fallback trigger failed: ${fallbackError.message}`);
+          }
+        }
+        
         results.push({
           messageId: condition.message_id,
-          result: triggerResult
+          result: triggerResult,
+          error: error?.message
         });
       }
       
@@ -285,14 +343,64 @@ async function handleMessageSelection(userId: string, fromNumber: string, messag
     const selectedCondition = panicConditions[selection - 1];
     console.log(`[WEBHOOK] Selected panic message ${selectedCondition.message_id} (${selection} of ${panicConditions.length})`);
     
-    const { data: triggerResult } = await supabase.functions.invoke("send-message-notifications", {
+    // FIXED: Add forceSend and source parameters
+    const { data: triggerResult, error } = await supabase.functions.invoke("send-message-notifications", {
       body: {
         messageId: selectedCondition.message_id,
         isEmergency: true,
         debug: true,
-        whatsAppEnabled: selectedCondition.panic_config?.methods?.includes('whatsapp') || false
+        forceSend: true, // ADDED: Always force send for WhatsApp triggers
+        whatsAppEnabled: selectedCondition.panic_config?.methods?.includes('whatsapp') || false,
+        source: "whatsapp_selection_single", // ADDED: Identify source
+        bypassDeduplication: true // ADDED: Bypass deduplication logic
       }
     });
+    
+    // IMPROVED: Error handling for 404 responses
+    if (error) {
+      console.error(`[WEBHOOK] Error triggering message ${selectedCondition.message_id}: ${error.message}`);
+      
+      // Try with fallback method if edge function call failed
+      try {
+        console.log(`[WEBHOOK] Attempting fallback trigger for message ${selectedCondition.message_id}`);
+        
+        // Create a reminder delivery record to track this attempt
+        await supabase
+          .from("reminder_delivery_log")
+          .insert({
+            reminder_id: `whatsapp-fallback-${Date.now()}`,
+            message_id: selectedCondition.message_id,
+            condition_id: selectedCondition.id,
+            recipient: 'whatsapp-selection',
+            delivery_channel: 'fallback-trigger',
+            delivery_status: 'processing',
+            response_data: {
+              emergency: true, 
+              triggered_by: userId,
+              triggered_at: new Date().toISOString(),
+              source: "whatsapp_selection_fallback"
+            }
+          });
+        
+        // Create a sent_reminders record which will trigger notifications via database trigger
+        const { error: sentError } = await supabase
+          .from("sent_reminders")
+          .insert({
+            message_id: selectedCondition.message_id,
+            condition_id: selectedCondition.id,
+            user_id: userId,
+            deadline: new Date().toISOString()
+          });
+          
+        if (sentError) {
+          console.error(`[WEBHOOK] Fallback trigger also failed: ${sentError.message}`);
+        } else {
+          console.log(`[WEBHOOK] Fallback trigger succeeded for message ${selectedCondition.message_id}`);
+        }
+      } catch (fallbackError) {
+        console.error(`[WEBHOOK] Fallback trigger failed: ${fallbackError.message}`);
+      }
+    }
     
     await supabase.functions.invoke("send-whatsapp", {
       body: {
@@ -305,9 +413,10 @@ async function handleMessageSelection(userId: string, fromNumber: string, messag
       status: "success", 
       message: `Emergency message #${selection} triggered`, 
       messageId: selectedCondition.message_id,
-      triggerResult
+      triggerResult,
+      error: error?.message
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error(`[WEBHOOK] Error in handleMessageSelection:`, error);
     return { 
       status: "error", 
