@@ -1,5 +1,6 @@
 
 import { createSupabaseAdmin } from "../../shared/supabase-client.ts";
+import { getPanicConditions, checkForPanicTrigger, sendPanicResponseMessage } from "./panic-service.ts";
 
 /**
  * Get active panic trigger conditions for a user
@@ -79,5 +80,59 @@ export async function sendPanicResponseMessage(toNumber: string, matched: boolea
         message: `No matching emergency trigger found. Please send '${defaultTrigger}' to trigger your emergency message.`
       }
     });
+  }
+}
+
+/**
+ * Process a panic trigger message from WhatsApp
+ * @param userId The user ID that sent the message
+ * @param fromNumber The phone number that sent the message
+ * @returns Processing result
+ */
+export async function processPanicTrigger(userId: string, fromNumber: string) {
+  try {
+    console.log(`[WEBHOOK] Processing panic trigger for user ${userId} from phone ${fromNumber}`);
+    
+    // Get the panic conditions for this user
+    const panicConditions = await getPanicConditions();
+    
+    if (!panicConditions || panicConditions.length === 0) {
+      console.log(`[WEBHOOK] No active panic conditions found`);
+      return { 
+        status: "error", 
+        message: "No active emergency messages found", 
+        code: "NO_PANIC_CONDITIONS"
+      };
+    }
+    
+    // Check if the message matches any panic trigger
+    const triggerResult = await checkForPanicTrigger("SOS", panicConditions);
+    
+    // Send response message
+    await sendPanicResponseMessage(fromNumber, triggerResult.matched, "SOS");
+    
+    if (triggerResult.matched) {
+      console.log(`[WEBHOOK] Successfully triggered panic message ${triggerResult.messageId}`);
+      return { 
+        status: "success", 
+        message: "Emergency message triggered", 
+        messageId: triggerResult.messageId 
+      };
+    } else {
+      console.log(`[WEBHOOK] No matching panic message found`);
+      return { 
+        status: "error", 
+        message: "No matching emergency trigger found", 
+        code: "NO_MATCH"
+      };
+    }
+    
+  } catch (error) {
+    console.error(`[WEBHOOK] Error in processPanicTrigger:`, error);
+    return { 
+      status: "error", 
+      message: error.message || "Unknown error processing panic trigger",
+      code: "PROCESSING_ERROR"
+    };
   }
 }
