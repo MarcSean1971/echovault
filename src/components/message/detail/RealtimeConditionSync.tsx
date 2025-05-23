@@ -4,6 +4,31 @@ import { supabase } from "@/integrations/supabase/client";
 import { useParams } from "react-router-dom";
 
 /**
+ * Interface for Message Condition data structure
+ */
+interface MessageCondition {
+  id: string;
+  message_id: string;
+  last_checked?: string;
+  condition_type: string;
+  active: boolean;
+  [key: string]: any; // For other potential properties
+}
+
+/**
+ * Payload interface for Supabase Realtime events
+ */
+interface RealtimePayload {
+  schema: string;
+  table: string;
+  commit_timestamp: string;
+  eventType: 'INSERT' | 'UPDATE' | 'DELETE';
+  new: MessageCondition;
+  old: MessageCondition;
+  errors: any | null;
+}
+
+/**
  * Component that listens for Supabase Realtime updates to message conditions
  * and dispatches appropriate events to update the UI
  */
@@ -28,7 +53,7 @@ export function RealtimeConditionSync() {
           table: 'message_conditions',
           filter: `message_id=eq.${messageId}`
         },
-        (payload) => {
+        (payload: RealtimePayload) => {
           // When a message condition is updated (e.g., via WhatsApp check-in)
           console.log('[RealtimeSync] Received condition update:', payload);
           

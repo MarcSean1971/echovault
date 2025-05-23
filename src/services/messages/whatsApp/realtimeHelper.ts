@@ -2,6 +2,31 @@
 import { supabase } from "@/integrations/supabase/client";
 
 /**
+ * Interface for Message Condition data structure
+ */
+interface MessageCondition {
+  id: string;
+  message_id: string;
+  last_checked?: string;
+  condition_type: string;
+  active: boolean;
+  [key: string]: any; // For other potential properties
+}
+
+/**
+ * Payload interface for Supabase Realtime events
+ */
+interface RealtimePayload {
+  schema: string;
+  table: string;
+  commit_timestamp: string;
+  eventType: 'INSERT' | 'UPDATE' | 'DELETE';
+  new: MessageCondition;
+  old: MessageCondition;
+  errors: any | null;
+}
+
+/**
  * Enable Realtime functionality for WhatsApp check-ins
  * This configures a channel to listen for changes to the message_conditions table
  */
@@ -19,7 +44,7 @@ export async function enableRealtimeForConditions(): Promise<boolean> {
           schema: 'public',
           table: 'message_conditions'
         },
-        (payload) => {
+        (payload: RealtimePayload) => {
           // This is a global handler that logs when changes occur
           console.log('[RealtimeHelper] Detected change in message_conditions:', 
             payload.eventType, 
