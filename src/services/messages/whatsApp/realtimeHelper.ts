@@ -2,100 +2,88 @@
 import { supabase } from "@/integrations/supabase/client";
 import { RealtimeChannel } from "@supabase/supabase-js";
 
-/**
- * Interface for Message Condition data structure
- */
-interface MessageCondition {
-  id: string;
-  message_id: string;
-  last_checked?: string;
-  condition_type: string;
-  active: boolean;
-  [key: string]: any; // For other potential properties
-}
+let realtimeChannel: RealtimeChannel | null = null;
 
 /**
- * Payload interface for Supabase Realtime events
- */
-interface RealtimePayload {
-  schema: string;
-  table: string;
-  commit_timestamp: string;
-  eventType: 'INSERT' | 'UPDATE' | 'DELETE';
-  new: MessageCondition;
-  old: MessageCondition;
-  errors: any | null;
-}
-
-/**
- * Enable Realtime functionality for WhatsApp check-ins
- * This configures a channel to listen for changes to the message_conditions table
+ * Enable Realtime for message_conditions table to get condition updates
+ * @returns {Promise<boolean>} Success status
  */
 export async function enableRealtimeForConditions(): Promise<boolean> {
   try {
-    console.log("[RealtimeHelper] Enabling Realtime for message_conditions table");
-    
-    // Create a channel for the message_conditions table
-    // This is a global channel that all components can use with specific filters
-    const channel = supabase.channel('message_conditions_changes')
+    // Create a channel specifically for message_conditions table
+    const channel = supabase
+      .channel('message_conditions_changes')
       .on('postgres_changes', 
-        {
-          event: '*', // Listen for all events (INSERT, UPDATE, DELETE)
-          schema: 'public',
+        { 
+          event: 'UPDATE', 
+          schema: 'public', 
           table: 'message_conditions'
         },
         (payload) => {
-          // This is a global handler that logs when changes occur
-          const typedPayload = payload as unknown as RealtimePayload;
-          console.log('[RealtimeHelper] Detected change in message_conditions:', 
-            typedPayload.eventType, 
-            'for record:', 
-            typedPayload.new?.id, 
-            'message_id:', 
-            typedPayload.new?.message_id
-          );
-        }
-      )
-      .subscribe((status) => {
-        console.log(`[RealtimeHelper] Channel subscription status: ${status}`);
-        
-        if (status === 'SUBSCRIBED') {
-          console.log('[RealtimeHelper] Successfully subscribed to message_conditions changes');
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('[RealtimeHelper] Error subscribing to message_conditions changes');
-        }
-      });
+          console.log('[REALTIME] Received message_conditions update:', payload);
+          
+          // Extract message_id from the updated condition
+          const messageId = payload.new?.message_id;
+          const conditionId = payload.new?.id;
+          const lastChecked = payload.new?.last_checked;
+          const oldLastChecked = payload.old?.last_checked;
+          
+          // Only dispatch event if last_checked timestamp changed
+          if (lastChecked && oldLastChecked && lastChecked !== oldLastChecked) {
+            console.log('[REALTIME] Check-in detected, dispatching conditions-updated event');
+            
+            // Dispatch global event with check-in information
+            window.dispatchEvent(
+              new CustomEvent('conditions-updated', {
+                detail: {
+                  messageId,
+                  conditionId,
+                  action: 'check-in',
+                  source: 'realtime',
+                  updatedAt: lastChecked,
+                  timestamp: new Date().toISOString()
+                }
+              })
+            );
+          }
+        })
+      .subscribe();
+      
+    realtimeChannel = channel;
     
+    console.log('[REALTIME] Enabled for message_conditions table');
     return true;
   } catch (error) {
-    console.error("[RealtimeHelper] Error enabling Realtime:", error);
+    console.error('[REALTIME] Failed to enable for message_conditions:', error);
     return false;
   }
 }
 
 /**
- * Check if Supabase Realtime is properly configured for the message_conditions table
- * This can be used for debugging
+ * Check if Realtime is properly connected and subscribed
+ * @returns {Promise<string>} Status of Realtime connection
  */
 export async function checkRealtimeStatus(): Promise<string> {
   try {
-    // Create a test channel to verify connectivity
-    const testChannel = supabase.channel('realtime_test');
+    if (!realtimeChannel) {
+      return 'NOT_INITIALIZED';
+    }
     
-    // Subscribe to the test channel
-    const status = await new Promise<string>((resolve) => {
-      testChannel.subscribe((status) => {
-        testChannel.unsubscribe();
-        resolve(status);
-      });
-      
-      // Set a timeout in case the subscription never completes
-      setTimeout(() => resolve('TIMEOUT'), 5000);
-    });
-    
-    return status;
+    const status = realtimeChannel.state;
+    return status || 'UNKNOWN';
   } catch (error) {
-    console.error("[RealtimeHelper] Error checking Realtime status:", error);
+    console.error('[REALTIME] Error checking status:', error);
     return 'ERROR';
+  }
+}
+
+/**
+ * Clean up Realtime channel on application exit
+ */
+export function cleanupRealtimeConnection() {
+  if (realtimeChannel) {
+    console.log('[REALTIME] Cleaning up message_conditions channel');
+    supabase.removeChannel(realtimeChannel);
+    realtimeChannel = null;
   }
 }
