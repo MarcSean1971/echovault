@@ -71,18 +71,17 @@ export function useArmOperations() {
       // Get message ID for UI feedback and reminders
       const actualMessageId = data.message_id;
       
-      // CRITICAL FIX: Directly ensure reminder schedule is created
-      // This is the key fix to make sure reminders are always generated
-      console.log(`[useArmOperations] Directly ensuring reminder schedule for condition ${conditionId}`);
-      
-      // IMPORTANT FIX: Pass isEdit=true and isArmOperation=true to prevent immediate notifications
-      // We're using isEdit=true here specifically to prevent immediate notifications
-      await ensureReminderSchedule(conditionId, true); // Changed to true to prevent immediate emails
-      
-      // Fire a background event to handle reminder generation without blocking UI
-      setTimeout(() => {
-        requestReminderGeneration(actualMessageId, conditionId);
-      }, 100);
+      // Perform reminder schedule creation and invalidation in parallel
+      await Promise.all([
+        // CRITICAL: Ensure reminder schedule is created with proper parameters
+        ensureReminderSchedule(conditionId, true), // Changed to true to prevent immediate emails
+        
+        // Additionally, make sure all caches that might affect display are invalidated
+        Promise.resolve().then(() => {
+          invalidateReminderCache([actualMessageId]);
+          invalidateCache(actualMessageId);
+        })
+      ]);
       
       // Get deadline for immediate UI feedback
       const { data: condition } = await supabase
@@ -115,6 +114,21 @@ export function useArmOperations() {
         'arm',
         deadlineDate?.toISOString()
       );
+      
+      // NEW: Fire a specific event for message cards to handle
+      window.dispatchEvent(new CustomEvent('message-reminder-updated', { 
+        detail: { 
+          messageId: actualMessageId,
+          conditionId,
+          action: 'arm',
+          timestamp: new Date().toISOString()
+        }
+      }));
+      
+      // Fire a background event to handle reminder generation without blocking UI
+      setTimeout(() => {
+        requestReminderGeneration(actualMessageId, conditionId);
+      }, 100);
       
       // Refresh conditions data to update UI components with the latest state
       await refreshConditions();

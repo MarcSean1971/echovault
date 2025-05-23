@@ -17,8 +17,8 @@ const reminderCache: {
   }
 } = {};
 
-// REDUCED Cache TTL to 30 seconds for more responsive updates
-const CACHE_TTL = 30 * 1000;
+// REDUCED Cache TTL to 15 seconds for more responsive updates
+const CACHE_TTL = 15 * 1000; // Reduced from 30 seconds
 
 /**
  * Fetches upcoming reminders for multiple messages in a single batch query
@@ -164,6 +164,18 @@ if (typeof window !== 'undefined') {
         invalidateReminderCache([detail.messageId]);
       } else {
         console.log(`[REMINDER-FETCHER] Event triggered full cache invalidation`);
+        invalidateReminderCache();
+      }
+    }
+  });
+  
+  // NEW: Also listen for arm/disarm events specifically
+  window.addEventListener('conditions-updated', (event) => {
+    if (event instanceof CustomEvent) {
+      const detail = event.detail || {};
+      if (detail.action === 'arm' || detail.action === 'disarm') {
+        console.log(`[REMINDER-FETCHER] ${detail.action} action triggered immediate cache invalidation`);
+        // Always invalidate immediately for arm/disarm actions to ensure freshness
         invalidateReminderCache();
       }
     }

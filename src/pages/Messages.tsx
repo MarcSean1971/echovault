@@ -21,6 +21,9 @@ export default function Messages() {
   const [panicMessagesState, setPanicMessagesState] = useState(panicMessages);
   const [regularMessagesState, setRegularMessagesState] = useState(regularMessages);
   
+  // Local refresh counter to force reminder updates
+  const [localReminderRefreshTrigger, setLocalReminderRefreshTrigger] = useState(0);
+  
   // Keep state in sync with the data from useMessageList
   useEffect(() => {
     setMessagesState(messages);
@@ -40,10 +43,39 @@ export default function Messages() {
   const allMessageIds = messages.map(message => message.id);
   
   // Fetch reminders for all messages in a single batch query
+  // Now using combined refresh trigger from both global and local sources
   const { reminders: reminderData, forceRefresh: forceReminderRefresh } = useBatchedReminders(
     allMessageIds, 
-    reminderRefreshTrigger
+    reminderRefreshTrigger + localReminderRefreshTrigger
   );
+
+  // Listen for condition-updated events that should trigger a refresh
+  useEffect(() => {
+    const handleConditionEvents = (event: Event) => {
+      if (!(event instanceof CustomEvent)) return;
+      
+      const { action } = event.detail || {};
+      
+      // When a message is armed or disarmed, trigger a local reminder refresh
+      if (action === 'arm' || action === 'disarm') {
+        console.log(`[Messages] Received ${action} event, refreshing reminders`);
+        
+        // Force refresh message list to update status
+        forceRefresh();
+        
+        // Force refresh reminders directly
+        forceReminderRefresh();
+        
+        // Also increment local trigger for safety
+        setLocalReminderRefreshTrigger(prev => prev + 1);
+      }
+    };
+    
+    window.addEventListener('conditions-updated', handleConditionEvents);
+    return () => {
+      window.removeEventListener('conditions-updated', handleConditionEvents);
+    };
+  }, [forceRefresh, forceReminderRefresh]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">

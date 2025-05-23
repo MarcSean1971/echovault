@@ -1,5 +1,5 @@
 
-import React, { memo, useMemo } from "react";
+import React, { memo, useMemo, useEffect, useState } from "react";
 import { Message } from "@/types/message";
 import { formatDate } from "@/utils/messageFormatUtils";
 import { MessageCardHeader } from "./card/MessageCardHeader";
@@ -24,6 +24,9 @@ interface MessageCardProps {
 
 // The non-memoized inner component
 function MessageCardInner({ message, onDelete, reminderInfo }: MessageCardProps) {
+  // Local state to track reminder updates
+  const [localReminderRefreshCounter, setLocalReminderRefreshCounter] = useState(0);
+  
   // Get condition, state and actions from our custom hook
   const { 
     isArmed, 
@@ -35,10 +38,6 @@ function MessageCardInner({ message, onDelete, reminderInfo }: MessageCardProps)
     onArmMessage, 
     onDisarmMessage
   } = useMessageCard(message.id);
-  
-  // Instead of using useMessageTranscription hook which parses video content,
-  // we'll just pass null for video messages in card view to improve performance
-  const transcription = message.message_type === 'video' ? null : null;
   
   // Get last check-in information
   const { formattedCheckIn, rawCheckInTime, isDeadmansSwitch } = useMessageLastCheckIn(condition);
@@ -53,8 +52,32 @@ function MessageCardInner({ message, onDelete, reminderInfo }: MessageCardProps)
     isArmed, 
     deadline, 
     condition, 
-    refreshCounter
+    refreshCounter + localReminderRefreshCounter // Add local counter to force refresh
   );
+  
+  // Listen for specific reminder updates for this card
+  useEffect(() => {
+    const handleReminderUpdate = (event: Event) => {
+      if (!(event instanceof CustomEvent)) return;
+      
+      const { messageId } = event.detail || {};
+      
+      // Only update if this event is for this specific message
+      if (messageId === message.id) {
+        console.log(`[MessageCard ${message.id}] Received reminder update event, refreshing`);
+        setLocalReminderRefreshCounter(prev => prev + 1);
+      }
+    };
+    
+    // Listen for both general and specific events
+    window.addEventListener('message-reminder-updated', handleReminderUpdate);
+    window.addEventListener('conditions-updated', handleReminderUpdate);
+    
+    return () => {
+      window.removeEventListener('message-reminder-updated', handleReminderUpdate);
+      window.removeEventListener('conditions-updated', handleReminderUpdate);
+    };
+  }, [message.id]);
 
   // Memoize header, content and footer to reduce re-renders
   const header = useMemo(() => (
@@ -72,7 +95,7 @@ function MessageCardInner({ message, onDelete, reminderInfo }: MessageCardProps)
       isArmed={isArmed} 
       deadline={deadline} 
       condition={condition}
-      transcription={transcription}
+      transcription={null}
       isPanicTrigger={isPanicTrigger}
       lastCheckIn={formattedCheckIn}
       rawCheckInTime={rawCheckInTime}
@@ -87,7 +110,6 @@ function MessageCardInner({ message, onDelete, reminderInfo }: MessageCardProps)
     isArmed,
     deadline,
     condition,
-    transcription,
     isPanicTrigger,
     formattedCheckIn,
     rawCheckInTime,
