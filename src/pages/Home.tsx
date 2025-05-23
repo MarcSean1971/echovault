@@ -221,10 +221,18 @@ export default function Home() {
               <h2 className="text-xl font-serif font-bold gradient-text">EchoVault</h2>
               <p className="text-sm text-muted-foreground">Your secure digital failsafe</p>
             </div>
-            <div>
+            <div className="flex flex-col items-center md:items-end">
               <p className="text-sm text-muted-foreground">
                 &copy; {new Date().getFullYear()} EchoVault. All rights reserved.
               </p>
+              <div className="flex space-x-4 mt-2">
+                <Link to="/terms" className="text-xs text-muted-foreground hover:text-primary transition-colors">
+                  Terms & Conditions
+                </Link>
+                <Link to="/privacy" className="text-xs text-muted-foreground hover:text-primary transition-colors">
+                  Privacy Policy
+                </Link>
+              </div>
             </div>
           </div>
         </div>
