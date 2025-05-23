@@ -46,7 +46,7 @@ export function RealtimeConditionSync() {
     const channel = supabase
       .channel('message_conditions_changes')
       .on(
-        'postgres_changes' as unknown as 'INSERT' | 'UPDATE' | 'DELETE',
+        'postgres_changes',
         {
           event: 'UPDATE',
           schema: 'public',
