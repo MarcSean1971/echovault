@@ -2,141 +2,157 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { corsHeaders } from "./utils.ts";
 import { processReminders } from "./reminder-processor.ts";
-import { updateNextReminderTime } from "./db/reminder-tracking.ts";
+import { getMessagesNeedingReminders } from "./db-service.ts";
 import { checkForDueReminders } from "./reminder-checker.ts";
-import { testReminderDelivery } from "./reminder-tester.ts";
-import { supabaseClient } from "./supabase-client.ts";
 
 serve(async (req) => {
-  // Handle CORS preflight request
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
   
   try {
-    // Get request parameters
+    // Parse the request body
+    const body = await req.json().catch(() => ({}));
+    console.log("Received request:", JSON.stringify(body));
+    
     const { 
       messageId, 
-      forceSend = false,
       debug = false, 
-      action = "process",
-      testMode = false,
-      source = "api-call",
-      userId = null
-    } = await req.json();
+      forceSend = false,
+      source = "manual",
+      action = "process" // New parameter to control behavior
+    } = body;
     
-    console.log(`Request received: ${JSON.stringify({ debug, action, messageId, forceSend, testMode, source, userId })}`);
-    console.log(`Request action: ${action}, forceSend: ${forceSend}, source: ${source}`);
+    console.log(`Request parameters: messageId=${messageId}, debug=${debug}, forceSend=${forceSend}, source=${source}, action=${action}`);
     
-    // Process based on requested action
-    switch (action) {
-      case "test-delivery":
-        // Test the reminder delivery for a specific message
-        if (!messageId) {
-          return new Response(
-            JSON.stringify({ 
-              success: false, 
-              error: "Missing required parameter: messageId"
-            }),
-            { 
-              status: 400, 
-              headers: { ...corsHeaders, "Content-Type": "application/json" }
-            }
-          );
+    // Handle different types of actions
+    if (action === "fix-stuck") {
+      // Fix stuck reminders - updates reminders stuck in 'processing' status for more than 5 minutes
+      console.log("Fixing stuck reminders...");
+      const supabase = await import("./supabase-client.ts").then(m => m.supabaseClient());
+      
+      const { data, error } = await supabase
+        .from('reminder_schedule')
+        .update({ 
+          status: 'pending',
+          retry_count: 0,
+          updated_at: new Date().toISOString()
+        })
+        .eq('status', 'processing')
+        .lt('last_attempt_at', new Date(Date.now() - 5 * 60 * 1000).toISOString());
+        
+      console.log(`Fixed ${data?.length || 0} stuck reminders. Error: ${error?.message || 'None'}`);
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          action: "fix-stuck",
+          count: data?.length || 0
+        }),
+        { 
+          status: 200, 
+          headers: { 'Content-Type': 'application/json', ...corsHeaders } 
         }
-        
-        // CRITICAL FIX: Use the userId parameter if provided for test deliveries
-        const testResults = await testReminderDelivery(messageId, {
-          debug,
-          forceSend, 
-          testMode: true,
-          source,
-          userId
-        });
-        
+      );
+    }
+    else if (action === "update-after-checkin") {
+      // Special action when a check-in has occurred - update reminder schedules
+      console.log("Updating reminder schedule after check-in");
+      if (!messageId) {
         return new Response(
-          JSON.stringify({
-            success: testResults.success,
-            results: testResults.results,
-            messageId
-          }),
-          { 
-            status: 200, 
-            headers: { ...corsHeaders, "Content-Type": "application/json" }
-          }
+          JSON.stringify({ success: false, error: "Missing required parameter: messageId" }),
+          { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
         );
-
-      case "process":
-      default:
-        // Check for and process due reminders
-        console.log("Checking for due reminders...");
-        const dueRemindersResult = await checkForDueReminders(forceSend);
-        console.log(`Found ${dueRemindersResult.length} due reminders`);
+      }
+      
+      // Get message conditions needing reminders with the latest check-in info
+      const messages = await getMessagesNeedingReminders(messageId, true);
+      
+      if (messages.length === 0) {
+        console.log(`No messages found for message ID ${messageId} or no reminders needed`);
+        return new Response(
+          JSON.stringify({ success: true, messages: 0, message: "No reminders needed" }),
+          { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+        );
+      }
+      
+      console.log(`Found ${messages.length} messages that need reminder updates after check-in`);
+      
+      // Process reminders for each message
+      const results = await processReminders([messageId], { debug: true, forceSend: false });
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: "Reminders updated after check-in",
+          results 
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+    else {
+      // Default behavior: Process due reminders
+      console.log("Processing due reminders...");
+      
+      let processingResults;
+      
+      if (messageId) {
+        // If a specific message ID is provided, check that message specifically
+        console.log(`Checking specific message ID: ${messageId}`);
         
-        // If there are due reminders or we're forcing, process them
-        if (dueRemindersResult.length > 0 || forceSend) {
-          if (messageId) {
-            // Process specific message reminder
-            const result = await processReminders([messageId], { debug, forceSend });
-            
-            return new Response(
-              JSON.stringify({
-                success: true,
-                processed: result.length,
-                results: result,
-                message: `Processed ${result.length} reminders for message ${messageId}`
-              }),
-              { 
-                status: 200, 
-                headers: { ...corsHeaders, "Content-Type": "application/json" }
-              }
-            );
-          } else {
-            // Process all due reminders
-            const messageIds = dueRemindersResult.map(r => r.message_id);
-            const uniqueMessageIds = [...new Set(messageIds)];
-            const results = await processReminders(uniqueMessageIds, { debug, forceSend });
-            
-            return new Response(
-              JSON.stringify({
-                success: true,
-                processed: results.length,
-                results: results,
-                message: `Processed ${results.length} reminders for ${uniqueMessageIds.length} messages`
-              }),
-              { 
-                status: 200, 
-                headers: { ...corsHeaders, "Content-Type": "application/json" }
-              }
-            );
-          }
-        } else {
-          // No due reminders to process
+        // Get messages needing reminders
+        const messages = await getMessagesNeedingReminders(messageId, forceSend);
+        
+        if (messages.length === 0) {
+          console.log(`No reminders needed for message ID ${messageId}`);
           return new Response(
-            JSON.stringify({
-              success: true,
-              processed: 0,
-              message: "No due reminders found"
-            }),
-            { 
-              status: 200, 
-              headers: { ...corsHeaders, "Content-Type": "application/json" }
-              }
+            JSON.stringify({ success: true, messages: 0, message: "No reminders needed" }),
+            { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
           );
         }
+        
+        console.log(`Found ${messages.length} messages that need reminders`);
+        
+        // Process reminders for the specific message
+        processingResults = await processReminders([messageId], { debug, forceSend });
+      } else {
+        // If no specific message ID, check for all due reminders
+        console.log("Checking for all due reminders");
+        
+        // Get due reminders from the database with atomic locking
+        const dueReminders = await checkForDueReminders(forceSend, debug);
+        
+        if (dueReminders.length === 0) {
+          console.log("No due reminders found");
+          return new Response(
+            JSON.stringify({ success: true, reminders: 0, message: "No due reminders" }),
+            { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+          );
+        }
+        
+        // Get unique message IDs from due reminders
+        const messageIds = [...new Set(dueReminders.map(r => r.message_id))];
+        console.log(`Found ${messageIds.length} unique messages with due reminders`);
+        
+        // Process all due reminders
+        processingResults = await processReminders(messageIds, { debug, forceSend });
+      }
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          source,
+          results: processingResults 
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
     }
   } catch (error) {
-    // Log and return any errors
-    console.error(`Error processing reminder request: ${error.message}`);
+    console.error("Error in send-reminder-emails function:", error);
     return new Response(
-      JSON.stringify({
-        success: false,
-        error: error.message
-      }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, "Content-Type": "application/json" }
-      }
+      JSON.stringify({ success: false, error: error.message || "Unknown error" }),
+      { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
     );
   }
 });

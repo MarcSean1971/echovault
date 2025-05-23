@@ -2,43 +2,46 @@
 import { corsHeaders } from "./cors-headers.ts";
 
 /**
- * Create a success response with proper CORS headers
+ * Create a standardized error response
+ * @param message Error message or error object
+ * @param status HTTP status code
+ * @returns Response object
  */
-export function createSuccessResponse(data: any, status: number = 200) {
+export function createErrorResponse(message: string | Error, status: number = 400): Response {
+  const errorMessage = message instanceof Error ? message.message : message;
+  
   return new Response(
     JSON.stringify({
-      success: true,
-      data,
+      success: false,
+      error: errorMessage
     }),
     {
-      status,
+      status: status,
       headers: {
-        ...corsHeaders,
         "Content-Type": "application/json",
-      },
+        ...corsHeaders
+      }
     }
   );
 }
 
 /**
- * Create an error response with proper CORS headers
+ * Create a standardized success response
+ * @param data Response data
+ * @returns Response object
  */
-export function createErrorResponse(error: any, status: number = 500) {
-  console.error("[ERROR]", error);
-  
-  const message = error?.message || error?.toString() || "Unknown error";
-  
+export function createSuccessResponse(data: any): Response {
   return new Response(
     JSON.stringify({
-      success: false,
-      error: message,
+      success: true,
+      ...data
     }),
     {
-      status,
+      status: 200,
       headers: {
-        ...corsHeaders,
         "Content-Type": "application/json",
-      },
+        ...corsHeaders
+      }
     }
   );
 }
