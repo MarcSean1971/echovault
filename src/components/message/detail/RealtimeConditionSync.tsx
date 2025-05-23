@@ -48,7 +48,7 @@ export function RealtimeConditionSync() {
       .channel('message_conditions_changes')
       .on(
         'postgres_changes', 
-        {
+        { 
           event: 'UPDATE',
           schema: 'public',
           table: 'message_conditions',

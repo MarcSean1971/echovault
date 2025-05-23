@@ -1,6 +1,6 @@
 
 import { supabaseClient } from "../supabase-client.ts";
-import { formatWhatsAppNumber } from "../utils/phone-formatter.ts";
+import { formatWhatsAppNumber } from "../../shared/utils/phone-formatter.ts";
 
 /**
  * Send a WhatsApp message for a reminder using the check-in template
