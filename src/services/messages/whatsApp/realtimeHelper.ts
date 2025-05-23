@@ -10,8 +10,7 @@ export async function enableRealtimeForConditions(): Promise<boolean> {
     console.log("[RealtimeHelper] Enabling Realtime for message_conditions table");
     
     // Create a channel for the message_conditions table
-    // The channel subscribes to all changes on message_conditions
-    // The actual filtering happens in each component that uses the channel
+    // This is a global channel that all components can use with specific filters
     const channel = supabase.channel('message_conditions_changes')
       .on(
         'postgres_changes',
@@ -21,22 +20,56 @@ export async function enableRealtimeForConditions(): Promise<boolean> {
           table: 'message_conditions'
         },
         (payload) => {
-          // This is a global handler that logs but doesn't dispatch events
-          // Each component will have its own specific handler
-          console.log('[RealtimeHelper] Detected change in message_conditions:', payload);
+          // This is a global handler that logs when changes occur
+          console.log('[RealtimeHelper] Detected change in message_conditions:', 
+            payload.eventType, 
+            'for record:', 
+            payload.new?.id, 
+            'message_id:', 
+            payload.new?.message_id
+          );
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log(`[RealtimeHelper] Channel subscription status: ${status}`);
+        
+        if (status === 'SUBSCRIBED') {
+          console.log('[RealtimeHelper] Successfully subscribed to message_conditions changes');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('[RealtimeHelper] Error subscribing to message_conditions changes');
+        }
+      });
     
-    if (channel) {
-      console.log("[RealtimeHelper] Realtime subscription created successfully for message_conditions table");
-      return true;
-    } else {
-      console.error("[RealtimeHelper] Failed to create Realtime subscription");
-      return false;
-    }
+    return true;
   } catch (error) {
     console.error("[RealtimeHelper] Error enabling Realtime:", error);
     return false;
+  }
+}
+
+/**
+ * Check if Supabase Realtime is properly configured for the message_conditions table
+ * This can be used for debugging
+ */
+export async function checkRealtimeStatus(): Promise<string> {
+  try {
+    // Create a test channel to verify connectivity
+    const testChannel = supabase.channel('realtime_test');
+    
+    // Subscribe to the test channel
+    const status = await new Promise<string>((resolve) => {
+      testChannel.subscribe((status) => {
+        testChannel.unsubscribe();
+        resolve(status);
+      });
+      
+      // Set a timeout in case the subscription never completes
+      setTimeout(() => resolve('TIMEOUT'), 5000);
+    });
+    
+    return status;
+  } catch (error) {
+    console.error("[RealtimeHelper] Error checking Realtime status:", error);
+    return 'ERROR';
   }
 }

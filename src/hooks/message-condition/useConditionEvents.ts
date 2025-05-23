@@ -18,10 +18,15 @@ export function useConditionEvents(
       const detail = event.detail || {};
       const eventMessageId = detail.messageId;
       const action = detail.action;
+      const source = detail.source;
       
       // If event is for this specific message or it's a global update
       if (!eventMessageId || eventMessageId === messageId) {
-        console.log(`[MessageCard ${messageId}] Received conditions-updated event, action: ${action || 'update'}, reloading`);
+        console.log(`[useConditionEvents ${messageId}] Received conditions-updated event:`, 
+          'action:', action || 'update', 
+          'source:', source || 'unknown',
+          'messageId:', eventMessageId || 'global'
+        );
         
         // Clear cache for this message
         invalidateCache();
@@ -37,9 +42,12 @@ export function useConditionEvents(
   
   // Set up event listener
   useEffect(() => {
+    console.log(`[useConditionEvents] Setting up conditions-updated listener for message ${messageId}`);
     window.addEventListener('conditions-updated', handleConditionsUpdated);
+    
     return () => {
+      console.log(`[useConditionEvents] Removing conditions-updated listener for message ${messageId}`);
       window.removeEventListener('conditions-updated', handleConditionsUpdated);
     };
-  }, [handleConditionsUpdated]);
+  }, [handleConditionsUpdated, messageId]);
 }

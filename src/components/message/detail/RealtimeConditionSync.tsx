@@ -16,10 +16,10 @@ export function RealtimeConditionSync() {
     
     console.log(`[RealtimeSync] Setting up Realtime subscription for message ${messageId}`);
     
-    // Create a channel to listen for changes to the message_conditions table
-    // specifically for the current message
+    // Use the global message_conditions_changes channel to ensure consistency
+    // with the channel created in realtimeHelper.ts
     const channel = supabase
-      .channel(`message_conditions_${messageId}`)
+      .channel('message_conditions_changes')
       .on(
         'postgres_changes',
         {
@@ -37,10 +37,12 @@ export function RealtimeConditionSync() {
           const oldCondition = payload.old;
           
           // Check if the last_checked timestamp changed (indicating a check-in)
-          if (updatedCondition.last_checked !== oldCondition.last_checked) {
-            console.log('[RealtimeSync] Check-in detected, dispatching conditions-updated event');
+          if (updatedCondition && oldCondition && 
+              updatedCondition.last_checked !== oldCondition.last_checked) {
+            console.log('[RealtimeSync] Check-in detected, last_checked changed from:', 
+              oldCondition.last_checked, 'to:', updatedCondition.last_checked);
             
-            // Dispatch the same event that's used for browser check-ins
+            // Dispatch the conditions-updated event
             window.dispatchEvent(
               new CustomEvent('conditions-updated', {
                 detail: {
@@ -53,10 +55,14 @@ export function RealtimeConditionSync() {
                 }
               })
             );
+          } else {
+            console.log('[RealtimeSync] Received update but last_checked unchanged or missing data', payload);
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log(`[RealtimeSync] Channel subscription status: ${status}`);
+      });
     
     // Clean up subscription when component unmounts
     return () => {

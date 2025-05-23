@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { ensureReminderSchedule } from "@/utils/reminder/ensureReminderSchedule";
 import { getCurrentLocation } from "@/services/location/mapboxService";
@@ -57,12 +56,15 @@ export async function performCheckIn(conditionId: string): Promise<boolean> {
     }
     
     // Dispatch a custom event to notify components about the condition update
+    // with complete details to help debugging
     window.dispatchEvent(new CustomEvent('conditions-updated', { 
       detail: { 
         conditionId,
         messageId,
         updatedAt: now,
-        action: 'check-in'
+        action: 'check-in',
+        source: 'browser-check-in',
+        timestamp: new Date().toISOString()
       }
     }));
     
