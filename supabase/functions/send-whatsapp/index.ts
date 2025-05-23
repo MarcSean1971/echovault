@@ -1,6 +1,8 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { corsHeaders, createSuccessResponse, createErrorResponse, sendWhatsAppMessage } from "../shared/whatsapp-utils.ts";
+import { corsHeaders } from "../shared/utils/cors-headers.ts";
+import { createSuccessResponse, createErrorResponse } from "../shared/utils/response-formatters.ts";
+import { sendWhatsAppMessage } from "../shared/services/whatsapp-service.ts";
 
 /**
  * Simple edge function to send WhatsApp messages

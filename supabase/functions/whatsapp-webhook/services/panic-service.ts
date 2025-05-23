@@ -25,7 +25,7 @@ export async function getPanicConditions(userId: string) {
   // Get active panic trigger conditions for messages owned by this user
   const { data: panicConditions } = await supabase
     .from("message_conditions")
-    .select("id, message_id, panic_config")
+    .select("id, message_id, panic_config, message:message_id(title)")
     .eq("condition_type", "panic_trigger")
     .eq("active", true)
     .in("message_id", messageIds);
@@ -53,7 +53,8 @@ export async function checkForPanicTrigger(messageBody: string, panicConditions:
       console.log(`[WEBHOOK] Match found! "${messageBody}" matches trigger "${triggerKeyword}" for message ${condition.message_id}`);
       matches.push({
         messageId: condition.message_id,
-        config: config
+        config: config,
+        title: condition.message?.title || "Emergency message"
       });
     }
   }
@@ -90,7 +91,10 @@ export async function checkForPanicTrigger(messageBody: string, panicConditions:
     matched: true,
     isMultiple: true,
     matchCount: matches.length,
-    matches: matches.map(m => m.messageId)
+    matches: matches.map(m => ({
+      id: m.messageId,
+      title: m.title
+    }))
   };
 }
 
@@ -100,14 +104,19 @@ export async function checkForPanicTrigger(messageBody: string, panicConditions:
  * @param matched Whether a panic trigger match was found
  * @param defaultTrigger Default trigger keyword to suggest
  */
-export async function sendPanicResponseMessage(toNumber: string, matched: boolean, defaultTrigger = "SOS", multipleMessages = false) {
+export async function sendPanicResponseMessage(toNumber: string, matched: boolean, defaultTrigger = "SOS", multipleMessages = false, matches = []) {
   const supabase = createSupabaseAdmin();
   
   if (matched && multipleMessages) {
+    // Create a numbered list of available emergency messages
+    const messageList = matches.map((match, index) => 
+      `${index + 1}. ${match.title || `Emergency message ${index + 1}`}`
+    ).join("\n");
+    
     await supabase.functions.invoke("send-whatsapp", {
       body: {
         to: toNumber,
-        message: "⚠️ MULTIPLE EMERGENCY MESSAGES FOUND. Reply with the number of the message you want to trigger:\n\n1. First emergency message\n2. Second emergency message\n\nOr reply with ALL to trigger all messages."
+        message: `⚠️ MULTIPLE EMERGENCY MESSAGES FOUND. Reply with the number of the message you want to trigger:\n\n${messageList}\n\nOr reply with ALL to trigger all messages.`
       }
     });
   } else if (matched) {
@@ -166,15 +175,17 @@ export async function processPanicTrigger(userId: string, fromNumber: string, me
     if (triggerResult.matched && triggerResult.isMultiple) {
       console.log(`[WEBHOOK] Multiple matching panic messages found (${triggerResult.matchCount})`);
       
-      // Store the matched message IDs in a temporary storage or session
-      // For simplicity, we'll use the message IDs directly in the WhatsApp response
-      await sendPanicResponseMessage(fromNumber, true, "SOS", true);
+      // Format the message titles to show to the user
+      const messageMatches = triggerResult.matches;
+      
+      // Send selection message with actual message titles
+      await sendPanicResponseMessage(fromNumber, true, "SOS", true, messageMatches);
       
       return { 
         status: "pending", 
         message: "Multiple emergency messages found, selection required", 
         matchCount: triggerResult.matchCount,
-        matches: triggerResult.matches
+        matches: messageMatches.map(m => m.id)
       };
     }
     
