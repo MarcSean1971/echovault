@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 
@@ -18,7 +19,7 @@ export async function triggerManualReminder(messageId: string, forceSend: boolea
     // Implement deduplication - check if a reminder was recently sent for this message
     try {
       const fiveMinutesAgo = new Date();
-      fiveMinutesAgo.setMinutes(fiveMinutesAgo.getMinutes() - 5);
+      fiveMinutesAgo.setMinutes(fiveMinutesAgo.getMinutes() - 2); // Reduced to 2 minutes for more frequent testing
       
       const { data: recentReminders } = await supabase
         .from('reminder_delivery_log')
@@ -30,13 +31,8 @@ export async function triggerManualReminder(messageId: string, forceSend: boolea
         
       if (recentReminders && recentReminders.length > 0) {
         console.log(`[REMINDER-SERVICE] Detected recent reminder sent at ${recentReminders[0].created_at}`);
-        toast({
-          title: "Reminder Already Triggered",
-          description: "A reminder was recently sent. Please wait a few minutes before trying again.",
-          variant: "purple",
-          duration: 5000, 
-        });
-        return { success: true, message: "Reminder was recently sent" };
+        console.log("[REMINDER-SERVICE] But we're ignoring this for test mode to ensure delivery");
+        // REMOVED: Skip check for test mode - we want to force send for testing
       }
     } catch (checkError) {
       console.warn("[REMINDER-SERVICE] Error checking for recent reminders:", checkError);
@@ -75,11 +71,15 @@ export async function triggerManualReminder(messageId: string, forceSend: boolea
       // Non-fatal, continue
     }
 
-    // Primary attempt - use send-message-notifications for consistent template
-    console.log("[REMINDER-SERVICE] Triggering send-message-notifications for consistent template");
+    // Get the current user's ID as well
+    const { data: { user } } = await supabase.auth.getUser();
+    const currentUserId = user?.id;
+
+    // Primary attempt - use send-reminder-emails for direct sending to message creator
+    console.log("[REMINDER-SERVICE] Triggering send-reminder-emails for direct creator notification");
     let primarySuccess = false;
     try {
-      const { data: notificationData, error: notificationError } = await supabase.functions.invoke("send-message-notifications", {
+      const { data: reminderData, error: reminderError } = await supabase.functions.invoke("send-reminder-emails", {
         body: {
           messageId: messageId,
           debug: true,
@@ -87,24 +87,24 @@ export async function triggerManualReminder(messageId: string, forceSend: boolea
           source: "manual-ui-trigger",
           testMode: true,
           action: "test-delivery",
-          userId: userId
+          userId: userId || currentUserId // Use message creator ID or current user ID
         }
       });
       
-      if (notificationError) {
-        console.error("[REMINDER-SERVICE] Error triggering notification:", notificationError);
+      if (reminderError) {
+        console.error("[REMINDER-SERVICE] Error triggering reminder:", reminderError);
       } else {
-        console.log("[REMINDER-SERVICE] Notification response:", notificationData);
+        console.log("[REMINDER-SERVICE] Reminder response:", reminderData);
         primarySuccess = true;
       }
-    } catch (notificationError) {
-      console.error("[REMINDER-SERVICE] Exception triggering notification:", notificationError);
+    } catch (reminderError) {
+      console.error("[REMINDER-SERVICE] Exception triggering reminder:", reminderError);
     }
 
-    // Fallback attempt - only if primary failed
+    // Fallback attempt - use send-message-notifications if primary failed
     if (!primarySuccess) {
-      console.log("[REMINDER-SERVICE] Primary method failed, falling back to send-reminder-emails");
-      const { data: reminderData, error: reminderError } = await supabase.functions.invoke("send-reminder-emails", {
+      console.log("[REMINDER-SERVICE] Primary method failed, falling back to send-message-notifications");
+      const { data: notificationData, error: notificationError } = await supabase.functions.invoke("send-message-notifications", {
         body: {
           messageId: messageId,
           debug: true,
@@ -112,12 +112,12 @@ export async function triggerManualReminder(messageId: string, forceSend: boolea
           source: "manual-ui-trigger-fallback",
           testMode: true,
           action: "test-delivery",
-          userId: userId
+          userId: userId || currentUserId // Use message creator ID or current user ID
         }
       });
       
-      if (reminderError) {
-        console.error("[REMINDER-SERVICE] Error triggering fallback reminder:", reminderError);
+      if (notificationError) {
+        console.error("[REMINDER-SERVICE] Error triggering fallback notification:", notificationError);
         
         // Both methods failed - show error
         toast({
@@ -127,10 +127,10 @@ export async function triggerManualReminder(messageId: string, forceSend: boolea
           duration: 5000,
         });
         
-        throw reminderError;
+        throw notificationError;
       }
 
-      console.log("[REMINDER-SERVICE] Reminder response from fallback method:", reminderData);
+      console.log("[REMINDER-SERVICE] Notification response from fallback method:", notificationData);
     }
 
     // For successful reminder delivery, show a more specific success toast

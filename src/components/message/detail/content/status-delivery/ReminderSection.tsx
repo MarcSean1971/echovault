@@ -6,9 +6,11 @@ import { ReminderHistoryDialog } from "@/components/message/detail/ReminderHisto
 import { ReminderStatus } from "./reminder/ReminderStatus";
 import { useReminderManager } from "./reminder/hooks/useReminderManager";
 import { enhanceReminders } from "./reminder/utils/reminderEnhancer";
-import { Bell } from "lucide-react";
+import { Bell, RefreshCw, SendHorizonal } from "lucide-react";
 import { AccordionSection } from "@/components/message/detail/AccordionSection";
 import { ICON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { Button } from "@/components/ui/button";
+import { triggerManualReminder } from "@/services/messages/reminder";
 
 interface ReminderSectionProps {
   condition: any | null;
@@ -77,6 +79,18 @@ export function ReminderSection({
     return null;
   }
 
+  // Handle testing the reminder functionality
+  const handleTestReminderClick = async () => {
+    if (!condition?.message_id || refreshInProgressRef.current || isTestingReminder) return;
+    
+    try {
+      await handleTestReminder();
+    } catch (error) {
+      console.error("Error testing reminder:", error);
+      setErrorState("Failed to test reminder");
+    }
+  };
+
   return (
     <AccordionSection
       title={
@@ -113,7 +127,28 @@ export function ReminderSection({
         errorState={errorState}
       />
       
-      {/* Test reminder button section removed */}
+      {/* Add test reminder buttons */}
+      <div className="mt-4 flex gap-2">
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={handleForceRefresh}
+          disabled={refreshInProgressRef.current || isTestingReminder}
+          className="flex items-center text-xs"
+        >
+          <RefreshCw className="w-3 h-3 mr-1.5" /> Refresh Status
+        </Button>
+        
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={handleTestReminderClick}
+          disabled={refreshInProgressRef.current || isTestingReminder}
+          className="flex items-center text-xs"
+        >
+          <SendHorizonal className="w-3 h-3 mr-1.5" /> Test Notifications
+        </Button>
+      </div>
       
       {/* Reminder History Dialog - hidden but kept for functionality */}
       {condition?.message_id && (
