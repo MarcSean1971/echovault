@@ -1,10 +1,8 @@
-
 import React from "react";
 import { Shield, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { AccordionSection } from "@/components/message/detail/AccordionSection";
-
 interface MessageInfoSectionProps {
   message: any;
   formatDate: (dateString: string) => string;
@@ -14,7 +12,6 @@ interface MessageInfoSectionProps {
   checkInCode?: string | null;
   condition?: any;
 }
-
 export function MessageInfoSection({
   message,
   formatDate,
@@ -24,90 +21,67 @@ export function MessageInfoSection({
   checkInCode,
   condition
 }: MessageInfoSectionProps) {
-  return (
-    <>
-      <AccordionSection
-        title={
-          <div className="flex items-center">
+  return <>
+      <AccordionSection title={<div className="flex items-center">
             <Shield className={`h-4 w-4 mr-1.5 ${HOVER_TRANSITION}`} />
             Message Information
-          </div>
-        }
-        defaultOpen={false}
-      >
+          </div>} defaultOpen={false}>
         <div className="space-y-2 text-sm">
           <div className="grid grid-cols-3 gap-1">
             <span className="font-medium">Created:</span>
             <span className="col-span-2">{formatDate(message.created_at)}</span>
           </div>
           
-          {message.updated_at !== message.created_at && (
-            <div className="grid grid-cols-3 gap-1">
+          {message.updated_at !== message.created_at && <div className="grid grid-cols-3 gap-1">
               <span className="font-medium">Last updated:</span>
               <span className="col-span-2">{formatDate(message.updated_at)}</span>
-            </div>
-          )}
+            </div>}
           
           {/* Add Last Sent Information */}
-          {lastDelivered && (
-            <div className="grid grid-cols-3 gap-1">
+          {lastDelivered && <div className="grid grid-cols-3 gap-1">
               <span className="font-medium">Last sent:</span>
               <span className="col-span-2">
-                {formatDate(lastDelivered)} · {formatDistanceToNow(new Date(lastDelivered), { addSuffix: true })}
+                {formatDate(lastDelivered)} · {formatDistanceToNow(new Date(lastDelivered), {
+              addSuffix: true
+            })}
               </span>
-            </div>
-          )}
+            </div>}
           
           {/* Viewed Count Information */}
-          {viewCount !== undefined && viewCount !== null && viewCount > 0 && (
-            <div className="grid grid-cols-3 gap-1">
+          {viewCount !== undefined && viewCount !== null && viewCount > 0 && <div className="grid grid-cols-3 gap-1">
               <span className="font-medium">View count:</span>
               <span className="col-span-2">{viewCount}</span>
-            </div>
-          )}
+            </div>}
         </div>
       </AccordionSection>
       
       {/* Check-In Information */}
-      {(lastCheckIn || checkInCode || condition?.condition_type?.includes('check_in')) && (
-        <AccordionSection
-          title={
-            <div className="flex items-center">
+      {(lastCheckIn || checkInCode || condition?.condition_type?.includes('check_in')) && <AccordionSection title={<div className="flex items-center">
               <Clock className={`h-4 w-4 mr-1.5 ${HOVER_TRANSITION}`} />
               Check-In Information
-            </div>
-          }
-          defaultOpen={false}
-          value="check-in"
-        >
+            </div>} defaultOpen={false} value="check-in">
           <div className="space-y-2 text-sm">
-            {lastCheckIn && (
-              <div className="grid grid-cols-3 gap-1">
+            {lastCheckIn && <div className="grid grid-cols-3 gap-1">
                 <span className="font-medium">Last check-in:</span>
-                <span className="col-span-2">
-                  {formatDistanceToNow(new Date(lastCheckIn), { addSuffix: true })}
+                <span className="col-span-2 text-right">
+                  {formatDistanceToNow(new Date(lastCheckIn), {
+              addSuffix: true
+            })}
                 </span>
-              </div>
-            )}
+              </div>}
             
-            {checkInCode && (
-              <div className="grid grid-cols-3 gap-1">
+            {checkInCode && <div className="grid grid-cols-3 gap-1">
                 <span className="font-medium">Check-in code:</span>
-                <span className="col-span-2">
+                <span className="col-span-2 text-right">
                   {checkInCode}
                 </span>
-              </div>
-            )}
+              </div>}
             
-            {condition?.condition_type?.includes('check_in') && (
-              <div className="grid grid-cols-3 gap-1">
+            {condition?.condition_type?.includes('check_in') && <div className="grid grid-cols-3 gap-1">
                 <span className="font-medium">Check-in via:</span>
-                <span className="col-span-2">App, WhatsApp</span>
-              </div>
-            )}
+                <span className="col-span-2 text-right">App, WhatsApp</span>
+              </div>}
           </div>
-        </AccordionSection>
-      )}
-    </>
-  );
+        </AccordionSection>}
+    </>;
 }
