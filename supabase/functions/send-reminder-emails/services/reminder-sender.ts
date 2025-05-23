@@ -1,643 +1,495 @@
-import { sendEmail } from "./email-service.ts";
-import { sendWhatsApp, formatTimeUntilDeadline, getAppUrl } from "./whatsapp-service.ts";
 import { supabaseClient } from "../supabase-client.ts";
+import { Resend } from "npm:resend@2.0.0";
+import { generateAccessUrl } from "../utils/url-generator.ts";
 
-export interface ReminderResult {
-  recipientId: string;
-  recipientEmail: string;
-  reminderType: string;
+// Initialize email client with API key
+const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+
+// Define types for better parameter handling
+interface ReminderResult {
   success: boolean;
-  error?: string;
-  deliveryId?: string;
+  recipient: string;
+  channel: 'email' | 'whatsapp' | 'system';
+  messageId?: string;
+  error?: string | null;
 }
 
 /**
- * Send a reminder to the message creator
- * Enhanced to send both email and WhatsApp notifications
+ * Send reminder to creator about their check-in deadline
+ * FIXED: Updated parameter list and fixed creator email issue
  */
 export async function sendCreatorReminder(
-  messageData: any, 
-  conditionData: any, 
-  reminderData: any,
-  debug = false
-): Promise<boolean> {
+  messageId: string,
+  conditionId: string,
+  messageTitle: string,
+  creatorUserId: string,
+  hoursUntilDeadline: number,
+  scheduledAt: string,
+  debug: boolean = false
+): Promise<ReminderResult[]> {
   try {
+    if (!creatorUserId) {
+      console.error("Creator user ID is missing in sendCreatorReminder!");
+      return [{ success: false, recipient: "unknown", channel: 'system', error: "Missing creator user ID" }];
+    }
+
+    // Get creator's primary email from auth.users table
     const supabase = supabaseClient();
     
-    // Get creator profile from user_id
-    const { data: creatorProfile, error: creatorError } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", messageData.user_id)
+    // First try to get the profile data which may have more info
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, first_name, last_name, email, backup_email')
+      .eq('id', creatorUserId)
       .single();
     
-    if (creatorError) {
-      console.error("[REMINDER-SENDER] Error getting creator profile:", creatorError);
-      return false;
+    if (debug) {
+      console.log(`[REMINDER-SENDER] Retrieved profile for user ${creatorUserId}:`, 
+        profileError ? `ERROR: ${profileError.message}` : 
+        profileData ? `SUCCESS: ${JSON.stringify(profileData)}` : "No profile data found");
     }
     
-    if (!creatorProfile) {
-      console.error("[REMINDER-SENDER] Creator profile not found for user_id:", messageData.user_id);
-      return false;
+    // CRITICAL FIX: Get the user's email from auth.users as fallback
+    const { data: userData, error: userError } = await supabase.auth.admin.getUserById(creatorUserId);
+    
+    if (debug) {
+      console.log(`[REMINDER-SENDER] Retrieved auth user data for ${creatorUserId}:`, 
+        userError ? `ERROR: ${userError.message}` : 
+        userData ? `SUCCESS with email ${userData.user?.email}` : "No user data found");
     }
     
-    // Now the important change - send both email AND WhatsApp notifications
-    if (debug) console.log(`[REMINDER-SENDER] Sending reminder to creator: ${creatorProfile.email}`);
+    // Get the best email we have for the user - first try profile, then auth user
+    const creatorEmail = userData?.user?.email;
+    const creatorName = profileData?.first_name 
+      ? `${profileData.first_name} ${profileData.last_name || ''}`
+      : "User";
     
-    // Calculate deadline for display in messages
-    let deadlineTime = "";
-    let deadlineDate: Date | null = null;
-    
-    if (conditionData.condition_type === "scheduled" && conditionData.trigger_date) {
-      deadlineDate = new Date(conditionData.trigger_date);
-      deadlineTime = formatTimeUntilDeadline(deadlineDate);
-    } else if (conditionData.hours_threshold || conditionData.minutes_threshold) {
-      // Calculate virtual deadline based on last checked and thresholds
-      const lastChecked = new Date(conditionData.last_checked || new Date());
-      const hoursMs = (conditionData.hours_threshold || 0) * 60 * 60 * 1000;
-      const minutesMs = (conditionData.minutes_threshold || 0) * 60 * 1000;
-      
-      deadlineDate = new Date(lastChecked.getTime() + hoursMs + minutesMs);
-      deadlineTime = formatTimeUntilDeadline(deadlineDate);
+    if (!creatorEmail) {
+      console.error(`[REMINDER-SENDER] No email found for creator ${creatorUserId}`);
+      return [{ 
+        success: false, 
+        recipient: "unknown", 
+        channel: 'email', 
+        error: "No email found for creator" 
+      }];
     }
     
-    // Calculate app URL for check-in link
-    const appUrl = await getAppUrl();
-    const checkInUrl = `${appUrl}/messages/${messageData.id}`;
-    
-    // Prepare notification delivery promises
-    const notificationPromises = [];
-    
-    // Add email notification
-    const emailPromise = sendEmail({
-      to: creatorProfile.email,
-      subject: `Reminder: Check-in needed for "${messageData.title}"`,
-      message: {
-        title: messageData.title,
-        content: messageData.content,
-        deadline: deadlineTime,
-        checkInUrl: checkInUrl,
-        recipientName: creatorProfile.first_name || creatorProfile.display_name || "User"
-      }
-    })
-    .then(emailResult => {
-      if (debug) console.log(`[REMINDER-SENDER] Email sent result:`, emailResult);
-      return { channel: 'email', success: true, result: emailResult };
-    })
-    .catch(error => {
-      console.error(`[REMINDER-SENDER] Email error:`, error);
-      return { channel: 'email', success: false, error };
-    });
-    
-    notificationPromises.push(emailPromise);
-    
-    // Add WhatsApp notification if phone number is available
-    if (creatorProfile.phone) {
-      const whatsappPromise = sendWhatsApp(
-        {
-          phone: creatorProfile.phone,
-          name: creatorProfile.display_name || creatorProfile.first_name || "User",
-          firstName: creatorProfile.first_name
-        },
-        {
-          id: messageData.id,
-          title: messageData.title,
-          user_id: messageData.user_id
-        },
-        {
-          timeUntilDeadline: deadlineTime,
-          appUrl: checkInUrl,
-          debug: debug
-        }
-      )
-      .then(whatsappResult => {
-        if (debug) console.log(`[REMINDER-SENDER] WhatsApp sent result:`, whatsappResult);
-        return { channel: 'whatsapp', success: whatsappResult.success, result: whatsappResult };
-      })
-      .catch(error => {
-        console.error(`[REMINDER-SENDER] WhatsApp error:`, error);
-        return { channel: 'whatsapp', success: false, error };
-      });
-      
-      notificationPromises.push(whatsappPromise);
-    } else if (debug) {
-      console.log(`[REMINDER-SENDER] No phone number available for WhatsApp notification to creator`);
+    if (debug) {
+      console.log(`[REMINDER-SENDER] Sending check-in reminder to creator ${creatorName} (${creatorEmail})`);
+      console.log(`[REMINDER-SENDER] Message ID: ${messageId}, Title: ${messageTitle}`);
+      console.log(`[REMINDER-SENDER] Hours until deadline: ${hoursUntilDeadline}`);
     }
     
-    // Wait for all notification channels to complete
-    const results = await Promise.all(notificationPromises);
+    // Format the time remaining in a user-friendly way
+    const timeRemaining = formatTimeRemaining(hoursUntilDeadline);
     
-    // Track notification attempts in the database
+    // Generate the access URL for the message
+    const accessUrl = generateAccessUrl(messageId, creatorEmail);
+    
+    // CRITICAL FIX: Use proper HTML template specific for creator check-in reminders
+    const html = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Check-In Reminder</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+          body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.5;
+            color: #334155;
+            background-color: #f8fafc;
+            padding: 24px;
+            margin: 0;
+          }
+          .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+          }
+          .header {
+            background-color: #9b87f5;
+            padding: 24px;
+            text-align: center;
+          }
+          .header h1 {
+            color: white;
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+          }
+          .content {
+            padding: 32px;
+          }
+          .action-button {
+            display: inline-block;
+            background-color: #9b87f5;
+            color: white;
+            text-decoration: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-weight: 500;
+            margin-top: 24px;
+          }
+          .footer {
+            background-color: #f1f5f9;
+            padding: 16px;
+            text-align: center;
+            font-size: 14px;
+            color: #64748b;
+          }
+          .warning-box {
+            background-color: #fef2f2;
+            border-left: 4px solid #ef4444;
+            padding: 16px;
+            margin: 24px 0;
+            border-radius: 4px;
+          }
+          .time-remaining {
+            font-weight: bold;
+            font-size: 18px;
+            color: #ef4444;
+          }
+          .deadline-info {
+            margin-bottom: 24px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Check-In Reminder</h1>
+          </div>
+          <div class="content">
+            <p><strong>Hello ${creatorName},</strong></p>
+            
+            <p>This is a reminder to check in for your message:</p>
+            <h2 style="color: #1e293b; margin-bottom: 16px;">${messageTitle}</h2>
+            
+            <div class="warning-box">
+              <div class="deadline-info">
+                <p>You need to check in <span class="time-remaining">within ${timeRemaining}</span> or your message will be automatically delivered to recipients.</p>
+              </div>
+            </div>
+            
+            <p>To check in and reset the timer, please click the button below:</p>
+            
+            <div style="text-align: center;">
+              <a href="${accessUrl}" class="action-button">Check In Now</a>
+            </div>
+            
+            <p style="margin-top: 24px; font-size: 14px;">If the button doesn't work, copy and paste this link into your browser:</p>
+            <p style="background-color: #f1f5f9; padding: 12px; border-radius: 4px; font-size: 14px; word-break: break-all;">
+              <a href="${accessUrl}" style="color: #9b87f5; text-decoration: none;">${accessUrl}</a>
+            </p>
+          </div>
+          <div class="footer">
+            <p>This is an automated reminder from EchoVault. Please do not reply to this email.</p>
+            <p>© ${new Date().getFullYear()} EchoVault - Secure Message Delivery</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
     try {
-      for (const result of results) {
-        await supabase.from('reminder_delivery_log').insert({
-          reminder_id: reminderData.id || 'manual',
-          message_id: messageData.id,
-          condition_id: conditionData.id,
-          recipient: creatorProfile.id,
-          delivery_channel: result.channel,
-          channel_order: result.channel === 'email' ? 1 : 2,
-          delivery_status: result.success ? 'delivered' : 'failed',
-          response_data: result.result || result.error || {}
-        });
+      // Send email using Resend API
+      const emailResponse = await resend.emails.send({
+        from: `EchoVault <notifications@echo-vault.app>`,
+        to: [creatorEmail],
+        subject: `🔔 Check-In Reminder for "${messageTitle}" - ${timeRemaining} Remaining`,
+        html: html,
+      });
+
+      if (debug) {
+        console.log(`[REMINDER-SENDER] Email sent to creator:`, emailResponse);
       }
-    } catch (logError) {
-      console.error("[REMINDER-SENDER] Error logging notification attempts:", logError);
+
+      return [{
+        success: true,
+        recipient: creatorEmail,
+        channel: 'email',
+        messageId: typeof emailResponse.id === 'string' ? emailResponse.id : undefined
+      }];
+    } catch (emailError: any) {
+      console.error(`[REMINDER-SENDER] Error sending creator reminder email:`, emailError);
+      
+      return [{
+        success: false,
+        recipient: creatorEmail,
+        channel: 'email',
+        error: emailError.message || "Unknown email sending error"
+      }];
     }
+  } catch (error: any) {
+    console.error(`[REMINDER-SENDER] Error in sendCreatorReminder:`, error);
     
-    // Consider the notification successful if at least one channel worked
-    const anySuccess = results.some(r => r.success);
-    return anySuccess;
-    
-  } catch (error) {
-    console.error("[REMINDER-SENDER] Error sending creator reminder:", error);
-    return false;
+    return [{
+      success: false,
+      recipient: "unknown",
+      channel: 'system',
+      error: error.message || "Unknown system error"
+    }];
   }
 }
 
 /**
- * Send reminders to recipients for standard reminders
+ * Send reminder emails to recipients about upcoming message
  */
 export async function sendRecipientReminders(
   messageId: string,
   messageTitle: string,
-  creatorName: string,
+  senderName: string,
   recipients: any[],
   hoursUntilDeadline: number,
   scheduledAt: string,
   debug: boolean = false,
   isFinalDelivery: boolean = false
 ): Promise<ReminderResult[]> {
-  try {
-    if (debug) {
-      console.log(`[REMINDER-SENDER] Sending ${isFinalDelivery ? 'FINAL DELIVERY' : 'reminder'} for message ${messageId}`);
-      console.log(`[REMINDER-SENDER] Recipients count: ${recipients.length}`);
-    }
-    
-    const supabase = supabaseClient();
-    const results: ReminderResult[] = [];
-    
-    // Format time until deadline for the email
-    const timeUntilDeadline = formatReminderTime(hoursUntilDeadline);
-    
-    // Get app domain from environment or use default for button URL
-    const appDomain = Deno.env.get("APP_DOMAIN") || "https://echo-vault.app";
-    
-    // Process each recipient
-    for (const recipient of recipients) {
-      const recipientEmail = recipient.email;
-      const recipientName = recipient.name || "Recipient";
-      const deliveryId = `delivery-${Date.now()}-${recipient.id || Math.random().toString(36).substring(2, 15)}`;
-      
-      if (!recipientEmail) {
-        console.error(`[REMINDER-SENDER] No email for recipient ${recipient.id || 'unknown'}`);
-        results.push({
-          recipientId: recipient.id || "unknown",
-          recipientEmail: "missing",
-          reminderType: isFinalDelivery ? "final_delivery" : "standard",
-          success: false,
-          error: "No email address provided"
-        });
+  const results: ReminderResult[] = [];
+  
+  // Process each recipient
+  for (const recipient of recipients) {
+    try {
+      if (!recipient.email) {
+        console.warn(`Recipient has no email address: ${recipient.name || 'Unknown'}`);
         continue;
       }
       
-      // Generate the access URL for the message
-      const accessUrl = `${appDomain}/access/message/${encodeURIComponent(messageId)}?delivery=${encodeURIComponent(deliveryId)}&recipient=${encodeURIComponent(recipientEmail)}`;
+      // Generate access URL for this recipient
+      const accessUrl = generateAccessUrl(messageId, recipient.email);
       
-      // Track the reminder attempt
-      try {
-        await supabase.from('reminder_delivery_log').insert({
-          reminder_id: `recipient-${Date.now()}-${results.length}`,
-          message_id: messageId,
-          condition_id: recipient.id || "unknown",
-          recipient: recipientEmail,
-          delivery_channel: 'email',
-          channel_order: 1,
-          delivery_status: 'processing',
-          response_data: { 
-            type: isFinalDelivery ? "final_delivery" : "reminder", 
-            hoursUntilDeadline,
-            scheduledAt
-          }
-        });
-      } catch (logError) {
-        console.warn("[REMINDER-SENDER] Error creating recipient delivery log:", logError);
-        // Non-fatal, continue sending
-      }
+      // Format the time remaining in a user-friendly way
+      const timeRemaining = formatTimeRemaining(hoursUntilDeadline);
       
-      // Construct the email content with modern design
+      // Use a different email template based on whether this is final delivery or a reminder
       let subject, html;
       
       if (isFinalDelivery) {
-        subject = `Message Delivered: "${messageTitle}" from ${creatorName}`;
+        subject = `Important Message from ${senderName}: "${messageTitle}"`;
         html = `
           <!DOCTYPE html>
-          <html>
-            <head>
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-              <title>Message Delivered</title>
-              <style>
-                @media only screen and (max-width: 620px) {
-                  table.body h1 {
-                    font-size: 28px !important;
-                    margin-bottom: 10px !important;
-                  }
-                  
-                  table.body p,
-                  table.body ul,
-                  table.body ol,
-                  table.body td,
-                  table.body span,
-                  table.body a {
-                    font-size: 16px !important;
-                  }
-                  
-                  table.body .wrapper,
-                  table.body .article {
-                    padding: 10px !important;
-                  }
-                  
-                  table.body .content {
-                    padding: 0 !important;
-                  }
-                  
-                  table.body .container {
-                    padding: 0 !important;
-                    width: 100% !important;
-                  }
-                  
-                  table.body .main {
-                    border-left-width: 0 !important;
-                    border-radius: 0 !important;
-                    border-right-width: 0 !important;
-                  }
-                  
-                  table.body .btn table {
-                    width: 100% !important;
-                  }
-                  
-                  table.body .btn a {
-                    width: 100% !important;
-                  }
-                }
+          <html lang="en">
+          <!-- Final delivery email template -->
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Message Delivery</title>
+            <style>
+              @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+              body {
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+                line-height: 1.5;
+                color: #334155;
+                background-color: #f8fafc;
+                padding: 24px;
+                margin: 0;
+              }
+              .container {
+                max-width: 600px;
+                margin: 0 auto;
+                background-color: white;
+                border-radius: 8px;
+                overflow: hidden;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+              }
+              .header {
+                background-color: #9b87f5;
+                padding: 24px;
+                text-align: center;
+              }
+              .header h1 {
+                color: white;
+                margin: 0;
+                font-size: 24px;
+                font-weight: 600;
+              }
+              .content {
+                padding: 32px;
+              }
+              .action-button {
+                display: inline-block;
+                background-color: #9b87f5;
+                color: white;
+                text-decoration: none;
+                padding: 12px 24px;
+                border-radius: 6px;
+                font-weight: 500;
+                margin-top: 24px;
+              }
+              .footer {
+                background-color: #f1f5f9;
+                padding: 16px;
+                text-align: center;
+                font-size: 14px;
+                color: #64748b;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1>Message Delivery</h1>
+              </div>
+              <div class="content">
+                <p><strong>Hello ${recipient.name || 'there'},</strong></p>
                 
-                @media all {
-                  .ExternalClass {
-                    width: 100%;
-                  }
-                  
-                  .ExternalClass,
-                  .ExternalClass p,
-                  .ExternalClass span,
-                  .ExternalClass font,
-                  .ExternalClass td,
-                  .ExternalClass div {
-                    line-height: 100%;
-                  }
-                  
-                  .apple-link a {
-                    color: inherit !important;
-                    font-family: inherit !important;
-                    font-size: inherit !important;
-                    font-weight: inherit !important;
-                    line-height: inherit !important;
-                    text-decoration: none !important;
-                  }
-                  
-                  #MessageViewBody a {
-                    color: inherit;
-                    text-decoration: none;
-                    font-size: inherit;
-                    font-family: inherit;
-                    font-weight: inherit;
-                    line-height: inherit;
-                  }
-                  
-                  .btn-primary table td:hover {
-                    background-color: #8b5cf6 !important;
-                  }
-                  
-                  .btn-primary a:hover {
-                    background-color: #8b5cf6 !important;
-                    border-color: #8b5cf6 !important;
-                  }
-                }
-              </style>
-            </head>
-            <body style="background-color: #f6f6f6; font-family: sans-serif; -webkit-font-smoothing: antialiased; font-size: 14px; line-height: 1.4; margin: 0; padding: 0; -ms-text-size-adjust: 100%; -webkit-text-size-adjust: 100%;">
-              <table role="presentation" border="0" cellpadding="0" cellspacing="0" class="body" style="border-collapse: separate; mso-table-lspace: 0pt; mso-table-rspace: 0pt; background-color: #f6f6f6; width: 100%;" width="100%" bgcolor="#f6f6f6">
-                <tr>
-                  <td style="font-family: sans-serif; font-size: 14px; vertical-align: top;" valign="top">&nbsp;</td>
-                  <td class="container" style="font-family: sans-serif; font-size: 14px; vertical-align: top; display: block; max-width: 580px; padding: 10px; width: 580px; margin: 0 auto;" width="580" valign="top">
-                    <div class="content" style="box-sizing: border-box; display: block; margin: 0 auto; max-width: 580px; padding: 10px;">
-                      <!-- START CENTERED WHITE CONTAINER -->
-                      <table role="presentation" class="main" style="border-collapse: separate; mso-table-lspace: 0pt; mso-table-rspace: 0pt; background: #ffffff; border-radius: 3px; width: 100%;" width="100%">
-                        <!-- START MAIN CONTENT AREA -->
-                        <tr>
-                          <td class="wrapper" style="font-family: sans-serif; font-size: 14px; vertical-align: top; box-sizing: border-box; padding: 20px;" valign="top">
-                            <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="border-collapse: separate; mso-table-lspace: 0pt; mso-table-rspace: 0pt; width: 100%;" width="100%">
-                              <tr>
-                                <td style="font-family: sans-serif; font-size: 14px; vertical-align: top;" valign="top">
-                                  <div style="text-align: center; margin-bottom: 24px;">
-                                    <img src="https://echovault-public.s3.amazonaws.com/logo-purple.png" alt="EchoVault Logo" style="width: 120px; height: auto;">
-                                  </div>
-                                  <h2 style="color: #9b87f5; font-family: sans-serif; font-weight: 700; line-height: 1.4; margin: 0; margin-bottom: 20px; font-size: 24px; text-align: center;">Message Delivered</h2>
-                                  <p style="font-family: sans-serif; font-size: 14px; font-weight: normal; margin: 0; margin-bottom: 15px;">Hello ${recipientName},</p>
-                                  <p style="font-family: sans-serif; font-size: 14px; font-weight: normal; margin: 0; margin-bottom: 15px;">${creatorName} has sent you a message titled: <strong>${messageTitle}</strong>.</p>
-                                  <p style="font-family: sans-serif; font-size: 14px; font-weight: normal; margin: 0; margin-bottom: 15px;">This message was automatically delivered because the sender did not check in within the specified timeframe.</p>
-                                  <table role="presentation" border="0" cellpadding="0" cellspacing="0" class="btn btn-primary" style="border-collapse: separate; mso-table-lspace: 0pt; mso-table-rspace: 0pt; box-sizing: border-box; width: 100%;" width="100%">
-                                    <tbody>
-                                      <tr>
-                                        <td align="center" style="font-family: sans-serif; font-size: 14px; vertical-align: top; padding-bottom: 15px;" valign="top">
-                                          <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="border-collapse: separate; mso-table-lspace: 0pt; mso-table-rspace: 0pt; width: auto;">
-                                            <tbody>
-                                              <tr>
-                                                <td style="font-family: sans-serif; font-size: 14px; vertical-align: top; border-radius: 5px; text-align: center; background-color: #9b87f5;" valign="top" align="center" bgcolor="#9b87f5">
-                                                  <a href="${accessUrl}" target="_blank" style="border: solid 1px #9b87f5; border-radius: 5px; box-sizing: border-box; cursor: pointer; display: inline-block; font-size: 14px; font-weight: bold; margin: 0; padding: 12px 25px; text-decoration: none; text-transform: capitalize; background-color: #9b87f5; border-color: #9b87f5; color: #ffffff;">View Message</a>
-                                                </td>
-                                              </tr>
-                                            </tbody>
-                                          </table>
-                                        </td>
-                                      </tr>
-                                    </tbody>
-                                  </table>
-                                  <p style="font-family: sans-serif; font-size: 14px; font-weight: normal; margin: 0; margin-bottom: 15px;">Or, click the link below to access the message:</p>
-                                  <p style="font-family: sans-serif; font-size: 14px; font-weight: normal; margin: 0; margin-bottom: 15px;"><a href="${accessUrl}" target="_blank" style="color: #9b87f5;">${accessUrl}</a></p>
-                                  <p style="font-family: sans-serif; font-size: 14px; font-weight: normal; margin: 0; margin-bottom: 15px;">Thank you,<br>EchoVault</p>
-                                </td>
-                              </tr>
-                            </table>
-                          </td>
-                        </tr>
-                        <!-- END MAIN CONTENT AREA -->
-                      </table>
-                      <!-- START FOOTER -->
-                      <div class="footer" style="clear: both; margin-top: 10px; text-align: center; width: 100%;">
-                        <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="border-collapse: separate; mso-table-lspace: 0pt; mso-table-rspace: 0pt; width: 100%;" width="100%">
-                          <tr>
-                            <td class="content-block" style="font-family: sans-serif; vertical-align: top; padding-bottom: 10px; padding-top: 10px; color: #999999; font-size: 12px; text-align: center;" valign="top" align="center">
-                              <span class="apple-link" style="color: #999999; font-size: 12px; text-align: center;">EchoVault - Secure Message Delivery</span>
-                            </td>
-                          </tr>
-                        </table>
-                      </div>
-                      <!-- END FOOTER -->
-                    </div>
-                  </td>
-                  <td style="font-family: sans-serif; font-size: 14px; vertical-align: top;" valign="top">&nbsp;</td>
-                </tr>
-              </table>
-            </body>
+                <p>${senderName} has sent you an important message that is now available:</p>
+                <h2 style="color: #1e293b; margin-bottom: 16px;">${messageTitle}</h2>
+                
+                <p>To view this message, please click the button below:</p>
+                
+                <div style="text-align: center;">
+                  <a href="${accessUrl}" class="action-button">View Message</a>
+                </div>
+                
+                <p style="margin-top: 24px; font-size: 14px;">If the button doesn't work, copy and paste this link into your browser:</p>
+                <p style="background-color: #f1f5f9; padding: 12px; border-radius: 4px; font-size: 14px; word-break: break-all;">
+                  <a href="${accessUrl}" style="color: #9b87f5; text-decoration: none;">${accessUrl}</a>
+                </p>
+              </div>
+              <div class="footer">
+                <p>This message was delivered through EchoVault. Please do not reply to this email.</p>
+              </div>
+            </div>
+          </body>
           </html>
         `;
       } else {
-        subject = `Upcoming Message: "${messageTitle}" from ${creatorName}`;
+        subject = `Upcoming Message from ${senderName} - Available in ${timeRemaining}`;
         html = `
           <!DOCTYPE html>
-          <html>
-            <head>
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-              <title>Upcoming Message Notification</title>
-              <style>
-                @media only screen and (max-width: 620px) {
-                  table.body h1 {
-                    font-size: 28px !important;
-                    margin-bottom: 10px !important;
-                  }
-                  
-                  table.body p,
-                  table.body ul,
-                  table.body ol,
-                  table.body td,
-                  table.body span,
-                  table.body a {
-                    font-size: 16px !important;
-                  }
-                  
-                  table.body .wrapper,
-                  table.body .article {
-                    padding: 10px !important;
-                  }
-                  
-                  table.body .content {
-                    padding: 0 !important;
-                  }
-                  
-                  table.body .container {
-                    padding: 0 !important;
-                    width: 100% !important;
-                  }
-                  
-                  table.body .main {
-                    border-left-width: 0 !important;
-                    border-radius: 0 !important;
-                    border-right-width: 0 !important;
-                  }
-                  
-                  table.body .btn table {
-                    width: 100% !important;
-                  }
-                  
-                  table.body .btn a {
-                    width: 100% !important;
-                  }
-                }
+          <html lang="en">
+          <!-- Reminder email template -->
+          <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Message Reminder</title>
+            <style>
+              @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+              body {
+                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+                line-height: 1.5;
+                color: #334155;
+                background-color: #f8fafc;
+                padding: 24px;
+                margin: 0;
+              }
+              .container {
+                max-width: 600px;
+                margin: 0 auto;
+                background-color: white;
+                border-radius: 8px;
+                overflow: hidden;
+                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+              }
+              .header {
+                background-color: #9b87f5;
+                padding: 24px;
+                text-align: center;
+              }
+              .header h1 {
+                color: white;
+                margin: 0;
+                font-size: 24px;
+                font-weight: 600;
+              }
+              .content {
+                padding: 32px;
+              }
+              .footer {
+                background-color: #f1f5f9;
+                padding: 16px;
+                text-align: center;
+                font-size: 14px;
+                color: #64748b;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1>Upcoming Message</h1>
+              </div>
+              <div class="content">
+                <p><strong>Hello ${recipient.name || 'there'},</strong></p>
                 
-                @media all {
-                  .ExternalClass {
-                    width: 100%;
-                  }
-                  
-                  .ExternalClass,
-                  .ExternalClass p,
-                  .ExternalClass span,
-                  .ExternalClass font,
-                  .ExternalClass td,
-                  .ExternalClass div {
-                    line-height: 100%;
-                  }
-                  
-                  .apple-link a {
-                    color: inherit !important;
-                    font-family: inherit !important;
-                    font-size: inherit !important;
-                    font-weight: inherit !important;
-                    line-height: inherit !important;
-                    text-decoration: none !important;
-                  }
-                  
-                  #MessageViewBody a {
-                    color: inherit;
-                    text-decoration: none;
-                    font-size: inherit;
-                    font-family: inherit;
-                    font-weight: inherit;
-                    line-height: inherit;
-                  }
-                  
-                  .btn-primary table td:hover {
-                    background-color: #8b5cf6 !important;
-                  }
-                  
-                  .btn-primary a:hover {
-                    background-color: #8b5cf6 !important;
-                    border-color: #8b5cf6 !important;
-                  }
-                }
-              </style>
-            </head>
-            <body style="background-color: #f6f6f6; font-family: sans-serif; -webkit-font-smoothing: antialiased; font-size: 14px; line-height: 1.4; margin: 0; padding: 0; -ms-text-size-adjust: 100%; -webkit-text-size-adjust: 100%;">
-              <table role="presentation" border="0" cellpadding="0" cellspacing="0" class="body" style="border-collapse: separate; mso-table-lspace: 0pt; mso-table-rspace: 0pt; background-color: #f6f6f6; width: 100%;" width="100%" bgcolor="#f6f6f6">
-                <tr>
-                  <td style="font-family: sans-serif; font-size: 14px; vertical-align: top;" valign="top">&nbsp;</td>
-                  <td class="container" style="font-family: sans-serif; font-size: 14px; vertical-align: top; display: block; max-width: 580px; padding: 10px; width: 580px; margin: 0 auto;" width="580" valign="top">
-                    <div class="content" style="box-sizing: border-box; display: block; margin: 0 auto; max-width: 580px; padding: 10px;">
-                      <!-- START CENTERED WHITE CONTAINER -->
-                      <table role="presentation" class="main" style="border-collapse: separate; mso-table-lspace: 0pt; mso-table-rspace: 0pt; background: #ffffff; border-radius: 3px; width: 100%;" width="100%">
-                        <!-- START MAIN CONTENT AREA -->
-                        <tr>
-                          <td class="wrapper" style="font-family: sans-serif; font-size: 14px; vertical-align: top; box-sizing: border-box; padding: 20px;" valign="top">
-                            <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="border-collapse: separate; mso-table-lspace: 0pt; mso-table-rspace: 0pt; width: 100%;" width="100%">
-                              <tr>
-                                <td style="font-family: sans-serif; font-size: 14px; vertical-align: top;" valign="top">
-                                  <div style="text-align: center; margin-bottom: 24px;">
-                                    <img src="https://echovault-public.s3.amazonaws.com/logo-purple.png" alt="EchoVault Logo" style="width: 120px; height: auto;">
-                                  </div>
-                                  <h2 style="color: #9b87f5; font-family: sans-serif; font-weight: 700; line-height: 1.4; margin: 0; margin-bottom: 20px; font-size: 24px; text-align: center;">Upcoming Message Notification</h2>
-                                  <p style="font-family: sans-serif; font-size: 14px; font-weight: normal; margin: 0; margin-bottom: 15px;">Hello ${recipientName},</p>
-                                  <p style="font-family: sans-serif; font-size: 14px; font-weight: normal; margin: 0; margin-bottom: 15px;">This is a reminder that ${creatorName} has a message titled <strong>${messageTitle}</strong> that will be delivered to you in ${timeUntilDeadline}.</p>
-                                  <p style="font-family: sans-serif; font-size: 14px; font-weight: normal; margin: 0; margin-bottom: 15px;">The message will be delivered if the sender does not check in within that timeframe.</p>
-                                  <p style="font-family: sans-serif; font-size: 14px; font-weight: normal; margin: 0; margin-bottom: 15px;">Thank you,<br>EchoVault</p>
-                                </td>
-                              </tr>
-                            </table>
-                          </td>
-                        </tr>
-                        <!-- END MAIN CONTENT AREA -->
-                      </table>
-                      <!-- START FOOTER -->
-                      <div class="footer" style="clear: both; margin-top: 10px; text-align: center; width: 100%;">
-                        <table role="presentation" border="0" cellpadding="0" cellspacing="0" style="border-collapse: separate; mso-table-lspace: 0pt; mso-table-rspace: 0pt; width: 100%;" width="100%">
-                          <tr>
-                            <td class="content-block" style="font-family: sans-serif; vertical-align: top; padding-bottom: 10px; padding-top: 10px; color: #999999; font-size: 12px; text-align: center;" valign="top" align="center">
-                              <span class="apple-link" style="color: #999999; font-size: 12px; text-align: center;">EchoVault - Secure Message Delivery</span>
-                            </td>
-                          </tr>
-                        </table>
-                      </div>
-                      <!-- END FOOTER -->
-                    </div>
-                  </td>
-                  <td style="font-family: sans-serif; font-size: 14px; vertical-align: top;" valign="top">&nbsp;</td>
-                </tr>
-              </table>
-            </body>
+                <p>This is a reminder that ${senderName} has sent you a message that will be available in ${timeRemaining}:</p>
+                <h2 style="color: #1e293b; margin-bottom: 16px;">${messageTitle}</h2>
+                
+                <p>You'll receive another notification when the message is available for viewing.</p>
+              </div>
+              <div class="footer">
+                <p>This is an automated reminder from EchoVault. Please do not reply to this email.</p>
+              </div>
+            </div>
+          </body>
           </html>
         `;
       }
-      
-      // Send the email
-      try {
-        const emailResult = await sendEmail({
-          to: recipientEmail,
-          subject,
-          html,
-          from: "EchoVault <notifications@echo-vault.app>"
-        });
-        
-        if (debug) {
-          console.log(`[REMINDER-SENDER] Email sent to ${recipientEmail}: ${emailResult}`);
-        }
-        
-        // If this is a final delivery, try to track it in the delivered_messages table
-        if (isFinalDelivery) {
-          try {
-            await supabase.from('delivered_messages').insert({
-              message_id: messageId,
-              recipient_id: recipient.id || null,
-              delivery_id: deliveryId,
-              condition_id: conditionId
-            });
-          } catch (deliveryTrackError) {
-            console.warn("[REMINDER-SENDER] Error tracking delivery in delivered_messages:", deliveryTrackError);
-            // Non-fatal error, continue
-          }
-        }
-        
-        // Track the delivery result
-        try {
-          await supabase.from('reminder_delivery_log').insert({
-            reminder_id: `recipient-result-${Date.now()}-${results.length}`,
-            message_id: messageId,
-            condition_id: recipient.id || "unknown",
-            recipient: recipientEmail,
-            delivery_channel: 'email',
-            channel_order: 2,
-            delivery_status: emailResult ? 'delivered' : 'failed',
-            response_data: { 
-              type: isFinalDelivery ? "final_delivery_result" : "reminder_result", 
-              success: emailResult,
-              delivery_id: deliveryId
-            }
-          });
-        } catch (logError) {
-          console.warn("[REMINDER-SENDER] Error creating recipient result log:", logError);
-        }
-        
-        results.push({
-          recipientId: recipient.id || "unknown",
-          recipientEmail,
-          reminderType: isFinalDelivery ? "final_delivery" : "standard",
-          success: emailResult,
-          deliveryId: deliveryId
-        });
-        
-      } catch (emailError: any) {
-        console.error(`[REMINDER-SENDER] Error sending email to ${recipientEmail}:`, emailError);
-        
-        results.push({
-          recipientId: recipient.id || "unknown",
-          recipientEmail,
-          reminderType: isFinalDelivery ? "final_delivery" : "standard",
-          success: false,
-          error: emailError.message || "Unknown error sending email"
-        });
-        
-        // Track the failure
-        try {
-          await supabase.from('reminder_delivery_log').insert({
-            reminder_id: `recipient-error-${Date.now()}-${results.length}`,
-            message_id: messageId,
-            condition_id: recipient.id || "unknown",
-            recipient: recipientEmail,
-            delivery_channel: 'email',
-            channel_order: 3,
-            delivery_status: 'failed',
-            error_message: emailError.message || "Unknown error",
-            response_data: { 
-              type: isFinalDelivery ? "final_delivery_error" : "reminder_error", 
-              error: emailError.message || "Unknown error"
-            }
-          });
-        } catch (logError) {
-          console.warn("[REMINDER-SENDER] Error creating recipient error log:", logError);
-        }
+
+      // Send email using Resend API
+      const emailResponse = await resend.emails.send({
+        from: `EchoVault <notifications@echo-vault.app>`,
+        to: [recipient.email],
+        subject: subject,
+        html: html,
+      });
+
+      if (debug) {
+        console.log(`[REMINDER-SENDER] Email sent to recipient ${recipient.email}:`, emailResponse);
       }
+
+      results.push({
+        success: true,
+        recipient: recipient.email,
+        channel: 'email',
+        messageId: typeof emailResponse.id === 'string' ? emailResponse.id : undefined
+      });
+    } catch (error: any) {
+      console.error(`[REMINDER-SENDER] Error sending email to ${recipient.email}:`, error);
+      
+      results.push({
+        success: false,
+        recipient: recipient.email || "unknown",
+        channel: 'email',
+        error: error.message || "Unknown email sending error"
+      });
     }
-    
-    return results;
-  } catch (error: any) {
-    console.error("[REMINDER-SENDER] Error in sendRecipientReminders:", error);
-    
-    return [{
-      recipientId: "error",
-      recipientEmail: "error",
-      reminderType: isFinalDelivery ? "final_delivery" : "standard",
-      success: false,
-      error: error.message || "Unknown error in sendRecipientReminders"
-    }];
   }
+  
+  return results;
+}
+
+/**
+ * Format hours until deadline in a user-friendly way
+ */
+function formatTimeRemaining(hours: number): string {
+  if (isNaN(hours) || hours < 0) {
+    return "now";
+  }
+
+  if (hours < 1) {
+    const minutes = Math.round(hours * 60);
+    return `${minutes} minute${minutes !== 1 ? 's' : ''}`;
+  }
+  
+  if (hours < 24) {
+    const roundedHours = Math.round(hours);
+    return `${roundedHours} hour${roundedHours !== 1 ? 's' : ''}`;
+  }
+  
+  const days = Math.floor(hours / 24);
+  const remainingHours = Math.round(hours % 24);
+  
+  if (remainingHours === 0) {
+    return `${days} day${days !== 1 ? 's' : ''}`;
+  }
+  
+  return `${days} day${days !== 1 ? 's' : ''} and ${remainingHours} hour${remainingHours !== 1 ? 's' : ''}`;
 }

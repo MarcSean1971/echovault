@@ -231,12 +231,13 @@ export async function processReminder(
           hoursUntilDeadline = conditionData.hours_threshold || 48; // Fallback
         }
         
-        // For check-in conditions, send reminder to creator
+        // CRITICAL FIX: For check-in conditions, send reminder to creator only
+        // Pass proper parameters to the sendCreatorReminder function
         const emailResults = await sendCreatorReminder(
           reminder.message_id,
           reminder.condition_id,
           messageData.title,
-          messageData.user_id,
+          messageData.user_id, // This must be the user_id for the creator
           hoursUntilDeadline,
           reminder.scheduled_at,
           debug

@@ -1,6 +1,6 @@
 
 /**
- * Types for reminder processing
+ * Types for the reminder system
  */
 
 export interface ReminderData {
@@ -9,79 +9,49 @@ export interface ReminderData {
   condition_id: string;
   scheduled_at: string;
   reminder_type: 'reminder' | 'final_delivery';
-  status: string;
-  retry_count?: number;
-  delivery_priority?: 'normal' | 'high' | 'critical';
-  retry_strategy?: 'standard' | 'aggressive';
+  status: 'pending' | 'processing' | 'sent' | 'failed';
+  retry_count: number;
+  last_attempt_at?: string;
+  delivery_priority: 'normal' | 'high' | 'critical';
+  retry_strategy: 'standard' | 'aggressive';
+  created_at: string;
+  updated_at: string;
 }
 
 export interface ReminderProcessingResult {
   success: boolean;
   error?: string;
   sent?: boolean;
-  scheduled?: boolean;
-  results?: ReminderResult[];
+  results?: Array<{
+    success: boolean;
+    recipient: string;
+    channel: string;
+    messageId?: string;
+    error?: string;
+  }>;
+  details?: any;
 }
 
-export interface ReminderResult {
-  recipientId: string;
-  recipientEmail: string;
-  reminderType: string;
-  success: boolean;
-  error?: string;
+export interface ReminderSystemStats {
+  pendingReminders: number;
+  processedReminders: number;
+  sentReminders: number;
+  failedReminders: number;
+  nextScheduledReminder?: string;
+}
+
+export interface RecipientReminderData {
+  name: string;
+  email: string;
+  phone?: string;
+  firstName?: string;
   deliveryId?: string;
 }
 
-export interface MessageData {
-  id: string;
-  user_id: string;
-  title: string;
-  created_at?: string;
-  updated_at?: string;
-  content?: string;
-  message_type?: string;
-}
-
-export interface ConditionData {
-  id: string;
-  message_id: string;
-  condition_type: string;
-  hours_threshold?: number;
-  minutes_threshold?: number;
-  recipients?: any[];
-  active: boolean;
-  last_checked?: string;
-  created_at?: string;
-  updated_at?: string;
-  trigger_date?: string;
-  recurring_pattern?: any;
-  pin_code?: string;
-  panic_config?: {
-    enabled: boolean;
-    methods: string[];
-    keep_armed: boolean;
-    bypass_logging: boolean;
-    trigger_keyword: string;
-    cancel_window_seconds: number;
-  };
-  check_in_code?: string;
-}
-
-export interface ProfileData {
-  first_name?: string;
-  last_name?: string;
-  email?: string;
-  backup_email?: string;
-}
-
-export interface DeliveryLogEntry {
-  reminder_id: string;
-  message_id: string;
-  condition_id: string;
-  recipient: string;
-  delivery_channel: string;
-  channel_order: number;
-  delivery_status: 'processing' | 'delivered' | 'failed' | 'error';
-  error_message?: string;
-  response_data?: any;
+export interface WhatsAppSendOptions {
+  timeUntilDeadline: string;
+  appUrl: string;
+  debug?: boolean;
+  isTest?: boolean;
+  isFinalDelivery?: boolean;
 }
