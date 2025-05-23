@@ -31,12 +31,12 @@ export function MessageCardHeader({ message, isArmed, formatDate, isPanicTrigger
           
           {/* Video icon if message has video content */}
           {hasVideo && (
-            <Video className={`h-3.5 w-3.5 text-muted-foreground ml-1 ${HOVER_TRANSITION}`} />
+            <Video className={`h-3.5 w-3.5 text-muted-foreground ml-1 hover:text-primary ${HOVER_TRANSITION}`} />
           )}
           
           {/* File icon if message has attachments */}
           {hasAttachments && (
-            <File className={`h-3.5 w-3.5 text-muted-foreground ml-1 ${HOVER_TRANSITION}`} />
+            <File className={`h-3.5 w-3.5 text-muted-foreground ml-1 hover:text-primary ${HOVER_TRANSITION}`} />
           )}
         </p>
       </div>

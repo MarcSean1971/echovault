@@ -2,6 +2,7 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cn } from "@/lib/utils"
+import { HOVER_TRANSITION } from "@/utils/hoverEffects"
 
 // SidebarGroup
 export interface SidebarGroupProps extends React.ComponentProps<"div"> {}
@@ -36,6 +37,7 @@ export const SidebarGroupLabel = React.forwardRef<HTMLDivElement, SidebarGroupLa
         className={cn(
           "duration-200 flex h-8 shrink-0 items-center rounded-md px-2 text-xs font-medium text-sidebar-foreground/70 outline-none ring-sidebar-ring transition-[margin,opa] ease-linear focus-visible:ring-2 [&>svg]:size-4 [&>svg]:shrink-0",
           "group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0",
+          HOVER_TRANSITION,
           className
         )}
         {...props}
@@ -63,6 +65,7 @@ export const SidebarGroupAction = React.forwardRef<HTMLButtonElement, SidebarGro
           // Increases the hit area of the button on mobile.
           "after:absolute after:-inset-2 after:md:hidden",
           "group-data-[collapsible=icon]:hidden",
+          HOVER_TRANSITION,
           className
         )}
         {...props}

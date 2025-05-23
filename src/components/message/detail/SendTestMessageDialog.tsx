@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Send } from "lucide-react";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface SendTestMessageDialogProps {
   open: boolean;
@@ -86,6 +87,7 @@ export function SendTestMessageDialog({
                   id="select-all" 
                   checked={selectedRecipients.length === recipients.length && recipients.length > 0}
                   onCheckedChange={toggleAllRecipients}
+                  className={HOVER_TRANSITION}
                 />
                 <Label htmlFor="select-all" className="font-medium">Select All Recipients</Label>
               </div>
@@ -97,6 +99,7 @@ export function SendTestMessageDialog({
                       id={`recipient-${recipient.id}`}
                       checked={selectedRecipients.some(r => r.id === recipient.id)}
                       onCheckedChange={() => toggleRecipient(recipient)}
+                      className={HOVER_TRANSITION}
                     />
                     <div className="grid gap-0.5">
                       <Label htmlFor={`recipient-${recipient.id}`} className="font-medium">{recipient.name}</Label>
@@ -111,12 +114,17 @@ export function SendTestMessageDialog({
           )}
         </div>
         <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button 
+            variant="outline" 
+            onClick={() => onOpenChange(false)}
+            className={HOVER_TRANSITION}
+          >
             Cancel
           </Button>
           <Button 
             onClick={handleSendTest} 
             disabled={selectedRecipients.length === 0 || isLoading}
+            className={HOVER_TRANSITION}
           >
             {isLoading ? "Sending..." : (
               <>
