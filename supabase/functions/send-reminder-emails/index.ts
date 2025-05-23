@@ -3,8 +3,8 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { corsHeaders } from "./utils.ts";
 import { processReminders } from "./reminder-processor.ts";
 import { updateNextReminderTime } from "./db/reminder-tracking.ts";
-import { checkForDueReminders } from "./services/reminder-checker.ts";
-import { testReminderDelivery } from "./services/reminder-tester.ts";
+import { checkForDueReminders } from "./reminder-checker.ts";
+import { testReminderDelivery } from "./reminder-tester.ts";
 import { supabaseClient } from "./supabase-client.ts";
 
 serve(async (req) => {
