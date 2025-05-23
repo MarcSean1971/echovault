@@ -11,6 +11,8 @@ import { generateAccessUrl } from "./utils/url-generator.ts";
 
 // Map to track recent message notifications (messageId -> timestamp)
 const recentNotifications = new Map<string, number>();
+// CRITICAL FIX: Track notification attempts by source
+const notificationAttemptsBySource = new Map<string, Map<string, number>>();
 
 interface NotificationOptions {
   isEmergency?: boolean;
@@ -59,25 +61,60 @@ export async function sendMessageNotification(
       console.log(`Condition data:`, JSON.stringify(condition, null, 2));
     }
     
-    // Check if this is from WhatsApp selection
+    // Check if this is from WhatsApp or a reminder trigger
     const isFromWhatsApp = source && (
       source === 'whatsapp_trigger_single' || 
       source === 'whatsapp_selection_single' || 
       source === 'whatsapp_selection_all' ||
-      source === 'whatsapp_selection_fallback'
+      source === 'whatsapp_selection_fallback' ||
+      source === 'whatsapp-checkin'
+    );
+    
+    const isReminderTriggered = source && (
+      source === 'reminder_schedule_trigger' ||
+      source === 'reminder-schedule-direct-trigger' ||
+      source === 'reminder-schedule-update' ||
+      source === 'obsolete-immediate-check'
     );
     
     if (isFromWhatsApp && debug) {
       console.log(`CRITICAL: This is a WhatsApp-triggered notification from ${source}. Bypassing deduplication.`);
     }
     
-    // CRITICAL FIX: Add deduplication check, but bypass it for WhatsApp selections
+    if (isReminderTriggered && debug) {
+      console.log(`CRITICAL: This is a reminder-triggered notification from ${source}. Bypassing deduplication.`);
+    }
+    
+    // CRITICAL FIX: More intelligent deduplication with source tracking
     const now = Date.now();
     const lastNotificationTime = recentNotifications.get(message.id);
     
-    // If this message was notified within the last 30 seconds, don't send another notification
-    // UNLESS it's a WhatsApp selection or bypassDeduplication is set to true
-    if (lastNotificationTime && now - lastNotificationTime < 30000 && !bypassDeduplication && !isFromWhatsApp) {
+    // Track attempts by source
+    if (!notificationAttemptsBySource.has(source)) {
+      notificationAttemptsBySource.set(source, new Map<string, number>());
+    }
+    const sourceMap = notificationAttemptsBySource.get(source)!;
+    const lastSourceAttempt = sourceMap.get(message.id) || 0;
+    sourceMap.set(message.id, now);
+    
+    // If this message was notified within the last 15 seconds, don't send another notification
+    // UNLESS it's a WhatsApp selection, reminder trigger, or bypassDeduplication is set to true
+    if (lastNotificationTime && now - lastNotificationTime < 15000 && 
+        !bypassDeduplication && !isFromWhatsApp && !isReminderTriggered) {
+      
+      // For the same source, require a longer delay (30 seconds) to prevent rapid firing
+      if (now - lastSourceAttempt < 30000) {
+        if (debug) {
+          console.log(`Message ${message.id} was already notified by source ${source} ${(now - lastSourceAttempt) / 1000}s ago. Skipping duplicate notification.`);
+        }
+        
+        return { 
+          success: true, 
+          details: "Skipped duplicate notification from same source", 
+          isDuplicate: true 
+        };
+      }
+      
       if (debug) {
         console.log(`Message ${message.id} was already notified ${(now - lastNotificationTime) / 1000}s ago. Skipping duplicate notification.`);
       }
@@ -96,6 +133,18 @@ export async function sendMessageNotification(
     for (const [msgId, time] of recentNotifications.entries()) {
       if (now - time > 60000) { // Remove entries older than 1 minute
         recentNotifications.delete(msgId);
+      }
+    }
+    
+    // Also cleanup source tracking
+    for (const [src, msgMap] of notificationAttemptsBySource.entries()) {
+      for (const [msgId, time] of msgMap.entries()) {
+        if (now - time > 120000) { // 2 minutes
+          msgMap.delete(msgId);
+        }
+      }
+      if (msgMap.size === 0) {
+        notificationAttemptsBySource.delete(src);
       }
     }
     
@@ -180,7 +229,9 @@ export async function sendMessageNotification(
         maxRetries,
         retryDelay,
         isWhatsAppEnabled,
-        triggerKeyword
+        triggerKeyword,
+        forceSend, // Pass through the forceSend flag
+        source     // Pass through the source
       });
     }));
     

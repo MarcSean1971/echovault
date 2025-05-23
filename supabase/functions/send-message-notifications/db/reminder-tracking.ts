@@ -53,7 +53,7 @@ export async function trackMessageNotification(messageId: string, conditionId: s
 
 /**
  * Update reminder times for condition - ensures we don't miss any reminders
- * FIXED: Added isEditOperation parameter and deduplication to prevent multiple emails
+ * CRITICAL FIX: Removed the isEdit parameter restriction for immediate checks
  */
 export async function markRemindersObsolete(
   conditionId: string,
@@ -80,11 +80,11 @@ export async function markRemindersObsolete(
     
     console.log(`[REMINDER-TRACKING] Successfully marked ${count || 'unknown number of'} reminders as obsolete for message ${messageId}`);
     
-    // CRITICAL FIX: Add deduplication by checking if notification was already sent recently
+    // CRITICAL FIX: Make deduplication less restrictive (only 1 minute instead of 5)
     try {
-      // Check if a notification was sent in the last 5 minutes to avoid duplicates
+      // Check if a notification was sent in the last 1 minute to avoid duplicates
       const recentCheck = new Date();
-      recentCheck.setMinutes(recentCheck.getMinutes() - 5);
+      recentCheck.setMinutes(recentCheck.getMinutes() - 1);
       
       const { data: recentNotifications } = await supabase
         .from('reminder_delivery_log')
@@ -110,19 +110,17 @@ export async function markRemindersObsolete(
         response_data: { source: "markRemindersObsolete", time: new Date().toISOString(), isEdit: isEditOperation }
       });
       
-      // CRITICAL FIX: Skip immediate check completely if this is an edit operation
-      if (isEditOperation) {
-        console.log("[REMINDER-TRACKING] Skipping immediate reminder check because this is an edit operation");
-        return true; // Skip the immediate check completely
-      }
+      // CRITICAL FIX: Allow immediate checks even for edit operations with a flag
+      // This ensures that reminders are still processed after edits
+      const forceSend = !isEditOperation; // Only force send for non-edit operations
       
-      // CONTROLLED IMMEDIATE CHECK: Only proceed if no recent notification and not an edit
-      console.log("[REMINDER-TRACKING] Running immediate reminder check for message:", messageId);
+      // IMMEDIATE CHECK: Always run the immediate check, but only force for non-edits
+      console.log(`[REMINDER-TRACKING] Running immediate reminder check for message: ${messageId}, forceSend: ${forceSend}`);
       await supabase.functions.invoke("send-reminder-emails", {
         body: {
           messageId: messageId,
           debug: true,
-          forceSend: false, // CRITICAL FIX: Changed to false to prevent forcing emails when not needed
+          forceSend: forceSend,
           source: "obsolete-immediate-check"
         }
       });

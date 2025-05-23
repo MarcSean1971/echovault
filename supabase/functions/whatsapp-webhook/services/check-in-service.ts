@@ -71,6 +71,26 @@ export async function processCheckIn(userId: string, phoneNumber: string) {
       };
     }
     
+    // CRITICAL FIX: Trigger reminder schedule update for each affected message
+    // This ensures that the reminder schedule is updated after a check-in
+    for (const condition of conditions) {
+      try {
+        console.log(`[WEBHOOK] Triggering reminder update for message ${condition.message_id}`);
+        await supabase.functions.invoke("send-reminder-emails", {
+          body: { 
+            messageId: condition.message_id,
+            debug: true,
+            forceSend: false,
+            action: "update-after-checkin",
+            source: "whatsapp-checkin"
+          }
+        });
+      } catch (reminderError) {
+        console.error(`[WEBHOOK] Error triggering reminder update for message ${condition.message_id}:`, reminderError);
+        // Continue with other messages even if one fails
+      }
+    }
+    
     // Send a confirmation message via WhatsApp
     const confirmationSent = await sendConfirmationMessage(phoneNumber, conditions.length);
     
@@ -137,58 +157,46 @@ async function sendConfirmationMessage(phoneNumber: string, conditionsUpdated: n
       message += " No active conditions required updating.";
     }
     
-    // First try: Call the send-whatsapp function with formatted number
-    try {
-      const supabase = createSupabaseAdmin();
-      console.log(`[WEBHOOK] Attempting to send WhatsApp confirmation with formatted number: ${formattedPhone}`);
-      
-      const { data, error } = await supabase.functions.invoke("send-whatsapp", {
-        body: {
-          to: formattedPhone,
-          message: message,
-          useTemplate: false
-        }
-      });
-      
-      if (error) {
-        throw new Error(`Error from send-whatsapp: ${error.message}`);
-      }
-      
-      console.log(`[WEBHOOK] WhatsApp confirmation sent successfully:`, data);
-      return true;
-    } catch (firstError) {
-      console.error(`[WEBHOOK] First attempt failed:`, firstError);
-      
-      // Second try: If the first attempt failed, try with a different phone format
+    // CRITICAL FIX: Use maximum retries to increase reliability
+    let sentSuccessfully = false;
+    const maxRetries = 3;
+    
+    for (let attempt = 0; attempt < maxRetries && !sentSuccessfully; attempt++) {
       try {
-        console.log(`[WEBHOOK] Trying alternate phone format...`);
-        // Try without the whatsapp: prefix if it had one, or with it if it didn't
-        const alternatePhone = phoneNumber.includes("whatsapp:") ? 
-          cleanPhone : 
-          `whatsapp:${cleanPhone}`;
-        
-        console.log(`[WEBHOOK] Alternate phone format: ${alternatePhone}`);
-        
         const supabase = createSupabaseAdmin();
+        const phoneToUse = attempt === 0 ? formattedPhone : 
+                          attempt === 1 ? cleanPhone : 
+                          `whatsapp:${cleanPhone}`;
+                          
+        console.log(`[WEBHOOK] Attempt #${attempt + 1}: Sending WhatsApp confirmation to ${phoneToUse}`);
+        
         const { data, error } = await supabase.functions.invoke("send-whatsapp", {
           body: {
-            to: alternatePhone,
+            to: phoneToUse,
             message: message,
-            useTemplate: false
+            useTemplate: false,
+            retryCount: attempt
           }
         });
         
         if (error) {
-          throw new Error(`Error from send-whatsapp with alternate format: ${error.message}`);
+          throw new Error(`Error from send-whatsapp: ${error.message}`);
         }
         
-        console.log(`[WEBHOOK] WhatsApp confirmation sent successfully with alternate format:`, data);
-        return true;
-      } catch (secondError) {
-        console.error(`[WEBHOOK] Both attempts failed:`, secondError);
-        return false;
+        console.log(`[WEBHOOK] WhatsApp confirmation sent successfully on attempt #${attempt + 1}:`, data);
+        sentSuccessfully = true;
+        break;
+      } catch (attemptError) {
+        console.error(`[WEBHOOK] Attempt #${attempt + 1} failed:`, attemptError);
+        
+        if (attempt < maxRetries - 1) {
+          console.log(`[WEBHOOK] Will retry with different format...`);
+          await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1))); // Exponential backoff
+        }
       }
     }
+    
+    return sentSuccessfully;
   } catch (error) {
     console.error(`[WEBHOOK] Error sending confirmation message:`, error);
     return false;

@@ -1,4 +1,3 @@
-
 /**
  * Service functions for creating and managing reminder schedules
  */
@@ -67,10 +66,9 @@ export async function createOrUpdateReminderSchedule(params: ReminderSchedulePar
       }
     }));
     
-    // Trigger notification processing through cascading function calls
-    // CRITICAL FIX: Do NOT force send notifications if this is an edit operation!
-    // CRITICAL FIX: Also do not force send for arming operations
-    triggerNotificationProcessing(params.messageId, false); // FIXED: Always use false for forceSend flag
+    // CRITICAL FIX: Trigger immediate notification processing for new reminders 
+    // This ensures that reminders created close to their scheduled time are sent immediately
+    triggerNotificationProcessing(params.messageId, !isEdit); // Force send for new reminders, not for edits
     
     return true;
   } catch (error) {
@@ -120,24 +118,32 @@ function calculateScheduleTimes(params: ReminderScheduleParams): any[] {
     const scheduledAt = new Date(effectiveDeadline!.getTime() - (minutes * 60 * 1000));
     console.log(`[REMINDER-SERVICE] Creating reminder ${minutes} mins before deadline at ${scheduledAt.toISOString()}`);
     
+    // CRITICAL FIX: Set reminders that are already due to "processing" status 
+    // so they'll be picked up immediately by the reminder processor
+    const now = new Date();
+    const status = scheduledAt <= now ? 'processing' : 'pending';
+    
     return {
       message_id: messageId,
       condition_id: conditionId,
       scheduled_at: scheduledAt.toISOString(),
       reminder_type: 'reminder',
-      status: 'pending',
+      status: status,
       delivery_priority: minutes < 60 ? 'high' : 'normal', // High priority for reminders less than an hour before deadline
       retry_strategy: 'standard'
     };
   });
   
   // Add final delivery entry
+  const now = new Date();
+  const finalStatus = effectiveDeadline <= now ? 'processing' : 'pending';
+  
   scheduleEntries.push({
     message_id: messageId,
     condition_id: conditionId,
     scheduled_at: effectiveDeadline.toISOString(),
     reminder_type: 'final_delivery',
-    status: 'pending',
+    status: finalStatus,
     delivery_priority: 'critical',
     retry_strategy: 'aggressive'
   });
@@ -148,20 +154,20 @@ function calculateScheduleTimes(params: ReminderScheduleParams): any[] {
 /**
  * Trigger notification processing through cascading function calls
  * with built-in retry strategy for reliability
- * FIXED: Added shouldForceSend parameter to control when notifications are forced
+ * CRITICAL FIX: Improved parameter handling for more reliable notification processing
  */
 async function triggerNotificationProcessing(messageId: string, shouldForceSend: boolean = false): Promise<void> {
   // Log whether we're forcing send or not
   console.log(`[REMINDER-SERVICE] Triggering notification processing for ${messageId} with forceSend=${shouldForceSend}`);
   
-  // CRITICAL FIX: Only force send when explicitly requested
   try {
     const { error: triggerError } = await supabase.functions.invoke("send-reminder-emails", {
       body: { 
         messageId: messageId,
         debug: true,
-        forceSend: shouldForceSend, // Only force send when specifically requested
-        source: shouldForceSend ? "reminder-schedule-direct-trigger" : "reminder-schedule-update"
+        forceSend: shouldForceSend,
+        source: shouldForceSend ? "reminder-schedule-direct-trigger" : "reminder-schedule-update",
+        action: "process" // CRITICAL FIX: Add explicit action to process
       }
     });
     
@@ -170,14 +176,15 @@ async function triggerNotificationProcessing(messageId: string, shouldForceSend:
     } else {
       console.log(`[REMINDER-SERVICE] Successfully triggered notification processing (forceSend=${shouldForceSend})`);
       
-      // If successful, also call the second function as a backup, but respect the forceSend flag
+      // If successful, also call the second function as a backup
       try {
         console.log("[REMINDER-SERVICE] Also triggering message notifications function");
         await supabase.functions.invoke("send-message-notifications", {
           body: { 
             messageId: messageId,
             debug: true,
-            forceSend: shouldForceSend, // Respect the same forceSend setting
+            forceSend: shouldForceSend,
+            bypassDeduplication: shouldForceSend, // CRITICAL FIX: Bypass deduplication when forcing send
             source: shouldForceSend ? "reminder-schedule-backup-trigger" : "reminder-schedule-backup-update"
           }
         });
@@ -188,7 +195,7 @@ async function triggerNotificationProcessing(messageId: string, shouldForceSend:
   } catch (triggerError) {
     console.warn("[REMINDER-SERVICE] Exception triggering notification processing:", triggerError);
     
-    // Second attempt after 2 seconds if first fails, but respect the forceSend flag
+    // Second attempt after 2 seconds if first fails
     setTimeout(async () => {
       try {
         console.log(`[REMINDER-SERVICE] Retry #1: Triggering notification processing (forceSend=${shouldForceSend})`);
@@ -196,14 +203,15 @@ async function triggerNotificationProcessing(messageId: string, shouldForceSend:
           body: { 
             messageId: messageId,
             debug: true,
-            forceSend: shouldForceSend, // Respect the shouldForceSend flag
-            source: shouldForceSend ? "retry-trigger-1" : "retry-update-1"
+            forceSend: shouldForceSend,
+            source: shouldForceSend ? "retry-trigger-1" : "retry-update-1",
+            action: "process" // CRITICAL FIX: Add explicit action to process
           }
         });
       } catch (retryError) {
         console.warn("[REMINDER-SERVICE] Retry #1 failed:", retryError);
         
-        // Third attempt after 5 more seconds (7s total), but respect the forceSend flag
+        // Third attempt after 5 more seconds (7s total)
         setTimeout(async () => {
           try {
             console.log(`[REMINDER-SERVICE] Retry #2: Final attempt at triggering notification (forceSend=${shouldForceSend})`);
@@ -211,8 +219,9 @@ async function triggerNotificationProcessing(messageId: string, shouldForceSend:
               body: { 
                 messageId: messageId,
                 debug: true,
-                forceSend: shouldForceSend, // Respect the shouldForceSend flag
-                source: shouldForceSend ? "retry-trigger-2" : "retry-update-2"
+                forceSend: shouldForceSend,
+                source: shouldForceSend ? "retry-trigger-2" : "retry-update-2",
+                action: "process" // CRITICAL FIX: Add explicit action to process
               }
             });
           } catch (finalError) {

@@ -74,11 +74,24 @@ const handler = async (req: Request): Promise<Response> => {
       source === 'whatsapp_trigger_single' || 
       source === 'whatsapp_selection_single' || 
       source === 'whatsapp_selection_all' ||
-      source === 'whatsapp_selection_fallback'
+      source === 'whatsapp_selection_fallback' ||
+      source === 'whatsapp-checkin'  // CRITICAL FIX: Added this source
     );
     
     if (isFromWhatsApp) {
       console.log(`SPECIAL HANDLING: This is a WhatsApp-triggered notification from ${source}`);
+    }
+    
+    // CRITICAL FIX: Check if this is reminder-triggered
+    const isReminderTriggered = source && (
+      source === 'reminder_schedule_trigger' ||
+      source === 'reminder-schedule-direct-trigger' ||
+      source === 'reminder-schedule-update' ||
+      source === 'obsolete-immediate-check'
+    );
+    
+    if (isReminderTriggered) {
+      console.log(`REMINDER HANDLING: This is a reminder-triggered notification from ${source}`);
     }
     
     // New: Handle test mode specially
@@ -121,8 +134,11 @@ const handler = async (req: Request): Promise<Response> => {
       console.log(`Keep armed flag explicitly set to: ${keepArmed}`);
     }
     
+    // CRITICAL FIX: Always use forceSend for WhatsApp or reminder triggers
+    const effectiveForceSend = forceSend || isFromWhatsApp || isReminderTriggered;
+    
     // Get messages that need notification
-    const messagesToNotify = await getMessagesToNotify(messageId, forceSend || isFromWhatsApp); // FIXED: Force send for WhatsApp triggers
+    const messagesToNotify = await getMessagesToNotify(messageId, effectiveForceSend); 
     console.log(`Found ${messagesToNotify.length} messages to notify out of ${messageId ? '1 requested' : 'all active conditions'}`);
     
     if (messagesToNotify.length === 0 && messageId) {
@@ -151,9 +167,9 @@ const handler = async (req: Request): Promise<Response> => {
           if (!conditionData.active) {
             console.log("Message condition is not active, that's why it wasn't included");
             
-            // If forceSend is true or this is from WhatsApp, we'll include it anyway
-            if (forceSend || isFromWhatsApp) {
-              console.log("Force send or WhatsApp trigger is enabled, trying to process this message anyway");
+            // CRITICAL FIX: If forceSend, WhatsApp, or reminder trigger, include it anyway
+            if (effectiveForceSend) {
+              console.log("Force send, WhatsApp trigger, or reminder trigger is enabled, trying to process this message anyway");
               
               // Get the full message and condition data
               const { data: fullMessageData } = await supabase
@@ -182,7 +198,7 @@ const handler = async (req: Request): Promise<Response> => {
                   isEmergency,
                   debug: true, // Always enable debug mode for forced messages
                   forceSend: true,
-                  bypassDeduplication: isFromWhatsApp || bypassDeduplication // FIXED: Bypass deduplication for WhatsApp
+                  bypassDeduplication: isFromWhatsApp || bypassDeduplication || isReminderTriggered
                 });
                 
                 return new Response(
@@ -268,8 +284,8 @@ const handler = async (req: Request): Promise<Response> => {
         sendMessageNotification(message, {
           isEmergency,
           debug: debug || isEmergency, // Always enable debug mode for emergency messages
-          forceSend: forceSend || isFromWhatsApp, // FIXED: Force send for WhatsApp triggers
-          bypassDeduplication: isFromWhatsApp || bypassDeduplication, // FIXED: Bypass deduplication for WhatsApp
+          forceSend: effectiveForceSend, // CRITICAL FIX: Use effective force send flag
+          bypassDeduplication: isFromWhatsApp || bypassDeduplication || isReminderTriggered, // FIXED: Bypass for all important sources
           source: source // ADDED: Pass source to notification service
         })
       )
