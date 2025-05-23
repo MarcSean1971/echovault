@@ -1,5 +1,5 @@
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { corsHeaders } from "../shared/utils/cors-headers.ts";
 import { createSuccessResponse, createErrorResponse } from "../shared/utils/response-formatters.ts";
 import { sendWhatsAppMessage } from "../shared/services/whatsapp-service.ts";
