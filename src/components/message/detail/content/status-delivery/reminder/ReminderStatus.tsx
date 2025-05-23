@@ -62,25 +62,6 @@ export function ReminderStatus({
     );
   }
   
-  // CRITICAL FIX: Actually render reminders when they exist instead of returning null
-  return (
-    <>
-      {/* Display the actual reminders - Status div has been removed */}
-      <div className="mt-2 space-y-1">
-        {enhancedReminders.map((reminder, index) => (
-          <div 
-            key={`${reminder.original}-${index}`}
-            className={`flex items-start rounded px-2 py-1 ${
-              reminder.isImportant 
-                ? 'bg-red-50 text-red-800' 
-                : 'bg-blue-50 text-blue-800'
-            }`}
-          >
-            <span className="mr-2 flex-shrink-0">•</span>
-            <span>{reminder.formattedText}</span>
-          </div>
-        ))}
-      </div>
-    </>
-  );
+  // When reminders exist, return empty fragment (removed reminders list)
+  return <></>;
 }
