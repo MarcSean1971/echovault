@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ReactNode } from "react";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
@@ -19,26 +19,20 @@ export function AccordionSection({
   className = "",
   value = "item-1"
 }: AccordionSectionProps) {
-  // Use controlled state for the accordion with defaultOpen as initial state
+  // Simplify state management - just track open/closed state
   const [isOpen, setIsOpen] = useState(defaultOpen);
-  
-  // Effect to properly handle defaultOpen prop changes
-  useEffect(() => {
-    setIsOpen(defaultOpen);
-  }, [defaultOpen]);
 
   return (
     <Accordion 
       type="single" 
       collapsible 
-      value={isOpen ? value : undefined}
-      onValueChange={(val) => setIsOpen(val === value)}
+      value={isOpen ? value : ""} 
+      onValueChange={(newValue) => setIsOpen(newValue === value)}
       className={className}
     >
       <AccordionItem value={value} className="border-none">
         <AccordionTrigger 
           className={`py-3 px-2 rounded text-sm font-medium text-muted-foreground hover:bg-muted/50 ${HOVER_TRANSITION} w-full flex justify-between`}
-          // Removed the redundant onClick handler that was causing the double-click issue
         >
           {title}
         </AccordionTrigger>
