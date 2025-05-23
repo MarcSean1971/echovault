@@ -44,14 +44,15 @@ export async function enableRealtimeForConditions(): Promise<boolean> {
           schema: 'public',
           table: 'message_conditions'
         },
-        (payload: RealtimePayload) => {
+        (payload) => {
           // This is a global handler that logs when changes occur
+          const typedPayload = payload as unknown as RealtimePayload;
           console.log('[RealtimeHelper] Detected change in message_conditions:', 
-            payload.eventType, 
+            typedPayload.eventType, 
             'for record:', 
-            payload.new?.id, 
+            typedPayload.new?.id, 
             'message_id:', 
-            payload.new?.message_id
+            typedPayload.new?.message_id
           );
         }
       )

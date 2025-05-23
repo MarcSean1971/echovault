@@ -53,13 +53,13 @@ export function RealtimeConditionSync() {
           table: 'message_conditions',
           filter: `message_id=eq.${messageId}`
         },
-        (payload: RealtimePayload) => {
+        (payload) => {
           // When a message condition is updated (e.g., via WhatsApp check-in)
           console.log('[RealtimeSync] Received condition update:', payload);
           
           // Extract the updated data
-          const updatedCondition = payload.new;
-          const oldCondition = payload.old;
+          const updatedCondition = payload.new as MessageCondition;
+          const oldCondition = payload.old as MessageCondition;
           
           // Check if the last_checked timestamp changed (indicating a check-in)
           if (updatedCondition && oldCondition && 
