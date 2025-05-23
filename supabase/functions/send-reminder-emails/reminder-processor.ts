@@ -16,6 +16,56 @@ interface ReminderProcessingResult {
  * Process all due reminders with atomic operations
  * Optimized to use batching and more efficient DB operations
  * 
+ * @param messageIds - Array of message IDs to process reminders for
+ * @param options - Options for processing
+ * @returns Processing results
+ */
+export async function processReminders(
+  messageIds: string[],
+  options: { debug?: boolean, forceSend?: boolean } = {}
+): Promise<any[]> {
+  const { debug = false, forceSend = false } = options;
+  const results: any[] = [];
+  
+  try {
+    if (debug) {
+      console.log(`[PROCESSOR] Processing reminders for ${messageIds.length} messages, forceSend: ${forceSend}`);
+    }
+    
+    // Process each message ID in the array
+    for (const messageId of messageIds) {
+      // Get due reminders for this message
+      const processingResult = await processDueReminders(messageId, forceSend, debug);
+      
+      if (debug) {
+        console.log(`[PROCESSOR] Results for message ${messageId}:`);
+        console.log(`  - Processed: ${processingResult.processedCount}`);
+        console.log(`  - Success: ${processingResult.successCount}`);
+        console.log(`  - Failed: ${processingResult.failedCount}`);
+        console.log(`  - Skipped: ${processingResult.skippedCount}`);
+      }
+      
+      results.push({
+        message_id: messageId,
+        processed: processingResult.processedCount,
+        success: processingResult.successCount,
+        failed: processingResult.failedCount,
+        skipped: processingResult.skippedCount,
+        results: processingResult.results
+      });
+    }
+    
+    return results;
+  } catch (error) {
+    console.error("[PROCESSOR] Error in processReminders:", error);
+    throw error;
+  }
+}
+
+/**
+ * Process all due reminders with atomic operations
+ * Optimized to use batching and more efficient DB operations
+ * 
  * @param messageId - Optional message ID to filter reminders
  * @param forceSend - Whether to force send reminders even if not due
  * @param debug - Enable debug logging
