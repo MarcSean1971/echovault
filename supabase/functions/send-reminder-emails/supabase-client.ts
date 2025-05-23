@@ -1,17 +1,17 @@
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.43.0";
 
 /**
- * Create a Supabase client for the edge function to use
+ * Create a Supabase client instance for use in the edge function
  */
 export function supabaseClient() {
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  // Create a Supabase client with the service role key
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
   
-  if (!supabaseUrl || !supabaseServiceKey) {
-    throw new Error("SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is not set");
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error("Missing Supabase environment variables");
   }
   
-  // Use the service role key for admin privileges
-  return createClient(supabaseUrl, supabaseServiceKey);
+  return createClient(supabaseUrl, supabaseKey);
 }

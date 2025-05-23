@@ -38,7 +38,11 @@ export async function testReminderDelivery(
     
     if (messageError) {
       console.error("[TEST] Error fetching message:", messageError);
-      return { success: false, results: [{ error: "Message not found" }] };
+      return { success: false, results: [{ error: "Message not found", details: messageError.message }] };
+    }
+    
+    if (debug) {
+      console.log(`[TEST] Found message: ${messageData.title}`);
     }
     
     // Get the condition for this message
@@ -50,7 +54,20 @@ export async function testReminderDelivery(
     
     if (conditionError) {
       console.error("[TEST] Error fetching condition:", conditionError);
-      return { success: false, results: [{ error: "Condition not found" }] };
+      return { success: false, results: [{ error: "Condition not found", details: conditionError.message }] };
+    }
+    
+    if (debug) {
+      console.log(`[TEST] Found condition of type: ${conditionData.condition_type}`);
+    }
+    
+    // Get the user who should receive the test notification
+    let testUserId = userId;
+    
+    if (!testUserId) {
+      // If no specific user ID was provided, use the message creator
+      testUserId = messageData.user_id;
+      console.log(`[TEST] No userId provided, using message creator: ${testUserId}`);
     }
     
     // For a test delivery, we'll create a temporary reminder record
@@ -72,20 +89,24 @@ export async function testReminderDelivery(
     
     if (reminderError) {
       console.error("[TEST] Error creating test reminder:", reminderError);
-      return { success: false, results: [{ error: "Failed to create test reminder" }] };
+      return { success: false, results: [{ error: "Failed to create test reminder", details: reminderError.message }] };
+    }
+    
+    if (debug) {
+      console.log(`[TEST] Created test reminder with ID: ${reminderData.id}`);
     }
     
     // Process the reminder with force send enabled
+    console.log(`[TEST] Processing reminder with forceSend=${forceSend}`);
     const result = await processReminder(reminderData, true);
     
     if (debug) {
       console.log(`[TEST] Test delivery result:`, result);
     }
     
-    // Important: If not using a database record for the test, we still need to track this
-    // for both the creator and message owner
+    // Also log a manual test delivery attempt 
     try {
-      if (userId) {
+      if (testUserId) {
         // Log a manual test delivery attempt for this specific user
         await supabase
           .from('reminder_delivery_log')
@@ -93,7 +114,7 @@ export async function testReminderDelivery(
             reminder_id: `manual-test-${testReminderId}`,
             message_id: messageId,
             condition_id: conditionData.id,
-            recipient: userId,
+            recipient: testUserId,
             delivery_channel: 'test',
             delivery_status: result.success ? 'delivered' : 'failed',
             response_data: {
@@ -102,6 +123,43 @@ export async function testReminderDelivery(
               results: result.results || []
             }
           });
+          
+        if (debug) {
+          console.log(`[TEST] Logged test delivery for user ${testUserId}`);
+        }
+      }
+      
+      // Also try to send a direct test email through the send-test-email function
+      try {
+        // Get user email from profiles
+        const { data: userData, error: userError } = await supabase
+          .from('profiles')
+          .select('email, first_name, last_name')
+          .eq('id', testUserId)
+          .single();
+          
+        if (!userError && userData && userData.email) {
+          console.log(`[TEST] Also sending direct test email to ${userData.email}`);
+          
+          // Call test email function as fallback
+          const { data: emailResult, error: emailError } = await supabase.functions.invoke("send-test-email", {
+            body: {
+              recipientEmail: userData.email,
+              recipientName: `${userData.first_name || ''} ${userData.last_name || ''}`.trim() || 'User',
+              messageTitle: messageData.title,
+              messageId: messageId,
+              isTest: true
+            }
+          });
+          
+          if (emailError) {
+            console.warn("[TEST] Error sending fallback email:", emailError);
+          } else {
+            console.log("[TEST] Fallback email sent successfully");
+          }
+        }
+      } catch (emailError) {
+        console.warn("[TEST] Error in fallback email attempt:", emailError);
       }
     } catch (logError) {
       console.warn("[TEST] Error logging test delivery:", logError);

@@ -32,3 +32,13 @@ export function getTwilioCredentials() {
   
   return { accountSid, authToken };
 }
+
+/**
+ * CORS headers for cross-origin requests
+ * Fixed: Added missing CORS headers export
+ */
+export const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+};

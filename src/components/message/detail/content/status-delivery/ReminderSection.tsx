@@ -10,7 +10,8 @@ import { Bell, RefreshCw, SendHorizonal } from "lucide-react";
 import { AccordionSection } from "@/components/message/detail/AccordionSection";
 import { ICON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { Button } from "@/components/ui/button";
-import { triggerManualReminder } from "@/services/messages/reminder";
+import { triggerManualReminder } from "@/services/messages/whatsApp/core/reminderService";
+import { toast } from "@/components/ui/use-toast";
 
 interface ReminderSectionProps {
   condition: any | null;
@@ -79,14 +80,26 @@ export function ReminderSection({
     return null;
   }
 
-  // Handle testing the reminder functionality
+  // Handle testing the reminder functionality with improved feedback
   const handleTestReminderClick = async () => {
     if (!condition?.message_id || refreshInProgressRef.current || isTestingReminder) return;
     
     try {
+      toast({
+        title: "Sending test notification...",
+        description: "Processing your test notification request",
+        duration: 3000,
+      });
+      
       await handleTestReminder();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error testing reminder:", error);
+      toast({
+        title: "Test notification failed",
+        description: error.message || "Failed to test reminder. Please try again.",
+        variant: "destructive",
+        duration: 5000,
+      });
       setErrorState("Failed to test reminder");
     }
   };
@@ -127,14 +140,14 @@ export function ReminderSection({
         errorState={errorState}
       />
       
-      {/* Add test reminder buttons */}
+      {/* Add test reminder buttons with improved hover effects */}
       <div className="mt-4 flex gap-2">
         <Button 
           variant="outline" 
           size="sm"
           onClick={handleForceRefresh}
           disabled={refreshInProgressRef.current || isTestingReminder}
-          className="flex items-center text-xs"
+          className={`flex items-center text-xs ${HOVER_TRANSITION}`}
         >
           <RefreshCw className="w-3 h-3 mr-1.5" /> Refresh Status
         </Button>
@@ -144,7 +157,7 @@ export function ReminderSection({
           size="sm"
           onClick={handleTestReminderClick}
           disabled={refreshInProgressRef.current || isTestingReminder}
-          className="flex items-center text-xs"
+          className={`flex items-center text-xs ${HOVER_TRANSITION}`}
         >
           <SendHorizonal className="w-3 h-3 mr-1.5" /> Test Notifications
         </Button>
