@@ -3,7 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LogOut, User, Settings, Users, MessageSquare } from "lucide-react";
+import { LogOut, User, Settings, Users, MessageSquare, Home } from "lucide-react";
 import { ICON_HOVER_EFFECTS } from "@/utils/hoverEffects";
 
 interface UserMenuProps {
@@ -43,15 +43,14 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
         </div>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56 bg-popover shadow-md" align="end" forceMount sideOffset={8} side="bottom">
-        <DropdownMenuLabel>
-          <div className="flex flex-col space-y-1">
-            <p className="text-xs leading-none text-muted-foreground">
-              User Account
-            </p>
-          </div>
-        </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
+          <DropdownMenuItem asChild>
+            <Link to="/" className="w-full cursor-pointer hover:opacity-90 transition-opacity">
+              <Home className={`mr-2 h-4 w-4 ${ICON_HOVER_EFFECTS.muted}`} />
+              <span>Home</span>
+            </Link>
+          </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link to="/messages" className="w-full cursor-pointer hover:opacity-90 transition-opacity">
               <MessageSquare className={`mr-2 h-4 w-4 ${ICON_HOVER_EFFECTS.muted}`} />
