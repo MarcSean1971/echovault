@@ -38,7 +38,7 @@ export async function enableRealtimeForConditions(): Promise<boolean> {
     // Create a channel for the message_conditions table
     // This is a global channel that all components can use with specific filters
     const channel = supabase.channel('message_conditions_changes')
-      .on(
+      .on<MessageCondition>(
         'postgres_changes', 
         {
           event: '*', // Listen for all events (INSERT, UPDATE, DELETE)
