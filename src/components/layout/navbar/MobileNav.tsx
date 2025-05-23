@@ -1,12 +1,12 @@
 
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Menu, Home, MessageSquare, Users, Settings, LogOut } from "lucide-react";
+import { Menu, Home, MessageSquare, Users, Settings, LogOut, User } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { ICON_HOVER_EFFECTS } from "@/utils/hoverEffects";
 
 interface MobileNavProps {
   userImage: string | null;
@@ -32,7 +32,7 @@ export function MobileNav({ userImage, initials }: MobileNavProps) {
   
   return (
     <div className="flex md:hidden items-center space-x-2">
-      <Avatar className={`h-10 w-10 border-2 border-border/60 shadow-sm ${HOVER_TRANSITION}`}>
+      <Avatar className={`h-10 w-10 border-2 border-border/60 shadow-sm`}>
         {userImage ? (
           <AvatarImage src={userImage} alt="Profile" />
         ) : (
@@ -61,7 +61,7 @@ export function MobileNav({ userImage, initials }: MobileNavProps) {
                 "flex items-center gap-3 w-full p-3 rounded-lg font-medium transition-all duration-200 hover:bg-accent/10",
                 isActive("/") && "bg-accent/15 text-accent"
               )}>
-                <Home className="h-5 w-5" />
+                <Home className={`h-5 w-5 ${ICON_HOVER_EFFECTS.muted}`} />
                 <span>Home</span>
               </Link>
               
@@ -69,7 +69,7 @@ export function MobileNav({ userImage, initials }: MobileNavProps) {
                 "flex items-center gap-3 w-full p-3 rounded-lg font-medium transition-all duration-200 hover:bg-accent/10",
                 isActive("/messages") && "bg-accent/15 text-accent"
               )}>
-                <MessageSquare className="h-5 w-5" />
+                <MessageSquare className={`h-5 w-5 ${ICON_HOVER_EFFECTS.muted}`} />
                 <span>Messages</span>
               </Link>
               
@@ -77,8 +77,16 @@ export function MobileNav({ userImage, initials }: MobileNavProps) {
                 "flex items-center gap-3 w-full p-3 rounded-lg font-medium transition-all duration-200 hover:bg-accent/10",
                 isActive("/recipients") && "bg-accent/15 text-accent"
               )}>
-                <Users className="h-5 w-5" />
+                <Users className={`h-5 w-5 ${ICON_HOVER_EFFECTS.muted}`} />
                 <span>Recipients</span>
+              </Link>
+              
+              <Link to="/profile" className={cn(
+                "flex items-center gap-3 w-full p-3 rounded-lg font-medium transition-all duration-200 hover:bg-accent/10",
+                isActive("/profile") && "bg-accent/15 text-accent"
+              )}>
+                <User className={`h-5 w-5 ${ICON_HOVER_EFFECTS.muted}`} />
+                <span>Profile</span>
               </Link>
               
               {/* Add Admin Dashboard link for admin users */}
@@ -87,18 +95,10 @@ export function MobileNav({ userImage, initials }: MobileNavProps) {
                   "flex items-center gap-3 w-full p-3 rounded-lg font-medium transition-all duration-200 hover:bg-accent/10",
                   isActive("/admin") && "bg-accent/15 text-accent"
                 )}>
-                  <Settings className="h-5 w-5" />
+                  <Settings className={`h-5 w-5 ${ICON_HOVER_EFFECTS.muted}`} />
                   <span>Admin Dashboard</span>
                 </Link>
               )}
-              
-              <Link to="/profile" className={cn(
-                "flex items-center gap-3 w-full p-3 rounded-lg font-medium transition-all duration-200 hover:bg-accent/10",
-                isActive("/profile") && "bg-accent/15 text-accent"
-              )}>
-                <Settings className="h-5 w-5" />
-                <span>Settings</span>
-              </Link>
             </div>
             
             <div className="mt-auto">
@@ -107,8 +107,8 @@ export function MobileNav({ userImage, initials }: MobileNavProps) {
                   onClick={handleSignOut}
                   className="flex items-center gap-3 w-full p-3 rounded-lg font-medium transition-all duration-200 hover:bg-accent/10 text-left"
                 >
-                  <LogOut className="h-5 w-5" />
-                  <span>Sign Out</span>
+                  <LogOut className={`h-5 w-5 ${ICON_HOVER_EFFECTS.muted}`} />
+                  <span>Log out</span>
                 </button>
               </div>
             </div>
