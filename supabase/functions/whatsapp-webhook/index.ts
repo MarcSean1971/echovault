@@ -1,11 +1,8 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { 
-  corsHeaders, 
-  createSuccessResponse, 
-  createErrorResponse,
-  extractWhatsAppMessageData
-} from "../shared/whatsapp-utils.ts";
+import { corsHeaders } from "../shared/utils/cors-headers.ts";
+import { createSuccessResponse, createErrorResponse } from "../shared/utils/response-formatters.ts";
+import { extractWhatsAppMessageData } from "../shared/utils/message-extractor.ts";
 import { processWhatsAppMessage } from "./handlers/message-handler.ts";
 
 /**

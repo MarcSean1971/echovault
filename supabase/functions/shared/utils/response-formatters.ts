@@ -2,48 +2,43 @@
 import { corsHeaders } from "./cors-headers.ts";
 
 /**
- * Create a successful response with CORS headers and consistent formatting
+ * Create a success response with proper CORS headers
  */
-export function createSuccessResponse(data: any) {
+export function createSuccessResponse(data: any, status: number = 200) {
   return new Response(
     JSON.stringify({
       success: true,
       data,
-      timestamp: new Date().toISOString()
     }),
     {
-      status: 200,
+      status,
       headers: {
+        ...corsHeaders,
         "Content-Type": "application/json",
-        ...corsHeaders
-      }
+      },
     }
   );
 }
 
 /**
- * Create an error response with CORS headers and consistent formatting
+ * Create an error response with proper CORS headers
  */
 export function createErrorResponse(error: any, status: number = 500) {
-  const errorMessage = error instanceof Error ? error.message : 
-                      (typeof error === 'string' ? error : 
-                      (error.message || "Unknown error"));
+  console.error("[ERROR]", error);
   
-  console.error("[ERROR]", errorMessage);
+  const message = error?.message || error?.toString() || "Unknown error";
   
   return new Response(
     JSON.stringify({
       success: false,
-      error: errorMessage,
-      details: error instanceof Error ? undefined : error,
-      timestamp: new Date().toISOString()
+      error: message,
     }),
     {
-      status: status,
+      status,
       headers: {
+        ...corsHeaders,
         "Content-Type": "application/json",
-        ...corsHeaders
-      }
+      },
     }
   );
 }
