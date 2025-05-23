@@ -16,12 +16,12 @@ export async function processWhatsAppMessage(fromNumber: string, messageBody: st
     
     // Clean up inputs
     const cleanedNumber = fromNumber.replace(/\s+/g, "").trim();
-    const cleanedMessage = messageBody.trim().toLowerCase();
+    const cleanedMessage = messageBody.trim();
     
     // Get the user associated with this phone number
-    const user = await findUserByPhone(cleanedNumber);
+    const userId = await findUserByPhone(cleanedNumber);
     
-    if (!user) {
+    if (!userId) {
       console.log(`[WEBHOOK] No user found for phone number ${cleanedNumber}`);
       return { 
         status: "error", 
@@ -30,24 +30,33 @@ export async function processWhatsAppMessage(fromNumber: string, messageBody: st
       };
     }
     
-    console.log(`[WEBHOOK] Found user ${user.id} for phone number ${cleanedNumber}`);
+    console.log(`[WEBHOOK] Found user ${userId} for phone number ${cleanedNumber}`);
     
     // Check if this is a check-in message
-    if (cleanedMessage === "checkin" || cleanedMessage === "check-in" || cleanedMessage === "check in") {
-      console.log(`[WEBHOOK] Processing check-in for user ${user.id}`);
-      return await processCheckIn(user.id, cleanedNumber);
+    if (cleanedMessage.toLowerCase() === "checkin" || 
+        cleanedMessage.toLowerCase() === "check-in" || 
+        cleanedMessage.toLowerCase() === "check in") {
+      console.log(`[WEBHOOK] Processing check-in for user ${userId}`);
+      return await processCheckIn(userId, cleanedNumber);
     }
     
     // Check if this is a check-in code
-    if (cleanedMessage.length >= 4 && cleanedMessage.length <= 10 && /^[a-zA-Z0-9]+$/.test(cleanedMessage)) {
+    if (cleanedMessage.length >= 4 && 
+        cleanedMessage.length <= 10 && 
+        /^[a-zA-Z0-9]+$/.test(cleanedMessage)) {
       console.log(`[WEBHOOK] Processing potential check-in code: ${cleanedMessage}`);
-      return await processCheckIn(user.id, cleanedNumber);
+      return await processCheckIn(userId, cleanedNumber);
     }
     
     // Check if this is a panic trigger message (SOS or custom keyword)
-    if (cleanedMessage === "sos" || cleanedMessage === "help" || cleanedMessage === "emergency") {
-      console.log(`[WEBHOOK] Processing panic trigger for user ${user.id}`);
-      return await processPanicTrigger(user.id, cleanedNumber);
+    // Or if this is a message selection for multiple panic messages
+    if (cleanedMessage.toLowerCase() === "sos" || 
+        cleanedMessage.toLowerCase() === "help" || 
+        cleanedMessage.toLowerCase() === "emergency" ||
+        cleanedMessage.toLowerCase() === "all" || 
+        /^[1-9][0-9]*$/.test(cleanedMessage)) {
+      console.log(`[WEBHOOK] Processing panic trigger or selection for user ${userId}`);
+      return await processPanicTrigger(userId, cleanedNumber, cleanedMessage);
     }
     
     // Unknown command

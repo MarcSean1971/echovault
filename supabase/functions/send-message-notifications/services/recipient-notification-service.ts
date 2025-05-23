@@ -21,7 +21,14 @@ export async function notifyRecipient(
   condition: any, 
   options: NotificationOptions = {}
 ) {
-  const { isEmergency = false, debug = false, maxRetries = 1, retryDelay = 5000, isWhatsAppEnabled = false, triggerKeyword = "" } = options;
+  const { 
+    isEmergency = false, 
+    debug = false, 
+    maxRetries = 1, 
+    retryDelay = 5000, 
+    isWhatsAppEnabled = false, 
+    triggerKeyword = "" 
+  } = options;
   
   try {
     // Initialize Supabase client for reliable data access
@@ -72,7 +79,7 @@ export async function notifyRecipient(
           recipient.name,
           senderName,
           message.title,
-          message.content,
+          message.text_content || message.content, // Use text_content field if available
           {
             share_location: message.share_location,
             latitude: message.location_latitude,
@@ -87,9 +94,15 @@ export async function notifyRecipient(
         
         if (emailResult.success) {
           emailSuccess = true;
+          if (debug) {
+            console.log(`Email sent successfully to ${recipient.email} for message ${message.id}`);
+          }
           break;
         } else {
           emailError = emailResult.error;
+          if (debug) {
+            console.error(`Email delivery failed to ${recipient.email}: ${emailResult.error}`);
+          }
           if (attempt < maxRetries - 1) {
             await new Promise(r => setTimeout(r, retryDelay));
           }
@@ -107,8 +120,12 @@ export async function notifyRecipient(
     let whatsAppSuccess = false;
     let whatsAppError = null;
     
-    if (isWhatsAppEnabled && recipient.phone) {
+    if ((isWhatsAppEnabled || condition.panic_config?.methods?.includes('whatsapp')) && recipient.phone) {
       try {
+        if (debug) {
+          console.log(`Attempting WhatsApp delivery to ${recipient.phone} for message ${message.id}`);
+        }
+        
         const whatsAppResult = await sendWhatsAppNotification(
           recipient,
           message,
@@ -119,6 +136,11 @@ export async function notifyRecipient(
         whatsAppSuccess = whatsAppResult.success;
         if (!whatsAppResult.success) {
           whatsAppError = whatsAppResult.error;
+          if (debug) {
+            console.error(`WhatsApp delivery failed to ${recipient.phone}: ${whatsAppResult.error}`);
+          }
+        } else if (debug) {
+          console.log(`WhatsApp sent successfully to ${recipient.phone} for message ${message.id}`);
         }
       } catch (err) {
         whatsAppError = err;
@@ -138,7 +160,7 @@ export async function notifyRecipient(
       whatsapp: { 
         success: whatsAppSuccess, 
         error: whatsAppError, 
-        enabled: isWhatsAppEnabled && !!recipient.phone
+        enabled: isWhatsAppEnabled || condition.panic_config?.methods?.includes('whatsapp')
       }
     };
   } catch (error) {
