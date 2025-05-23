@@ -27,11 +27,6 @@ export function AccordionSection({
     setIsOpen(defaultOpen);
   }, [defaultOpen]);
 
-  // Handle click on the accordion trigger
-  const handleAccordionClick = () => {
-    setIsOpen(prev => !prev);
-  };
-
   return (
     <Accordion 
       type="single" 
@@ -43,7 +38,7 @@ export function AccordionSection({
       <AccordionItem value={value} className="border-none">
         <AccordionTrigger 
           className={`py-3 px-2 rounded text-sm font-medium text-muted-foreground hover:bg-muted/50 ${HOVER_TRANSITION} w-full flex justify-between`}
-          onClick={handleAccordionClick}
+          // Removed the redundant onClick handler that was causing the double-click issue
         >
           {title}
         </AccordionTrigger>
