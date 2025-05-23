@@ -32,17 +32,7 @@ export function MobileNav({ userImage, initials }: MobileNavProps) {
   const isAdmin = user?.email === "marc.s@seelenbinderconsulting.com";
   
   return (
-    <div className="flex md:hidden items-center space-x-2">
-      <Avatar className={`h-10 w-10 border-2 border-border/60 shadow-sm`}>
-        {userImage ? (
-          <AvatarImage src={userImage} alt="Profile" />
-        ) : (
-          <AvatarFallback className="bg-primary/10 text-primary">
-            {initials}
-          </AvatarFallback>
-        )}
-      </Avatar>
-
+    <div className="flex md:hidden items-center space-x-2 justify-end">
       <Sheet>
         <SheetTrigger asChild>
           <Button 
