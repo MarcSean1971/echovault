@@ -1,4 +1,3 @@
-
 import { createSupabaseAdmin } from "../../shared/supabase-client.ts";
 
 /**
@@ -39,3 +38,6 @@ export async function findUserByPhone(fromNumber: string): Promise<string | null
   console.log(`[WEBHOOK] No user found with phone number: ${fromNumber}`);
   return null;
 }
+
+// Add an alias function to keep both naming conventions working
+export const getUserByPhoneNumber = findUserByPhone;

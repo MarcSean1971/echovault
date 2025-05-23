@@ -1,7 +1,7 @@
 
 import { createSupabaseAdmin } from "../../shared/supabase-client.ts";
 import { processCheckIn } from "../services/check-in-service.ts";
-import { getUserByPhoneNumber } from "../services/user-service.ts";
+import { findUserByPhone } from "../services/user-service.ts";
 import { processPanicTrigger } from "../services/panic-service.ts";
 
 /**
@@ -19,7 +19,7 @@ export async function processWhatsAppMessage(fromNumber: string, messageBody: st
     const cleanedMessage = messageBody.trim().toLowerCase();
     
     // Get the user associated with this phone number
-    const user = await getUserByPhoneNumber(cleanedNumber);
+    const user = await findUserByPhone(cleanedNumber);
     
     if (!user) {
       console.log(`[WEBHOOK] No user found for phone number ${cleanedNumber}`);
