@@ -65,14 +65,7 @@ export function ReminderStatus({
   // CRITICAL FIX: Actually render reminders when they exist instead of returning null
   return (
     <>
-      <div className="grid grid-cols-3 gap-1 text-sm mb-2">
-        <span className="font-medium">Status:</span>
-        <span className="col-span-2 text-emerald-600 font-medium">
-          {enhancedReminders.length} reminder{enhancedReminders.length !== 1 ? 's' : ''} configured
-        </span>
-      </div>
-      
-      {/* Display the actual reminders */}
+      {/* Display the actual reminders - Status div has been removed */}
       <div className="mt-2 space-y-1">
         {enhancedReminders.map((reminder, index) => (
           <div 
