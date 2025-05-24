@@ -1,3 +1,4 @@
+
 import { AlertCircle, HelpCircle, ArrowLeft, RefreshCw, FileText, Bug } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -230,26 +231,28 @@ export const ErrorState = ({ error, isPreviewMode = false }: ErrorStateProps) =>
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8 bg-white">
+    <div className="max-w-3xl mx-auto px-4 py-8 public-message-content">
       {isPreviewMode && (
-        <div className="email-info-bg border-l-4 border-[var(--email-purple)] p-4 mb-4">
-          <p className="email-icon">
+        <div className="email-info-bg border-l-4 border-purple-400 p-4 mb-4 rounded">
+          <p className="email-text-heading font-medium">
             <strong>PREVIEW MODE</strong> - This is a test view with a simulated delivery ID which will show an access error. This is expected behavior.
           </p>
         </div>
       )}
       
-      <Card className="p-6 border-gray-200 bg-white">
+      <Card className="p-6 border-red-300 email-light-bg shadow-lg">
         <div className="flex flex-col items-center justify-center text-center space-y-4 py-6">
-          <AlertCircle className={`h-12 w-12 email-icon ${HOVER_TRANSITION}`} />
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100 border-2 border-red-300 mb-2">
+            <AlertCircle className={`h-8 w-8 text-red-600 ${HOVER_TRANSITION}`} />
+          </div>
           <h2 className="text-xl font-semibold email-text-heading">Access Error</h2>
           
-          <Alert variant="default" className="mb-2 border-purple-200 email-info-bg">
-            <AlertTitle className="email-text-heading">Error accessing {isAttachmentError ? 'attachment' : 'message'}</AlertTitle>
-            <AlertDescription className="email-text-body">
+          <Alert variant="default" className="mb-2 border-red-300 bg-red-50">
+            <AlertTitle className="text-red-800 font-medium">Error accessing {isAttachmentError ? 'attachment' : 'message'}</AlertTitle>
+            <AlertDescription className="text-red-700">
               {isPreviewMode ? 'This is expected in preview mode. Use the Debug button for options.' : error}
               {!isPreviewMode && technicalDetails && (
-                <div className="mt-2 text-sm opacity-80 email-text-muted">
+                <div className="mt-2 text-sm opacity-80 text-red-600">
                   Technical details: {technicalDetails}
                 </div>
               )}
@@ -282,7 +285,7 @@ export const ErrorState = ({ error, isPreviewMode = false }: ErrorStateProps) =>
           </div>
           
           {showDebug && (
-            <div className="email-light-bg border border-gray-300 rounded p-4 text-left w-full overflow-auto">
+            <div className="email-info-bg border border-gray-400 rounded p-4 text-left w-full overflow-auto">
               <h3 className="font-semibold mb-2 email-text-heading">Debug Information:</h3>
               <p className="text-sm email-text-body"><strong>Message ID:</strong> {messageId || '(not found)'}</p>
               <p className="text-sm email-text-body"><strong>Delivery ID:</strong> {deliveryId || '(not found)'}</p>
@@ -292,7 +295,7 @@ export const ErrorState = ({ error, isPreviewMode = false }: ErrorStateProps) =>
               {deliveryData && (
                 <>
                   <h4 className="font-medium mt-3 mb-1 email-text-heading">Database Records:</h4>
-                  <div className="text-xs overflow-auto max-h-48 email-light-bg p-2">
+                  <div className="text-xs overflow-auto max-h-48 email-light-bg p-2 border rounded">
                     <pre className="email-text-muted">{JSON.stringify(deliveryData, null, 2)}</pre>
                   </div>
                 </>
@@ -301,7 +304,7 @@ export const ErrorState = ({ error, isPreviewMode = false }: ErrorStateProps) =>
           )}
           
           {isAttachmentError ? (
-            <div className="email-info-bg border border-purple-200 rounded-md p-4 mt-2 w-full max-w-md">
+            <div className="email-info-bg border border-purple-300 rounded-md p-4 mt-2 w-full max-w-md">
               <div className="flex items-start">
                 <HelpCircle className={`h-5 w-5 email-icon mr-2 mt-0.5 flex-shrink-0 ${HOVER_TRANSITION}`} />
                 <div className="text-sm email-text-body text-left">
@@ -326,7 +329,7 @@ export const ErrorState = ({ error, isPreviewMode = false }: ErrorStateProps) =>
               </div>
             </div>
           ) : (
-            <div className="email-info-bg border border-purple-200 rounded-md p-4 mt-2 w-full max-w-md">
+            <div className="email-info-bg border border-purple-300 rounded-md p-4 mt-2 w-full max-w-md">
               <div className="flex items-start">
                 <HelpCircle className={`h-5 w-5 email-icon mr-2 mt-0.5 flex-shrink-0 ${HOVER_TRANSITION}`} />
                 <div className="text-sm email-text-body text-left">
@@ -344,7 +347,7 @@ export const ErrorState = ({ error, isPreviewMode = false }: ErrorStateProps) =>
           )}
           
           {isPreviewMode && (
-            <div className="email-light-bg border border-gray-300 rounded-md p-4 w-full max-w-md">
+            <div className="email-info-bg border border-gray-400 rounded-md p-4 w-full max-w-md">
               <div className="flex items-start">
                 <HelpCircle className={`h-5 w-5 email-icon mr-2 mt-0.5 flex-shrink-0 ${HOVER_TRANSITION}`} />
                 <div className="text-sm email-text-body text-left">
@@ -360,9 +363,9 @@ export const ErrorState = ({ error, isPreviewMode = false }: ErrorStateProps) =>
             </div>
           )}
           
-          <Separator className="my-2" />
+          <Separator className="my-2 border-gray-300" />
           
-          <div className="email-light-bg border border-gray-300 rounded-md p-4 w-full max-w-md">
+          <div className="email-info-bg border border-gray-400 rounded-md p-4 w-full max-w-md">
             <div className="flex items-start">
               <HelpCircle className={`h-5 w-5 email-icon mr-2 mt-0.5 flex-shrink-0 ${HOVER_TRANSITION}`} />
               <div className="text-sm email-text-body text-left">
@@ -378,7 +381,7 @@ export const ErrorState = ({ error, isPreviewMode = false }: ErrorStateProps) =>
             </div>
           </div>
           
-          <p className="text-sm email-text-muted mt-2">
+          <p className="text-sm email-text-muted mt-2 max-w-md">
             If you continue to experience issues, please contact the sender of this message and let them know about the error.
           </p>
           

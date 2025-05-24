@@ -147,62 +147,137 @@
     @apply shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5;
   }
 
-  /* Email theme styles for public message pages */
+  /* Email theme styles for public message pages - IMPROVED */
   .email-theme .public-message-content {
     background-color: #FFFFFF !important;
   }
 
   .email-theme .email-header {
-    background-color: var(--email-purple) !important;
+    background: linear-gradient(135deg, var(--email-purple) 0%, var(--email-purple-dark) 100%) !important;
     color: white !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
   }
 
   .email-theme .email-button {
-    background-color: var(--email-purple) !important;
+    background: linear-gradient(135deg, var(--email-purple) 0%, var(--email-purple-dark) 100%) !important;
     color: white !important;
     border-radius: 6px !important;
     font-weight: 500 !important;
     border: none !important;
+    box-shadow: 0 2px 4px rgba(155, 135, 245, 0.2) !important;
+    transition: all 0.2s ease !important;
   }
 
   .email-theme .email-button:hover {
-    background-color: var(--email-purple-dark) !important;
+    background: linear-gradient(135deg, var(--email-purple-dark) 0%, #553C7B 100%) !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 8px rgba(155, 135, 245, 0.3) !important;
   }
 
   .email-theme .email-button-secondary {
-    background-color: var(--email-info-bg) !important;
+    background-color: transparent !important;
     color: var(--email-purple) !important;
-    border: 1px solid var(--email-purple) !important;
+    border: 2px solid var(--email-purple) !important;
     border-radius: 6px !important;
     font-weight: 500 !important;
+    transition: all 0.2s ease !important;
   }
 
   .email-theme .email-button-secondary:hover {
     background-color: var(--email-purple) !important;
     color: white !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 8px rgba(155, 135, 245, 0.3) !important;
   }
 
   .email-theme .email-text-heading {
     color: var(--email-heading) !important;
+    font-weight: 600 !important;
   }
 
   .email-theme .email-text-body {
     color: var(--email-body) !important;
+    line-height: 1.6 !important;
   }
 
   .email-theme .email-text-muted {
     color: var(--email-muted) !important;
+    font-size: 0.9em !important;
   }
 
   .email-theme .email-icon {
     color: var(--email-purple) !important;
+    transition: all 0.2s ease !important;
+  }
+
+  .email-theme .email-icon:hover {
+    color: var(--email-purple-dark) !important;
+    transform: scale(1.05) !important;
   }
 
   .email-theme .email-info-bg {
-    background-color: var(--email-info-bg) !important;
+    background: linear-gradient(135deg, var(--email-info-bg) 0%, #e2e8f0 100%) !important;
+    border: 1px solid #cbd5e1 !important;
   }
 
   .email-theme .email-light-bg {
-    background-color: var(--email-light-bg) !important;
+    background: linear-gradient(135deg, var(--email-light-bg) 0%, #ffffff 100%) !important;
+    border: 1px solid #e2e8f0 !important;
+  }
+
+  /* Enhanced card styling for public messages */
+  .email-theme .public-message-content .shadow-lg {
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05) !important;
+  }
+
+  /* Better skeleton colors for loading state */
+  .email-theme .bg-gray-200 {
+    background-color: #e2e8f0 !important;
+  }
+
+  .email-theme .bg-gray-300 {
+    background-color: #cbd5e1 !important;
+  }
+
+  .email-theme .border-gray-300 {
+    border-color: #cbd5e1 !important;
+  }
+
+  .email-theme .border-gray-400 {
+    border-color: #94a3b8 !important;
+  }
+
+  /* Alert styling improvements */
+  .email-theme .bg-red-50 {
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%) !important;
+  }
+
+  .email-theme .border-red-300 {
+    border-color: #fca5a5 !important;
+  }
+
+  .email-theme .text-red-600 {
+    color: #dc2626 !important;
+  }
+
+  .email-theme .text-red-700 {
+    color: #b91c1c !important;
+  }
+
+  .email-theme .text-red-800 {
+    color: #991b1b !important;
+  }
+
+  /* Purple theme improvements */
+  .email-theme .border-purple-200 {
+    border-color: #e9d5ff !important;
+  }
+
+  .email-theme .border-purple-300 {
+    border-color: #d8b4fe !important;
+  }
+
+  .email-theme .border-purple-400 {
+    border-color: #c084fc !important;
   }
 }

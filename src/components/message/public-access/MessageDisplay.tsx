@@ -56,12 +56,12 @@ export const MessageDisplay = ({
 
   if (!message) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-8 bg-white">
-        <Card className="overflow-hidden border-red-200 bg-white">
-          <CardHeader className="bg-white">
-            <CardTitle className="text-center text-red-600">Message Not Available</CardTitle>
+      <div className="max-w-3xl mx-auto px-4 py-8 public-message-content">
+        <Card className="overflow-hidden border-red-200 email-light-bg">
+          <CardHeader className="email-light-bg border-b border-red-200">
+            <CardTitle className="text-center text-red-600 email-text-heading">Message Not Available</CardTitle>
           </CardHeader>
-          <CardContent className="p-8 text-center bg-white">
+          <CardContent className="p-8 text-center email-light-bg">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100 mb-6">
               <Lock className={`h-8 w-8 text-red-600 ${HOVER_TRANSITION}`} />
             </div>
@@ -78,16 +78,16 @@ export const MessageDisplay = ({
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8 mb-16 animate-fade-in bg-white">
-      <div className="bg-white">
+    <div className="max-w-3xl mx-auto px-4 py-8 mb-16 animate-fade-in public-message-content">
+      <div className="public-message-content">
         {isPreviewMode && (
-          <div className="mb-4 rounded-lg email-info-bg p-4 border border-purple-200">
+          <div className="mb-4 rounded-lg email-info-bg p-4 border border-purple-300">
             <div className="flex">
               <div className="flex-shrink-0">
                 <Eye className={`h-5 w-5 email-icon ${HOVER_TRANSITION}`} aria-hidden="true" />
               </div>
               <div className="ml-3">
-                <h3 className="text-sm font-medium email-icon">Preview Mode</h3>
+                <h3 className="text-sm font-medium email-text-heading">Preview Mode</h3>
                 <p className="text-sm email-text-muted">
                   You're viewing this message in preview mode. Some features may be limited.
                 </p>
@@ -96,37 +96,40 @@ export const MessageDisplay = ({
           </div>
         )}
         
-        <Card className="overflow-hidden border border-gray-200 shadow-sm bg-white">
-          {/* Message Header - Clean white with email theme colors */}
-          <CardHeader className="bg-white p-6 border-b border-gray-200">
+        <Card className="overflow-hidden border-gray-300 shadow-lg email-light-bg">
+          {/* Message Header */}
+          <CardHeader className="email-light-bg p-6 border-b border-gray-300">
             <CardTitle className="text-2xl font-bold font-serif email-text-heading">{message.title}</CardTitle>
             <div className="flex items-center email-text-muted text-sm">
               <Calendar className={`h-4 w-4 mr-1 email-icon ${HOVER_TRANSITION}`} />
-              <span>{formatMessageDate(message.created_at)}</span>
+              <span className="email-text-body">{formatMessageDate(message.created_at)}</span>
             </div>
           </CardHeader>
           
-          {/* Security Badge - Use email theme colors */}
-          <div className="bg-white px-6 py-2 border-b border-gray-200">
-            <div className="flex items-center">
-              <Shield className={`h-4 w-4 email-icon mr-2 ${HOVER_TRANSITION}`} />
-              <span className="text-sm font-medium email-icon">Secure Message</span>
+          {/* Security Badge */}
+          <div className="email-info-bg px-6 py-3 border-b border-gray-300">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Shield className={`h-4 w-4 email-icon mr-2 ${HOVER_TRANSITION}`} />
+                <span className="text-sm font-medium email-text-heading">Secure Message</span>
+              </div>
               
-              <Badge className="ml-auto bg-[var(--email-purple)] text-white hover:bg-[var(--email-purple-dark)]">
-                <Clock className={`h-3 w-3 mr-1 ${HOVER_TRANSITION}`} /> {message.expires_at ? 'Expires' : 'No Expiration'}
+              <Badge className="email-button text-white border-0">
+                <Clock className={`h-3 w-3 mr-1 ${HOVER_TRANSITION}`} /> 
+                <span className="text-white">{message.expires_at ? 'Expires' : 'No Expiration'}</span>
               </Badge>
             </div>
           </div>
           
-          {/* Message Content - White background */}
-          <CardContent className="p-6 bg-white">
+          {/* Message Content */}
+          <CardContent className="p-6 email-light-bg">
             <div className="prose max-w-full">
               {message && <MessageContent message={message} deliveryId={deliveryId} recipientEmail={recipientEmail} />}
             </div>
           </CardContent>
           
-          {/* Footer - White background with email theme colors */}
-          <div className="bg-white px-6 py-4 text-sm border-t border-gray-200">
+          {/* Footer */}
+          <div className="email-light-bg px-6 py-4 text-sm border-t border-gray-300">
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <Shield className={`h-4 w-4 mr-2 email-icon ${HOVER_TRANSITION}`} />
