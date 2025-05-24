@@ -1,3 +1,4 @@
+
 import { useParams } from "react-router-dom";
 import { useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -15,7 +16,6 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { RealtimeConditionSync } from "@/components/message/detail/RealtimeConditionSync";
-import { EmergencyRecoveryButton } from "@/components/debug/EmergencyRecoveryButton";
 
 export default function MessageDetail() {
   const { id } = useParams<{ id: string }>();
@@ -63,22 +63,15 @@ export default function MessageDetail() {
   // Get the recipient rendering function
   const { renderRecipients } = MessageRecipientProvider({ recipients });
   
-  // Back button with emergency recovery button
+  // Back button component
   const backButton = (
-    <div className="mb-6 flex items-center justify-between">
-      <Button 
-        variant="ghost" 
-        onClick={() => navigate("/messages")}
-        className={`hover:bg-muted/80 hover:text-foreground ${HOVER_TRANSITION}`}
-      >
-        <ArrowLeft className="mr-2 h-4 w-4" /> Back to Messages
-      </Button>
-      
-      {/* Emergency recovery button - only show if message is armed and overdue */}
-      {isArmed && deadline && new Date() > deadline && (
-        <EmergencyRecoveryButton messageId={id} />
-      )}
-    </div>
+    <Button 
+      variant="ghost" 
+      onClick={() => navigate("/messages")}
+      className={`mb-6 hover:bg-muted/80 hover:text-foreground ${HOVER_TRANSITION}`}
+    >
+      <ArrowLeft className="mr-2 h-4 w-4" /> Back to Messages
+    </Button>
   );
   
   // Set up event listeners for conditions and deadline
