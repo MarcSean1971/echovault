@@ -2,96 +2,154 @@
 import { createSupabaseAdmin } from "../../shared/supabase-client.ts";
 import { createSelectionKey, logPhoneDebugInfo } from "../utils/phone-utils.ts";
 
-// In-memory storage for selection states (increased expiration time to 5 minutes)
-const selectionStates = new Map<string, {
-  userId: string;
-  phoneNumber: string;
-  panicConditions: any[];
-  createdAt: Date;
-}>();
-
-// Clean up expired selection states (older than 5 minutes now)
-function cleanupExpiredStates() {
-  const now = new Date();
-  const expiredKeys: string[] = [];
+/**
+ * Clean up expired selection states from database
+ */
+async function cleanupExpiredStates() {
+  const supabase = createSupabaseAdmin();
   
-  console.log(`[PANIC-SELECTION] Starting cleanup, current states: ${selectionStates.size}`);
+  console.log(`[PANIC-SELECTION] Starting cleanup of expired states`);
   
-  for (const [key, state] of selectionStates.entries()) {
-    const ageMs = now.getTime() - state.createdAt.getTime();
-    const ageMinutes = ageMs / (1000 * 60);
+  try {
+    const { data, error } = await supabase
+      .from('panic_selections')
+      .delete()
+      .lt('expires_at', new Date().toISOString())
+      .select();
     
-    if (ageMs > 300000) { // 5 minutes instead of 2
-      expiredKeys.push(key);
-      console.log(`[PANIC-SELECTION] Marking key ${key} for expiration (age: ${ageMinutes.toFixed(2)} minutes)`);
+    if (error) {
+      console.error(`[PANIC-SELECTION] Error during cleanup: ${error.message}`);
     } else {
-      console.log(`[PANIC-SELECTION] Keeping key ${key} (age: ${ageMinutes.toFixed(2)} minutes)`);
+      console.log(`[PANIC-SELECTION] Cleanup complete, removed ${data?.length || 0} expired states`);
     }
+  } catch (error) {
+    console.error(`[PANIC-SELECTION] Exception during cleanup: ${error.message}`);
   }
-  
-  expiredKeys.forEach(key => {
-    selectionStates.delete(key);
-    console.log(`[PANIC-SELECTION] Deleted expired key: ${key}`);
-  });
-  
-  console.log(`[PANIC-SELECTION] Cleanup complete, remaining states: ${selectionStates.size}`);
 }
 
 /**
- * Store user's selection state for multiple panic messages
+ * Store user's selection state in database
  */
-export function storeSelectionState(userId: string, phoneNumber: string, panicConditions: any[]) {
-  cleanupExpiredStates();
+export async function storeSelectionState(userId: string, phoneNumber: string, panicConditions: any[]) {
+  await cleanupExpiredStates();
   
   logPhoneDebugInfo("STORE", userId, phoneNumber);
   
-  const key = createSelectionKey(userId, phoneNumber);
-  selectionStates.set(key, {
-    userId,
-    phoneNumber,
-    panicConditions,
-    createdAt: new Date()
-  });
+  const supabase = createSupabaseAdmin();
   
-  console.log(`[PANIC-SELECTION] Stored selection state for key ${key} with ${panicConditions.length} conditions`);
-  console.log(`[PANIC-SELECTION] Current stored keys: [${Array.from(selectionStates.keys()).join(', ')}]`);
+  try {
+    // First, clear any existing selection for this user/phone
+    await supabase
+      .from('panic_selections')
+      .delete()
+      .eq('user_id', userId)
+      .eq('phone_number', phoneNumber);
+    
+    // Insert new selection state
+    const { data, error } = await supabase
+      .from('panic_selections')
+      .insert({
+        user_id: userId,
+        phone_number: phoneNumber,
+        panic_conditions: panicConditions
+      })
+      .select()
+      .single();
+    
+    if (error) {
+      console.error(`[PANIC-SELECTION] Error storing selection state: ${error.message}`);
+      return false;
+    }
+    
+    console.log(`[PANIC-SELECTION] Stored selection state for user ${userId} with ${panicConditions.length} conditions`);
+    return true;
+    
+  } catch (error) {
+    console.error(`[PANIC-SELECTION] Exception storing selection state: ${error.message}`);
+    return false;
+  }
 }
 
 /**
- * Get user's selection state
+ * Get user's selection state from database
  */
-export function getSelectionState(userId: string, phoneNumber: string) {
-  cleanupExpiredStates();
+export async function getSelectionState(userId: string, phoneNumber: string) {
+  await cleanupExpiredStates();
   
   logPhoneDebugInfo("RETRIEVE", userId, phoneNumber);
   
-  const key = createSelectionKey(userId, phoneNumber);
-  const state = selectionStates.get(key);
+  const supabase = createSupabaseAdmin();
   
-  console.log(`[PANIC-SELECTION] Looking for key: ${key}`);
-  console.log(`[PANIC-SELECTION] Available keys: [${Array.from(selectionStates.keys()).join(', ')}]`);
-  console.log(`[PANIC-SELECTION] State found: ${state ? 'YES' : 'NO'}`);
-  
-  if (state) {
-    const ageMs = new Date().getTime() - state.createdAt.getTime();
-    const ageMinutes = ageMs / (1000 * 60);
-    console.log(`[PANIC-SELECTION] State age: ${ageMinutes.toFixed(2)} minutes`);
+  try {
+    const { data, error } = await supabase
+      .from('panic_selections')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('phone_number', phoneNumber)
+      .gt('expires_at', new Date().toISOString())
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+    
+    if (error) {
+      if (error.code === 'PGRST116') {
+        // No rows found
+        console.log(`[PANIC-SELECTION] No selection state found for user ${userId}, phone ${phoneNumber}`);
+        return null;
+      }
+      console.error(`[PANIC-SELECTION] Error retrieving selection state: ${error.message}`);
+      return null;
+    }
+    
+    if (data) {
+      const ageMs = new Date().getTime() - new Date(data.created_at).getTime();
+      const ageMinutes = ageMs / (1000 * 60);
+      console.log(`[PANIC-SELECTION] Found selection state for user ${userId}, age: ${ageMinutes.toFixed(2)} minutes`);
+      
+      return {
+        userId: data.user_id,
+        phoneNumber: data.phone_number,
+        panicConditions: data.panic_conditions,
+        createdAt: new Date(data.created_at)
+      };
+    }
+    
+    return null;
+    
+  } catch (error) {
+    console.error(`[PANIC-SELECTION] Exception retrieving selection state: ${error.message}`);
+    return null;
   }
-  
-  return state;
 }
 
 /**
- * Clear user's selection state
+ * Clear user's selection state from database
  */
-export function clearSelectionState(userId: string, phoneNumber: string) {
-  const key = createSelectionKey(userId, phoneNumber);
-  const deleted = selectionStates.delete(key);
+export async function clearSelectionState(userId: string, phoneNumber: string) {
+  const supabase = createSupabaseAdmin();
   
-  console.log(`[PANIC-SELECTION] ${deleted ? 'Cleared' : 'Failed to clear'} selection state for key ${key}`);
-  console.log(`[PANIC-SELECTION] Remaining keys after clear: [${Array.from(selectionStates.keys()).join(', ')}]`);
-  
-  return deleted;
+  try {
+    const { data, error } = await supabase
+      .from('panic_selections')
+      .delete()
+      .eq('user_id', userId)
+      .eq('phone_number', phoneNumber)
+      .select();
+    
+    if (error) {
+      console.error(`[PANIC-SELECTION] Error clearing selection state: ${error.message}`);
+      return false;
+    }
+    
+    const deleted = data && data.length > 0;
+    console.log(`[PANIC-SELECTION] ${deleted ? 'Cleared' : 'No state to clear for'} user ${userId}, phone ${phoneNumber}`);
+    
+    return deleted;
+    
+  } catch (error) {
+    console.error(`[PANIC-SELECTION] Exception clearing selection state: ${error.message}`);
+    return false;
+  }
 }
 
 /**
@@ -118,8 +176,17 @@ async function sendWhatsAppResponse(toNumber: string, message: string) {
 export async function handlePanicMessageSelection(userId: string, phoneNumber: string, panicConditions: any[]) {
   console.log(`[PANIC-SELECTION] Handling panic message selection for ${panicConditions.length} conditions`);
   
-  // Store the selection state
-  storeSelectionState(userId, phoneNumber, panicConditions);
+  // Store the selection state in database
+  const stored = await storeSelectionState(userId, phoneNumber, panicConditions);
+  
+  if (!stored) {
+    console.error(`[PANIC-SELECTION] Failed to store selection state`);
+    await sendWhatsAppResponse(phoneNumber, "System error. Try again.");
+    return {
+      status: "error",
+      message: "Failed to store selection state"
+    };
+  }
   
   // Build clean, concise selection message
   let selectionMessage = "EMERGENCY - Select message:\n\n";
@@ -149,17 +216,10 @@ export async function handlePanicMessageSelection(userId: string, phoneNumber: s
 export async function processSelectionResponse(userId: string, phoneNumber: string, response: string) {
   console.log(`[PANIC-SELECTION] Processing selection response: "${response}" from user ${userId}, phone ${phoneNumber}`);
   
-  const selectionState = getSelectionState(userId, phoneNumber);
+  const selectionState = await getSelectionState(userId, phoneNumber);
   
   if (!selectionState) {
     console.log(`[PANIC-SELECTION] No selection state found for user ${userId}, phone ${phoneNumber}`);
-    
-    // Add fallback logging to help diagnose the issue
-    console.log(`[PANIC-SELECTION] DEBUG: All current states:`);
-    for (const [key, state] of selectionStates.entries()) {
-      console.log(`  - Key: ${key}, UserID: ${state.userId}, Phone: ${state.phoneNumber}`);
-    }
-    
     return null;
   }
   
@@ -167,7 +227,7 @@ export async function processSelectionResponse(userId: string, phoneNumber: stri
   
   // Handle cancellation
   if (responseUpper === 'CANCEL' || responseUpper === 'ABORT' || responseUpper === 'STOP') {
-    clearSelectionState(userId, phoneNumber);
+    await clearSelectionState(userId, phoneNumber);
     await sendWhatsAppResponse(phoneNumber, "Emergency cancelled");
     
     return {
@@ -196,7 +256,7 @@ export async function processSelectionResponse(userId: string, phoneNumber: stri
   const selectedTitle = selectedCondition.messages?.title || "Emergency Message";
   
   // Clear the selection state
-  clearSelectionState(userId, phoneNumber);
+  await clearSelectionState(userId, phoneNumber);
   
   console.log(`[PANIC-SELECTION] User ${userId} selected option ${selectionNumber}: ${selectedTitle}`);
   

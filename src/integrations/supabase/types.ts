@@ -218,6 +218,33 @@ export type Database = {
         }
         Relationships: []
       }
+      panic_selections: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          panic_conditions: Json
+          phone_number: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          panic_conditions: Json
+          phone_number: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          panic_conditions?: Json
+          phone_number?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -481,6 +508,10 @@ export type Database = {
           status: string
           updated_at: string
         }[]
+      }
+      cleanup_expired_panic_selections: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       get_system_reminder_stats: {
         Args: Record<PropertyKey, never>
