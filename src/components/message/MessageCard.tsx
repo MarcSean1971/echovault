@@ -207,7 +207,7 @@ function MessageCardInner({ message, onDelete, reminderInfo }: MessageCardProps)
   );
 }
 
-// Memoize the component with a MUCH less restrictive comparison function that prioritizes correctness
+// FIXED: Much less restrictive memo function that prioritizes check-in data updates
 export const MessageCard = memo(MessageCardInner, (prevProps, nextProps) => {
   // Always re-render if message IDs are different
   if (prevProps.message.id !== nextProps.message.id) return false;
@@ -226,7 +226,8 @@ export const MessageCard = memo(MessageCardInner, (prevProps, nextProps) => {
   if ((prevProps.reminderInfo?.upcomingReminders?.length || 0) !== 
       (nextProps.reminderInfo?.upcomingReminders?.length || 0)) return false;
 
-  // For most other cases, allow re-render to ensure we don't miss critical updates
-  // This is less performant but ensures correctness, especially for check-in updates
-  return true;
+  // CRITICAL FIX: Always re-render to ensure check-in updates are shown
+  // The component will handle its own optimization through internal memoization
+  // This ensures that when WhatsApp check-ins occur, the UI updates immediately
+  return false; // Always allow re-render for immediate check-in updates
 });
