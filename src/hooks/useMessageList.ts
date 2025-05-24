@@ -98,20 +98,28 @@ export function useMessageList() {
     loadData();
   }, [loadData]);
   
-  // ENHANCED: Stable event listener for conditions updates with better handling
+  // ENHANCED: Stable event listener for conditions updates with WhatsApp check-in delays
   useEffect(() => {
     const handleConditionsUpdated = (event: Event) => {
       if (event instanceof CustomEvent) {
         const { action, source, messageId, enhanced } = event.detail || {};
         console.log("[useMessageList] Received conditions-updated event:", { action, source, messageId, enhanced });
         
-        // For enhanced WhatsApp check-ins, refresh immediately
+        // ENHANCED: For WhatsApp check-ins, add delays to ensure DB propagation
         if (action === 'check-in' && source === 'whatsapp' && enhanced) {
-          console.log("[useMessageList] Enhanced WhatsApp check-in detected, immediate force refresh");
-          setTimeout(() => forceRefresh(), 200); // Small delay to ensure DB update is complete
+          console.log("[useMessageList] Enhanced WhatsApp check-in detected, delayed force refresh");
+          setTimeout(() => {
+            console.log("[useMessageList] Executing delayed refresh for enhanced WhatsApp check-in");
+            forceRefresh();
+          }, 500); // 500ms delay for enhanced events
+          
         } else if (action === 'check-in' && source === 'whatsapp') {
-          console.log("[useMessageList] Standard WhatsApp check-in detected, delayed force refresh");
-          setTimeout(() => forceRefresh(), 1000); // Longer delay for standard check-ins
+          console.log("[useMessageList] Standard WhatsApp check-in detected, extended delayed force refresh");
+          setTimeout(() => {
+            console.log("[useMessageList] Executing extended delayed refresh for standard WhatsApp check-in");
+            forceRefresh();
+          }, 1200); // 1.2s delay for standard check-ins to ensure DB completion
+          
         } else if (action === 'arm' || action === 'disarm') {
           console.log("[useMessageList] Arm/disarm event, refreshing data");
           forceRefresh();
@@ -123,7 +131,7 @@ export function useMessageList() {
       }
     };
     
-    console.log("[useMessageList] Setting up STABLE conditions-updated listener");
+    console.log("[useMessageList] Setting up ENHANCED conditions-updated listener with WhatsApp delays");
     window.addEventListener('conditions-updated', handleConditionsUpdated);
     
     return () => {

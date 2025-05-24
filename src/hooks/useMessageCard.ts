@@ -5,7 +5,7 @@ import { useMessageCardActions } from "@/hooks/useMessageCardActions";
 import { ensureReminderSchedule } from "@/utils/reminder/ensureReminderSchedule";
 
 /**
- * FIXED: Custom hook to handle message card state with optimized WhatsApp check-in handling
+ * FIXED: Custom hook to handle message card state with enhanced WhatsApp check-in handling
  */
 export function useMessageCard(messageId: string) {
   // Track local force refresh state
@@ -60,7 +60,7 @@ export function useMessageCard(messageId: string) {
     setRefreshCounter(prev => prev + 1);
   }, [condition, messageId, invalidateCache, handleDisarmMessage, setRefreshCounter]);
 
-  // FIXED: Optimized WhatsApp check-in event handling
+  // ENHANCED: Optimized WhatsApp check-in event handling with proper delays
   useEffect(() => {
     const handleWhatsAppCheckIn = (event: Event) => {
       if (!(event instanceof CustomEvent)) return;
@@ -71,14 +71,28 @@ export function useMessageCard(messageId: string) {
       if (detail.messageId === messageId) {
         console.log(`[MessageCard] Received update for message ${messageId}:`, detail);
         
-        // Immediate handling for WhatsApp check-ins
+        // ENHANCED: Special handling for WhatsApp check-ins with delay
         if (detail.action === 'check-in' && (detail.source === 'whatsapp' || detail.source === 'whatsapp-realtime')) {
-          console.log(`[MessageCard] WhatsApp check-in detected for message ${messageId} - IMMEDIATE refresh`);
+          console.log(`[MessageCard] WhatsApp check-in detected for message ${messageId} - ENHANCED refresh with delay`);
           
-          // Clear cache and force immediate refresh
-          invalidateCache();
-          setForceRefresh(true);
-          setRefreshCounter(prev => prev + 1);
+          // CRITICAL FIX: Add delay to ensure DB propagation is complete
+          setTimeout(() => {
+            console.log(`[MessageCard] Executing delayed refresh for WhatsApp check-in on message ${messageId}`);
+            
+            // Clear cache completely and force immediate refresh
+            invalidateCache();
+            setForceRefresh(true);
+            setRefreshCounter(prev => prev + 1);
+            
+            // Force another refresh after a short delay to ensure deadline recalculation
+            setTimeout(() => {
+              console.log(`[MessageCard] Secondary refresh for deadline recalculation on message ${messageId}`);
+              setForceRefresh(true);
+              setRefreshCounter(prev => prev + 1);
+            }, 300);
+            
+          }, 800); // Increased delay to 800ms to ensure DB propagation
+          
         } else {
           // Regular handling for other events
           invalidateCache();

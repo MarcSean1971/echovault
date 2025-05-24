@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useMessageList } from "@/hooks/useMessageList";
 import { useBatchedReminders } from "@/hooks/useBatchedReminders";
@@ -84,7 +85,7 @@ export default function Messages() {
     };
   }, []);
 
-  // ENHANCED: Listen for condition-updated events with improved handling
+  // ENHANCED: Listen for condition-updated events with improved WhatsApp check-in handling
   useEffect(() => {
     const handleConditionEvents = (event: Event) => {
       if (!(event instanceof CustomEvent)) return;
@@ -93,23 +94,29 @@ export default function Messages() {
       
       console.log("[Messages] Received condition event:", { action, source, enhanced, messageId });
       
-      // Enhanced handling for WhatsApp check-ins
+      // ENHANCED: WhatsApp check-ins get delayed refresh to ensure DB propagation
       if (action === 'check-in' && source === 'whatsapp' && enhanced) {
-        console.log("[Messages] Enhanced WhatsApp check-in event, immediate refresh");
+        console.log("[Messages] Enhanced WhatsApp check-in event, delayed immediate refresh");
         
-        // Immediate refresh for enhanced WhatsApp events
-        forceRefresh();
-        forceReminderRefresh();
-        setLocalReminderRefreshTrigger(prev => prev + 1);
-      } else if (action === 'check-in' && source === 'whatsapp') {
-        console.log("[Messages] Standard WhatsApp check-in event, delayed refresh");
-        
-        // Small delay for standard WhatsApp check-ins to ensure DB update is complete
+        // Delayed refresh for enhanced WhatsApp events to ensure DB updates complete
         setTimeout(() => {
+          console.log("[Messages] Executing delayed refresh for enhanced WhatsApp check-in");
           forceRefresh();
           forceReminderRefresh();
           setLocalReminderRefreshTrigger(prev => prev + 1);
-        }, 500);
+        }, 700);
+        
+      } else if (action === 'check-in' && source === 'whatsapp') {
+        console.log("[Messages] Standard WhatsApp check-in event, extended delayed refresh");
+        
+        // Extended delay for standard WhatsApp check-ins to ensure DB update is complete
+        setTimeout(() => {
+          console.log("[Messages] Executing extended delayed refresh for standard WhatsApp check-in");
+          forceRefresh();
+          forceReminderRefresh();
+          setLocalReminderRefreshTrigger(prev => prev + 1);
+        }, 1000);
+        
       } else if (action === 'arm' || action === 'disarm') {
         console.log(`[Messages] Received ${action} event, refreshing reminders`);
         
@@ -127,7 +134,7 @@ export default function Messages() {
       }
     };
     
-    console.log("[Messages] Setting up ENHANCED condition event listener");
+    console.log("[Messages] Setting up ENHANCED condition event listener with WhatsApp delays");
     window.addEventListener('conditions-updated', handleConditionEvents);
     
     return () => {
