@@ -8,7 +8,7 @@ import { ReminderScheduleParams } from "@/services/messages/reminder/types";
 /**
  * Generate schedule for standard conditions
  * @param reminderMinutes Array of minutes before deadline when reminders should be sent
- * FIXED: Added isEdit parameter to control notification behavior
+ * FIXED: Added isEdit parameter to control notification behavior and improved time validation
  */
 export async function generateReminderSchedule(
   messageId: string,
@@ -21,9 +21,17 @@ export async function generateReminderSchedule(
   console.log(`[REMINDER-GENERATOR] isEdit: ${isEdit}`);
   
   try {
+    // CRITICAL FIX: Validate deadline is in the future
+    const now = new Date();
+    if (deadlineDate <= now) {
+      console.error(`[REMINDER-GENERATOR] Deadline ${deadlineDate.toISOString()} is in the past, cannot create reminders`);
+      return false;
+    }
+    
     // Log the reminder minutes for debugging
     console.log(`[REMINDER-GENERATOR] Using ${reminderMinutes.length} reminder times:`, reminderMinutes);
     console.log(`[REMINDER-GENERATOR] Deadline: ${deadlineDate.toISOString()}`);
+    console.log(`[REMINDER-GENERATOR] Current time: ${now.toISOString()}`);
     
     // Ensure reminder minutes are unique and sorted if any exist
     const uniqueReminderMinutes = Array.from(new Set(reminderMinutes)).sort((a, b) => a - b);
@@ -32,12 +40,24 @@ export async function generateReminderSchedule(
       reminderMinutes = uniqueReminderMinutes;
     }
     
+    // CRITICAL FIX: Filter out reminder times that would be in the past
+    const validReminderMinutes = reminderMinutes.filter(minutes => {
+      const reminderTime = new Date(deadlineDate.getTime() - (minutes * 60 * 1000));
+      if (reminderTime <= now) {
+        console.warn(`[REMINDER-GENERATOR] Skipping reminder ${minutes} minutes before deadline (would be at ${reminderTime.toISOString()}, which is in the past)`);
+        return false;
+      }
+      return true;
+    });
+    
+    console.log(`[REMINDER-GENERATOR] After filtering past times: ${validReminderMinutes.length} valid reminder times`);
+    
     // Create parameters for the schedule service
     const params: ReminderScheduleParams = {
       messageId,
       conditionId,
       triggerDate: deadlineDate.toISOString(),
-      reminderMinutes: reminderMinutes,
+      reminderMinutes: validReminderMinutes,
       conditionType: 'standard',
       lastChecked: null
     };
@@ -52,7 +72,7 @@ export async function generateReminderSchedule(
 
 /**
  * Generate schedule for check-in type conditions
- * FIXED: Added isEdit parameter to control notification behavior
+ * FIXED: Added isEdit parameter to control notification behavior and improved time validation
  */
 export async function generateCheckInReminderSchedule(
   messageId: string,
@@ -69,9 +89,11 @@ export async function generateCheckInReminderSchedule(
       return false;
     }
     
+    const now = new Date();
     console.log(`[REMINDER-GENERATOR] Generating check-in reminder schedule for message ${messageId}`);
     console.log(`[REMINDER-GENERATOR] isEdit: ${isEdit}`);
     console.log(`[REMINDER-GENERATOR] Last checked: ${lastCheckedDate.toISOString()}`);
+    console.log(`[REMINDER-GENERATOR] Current time: ${now.toISOString()}`);
     
     // Calculate virtual deadline based on last check-in + threshold
     const virtualDeadline = new Date(lastCheckedDate);
@@ -80,6 +102,15 @@ export async function generateCheckInReminderSchedule(
     
     console.log(`[REMINDER-GENERATOR] Hours threshold: ${hoursThreshold}, Minutes threshold: ${minutesThreshold}`);
     console.log(`[REMINDER-GENERATOR] Virtual deadline: ${virtualDeadline.toISOString()}`);
+    
+    // CRITICAL FIX: Validate virtual deadline is in the future
+    if (virtualDeadline <= now) {
+      console.warn(`[REMINDER-GENERATOR] Virtual deadline ${virtualDeadline.toISOString()} is in the past, adjusting to minimum future time`);
+      // Set deadline to at least 5 minutes in the future
+      virtualDeadline.setTime(now.getTime() + 5 * 60 * 1000);
+      console.log(`[REMINDER-GENERATOR] Adjusted virtual deadline to: ${virtualDeadline.toISOString()}`);
+    }
+    
     console.log(`[REMINDER-GENERATOR] Reminder minutes: ${JSON.stringify(reminderMinutes)}`);
     
     // Ensure reminder minutes are unique and sorted if any exist
@@ -89,12 +120,24 @@ export async function generateCheckInReminderSchedule(
       reminderMinutes = uniqueReminderMinutes;
     }
     
+    // CRITICAL FIX: Filter out reminder times that would be in the past
+    const validReminderMinutes = reminderMinutes.filter(minutes => {
+      const reminderTime = new Date(virtualDeadline.getTime() - (minutes * 60 * 1000));
+      if (reminderTime <= now) {
+        console.warn(`[REMINDER-GENERATOR] Skipping check-in reminder ${minutes} minutes before deadline (would be at ${reminderTime.toISOString()}, which is in the past)`);
+        return false;
+      }
+      return true;
+    });
+    
+    console.log(`[REMINDER-GENERATOR] After filtering past times: ${validReminderMinutes.length} valid reminder times`);
+    
     // Create parameters for the schedule service
     const params: ReminderScheduleParams = {
       messageId,
       conditionId,
       conditionType: 'check_in',
-      reminderMinutes: reminderMinutes,
+      reminderMinutes: validReminderMinutes,
       lastChecked: lastCheckedDate.toISOString(),
       hoursThreshold,
       minutesThreshold,

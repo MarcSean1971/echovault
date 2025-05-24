@@ -12,6 +12,47 @@ export async function cleanupFailedReminders(debug: boolean = false): Promise<{ 
   try {
     console.log("[CLEANUP-SERVICE] Starting cleanup of failed reminders...");
     
+    // CRITICAL FIX: Find and reset reminders that failed due to past scheduling bug
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    
+    const { data: recentFailedReminders, error: findRecentError } = await supabase
+      .from('reminder_schedule')
+      .select('id, message_id, scheduled_at, status, created_at')
+      .eq('status', 'failed')
+      .gt('created_at', oneHourAgo); // Only recent failures
+    
+    if (findRecentError) {
+      errors.push(`Error finding recent failed reminders: ${findRecentError.message}`);
+    } else if (recentFailedReminders && recentFailedReminders.length > 0) {
+      console.log(`[CLEANUP-SERVICE] Found ${recentFailedReminders.length} recent failed reminders to investigate`);
+      
+      // Check which of these failed because they were scheduled in the past
+      const now = new Date();
+      const invalidReminders = recentFailedReminders.filter(r => {
+        const scheduledAt = new Date(r.scheduled_at);
+        const createdAt = new Date(r.created_at);
+        // If scheduled time was in the past when created, it was likely our bug
+        return scheduledAt <= createdAt;
+      });
+      
+      if (invalidReminders.length > 0) {
+        console.log(`[CLEANUP-SERVICE] Found ${invalidReminders.length} reminders that failed due to past scheduling`);
+        
+        // Delete these invalid reminders - they need to be recreated properly
+        const { error: deleteError } = await supabase
+          .from('reminder_schedule')
+          .delete()
+          .in('id', invalidReminders.map(r => r.id));
+        
+        if (deleteError) {
+          errors.push(`Error deleting invalid reminders: ${deleteError.message}`);
+        } else {
+          cleanedCount += invalidReminders.length;
+          console.log(`[CLEANUP-SERVICE] Deleted ${invalidReminders.length} invalid reminders`);
+        }
+      }
+    }
+    
     // Find reminders that have been stuck in 'processing' for more than 10 minutes
     const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
     

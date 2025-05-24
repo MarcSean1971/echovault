@@ -1,3 +1,4 @@
+
 /**
  * Service functions for creating and managing reminder schedules
  */
@@ -77,12 +78,15 @@ export async function createOrUpdateReminderSchedule(params: ReminderSchedulePar
 
 /**
  * Calculate reminder schedule times based on params
+ * CRITICAL FIX: Prevent scheduling reminders in the past
  */
 function calculateScheduleTimes(params: ReminderScheduleParams): any[] {
   const { messageId, conditionId, conditionType, triggerDate, reminderMinutes, lastChecked, hoursThreshold, minutesThreshold } = params;
   
   // For check-in conditions, we need to create a virtual deadline
   let effectiveDeadline: Date | null = null;
+  const now = new Date();
+  
   if (['no_check_in', 'regular_check_in', 'inactivity_to_date'].includes(conditionType) && lastChecked && (hoursThreshold || minutesThreshold)) {
     const lastCheckedDate = new Date(lastChecked);
     effectiveDeadline = new Date(lastCheckedDate);
@@ -108,41 +112,62 @@ function calculateScheduleTimes(params: ReminderScheduleParams): any[] {
     return [];
   }
   
+  // CRITICAL FIX: Validate deadline is in the future
+  if (effectiveDeadline <= now) {
+    console.warn(`[REMINDER-SERVICE] Deadline ${effectiveDeadline.toISOString()} is in the past, adjusting to minimum future time`);
+    // Set deadline to at least 5 minutes in the future
+    effectiveDeadline = new Date(now.getTime() + 5 * 60 * 1000);
+  }
+  
   // Generate schedule entries, ensuring reminder times are correct
   console.log(`[REMINDER-SERVICE] Generating reminders for ${reminderMinutes.length} times:`, reminderMinutes);
   console.log(`[REMINDER-SERVICE] Using deadline: ${effectiveDeadline.toISOString()}`);
   
-  const scheduleEntries = reminderMinutes.map(minutes => {
+  const scheduleEntries = [];
+  const minimumFutureTime = new Date(now.getTime() + 60 * 1000); // At least 1 minute in the future
+  
+  for (const minutes of reminderMinutes) {
     const scheduledAt = new Date(effectiveDeadline!.getTime() - (minutes * 60 * 1000));
-    console.log(`[REMINDER-SERVICE] Creating reminder ${minutes} mins before deadline at ${scheduledAt.toISOString()}`);
     
-    // CRITICAL FIX: Set reminders that are already due to "pending" status 
-    // Let the processor handle immediate processing
-    const now = new Date();
-    const status = 'pending';
+    // CRITICAL FIX: Only create reminders that are in the future
+    if (scheduledAt <= now) {
+      console.warn(`[REMINDER-SERVICE] Reminder ${minutes} mins before deadline would be at ${scheduledAt.toISOString()} (in the past), skipping`);
+      continue;
+    }
     
-    return {
+    // Ensure minimum future time
+    const adjustedScheduledAt = scheduledAt < minimumFutureTime ? minimumFutureTime : scheduledAt;
+    
+    console.log(`[REMINDER-SERVICE] Creating reminder ${minutes} mins before deadline at ${adjustedScheduledAt.toISOString()}`);
+    
+    scheduleEntries.push({
       message_id: messageId,
       condition_id: conditionId,
-      scheduled_at: scheduledAt.toISOString(),
+      scheduled_at: adjustedScheduledAt.toISOString(),
       reminder_type: 'reminder',
-      status: status,
+      status: 'pending',
       delivery_priority: minutes < 60 ? 'high' : 'normal',
       retry_strategy: 'standard'
-    };
-  });
+    });
+  }
   
-  // Add final delivery entry
-  scheduleEntries.push({
-    message_id: messageId,
-    condition_id: conditionId,
-    scheduled_at: effectiveDeadline.toISOString(),
-    reminder_type: 'final_delivery',
-    status: 'pending',
-    delivery_priority: 'critical',
-    retry_strategy: 'aggressive'
-  });
+  // Add final delivery entry - also validate it's in the future
+  if (effectiveDeadline > now) {
+    console.log(`[REMINDER-SERVICE] Adding final delivery at deadline: ${effectiveDeadline.toISOString()}`);
+    scheduleEntries.push({
+      message_id: messageId,
+      condition_id: conditionId,
+      scheduled_at: effectiveDeadline.toISOString(),
+      reminder_type: 'final_delivery',
+      status: 'pending',
+      delivery_priority: 'critical',
+      retry_strategy: 'aggressive'
+    });
+  } else {
+    console.warn(`[REMINDER-SERVICE] Final delivery deadline ${effectiveDeadline.toISOString()} is in the past, skipping`);
+  }
   
+  console.log(`[REMINDER-SERVICE] Created ${scheduleEntries.length} valid reminder entries`);
   return scheduleEntries;
 }
 
