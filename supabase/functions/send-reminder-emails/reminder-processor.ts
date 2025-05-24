@@ -3,7 +3,7 @@ import { supabaseClient } from "./supabase-client.ts";
 import { sendEmail } from "./email-service.ts";
 
 /**
- * Enhanced reminder processor with timeout protection and automatic stuck reminder detection
+ * FIXED: Enhanced reminder processor with comprehensive error handling and cleanup
  */
 export async function processDueReminders(
   messageId?: string,
@@ -11,19 +11,13 @@ export async function processDueReminders(
   debug: boolean = false
 ): Promise<any> {
   try {
-    console.log(`[REMINDER-PROCESSOR] Starting reminder processing for message: ${messageId || 'all'}`);
+    console.log(`[REMINDER-PROCESSOR] Starting enhanced reminder processing for message: ${messageId || 'all'}`);
     
     const supabase = supabaseClient();
     
-    // Step 1: Reset any stuck reminders using our new security definer function
-    console.log("[REMINDER-PROCESSOR] Checking for stuck reminders...");
-    const { data: resetResult, error: resetError } = await supabase.rpc('reset_stuck_reminders');
-    
-    if (resetError) {
-      console.error("[REMINDER-PROCESSOR] Error resetting stuck reminders:", resetError);
-    } else if (resetResult && resetResult[0]?.reset_count > 0) {
-      console.log(`[REMINDER-PROCESSOR] Reset ${resetResult[0].reset_count} stuck reminders`);
-    }
+    // Step 1: Clean up any genuinely stuck reminders first
+    console.log("[REMINDER-PROCESSOR] Cleaning up stuck reminders...");
+    await cleanupStuckReminders(supabase, debug);
     
     // Step 2: Acquire due reminders with proper locking
     let dueReminders;
@@ -33,7 +27,10 @@ export async function processDueReminders(
         max_reminders: 10
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error("[REMINDER-PROCESSOR] Error acquiring message reminders:", error);
+        throw error;
+      }
       dueReminders = data || [];
     } else {
       const { data, error } = await supabase.rpc('acquire_due_reminders', {
@@ -41,7 +38,10 @@ export async function processDueReminders(
         message_filter: null
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error("[REMINDER-PROCESSOR] Error acquiring due reminders:", error);
+        throw error;
+      }
       dueReminders = data || [];
     }
     
@@ -56,7 +56,7 @@ export async function processDueReminders(
       };
     }
     
-    // Step 3: Process each reminder with timeout protection
+    // Step 3: Process each reminder with enhanced error handling
     const results = [];
     let successCount = 0;
     let failedCount = 0;
@@ -65,14 +65,7 @@ export async function processDueReminders(
       try {
         console.log(`[REMINDER-PROCESSOR] Processing reminder ${reminder.id} for message ${reminder.message_id}`);
         
-        // Set a processing timeout of 30 seconds per reminder
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('Processing timeout')), 30000);
-        });
-        
-        const processingPromise = processIndividualReminder(reminder, debug);
-        
-        const result = await Promise.race([processingPromise, timeoutPromise]);
+        const result = await processIndividualReminderWithRecovery(reminder, debug, supabase);
         
         if (result.success) {
           successCount++;
@@ -84,29 +77,17 @@ export async function processDueReminders(
         
         results.push(result);
         
-      } catch (error) {
+      } catch (error: any) {
         console.error(`[REMINDER-PROCESSOR] Exception processing reminder ${reminder.id}:`, error);
         failedCount++;
         
-        // Mark reminder as failed if it times out or crashes
-        try {
-          await supabase
-            .from('reminder_schedule')
-            .update({
-              status: 'failed',
-              retry_count: (reminder.retry_count || 0) + 1,
-              last_attempt_at: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', reminder.id);
-        } catch (updateError) {
-          console.error(`[REMINDER-PROCESSOR] Failed to update failed reminder ${reminder.id}:`, updateError);
-        }
+        // Mark reminder as failed with proper error logging
+        await markReminderAsFailed(supabase, reminder.id, error.message || 'Processing exception', debug);
         
         results.push({
           reminderId: reminder.id,
           success: false,
-          error: error.message || 'Processing timeout or crash'
+          error: error.message || 'Processing exception'
         });
       }
     }
@@ -120,20 +101,61 @@ export async function processDueReminders(
       results
     };
     
-  } catch (error) {
+  } catch (error: any) {
     console.error("[REMINDER-PROCESSOR] Error in processDueReminders:", error);
     throw error;
   }
 }
 
 /**
- * Process an individual reminder with proper error handling
+ * Clean up reminders that are genuinely stuck in processing for too long
  */
-async function processIndividualReminder(reminder: any, debug: boolean = false): Promise<any> {
-  const supabase = supabaseClient();
-  
+async function cleanupStuckReminders(supabase: any, debug: boolean): Promise<void> {
   try {
-    // Get message and condition details
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    
+    // Find reminders stuck in processing for more than 5 minutes
+    const { data: stuckReminders, error: findError } = await supabase
+      .from('reminder_schedule')
+      .select('id, message_id, last_attempt_at')
+      .eq('status', 'processing')
+      .lt('last_attempt_at', fiveMinutesAgo);
+    
+    if (findError) {
+      console.warn("[REMINDER-PROCESSOR] Error finding stuck reminders:", findError);
+      return;
+    }
+    
+    if (stuckReminders && stuckReminders.length > 0) {
+      console.log(`[REMINDER-PROCESSOR] Found ${stuckReminders.length} stuck reminders, resetting...`);
+      
+      // Reset stuck reminders to pending
+      const { error: resetError } = await supabase
+        .from('reminder_schedule')
+        .update({
+          status: 'pending',
+          last_attempt_at: null,
+          updated_at: new Date().toISOString()
+        })
+        .in('id', stuckReminders.map(r => r.id));
+      
+      if (resetError) {
+        console.error("[REMINDER-PROCESSOR] Error resetting stuck reminders:", resetError);
+      } else if (debug) {
+        console.log(`[REMINDER-PROCESSOR] Successfully reset ${stuckReminders.length} stuck reminders`);
+      }
+    }
+  } catch (error: any) {
+    console.warn("[REMINDER-PROCESSOR] Error in cleanupStuckReminders:", error);
+  }
+}
+
+/**
+ * Process an individual reminder with comprehensive recovery logic
+ */
+async function processIndividualReminderWithRecovery(reminder: any, debug: boolean, supabase: any): Promise<any> {
+  try {
+    // Get message and condition details with validation
     const { data: messageData, error: messageError } = await supabase
       .from('messages')
       .select(`
@@ -146,21 +168,42 @@ async function processIndividualReminder(reminder: any, debug: boolean = false):
       .eq('id', reminder.message_id)
       .single();
     
-    if (messageError || !messageData) {
-      throw new Error(`Failed to fetch message data: ${messageError?.message}`);
+    if (messageError) {
+      console.error(`[REMINDER-PROCESSOR] Error fetching message ${reminder.message_id}:`, messageError);
+      throw new Error(`Failed to fetch message data: ${messageError.message}`);
     }
     
-    const condition = messageData.message_conditions[0];
-    if (!condition || !condition.recipients) {
-      throw new Error('No condition or recipients found for message');
+    if (!messageData) {
+      throw new Error('Message not found');
     }
     
-    // Process recipients
+    const condition = messageData.message_conditions?.[0];
+    if (!condition) {
+      throw new Error('No condition found for message');
+    }
+    
+    if (!condition.recipients) {
+      throw new Error('No recipients found in condition');
+    }
+    
+    // Process recipients with enhanced validation
     const recipients = Array.isArray(condition.recipients) ? condition.recipients : [condition.recipients];
+    
+    if (recipients.length === 0) {
+      throw new Error('Recipients array is empty');
+    }
+    
     let emailsSent = 0;
     let emailsFailed = 0;
+    const emailResults = [];
     
     for (const recipient of recipients) {
+      if (!recipient.email) {
+        console.warn(`[REMINDER-PROCESSOR] Skipping recipient with no email:`, recipient);
+        emailsFailed++;
+        continue;
+      }
+      
       try {
         console.log(`[REMINDER-PROCESSOR] Sending email to ${recipient.email}`);
         
@@ -173,12 +216,20 @@ async function processIndividualReminder(reminder: any, debug: boolean = false):
         
         if (emailResult.success) {
           emailsSent++;
+          console.log(`[REMINDER-PROCESSOR] Email sent successfully to ${recipient.email}, messageId: ${emailResult.messageId}`);
         } else {
           emailsFailed++;
           console.error(`[REMINDER-PROCESSOR] Email failed for ${recipient.email}:`, emailResult.error);
         }
         
-        // Log delivery attempt
+        emailResults.push({
+          recipient: recipient.email,
+          success: emailResult.success,
+          error: emailResult.error,
+          messageId: emailResult.messageId
+        });
+        
+        // Log delivery attempt with enhanced data
         await supabase.from('reminder_delivery_log').insert({
           reminder_id: reminder.id,
           message_id: reminder.message_id,
@@ -186,20 +237,31 @@ async function processIndividualReminder(reminder: any, debug: boolean = false):
           recipient: recipient.email,
           delivery_channel: 'email',
           delivery_status: emailResult.success ? 'delivered' : 'failed',
-          error_message: emailResult.error,
-          response_data: emailResult
+          error_message: emailResult.error || null,
+          response_data: {
+            messageId: emailResult.messageId,
+            timestamp: new Date().toISOString(),
+            emailLength: generateReminderEmailHtml(messageData, condition, reminder).length
+          }
         });
         
-      } catch (recipientError) {
+      } catch (recipientError: any) {
         console.error(`[REMINDER-PROCESSOR] Error sending to ${recipient.email}:`, recipientError);
         emailsFailed++;
+        emailResults.push({
+          recipient: recipient.email,
+          success: false,
+          error: recipientError.message || 'Unknown error'
+        });
       }
     }
     
-    // Update reminder status based on results
+    // Determine final status based on results
     const finalStatus = emailsSent > 0 ? 'sent' : 'failed';
+    const finalError = emailsSent === 0 ? 'All email deliveries failed' : null;
     
-    await supabase
+    // Update reminder status
+    const { error: updateError } = await supabase
       .from('reminder_schedule')
       .update({
         status: finalStatus,
@@ -208,16 +270,24 @@ async function processIndividualReminder(reminder: any, debug: boolean = false):
       })
       .eq('id', reminder.id);
     
+    if (updateError) {
+      console.error(`[REMINDER-PROCESSOR] Error updating reminder status:`, updateError);
+    }
+    
     // Add to sent_reminders table if successful
     if (finalStatus === 'sent') {
-      await supabase.from('sent_reminders').insert({
-        message_id: reminder.message_id,
-        condition_id: reminder.condition_id,
-        user_id: messageData.user_id,
-        deadline: condition.trigger_date || new Date().toISOString(),
-        scheduled_for: reminder.scheduled_at,
-        sent_at: new Date().toISOString()
-      });
+      try {
+        await supabase.from('sent_reminders').insert({
+          message_id: reminder.message_id,
+          condition_id: reminder.condition_id,
+          user_id: messageData.user_id,
+          deadline: condition.trigger_date || new Date().toISOString(),
+          scheduled_for: reminder.scheduled_at,
+          sent_at: new Date().toISOString()
+        });
+      } catch (sentReminderError: any) {
+        console.warn(`[REMINDER-PROCESSOR] Error inserting sent_reminder record:`, sentReminderError);
+      }
     }
     
     return {
@@ -225,32 +295,45 @@ async function processIndividualReminder(reminder: any, debug: boolean = false):
       success: finalStatus === 'sent',
       emailsSent,
       emailsFailed,
-      error: finalStatus === 'failed' ? 'All email deliveries failed' : null
+      emailResults,
+      error: finalError
     };
     
-  } catch (error) {
+  } catch (error: any) {
     console.error(`[REMINDER-PROCESSOR] Error processing reminder ${reminder.id}:`, error);
     
     // Mark as failed in database
-    try {
-      await supabase
-        .from('reminder_schedule')
-        .update({
-          status: 'failed',
-          retry_count: (reminder.retry_count || 0) + 1,
-          last_attempt_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', reminder.id);
-    } catch (updateError) {
-      console.error(`[REMINDER-PROCESSOR] Failed to mark reminder as failed:`, updateError);
-    }
+    await markReminderAsFailed(supabase, reminder.id, error.message || 'Unknown error', false);
     
     return {
       reminderId: reminder.id,
       success: false,
       error: error.message || 'Unknown error'
     };
+  }
+}
+
+/**
+ * Mark a reminder as failed with proper error tracking
+ */
+async function markReminderAsFailed(supabase: any, reminderId: string, errorMessage: string, debug: boolean): Promise<void> {
+  try {
+    const { error } = await supabase
+      .from('reminder_schedule')
+      .update({
+        status: 'failed',
+        last_attempt_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', reminderId);
+    
+    if (error) {
+      console.error(`[REMINDER-PROCESSOR] Failed to mark reminder ${reminderId} as failed:`, error);
+    } else if (debug) {
+      console.log(`[REMINDER-PROCESSOR] Marked reminder ${reminderId} as failed: ${errorMessage}`);
+    }
+  } catch (updateError: any) {
+    console.error(`[REMINDER-PROCESSOR] Exception marking reminder as failed:`, updateError);
   }
 }
 

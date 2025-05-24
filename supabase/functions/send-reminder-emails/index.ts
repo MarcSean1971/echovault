@@ -1,7 +1,8 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { processDueReminders } from "./reminder-processor.ts";
-import { checkForDueReminders, checkForStuckReminders, getReminderStats } from "./reminder-checker.ts";
+import { checkForDueReminders, getReminderStats } from "./reminder-checker.ts";
+import { cleanupFailedReminders, forceResetAllStuckReminders } from "./cleanup-service.ts";
 import { supabaseClient } from "./supabase-client.ts";
 
 const corsHeaders = {
@@ -34,44 +35,29 @@ serve(async (req) => {
     
     // Handle different actions
     switch (action) {
-      case 'fix-stuck':
-        console.log("Fixing stuck reminders using security definer function...");
+      case 'cleanup':
+        console.log("Running cleanup of failed and stuck reminders...");
         
-        const supabase = supabaseClient();
-        const { data: resetResult, error: resetError } = await supabase.rpc('reset_stuck_reminders');
-        
-        if (resetError) {
-          console.error("Error calling reset_stuck_reminders:", resetError);
-          return new Response(JSON.stringify({ 
-            success: false, 
-            error: resetError.message 
-          }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json', ...corsHeaders }
-          });
-        }
-        
-        const resetCount = resetResult?.[0]?.reset_count || 0;
-        console.log(`Successfully reset ${resetCount} stuck reminders`);
+        const cleanupResult = await cleanupFailedReminders(debug);
         
         return new Response(JSON.stringify({ 
           success: true, 
-          count: resetCount,
-          message: `Fixed ${resetCount} stuck reminders`
+          cleaned: cleanupResult.cleaned,
+          errors: cleanupResult.errors,
+          message: `Cleaned up ${cleanupResult.cleaned} reminders${cleanupResult.errors.length > 0 ? ` with ${cleanupResult.errors.length} errors` : ''}`
         }), {
           headers: { 'Content-Type': 'application/json', ...corsHeaders }
         });
         
-      case 'health-check':
-        console.log("Getting reminder system health status...");
+      case 'force-reset':
+        console.log("Force resetting all stuck reminders...");
         
-        const { data: healthData, error: healthError } = await supabaseClient().rpc('get_reminder_system_health');
+        const resetResult = await forceResetAllStuckReminders();
         
-        if (healthError) {
-          console.error("Error getting health status:", healthError);
+        if (resetResult.error) {
           return new Response(JSON.stringify({ 
             success: false, 
-            error: healthError.message 
+            error: resetResult.error 
           }), {
             status: 500,
             headers: { 'Content-Type': 'application/json', ...corsHeaders }
@@ -80,7 +66,8 @@ serve(async (req) => {
         
         return new Response(JSON.stringify({ 
           success: true, 
-          health: healthData?.[0] || null
+          reset: resetResult.reset,
+          message: `Reset ${resetResult.reset} stuck reminders`
         }), {
           headers: { 'Content-Type': 'application/json', ...corsHeaders }
         });
