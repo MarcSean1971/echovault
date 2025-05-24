@@ -1,4 +1,3 @@
-
 import { createSupabaseAdmin } from "../../shared/supabase-client.ts";
 
 // In-memory storage for selection states (in production, you might want to use Redis or database)
@@ -89,17 +88,24 @@ export async function handlePanicMessageSelection(userId: string, phoneNumber: s
   // Store the selection state
   storeSelectionState(userId, phoneNumber, panicConditions);
   
-  // Build selection message
-  let selectionMessage = "🚨 MULTIPLE EMERGENCY MESSAGES FOUND\n\n";
-  selectionMessage += "Select which emergency message to send:\n\n";
+  // Build user-friendly selection message with EchoVault branding
+  let selectionMessage = "🚨 *EchoVault Emergency Alert*\n\n";
+  selectionMessage += "Multiple emergency messages found! Please select which one to send:\n\n";
   
   panicConditions.forEach((condition, index) => {
-    const title = condition.messages?.title || "Emergency Message";
-    selectionMessage += `${index + 1}. ${title}\n`;
+    const title = condition.title || "Emergency Message";
+    const preview = condition.content ? 
+      (condition.content.length > 50 ? condition.content.substring(0, 50) + "..." : condition.content) : 
+      "No preview available";
+    
+    selectionMessage += `*${index + 1}.* ${title}\n`;
+    selectionMessage += `   _${preview}_\n\n`;
   });
   
-  selectionMessage += "\nReply with the number (1, 2, 3, etc.) to select.\n";
-  selectionMessage += "Send CANCEL to abort.";
+  selectionMessage += "📱 *How to respond:*\n";
+  selectionMessage += "• Reply with the number (1, 2, 3, etc.) to select\n";
+  selectionMessage += "• Send *CANCEL* to abort\n\n";
+  selectionMessage += "⏱️ _You have 2 minutes to select. EchoVault is standing by._";
   
   // Send selection message
   await sendWhatsAppResponse(phoneNumber, selectionMessage);
@@ -129,7 +135,7 @@ export async function processSelectionResponse(userId: string, phoneNumber: stri
   // Handle cancellation
   if (responseUpper === 'CANCEL' || responseUpper === 'ABORT' || responseUpper === 'STOP') {
     clearSelectionState(userId, phoneNumber);
-    await sendWhatsAppResponse(phoneNumber, "❌ Emergency message selection cancelled.");
+    await sendWhatsAppResponse(phoneNumber, "❌ *Emergency Alert Cancelled*\n\nYour emergency message selection has been cancelled.\n\n_EchoVault is here when you need us._");
     
     return {
       status: "cancelled",
@@ -143,7 +149,7 @@ export async function processSelectionResponse(userId: string, phoneNumber: stri
   if (isNaN(selectionNumber) || selectionNumber < 1 || selectionNumber > selectionState.panicConditions.length) {
     await sendWhatsAppResponse(
       phoneNumber, 
-      `❌ Invalid selection. Please reply with a number between 1 and ${selectionState.panicConditions.length}, or CANCEL to abort.`
+      `❌ *Invalid Selection*\n\nPlease reply with a number between *1* and *${selectionState.panicConditions.length}*, or *CANCEL* to abort.\n\n_EchoVault is waiting for your response._`
     );
     
     return {
@@ -154,7 +160,7 @@ export async function processSelectionResponse(userId: string, phoneNumber: stri
   
   // Get the selected panic condition
   const selectedCondition = selectionState.panicConditions[selectionNumber - 1];
-  const selectedTitle = selectedCondition.messages?.title || "Emergency Message";
+  const selectedTitle = selectedCondition.title || "Emergency Message";
   
   // Clear the selection state
   clearSelectionState(userId, phoneNumber);
@@ -166,6 +172,6 @@ export async function processSelectionResponse(userId: string, phoneNumber: stri
     message: "Valid selection made",
     selectedCondition,
     selectedTitle,
-    messageId: selectedCondition.message_id
+    messageId: selectedCondition.messageId
   };
 }

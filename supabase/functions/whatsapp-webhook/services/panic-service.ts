@@ -1,35 +1,31 @@
-
 import { createSupabaseAdmin } from "../../shared/supabase-client.ts";
 import { handlePanicMessageSelection, processSelectionResponse } from "./panic-selection-service.ts";
 
 /**
- * Get active panic trigger conditions for a specific user
+ * Get active panic trigger conditions for a specific user with message titles
  * @param userId The user ID to get panic conditions for
- * @returns Array of panic conditions
+ * @returns Array of panic conditions with message titles
  */
 export async function getPanicConditions(userId: string) {
   const supabase = createSupabaseAdmin();
   
-  // Get active panic trigger conditions for this specific user
-  const { data: messages } = await supabase
-    .from("messages")
-    .select("id")
-    .eq("user_id", userId);
-    
-  if (!messages || messages.length === 0) {
-    console.log(`[PANIC] No messages found for user ${userId}`);
-    return [];
-  }
-  
-  const messageIds = messages.map(m => m.id);
-  
-  // Get active panic trigger conditions for messages owned by this user
+  // Get active panic trigger conditions for this specific user with message titles
   const { data: panicConditions } = await supabase
     .from("message_conditions")
-    .select("id, message_id, panic_config, messages!inner(title)")
+    .select(`
+      id, 
+      message_id, 
+      panic_config,
+      messages!inner(
+        id,
+        title,
+        text_content,
+        user_id
+      )
+    `)
     .eq("condition_type", "panic_trigger")
     .eq("active", true)
-    .in("message_id", messageIds);
+    .eq("messages.user_id", userId);
   
   console.log(`[PANIC] Found ${panicConditions?.length || 0} active panic conditions for user ${userId}`);
   
@@ -61,7 +57,8 @@ export async function checkForPanicTrigger(messageBody: string, panicConditions:
         messageId: condition.message_id,
         conditionId: condition.id,
         config: config,
-        title: condition.messages?.title || "Emergency message"
+        title: condition.messages?.title || "Emergency Message",
+        content: condition.messages?.text_content || ""
       });
     }
   }
@@ -148,7 +145,7 @@ export async function processPanicTrigger(userId: string, fromNumber: string, me
         const triggerResult = await triggerEmergencyMessage(selectionResult.messageId, userId);
         
         if (triggerResult.success) {
-          await sendWhatsAppResponse(fromNumber, `⚠️ EMERGENCY ALERT TRIGGERED! Your emergency message "${selectionResult.selectedTitle}" has been sent to all recipients.`);
+          await sendWhatsAppResponse(fromNumber, `🚨 EMERGENCY ALERT TRIGGERED!\n\nYour emergency message "${selectionResult.selectedTitle}" has been sent to all recipients via EchoVault.\n\nHelp is on the way! 🆘`);
           
           return {
             status: "success",
@@ -156,7 +153,7 @@ export async function processPanicTrigger(userId: string, fromNumber: string, me
             messageId: selectionResult.messageId
           };
         } else {
-          await sendWhatsAppResponse(fromNumber, "❌ Failed to trigger emergency message. Please try again or contact support.");
+          await sendWhatsAppResponse(fromNumber, "❌ Failed to trigger emergency message. Please try again or contact EchoVault support.");
           
           return {
             status: "error",
@@ -177,7 +174,7 @@ export async function processPanicTrigger(userId: string, fromNumber: string, me
     if (!panicConditions || panicConditions.length === 0) {
       console.log(`[PANIC] No active panic conditions found for user ${userId}`);
       
-      await sendWhatsAppResponse(fromNumber, "❌ No active emergency messages found. Please set up an emergency message in the app first.");
+      await sendWhatsAppResponse(fromNumber, "❌ No active emergency messages found.\n\nPlease set up an emergency message in the EchoVault app first.");
       
       return { 
         status: "error", 
@@ -192,7 +189,7 @@ export async function processPanicTrigger(userId: string, fromNumber: string, me
     if (matches.length === 0) {
       console.log(`[PANIC] Message "${messageBody}" doesn't match any panic triggers`);
       
-      await sendWhatsAppResponse(fromNumber, "❌ Emergency trigger not recognized. Make sure your emergency message is configured for WhatsApp with the correct keyword.");
+      await sendWhatsAppResponse(fromNumber, "❌ Emergency trigger not recognized.\n\nMake sure your emergency message is configured for WhatsApp with the correct keyword in the EchoVault app.");
       
       return { 
         status: "error", 
@@ -213,7 +210,7 @@ export async function processPanicTrigger(userId: string, fromNumber: string, me
     const triggerResult = await triggerEmergencyMessage(match.messageId, userId);
     
     if (triggerResult.success) {
-      await sendWhatsAppResponse(fromNumber, `⚠️ EMERGENCY ALERT TRIGGERED! Your emergency message "${match.title}" has been sent to all recipients.`);
+      await sendWhatsAppResponse(fromNumber, `🚨 EMERGENCY ALERT TRIGGERED!\n\nYour emergency message "${match.title}" has been sent to all recipients via EchoVault.\n\nHelp is on the way! 🆘`);
       
       console.log(`[PANIC] Successfully triggered emergency message: ${match.title}`);
       return { 
@@ -222,7 +219,7 @@ export async function processPanicTrigger(userId: string, fromNumber: string, me
         messageId: match.messageId
       };
     } else {
-      await sendWhatsAppResponse(fromNumber, "❌ Failed to trigger emergency message. Please try again or contact support.");
+      await sendWhatsAppResponse(fromNumber, "❌ Failed to trigger emergency message. Please try again or contact EchoVault support.");
       
       console.log(`[PANIC] Failed to trigger emergency message`);
       return { 
@@ -236,7 +233,7 @@ export async function processPanicTrigger(userId: string, fromNumber: string, me
   } catch (error) {
     console.error(`[PANIC] Error in processPanicTrigger:`, error);
     
-    await sendWhatsAppResponse(fromNumber, "❌ System error processing emergency request. Please try again.");
+    await sendWhatsAppResponse(fromNumber, "❌ System error processing emergency request. Please try again or contact EchoVault support.");
     
     return { 
       status: "error", 
