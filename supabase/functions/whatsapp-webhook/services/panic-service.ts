@@ -1,5 +1,6 @@
 import { createSupabaseAdmin } from "../../shared/supabase-client.ts";
 import { handlePanicMessageSelection, processSelectionResponse } from "./panic-selection-service.ts";
+import { logPhoneDebugInfo } from "../utils/phone-utils.ts";
 
 /**
  * Get active panic trigger conditions for a specific user with message titles
@@ -134,10 +135,15 @@ export async function processPanicTrigger(userId: string, fromNumber: string, me
   try {
     console.log(`[PANIC] Processing panic trigger for user ${userId} from phone ${fromNumber}, message: ${messageBody}`);
     
+    // Add detailed logging for phone number formats
+    logPhoneDebugInfo("PANIC-TRIGGER", userId, fromNumber);
+    
     // First, check if this might be a selection response
     const selectionResult = await processSelectionResponse(userId, fromNumber, messageBody);
     
     if (selectionResult) {
+      console.log(`[PANIC] This was a selection response, status: ${selectionResult.status}`);
+      
       // This was a selection response
       if (selectionResult.status === "selected") {
         // User made a valid selection, trigger the selected message
@@ -165,6 +171,8 @@ export async function processPanicTrigger(userId: string, fromNumber: string, me
         return selectionResult;
       }
     }
+    
+    console.log(`[PANIC] Not a selection response, treating as new SOS trigger`);
     
     // Not a selection response, treat as new SOS trigger
     // Get the panic conditions for this specific user
