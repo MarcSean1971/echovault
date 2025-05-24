@@ -28,13 +28,18 @@ export async function sendWhatsAppMessage(params: {
       return { success: false, error: "Missing message content or template configuration" };
     }
     
-    // Format phone number to ensure WhatsApp format
+    // CRITICAL FIX: Preserve the original phone format if it's already WhatsApp format
     let formattedPhone = to;
     
-    // Ensure WhatsApp: prefix is present
+    // Only add whatsapp: prefix if it's not already there
     if (!formattedPhone.startsWith('whatsapp:')) {
-      formattedPhone = `whatsapp:${formattedPhone.replace('whatsapp:', '')}`;
+      // Clean and format the number
+      const cleanNumber = formattedPhone.replace(/[^\d+]/g, '');
+      const numberWithPlus = cleanNumber.startsWith('+') ? cleanNumber : `+${cleanNumber}`;
+      formattedPhone = `whatsapp:${numberWithPlus}`;
     }
+    
+    console.log(`[WHATSAPP-SERVICE] Original phone: ${to}, Formatted phone: ${formattedPhone}`);
     
     // Get Twilio credentials from environment variables
     const accountSid = Deno.env.get("TWILIO_ACCOUNT_SID");
@@ -104,15 +109,17 @@ export async function sendWhatsAppMessage(params: {
           // Use the standard Messages API for text messages
           twilioEndpoint = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
           
-          // Create the request body for text messages
+          // Create the request body for text messages - CRITICAL: Use proper From field
           requestBody = {
             To: formattedPhone,
             Body: message,
-            From: whatsappNumber || formattedPhone.replace("whatsapp:", ""),
+            From: whatsappNumber || `whatsapp:+14155238886`, // Use proper WhatsApp sender number
           };
           
-          if (messagingServiceSid) {
+          // Only add MessagingServiceSid if we have it and no From number
+          if (messagingServiceSid && !whatsappNumber) {
             requestBody.MessagingServiceSid = messagingServiceSid;
+            delete requestBody.From; // Remove From when using MessagingService
           }
           
           contentType = "application/x-www-form-urlencoded";
@@ -125,6 +132,8 @@ export async function sendWhatsAppMessage(params: {
         const formBody = Object.entries(requestBody)
           .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join('&');
+        
+        console.log(`[WHATSAPP-SERVICE] Request body: To=${requestBody.To}, From=${requestBody.From || requestBody.MessagingServiceSid}`);
         
         // Send the request to Twilio
         const response = await fetch(twilioEndpoint, {

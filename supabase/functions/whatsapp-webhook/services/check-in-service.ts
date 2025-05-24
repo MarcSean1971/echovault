@@ -40,13 +40,13 @@ export async function processCheckIn(userId: string, phoneNumber: string) {
       console.log("[CHECK-IN] Successfully updated conditions with new check-in time");
     }
     
-    // Send confirmation message back to user
+    // Send confirmation message back to user using the EXACT same phone format
     console.log(`[CHECK-IN] Sending confirmation message to ${phoneNumber}`);
     
     try {
       const { data: confirmationResult, error: confirmationError } = await supabase.functions.invoke("send-whatsapp", {
         body: {
-          to: phoneNumber,
+          to: phoneNumber, // Use the exact phone format received (should already have whatsapp: prefix)
           message: `✅ Check-in received! Your deadman's switch timers have been reset. Time: ${new Date().toLocaleTimeString()}`
         }
       });
