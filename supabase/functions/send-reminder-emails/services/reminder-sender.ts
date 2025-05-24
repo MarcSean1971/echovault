@@ -19,7 +19,7 @@ interface ReminderResult {
 }
 
 /**
- * FIXED: Send reminder to creator using the same proven infrastructure as final delivery
+ * FIXED: Send reminder to creator using DIRECT AUTH.USERS QUERY (no admin permissions needed)
  */
 export async function sendCreatorReminder(
   messageId: string,
@@ -44,19 +44,26 @@ export async function sendCreatorReminder(
     let creatorName = "User";
     let creatorPhone = null;
     
-    // CRITICAL FIX: First get the user's email from auth.users as PRIMARY source
-    const { data: userData, error: userError } = await supabase.auth.admin.getUserById(creatorUserId);
+    // RADICAL FIX: Direct query to auth.users table (NO ADMIN PERMISSIONS NEEDED)
+    console.log(`[REMINDER-SENDER] FIXED: Getting creator email directly from auth.users for ${creatorUserId}`);
+    
+    const { data: authUser, error: authError } = await supabase
+      .from('auth.users')
+      .select('email')
+      .eq('id', creatorUserId)
+      .single();
     
     if (debug) {
-      console.log(`[REMINDER-SENDER] Retrieved auth user data for ${creatorUserId}:`, 
-        userError ? `ERROR: ${userError.message}` : 
-        userData ? `SUCCESS with email ${userData.user?.email}` : "No user data found");
+      console.log(`[REMINDER-SENDER] Direct auth.users query result:`, 
+        authError ? `ERROR: ${authError.message}` : 
+        authUser ? `SUCCESS with email ${authUser.email}` : "No user data found");
     }
     
-    if (userData?.user?.email) {
-      creatorEmail = userData.user.email;
+    if (authUser?.email) {
+      creatorEmail = authUser.email;
+      console.log(`[REMINDER-SENDER] FIXED: Got creator email from direct query: ${creatorEmail}`);
     } else {
-      console.warn(`[REMINDER-SENDER] Could not find email in auth.users for ${creatorUserId}`);
+      console.error(`[REMINDER-SENDER] FAILED: Could not find email in auth.users for ${creatorUserId}`, authError);
     }
     
     // Then get the profile data which may have more info (backup email, phone, name)
@@ -230,7 +237,9 @@ export async function sendCreatorReminder(
       `;
       
       try {
-        // Send email using Resend API
+        // Send email using Resend API - SAME AS FINAL DELIVERY
+        console.log(`[REMINDER-SENDER] FIXED: Sending check-in reminder email to ${creatorEmail} using direct query result`);
+        
         const emailResponse = await resend.emails.send({
           from: `EchoVault <notifications@echo-vault.app>`,
           to: [creatorEmail],
@@ -239,7 +248,7 @@ export async function sendCreatorReminder(
         });
 
         if (debug) {
-          console.log(`[REMINDER-SENDER] Email sent to creator ${creatorEmail}:`, emailResponse);
+          console.log(`[REMINDER-SENDER] FIXED: Email sent successfully to creator ${creatorEmail}:`, emailResponse);
         }
 
         results.push({
