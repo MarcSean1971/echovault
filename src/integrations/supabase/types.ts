@@ -513,6 +513,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      force_process_message_reminders: {
+        Args: { target_message_id: string }
+        Returns: undefined
+      }
       get_system_reminder_stats: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -524,6 +528,10 @@ export type Database = {
       message_has_delivery: {
         Args: { msg_id: string }
         Returns: boolean
+      }
+      reset_stuck_reminders: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
     }
     Enums: {

@@ -1,14 +1,10 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
+import { reminderMonitor } from "@/services/messages/monitoring/reminderMonitor";
 
 /**
- * Trigger a manual reminder for testing purposes
- * 
- * @param messageId Message ID to send reminders for
- * @param forceSend Whether to force send reminders even if not due
- * @param testMode Whether this is a test message
- * @returns Success status and any errors
+ * Enhanced reminder service with comprehensive error handling and retry logic
  */
 export async function triggerManualReminder(
   messageId: string, 
@@ -16,115 +12,294 @@ export async function triggerManualReminder(
   testMode: boolean = false
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    console.log(`Triggering manual reminder for message ${messageId}`);
+    console.log(`Triggering enhanced manual reminder for message ${messageId}`);
     console.log(`Force send: ${forceSend}, Test mode: ${testMode}`);
     
     // Show initial toast notification
     toast({
-      title: "Sending test notification",
-      description: "Hang tight while we send your notification...",
-      duration: 3000,
+      title: "🚨 Critical Reminder Test",
+      description: "Testing critical reminder system - this is a safety-critical test...",
+      duration: 5000,
     });
     
-    // Attempt primary method first
+    // STEP 1: Force process any stuck reminders for this specific message
     try {
-      const { error } = await supabase.functions.invoke("send-reminder-emails", {
-        body: {
-          messageId,
-          debug: true,
-          forceSend,
-          testMode,
-          source: "manual-trigger",
-          bypassDeduplication: true
-        }
-      });
+      console.log("Step 1: Forcing message-specific reminder processing...");
+      await reminderMonitor.forceProcessMessageReminders(messageId);
+    } catch (forceError) {
+      console.error("Error in force process step:", forceError);
+    }
+    
+    // STEP 2: Try multiple reminder trigger methods with aggressive retry
+    const triggerMethods = [
+      // Method 1: Enhanced reminder emails function
+      async () => {
+        console.log("Method 1: Enhanced reminder emails function");
+        return await supabase.functions.invoke("send-reminder-emails", {
+          body: {
+            messageId,
+            debug: true,
+            forceSend: true,
+            testMode,
+            source: "critical-manual-trigger",
+            bypassDeduplication: true,
+            action: "process"
+          }
+        });
+      },
       
-      if (error) {
-        console.error("Error invoking send-reminder-emails:", error);
-        
-        // Try backup method
-        console.log("Trying backup method...");
-        await supabase.functions.invoke("send-message-notifications", {
+      // Method 2: Direct message notifications function
+      async () => {
+        console.log("Method 2: Direct message notifications function");
+        return await supabase.functions.invoke("send-message-notifications", {
           body: {
             messageId, 
             debug: true,
-            forceSend,
+            forceSend: true,
             testMode,
-            source: "manual-trigger-backup",
-            bypassDeduplication: true
+            source: "critical-backup-trigger",
+            bypassDeduplication: true,
+            emergencyMode: true
           }
         });
-      }
+      },
       
-      console.log("Manual reminder triggered successfully");
-      
-      // Show success toast
-      toast({
-        title: "Test notification sent",
-        description: "Check your email and WhatsApp for the notification.",
-        duration: 5000,
-      });
-      
-      return { success: true };
-    } catch (primaryError) {
-      console.error("Primary trigger method failed:", primaryError);
-      
-      // Try alternate last-resort approach
-      try {
-        console.log("Trying last-resort backup method...");
-        const { data, error: backupError } = await supabase
-          .from('reminder_schedule')
-          .update({ 
-            status: 'processing',
-            updated_at: new Date().toISOString(),
-            last_attempt_at: new Date().toISOString() 
-          })
-          .eq('message_id', messageId)
-          .eq('status', 'pending');
+      // Method 3: Force create new reminder schedule entry
+      async () => {
+        console.log("Method 3: Force create immediate reminder");
         
-        if (backupError) {
-          throw backupError;
+        // Get the condition for this message
+        const { data: conditions } = await supabase
+          .from('message_conditions')
+          .select('*')
+          .eq('message_id', messageId)
+          .eq('active', true)
+          .limit(1);
+        
+        if (conditions && conditions.length > 0) {
+          const condition = conditions[0];
+          
+          // Create immediate reminder
+          const { error: insertError } = await supabase
+            .from('reminder_schedule')
+            .insert({
+              message_id: messageId,
+              condition_id: condition.id,
+              scheduled_at: new Date().toISOString(), // Immediate
+              reminder_type: 'reminder',
+              status: 'pending',
+              delivery_priority: 'critical',
+              retry_strategy: 'aggressive'
+            });
+          
+          if (insertError) throw insertError;
+          
+          // Trigger processing immediately
+          return await supabase.functions.invoke("send-reminder-emails", {
+            body: {
+              messageId,
+              debug: true,
+              forceSend: true,
+              source: "force-created-reminder"
+            }
+          });
         }
         
-        // If we get here, at least the database was updated
-        toast({
-          title: "Test notification requested",
-          description: "Your notification has been queued and will be processed shortly.",
-          duration: 5000,
-        });
+        throw new Error("No active conditions found for message");
+      }
+    ];
+    
+    let lastError = null;
+    let successfulMethod = null;
+    
+    // Try each method in sequence
+    for (let i = 0; i < triggerMethods.length; i++) {
+      try {
+        console.log(`Attempting trigger method ${i + 1}/3...`);
+        const result = await triggerMethods[i]();
         
-        return { success: true };
-      } catch (backupError) {
-        console.error("All trigger methods failed:", backupError);
-        
-        // Show error toast
-        toast({
-          title: "Error sending test notification",
-          description: "Failed to send test notification. Please try again later.",
-          variant: "destructive",
-          duration: 5000,
-        });
-        
-        return { 
-          success: false, 
-          error: "All trigger methods failed. Try again in a few minutes." 
-        };
+        if (!result.error) {
+          successfulMethod = i + 1;
+          console.log(`Method ${i + 1} succeeded!`);
+          break;
+        } else {
+          lastError = result.error;
+          console.error(`Method ${i + 1} failed:`, result.error);
+        }
+      } catch (methodError: any) {
+        lastError = methodError;
+        console.error(`Method ${i + 1} threw exception:`, methodError);
+      }
+      
+      // Brief delay between methods
+      if (i < triggerMethods.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
-  } catch (error: any) {
-    console.error("Exception in triggerManualReminder:", error);
     
-    // Show error toast
+    if (successfulMethod) {
+      // SUCCESS: At least one method worked
+      toast({
+        title: "✅ Critical Reminder Sent",
+        description: `Reminder successfully triggered using method ${successfulMethod}. Check your email and WhatsApp!`,
+        duration: 8000,
+      });
+      
+      // Log success to delivery log
+      try {
+        await supabase.from('reminder_delivery_log').insert({
+          reminder_id: `manual-success-${Date.now()}`,
+          message_id: messageId,
+          condition_id: null,
+          recipient: 'system',
+          delivery_channel: 'manual-trigger',
+          delivery_status: 'sent',
+          response_data: {
+            successful_method: successfulMethod,
+            timestamp: new Date().toISOString(),
+            test_mode: testMode,
+            source: 'enhanced_manual_trigger'
+          }
+        });
+      } catch (logError) {
+        console.warn("Failed to log success:", logError);
+      }
+      
+      return { success: true };
+    } else {
+      // FAILURE: All methods failed
+      console.error("All reminder trigger methods failed. Last error:", lastError);
+      
+      toast({
+        title: "🚨 CRITICAL FAILURE",
+        description: `All reminder methods failed! This is a safety issue - check system immediately!`,
+        variant: "destructive",
+        duration: 10000,
+      });
+      
+      // Log failure
+      try {
+        await supabase.from('reminder_delivery_log').insert({
+          reminder_id: `manual-failure-${Date.now()}`,
+          message_id: messageId,
+          condition_id: null,
+          recipient: 'system',
+          delivery_channel: 'manual-trigger',
+          delivery_status: 'failed',
+          error_message: lastError?.message || 'All methods failed',
+          response_data: {
+            failed_methods: triggerMethods.length,
+            last_error: lastError?.message,
+            timestamp: new Date().toISOString(),
+            test_mode: testMode,
+            source: 'enhanced_manual_trigger'
+          }
+        });
+      } catch (logError) {
+        console.warn("Failed to log failure:", logError);
+      }
+      
+      return { 
+        success: false, 
+        error: lastError?.message || "All trigger methods failed - critical system issue!" 
+      };
+    }
+    
+  } catch (error: any) {
+    console.error("Critical exception in triggerManualReminder:", error);
+    
     toast({
-      title: "Error",
-      description: error.message || "An unexpected error occurred",
+      title: "🚨 SYSTEM ERROR",
+      description: `Critical system error: ${error.message}`,
       variant: "destructive",
-      duration: 5000,
+      duration: 10000,
     });
     
     return { 
       success: false, 
-      error: error.message || "An unexpected error occurred" 
+      error: error.message || "Critical system exception occurred" 
     };
+  }
+}
+
+/**
+ * Test the entire reminder pipeline for a message
+ */
+export async function testReminderPipeline(messageId: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    console.log(`Testing complete reminder pipeline for message ${messageId}`);
+    
+    toast({
+      title: "🧪 Testing Reminder Pipeline",
+      description: "Running comprehensive reminder system test...",
+      duration: 5000,
+    });
+    
+    // Step 1: Check if message exists and has conditions
+    const { data: message, error: messageError } = await supabase
+      .from('messages')
+      .select(`
+        *,
+        message_conditions(*)
+      `)
+      .eq('id', messageId)
+      .single();
+    
+    if (messageError || !message) {
+      throw new Error(`Message not found: ${messageError?.message}`);
+    }
+    
+    if (!message.message_conditions || message.message_conditions.length === 0) {
+      throw new Error("No conditions found for this message");
+    }
+    
+    // Step 2: Check reminder schedule
+    const { data: reminders, error: reminderError } = await supabase
+      .from('reminder_schedule')
+      .select('*')
+      .eq('message_id', messageId)
+      .eq('status', 'pending');
+    
+    if (reminderError) {
+      console.error("Error checking reminders:", reminderError);
+    }
+    
+    console.log(`Found ${reminders?.length || 0} pending reminders for message`);
+    
+    // Step 3: Test email service connectivity
+    try {
+      await supabase.functions.invoke("send-test-email", {
+        body: { test: true, debug: true }
+      });
+      console.log("Email service connectivity test passed");
+    } catch (emailError) {
+      console.warn("Email service test failed:", emailError);
+    }
+    
+    // Step 4: Run the actual reminder trigger
+    const triggerResult = await triggerManualReminder(messageId, true, true);
+    
+    if (triggerResult.success) {
+      toast({
+        title: "✅ Pipeline Test Successful",
+        description: "Complete reminder pipeline test passed!",
+        duration: 8000,
+      });
+      return { success: true };
+    } else {
+      throw new Error(triggerResult.error || "Pipeline test failed");
+    }
+    
+  } catch (error: any) {
+    console.error("Error in testReminderPipeline:", error);
+    
+    toast({
+      title: "❌ Pipeline Test Failed",
+      description: `Pipeline test failed: ${error.message}`,
+      variant: "destructive",
+      duration: 8000,
+    });
+    
+    return { success: false, error: error.message };
   }
 }

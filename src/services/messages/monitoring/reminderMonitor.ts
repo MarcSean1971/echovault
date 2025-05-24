@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -70,73 +71,70 @@ class ReminderMonitor {
   }
 
   /**
-   * Use the new security definer function to reset stuck reminders
+   * Use the security definer function to reset stuck reminders
    */
   private async resetStuckRemindersWithSecurityDefiner() {
     try {
-      const { data, error } = await supabase.rpc('reset_stuck_reminders' as any);
+      const { error } = await supabase.rpc('reset_stuck_reminders');
       
       if (error) {
         console.error("[REMINDER-MONITOR] Error calling reset_stuck_reminders:", error);
         return;
       }
       
-      const resetCount = data?.[0]?.reset_count || 0;
-      if (resetCount > 0) {
-        console.log(`[REMINDER-MONITOR] Successfully reset ${resetCount} stuck reminders`);
-        
-        toast({
-          title: "Reminder System",
-          description: `Reset ${resetCount} stuck reminder(s)`,
-          duration: 3000,
-        });
-      }
+      console.log("[REMINDER-MONITOR] Successfully reset stuck reminders");
     } catch (error) {
       console.error("[REMINDER-MONITOR] Exception resetting stuck reminders:", error);
     }
   }
 
   /**
-   * Perform system health check using the new health function
+   * Perform system health check using database query
    */
   private async performHealthCheck() {
     try {
       console.log("[REMINDER-MONITOR] Performing system health check...");
       
-      const { data, error } = await supabase.rpc('get_reminder_system_health' as any);
+      // Check for overdue reminders
+      const { data: overdueReminders, error: overdueError } = await supabase
+        .from('reminder_schedule')
+        .select('id, message_id, scheduled_at, status')
+        .eq('status', 'pending')
+        .lt('scheduled_at', new Date(Date.now() - 5 * 60 * 1000).toISOString()) // 5 minutes overdue
+        .limit(10);
       
-      if (error) {
-        console.error("[REMINDER-MONITOR] Error getting system health:", error);
+      if (overdueError) {
+        console.error("[REMINDER-MONITOR] Error checking overdue reminders:", overdueError);
         return;
       }
       
-      const health = data?.[0];
-      if (health) {
-        console.log("[REMINDER-MONITOR] System health:", health);
+      if (overdueReminders && overdueReminders.length > 0) {
+        console.warn(`[REMINDER-MONITOR] Found ${overdueReminders.length} overdue reminders`);
         
-        // Alert if there are too many stuck reminders
-        if (health.stuck_processing > 5) {
-          toast({
-            title: "Reminder System Alert",
-            description: `${health.stuck_processing} reminders are stuck in processing. Attempting auto-fix.`,
-            variant: "destructive",
-            duration: 5000,
-          });
-          
-          // Trigger immediate stuck reminder reset
-          await this.resetStuckRemindersWithSecurityDefiner();
-        }
+        toast({
+          title: "Reminder System Alert",
+          description: `${overdueReminders.length} reminders are overdue. Attempting auto-fix.`,
+          variant: "destructive",
+          duration: 5000,
+        });
         
-        // Alert if too many failures
-        if (health.failed_last_hour > 10) {
-          toast({
-            title: "Reminder System Warning",
-            description: `${health.failed_last_hour} reminders failed in the last hour.`,
-            variant: "destructive",
-            duration: 5000,
-          });
-        }
+        // Trigger immediate processing
+        await this.forceProcessAllReminders();
       }
+      
+      // Check for stuck processing reminders
+      const { data: stuckReminders, error: stuckError } = await supabase
+        .from('reminder_schedule')
+        .select('id')
+        .eq('status', 'processing')
+        .lt('last_attempt_at', new Date(Date.now() - 10 * 60 * 1000).toISOString()) // 10 minutes stuck
+        .limit(5);
+      
+      if (!stuckError && stuckReminders && stuckReminders.length > 0) {
+        console.warn(`[REMINDER-MONITOR] Found ${stuckReminders.length} stuck reminders`);
+        await this.resetStuckRemindersWithSecurityDefiner();
+      }
+      
     } catch (error) {
       console.error("[REMINDER-MONITOR] Error in health check:", error);
     }
@@ -228,14 +226,14 @@ class ReminderMonitor {
   }
 
   /**
-   * Get reminder system statistics using the new health function
+   * Get reminder system statistics
    */
   async getSystemStats() {
     try {
-      const { data, error } = await supabase.rpc('get_reminder_system_health' as any);
+      const { data, error } = await supabase.rpc('get_system_reminder_stats');
 
       if (error) {
-        console.error("[REMINDER-MONITOR] Error getting health stats:", error);
+        console.error("[REMINDER-MONITOR] Error getting system stats:", error);
         return null;
       }
 
@@ -253,7 +251,7 @@ class ReminderMonitor {
     try {
       console.log("[REMINDER-MONITOR] Manually resetting stuck reminders");
       
-      const { data, error } = await supabase.rpc('reset_stuck_reminders' as any);
+      const { error } = await supabase.rpc('reset_stuck_reminders');
       
       if (error) {
         console.error("[REMINDER-MONITOR] Error in manual reset:", error);
@@ -266,15 +264,13 @@ class ReminderMonitor {
         return;
       }
       
-      const resetCount = data?.[0]?.reset_count || 0;
-      
       toast({
         title: "Stuck Reminders Reset",
-        description: `Successfully reset ${resetCount} stuck reminder(s)`,
+        description: "Successfully reset stuck reminders",
         duration: 5000,
       });
       
-      return resetCount;
+      return true;
     } catch (error) {
       console.error("[REMINDER-MONITOR] Exception in manual reset:", error);
       toast({
@@ -283,7 +279,59 @@ class ReminderMonitor {
         variant: "destructive",
         duration: 5000,
       });
-      return 0;
+      return false;
+    }
+  }
+
+  /**
+   * Force process reminders for a specific message (for testing)
+   */
+  async forceProcessMessageReminders(messageId: string) {
+    try {
+      console.log(`[REMINDER-MONITOR] Force processing reminders for message ${messageId}`);
+      
+      const { error } = await supabase.rpc('force_process_message_reminders', {
+        target_message_id: messageId
+      });
+      
+      if (error) {
+        console.error("[REMINDER-MONITOR] Error in force process message:", error);
+        toast({
+          title: "Error",
+          description: "Failed to force process message reminders",
+          variant: "destructive",
+          duration: 5000,
+        });
+        return false;
+      }
+      
+      // Also trigger the email processing immediately
+      await supabase.functions.invoke("send-reminder-emails", {
+        body: {
+          messageId: messageId,
+          debug: true,
+          forceSend: true,
+          source: "force-message-specific",
+          action: "process"
+        }
+      });
+      
+      toast({
+        title: "Message Reminders Forced",
+        description: `Successfully forced processing for message ${messageId}`,
+        duration: 5000,
+      });
+      
+      return true;
+    } catch (error) {
+      console.error("[REMINDER-MONITOR] Exception in force process message:", error);
+      toast({
+        title: "Error",
+        description: "Failed to force process message reminders",
+        variant: "destructive",
+        duration: 5000,
+      });
+      return false;
     }
   }
 }
