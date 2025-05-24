@@ -74,7 +74,7 @@ export class ReminderMonitor {
       // First, get stuck reminders with their message_ids
       const { data: stuckReminders, error: fetchError } = await supabase
         .from('reminder_schedule')
-        .select('id, message_id, condition_id')
+        .select('id, message_id, condition_id, retry_count')
         .eq('status', 'processing')
         .lt('last_attempt_at', new Date(Date.now() - 10 * 60 * 1000).toISOString());
       
@@ -86,34 +86,38 @@ export class ReminderMonitor {
       if (stuckReminders && stuckReminders.length > 0) {
         console.log(`[REMINDER-MONITOR] Found ${stuckReminders.length} stuck reminders to reset`);
         
-        // Reset the stuck reminders - FIXED: Use proper increment syntax
-        const { error: updateError } = await supabase
-          .from('reminder_schedule')
-          .update({ 
-            status: 'pending',
-            retry_count: supabase.rpc('increment_retry_count') as any,
-            updated_at: new Date().toISOString()
-          })
-          .in('id', stuckReminders.map(r => r.id))
-          .lt('retry_count', 3);
-        
-        if (updateError) {
-          console.error("[REMINDER-MONITOR] Error updating stuck reminders:", updateError);
-          return;
-        }
-        
-        // Mark reminders with too many retries as failed
-        const { error: failError } = await supabase
-          .from('reminder_schedule')
-          .update({ 
-            status: 'failed',
-            updated_at: new Date().toISOString()
-          })
-          .in('id', stuckReminders.map(r => r.id))
-          .gte('retry_count', 3);
-        
-        if (failError) {
-          console.error("[REMINDER-MONITOR] Error marking failed reminders:", failError);
+        // Process each reminder individually to calculate retry_count properly
+        for (const reminder of stuckReminders) {
+          const newRetryCount = (reminder.retry_count || 0) + 1;
+          
+          if (newRetryCount < 3) {
+            // Reset the stuck reminder
+            const { error: updateError } = await supabase
+              .from('reminder_schedule')
+              .update({ 
+                status: 'pending',
+                retry_count: newRetryCount,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', reminder.id);
+            
+            if (updateError) {
+              console.error(`[REMINDER-MONITOR] Error updating reminder ${reminder.id}:`, updateError);
+            }
+          } else {
+            // Mark reminder as failed due to too many retries
+            const { error: failError } = await supabase
+              .from('reminder_schedule')
+              .update({ 
+                status: 'failed',
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', reminder.id);
+            
+            if (failError) {
+              console.error(`[REMINDER-MONITOR] Error marking reminder ${reminder.id} as failed:`, failError);
+            }
+          }
         }
         
         // FIXED: Create a proper log entry with a valid message_id (use first stuck reminder's message_id)
