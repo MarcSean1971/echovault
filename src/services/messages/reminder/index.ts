@@ -19,5 +19,4 @@ export { testReminderTrigger } from "./testService";
 // Export utility functions
 export { markRemindersAsObsolete } from "./utils";
 
-// Export the triggerManualReminder function from the WhatsApp core service
-export { triggerManualReminder } from "../whatsApp/core/reminderService";
+// Note: triggerManualReminder is exported from the whatsApp module to avoid conflicts

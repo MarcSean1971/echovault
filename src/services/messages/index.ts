@@ -15,22 +15,25 @@ if (typeof window !== 'undefined') {
   }, 2000);
 }
 
-// Export types
-export * from "./types";
-
 // Export condition services
 export * from "./conditionService";
 
 // Export message services
 export * from "./messageService";
 
-// Export reminder services
-export * from "./reminder";
+// Export reminder services - exclude triggerManualReminder to avoid conflict
+export { 
+  createOrUpdateReminderSchedule,
+  getReminderScheduleForMessage, 
+  getReminderHistory,
+  testReminderTrigger,
+  markRemindersAsObsolete
+} from "./reminder";
 
 // Export notification services
 export * from "./notification";
 
-// Export WhatsApp services
+// Export WhatsApp services (includes triggerManualReminder)
 export * from "./whatsApp";
 
 // Export monitoring services
