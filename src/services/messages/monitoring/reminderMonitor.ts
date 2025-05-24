@@ -24,6 +24,13 @@ export class ReminderMonitor {
   }
 
   /**
+   * Alias for start() method - used by some components
+   */
+  startMonitoring() {
+    this.start();
+  }
+
+  /**
    * Stop monitoring reminders
    */
   stop() {
@@ -79,12 +86,12 @@ export class ReminderMonitor {
       if (stuckReminders && stuckReminders.length > 0) {
         console.log(`[REMINDER-MONITOR] Found ${stuckReminders.length} stuck reminders to reset`);
         
-        // Reset the stuck reminders
+        // Reset the stuck reminders - FIXED: Use proper increment syntax
         const { error: updateError } = await supabase
           .from('reminder_schedule')
           .update({ 
             status: 'pending',
-            retry_count: supabase.sql`COALESCE(retry_count, 0) + 1`,
+            retry_count: supabase.rpc('increment_retry_count') as any,
             updated_at: new Date().toISOString()
           })
           .in('id', stuckReminders.map(r => r.id))
@@ -179,6 +186,60 @@ export class ReminderMonitor {
       
     } catch (error) {
       console.error(`[REMINDER-MONITOR] Error in forceProcessMessageReminders for ${messageId}:`, error);
+    }
+  }
+
+  /**
+   * Force process all due reminders
+   */
+  async forceProcessAllReminders(): Promise<void> {
+    try {
+      console.log("[REMINDER-MONITOR] Force processing all due reminders");
+      
+      // Reset stuck reminders first
+      await this.resetStuckRemindersWithSecurityDefiner();
+      
+      // Trigger processing of all reminders
+      await supabase.functions.invoke("send-reminder-emails", {
+        body: {
+          debug: true,
+          forceSend: true,
+          source: "force-process-all-reminders",
+          action: "process"
+        }
+      });
+      
+      console.log("[REMINDER-MONITOR] Successfully triggered force processing for all reminders");
+      
+    } catch (error) {
+      console.error("[REMINDER-MONITOR] Error in forceProcessAllReminders:", error);
+    }
+  }
+
+  /**
+   * Manual reset of stuck reminders (public method for diagnostic use)
+   */
+  async manualResetStuckReminders(): Promise<void> {
+    console.log("[REMINDER-MONITOR] Manual reset of stuck reminders requested");
+    await this.resetStuckRemindersWithSecurityDefiner();
+  }
+
+  /**
+   * Get system statistics for reminders
+   */
+  async getSystemStats(): Promise<any> {
+    try {
+      const { data, error } = await supabase.rpc('get_system_reminder_stats');
+      
+      if (error) {
+        console.error("[REMINDER-MONITOR] Error getting system stats:", error);
+        return null;
+      }
+      
+      return data?.[0] || null;
+    } catch (error) {
+      console.error("[REMINDER-MONITOR] Error in getSystemStats:", error);
+      return null;
     }
   }
 }

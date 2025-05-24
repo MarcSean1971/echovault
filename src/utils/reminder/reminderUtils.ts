@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { reminderMonitor } from "@/services/messages/monitoring/reminderMonitor";
 
 // Start monitoring when the utility is loaded
-reminderMonitor.startMonitoring();
+reminderMonitor.start(); // Use start() instead of startMonitoring()
 
 /**
  * Mark existing reminders obsolete - replaced by more specific function
