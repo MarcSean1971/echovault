@@ -35,12 +35,52 @@ serve(async (req) => {
     // Handle different actions
     switch (action) {
       case 'fix-stuck':
-        console.log("Fixing stuck reminders...");
-        const resetCount = await checkForStuckReminders();
+        console.log("Fixing stuck reminders using security definer function...");
+        
+        const supabase = supabaseClient();
+        const { data: resetResult, error: resetError } = await supabase.rpc('reset_stuck_reminders');
+        
+        if (resetError) {
+          console.error("Error calling reset_stuck_reminders:", resetError);
+          return new Response(JSON.stringify({ 
+            success: false, 
+            error: resetError.message 
+          }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+        
+        const resetCount = resetResult?.[0]?.reset_count || 0;
+        console.log(`Successfully reset ${resetCount} stuck reminders`);
+        
         return new Response(JSON.stringify({ 
           success: true, 
           count: resetCount,
           message: `Fixed ${resetCount} stuck reminders`
+        }), {
+          headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+        
+      case 'health-check':
+        console.log("Getting reminder system health status...");
+        
+        const { data: healthData, error: healthError } = await supabaseClient().rpc('get_reminder_system_health');
+        
+        if (healthError) {
+          console.error("Error getting health status:", healthError);
+          return new Response(JSON.stringify({ 
+            success: false, 
+            error: healthError.message 
+          }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders }
+          });
+        }
+        
+        return new Response(JSON.stringify({ 
+          success: true, 
+          health: healthData?.[0] || null
         }), {
           headers: { 'Content-Type': 'application/json', ...corsHeaders }
         });
@@ -55,38 +95,10 @@ serve(async (req) => {
           headers: { 'Content-Type': 'application/json', ...corsHeaders }
         });
         
-      case 'regenerate-schedule':
-        console.log(`Regenerating schedule for message ${messageId}...`);
-        if (!messageId) {
-          return new Response(JSON.stringify({
-            success: false,
-            error: "messageId required for regenerate-schedule action"
-          }), {
-            status: 400,
-            headers: { 'Content-Type': 'application/json', ...corsHeaders }
-          });
-        }
-        
-        // Mark existing reminders as obsolete and regenerate
-        const supabase = supabaseClient();
-        await supabase
-          .from('reminder_schedule')
-          .update({ status: 'obsolete' })
-          .eq('message_id', messageId)
-          .eq('status', 'pending');
-          
-        // The regeneration will be handled by the reminder generation service
-        return new Response(JSON.stringify({
-          success: true,
-          message: `Regenerated reminder schedule for message ${messageId}`
-        }), {
-          headers: { 'Content-Type': 'application/json', ...corsHeaders }
-        });
-        
       case 'process':
       default:
         // Process due reminders (main action)
-        console.log("Processing due reminders...");
+        console.log("Processing due reminders with enhanced error handling...");
         
         if (messageId) {
           console.log(`Processing reminders for specific message: ${messageId}`);
@@ -114,7 +126,7 @@ serve(async (req) => {
             });
           }
           
-          // Process the due reminders
+          // Process the due reminders with the enhanced processor
           const messageIds = [...new Set(dueReminders.map(r => r.message_id))];
           const allResults = [];
           

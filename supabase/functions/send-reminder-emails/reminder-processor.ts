@@ -1,381 +1,292 @@
 
 import { supabaseClient } from "./supabase-client.ts";
 import { sendEmail } from "./email-service.ts";
-import { sendWhatsAppMessage } from "../shared/services/whatsapp-service.ts";
 
 /**
- * Enhanced reminder processor with timeout handling and proper status management
+ * Enhanced reminder processor with timeout protection and automatic stuck reminder detection
  */
 export async function processDueReminders(
   messageId?: string,
   forceSend: boolean = false,
   debug: boolean = false
-): Promise<{ processedCount: number; successCount: number; failureCount: number }> {
-  const results = {
-    processedCount: 0,
-    successCount: 0,
-    failureCount: 0
-  };
-
+): Promise<any> {
   try {
-    console.log(`[REMINDER-PROCESSOR] Starting processing for ${messageId ? `message ${messageId}` : 'all messages'}`);
-    console.log(`[REMINDER-PROCESSOR] Force send: ${forceSend}, Debug: ${debug}`);
+    console.log(`[REMINDER-PROCESSOR] Starting reminder processing for message: ${messageId || 'all'}`);
     
     const supabase = supabaseClient();
     
-    // CRITICAL FIX: Use database function to atomically acquire reminders
-    // This prevents multiple processes from grabbing the same reminders
-    let acquiredReminders;
+    // Step 1: Reset any stuck reminders using our new security definer function
+    console.log("[REMINDER-PROCESSOR] Checking for stuck reminders...");
+    const { data: resetResult, error: resetError } = await supabase.rpc('reset_stuck_reminders');
     
+    if (resetError) {
+      console.error("[REMINDER-PROCESSOR] Error resetting stuck reminders:", resetError);
+    } else if (resetResult && resetResult[0]?.reset_count > 0) {
+      console.log(`[REMINDER-PROCESSOR] Reset ${resetResult[0].reset_count} stuck reminders`);
+    }
+    
+    // Step 2: Acquire due reminders with proper locking
+    let dueReminders;
     if (messageId) {
-      // Acquire reminders for specific message
       const { data, error } = await supabase.rpc('acquire_message_reminders', {
         target_message_id: messageId,
         max_reminders: 10
       });
       
-      if (error) {
-        console.error("[REMINDER-PROCESSOR] Error acquiring message reminders:", error);
-        throw error;
-      }
-      
-      acquiredReminders = data || [];
+      if (error) throw error;
+      dueReminders = data || [];
     } else {
-      // Acquire due reminders across all messages
       const { data, error } = await supabase.rpc('acquire_due_reminders', {
-        max_reminders: 50,
+        max_reminders: forceSend ? 100 : 20,
         message_filter: null
       });
       
-      if (error) {
-        console.error("[REMINDER-PROCESSOR] Error acquiring due reminders:", error);
-        throw error;
-      }
-      
-      acquiredReminders = data || [];
+      if (error) throw error;
+      dueReminders = data || [];
     }
     
-    console.log(`[REMINDER-PROCESSOR] Acquired ${acquiredReminders.length} reminders for processing`);
+    console.log(`[REMINDER-PROCESSOR] Found ${dueReminders.length} reminders to process`);
     
-    if (acquiredReminders.length === 0) {
-      return results;
+    if (dueReminders.length === 0) {
+      return {
+        processedCount: 0,
+        successCount: 0,
+        failedCount: 0,
+        results: []
+      };
     }
     
-    // Process each acquired reminder with timeout protection
-    for (const reminder of acquiredReminders) {
-      results.processedCount++;
-      
+    // Step 3: Process each reminder with timeout protection
+    const results = [];
+    let successCount = 0;
+    let failedCount = 0;
+    
+    for (const reminder of dueReminders) {
       try {
         console.log(`[REMINDER-PROCESSOR] Processing reminder ${reminder.id} for message ${reminder.message_id}`);
         
-        // CRITICAL FIX: Add timeout wrapper to prevent infinite processing
-        const processed = await processReminderWithTimeout(reminder, forceSend, debug);
+        // Set a processing timeout of 30 seconds per reminder
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Processing timeout')), 30000);
+        });
         
-        if (processed) {
-          results.successCount++;
+        const processingPromise = processIndividualReminder(reminder, debug);
+        
+        const result = await Promise.race([processingPromise, timeoutPromise]);
+        
+        if (result.success) {
+          successCount++;
           console.log(`[REMINDER-PROCESSOR] Successfully processed reminder ${reminder.id}`);
         } else {
-          results.failureCount++;
-          console.log(`[REMINDER-PROCESSOR] Failed to process reminder ${reminder.id}`);
+          failedCount++;
+          console.error(`[REMINDER-PROCESSOR] Failed to process reminder ${reminder.id}:`, result.error);
         }
         
-      } catch (error) {
-        results.failureCount++;
-        console.error(`[REMINDER-PROCESSOR] Error processing reminder ${reminder.id}:`, error);
+        results.push(result);
         
-        // CRITICAL FIX: Always update status on error to prevent stuck reminders
-        await updateReminderStatus(reminder.id, 'failed', error.message);
+      } catch (error) {
+        console.error(`[REMINDER-PROCESSOR] Exception processing reminder ${reminder.id}:`, error);
+        failedCount++;
+        
+        // Mark reminder as failed if it times out or crashes
+        try {
+          await supabase
+            .from('reminder_schedule')
+            .update({
+              status: 'failed',
+              retry_count: (reminder.retry_count || 0) + 1,
+              last_attempt_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', reminder.id);
+        } catch (updateError) {
+          console.error(`[REMINDER-PROCESSOR] Failed to update failed reminder ${reminder.id}:`, updateError);
+        }
+        
+        results.push({
+          reminderId: reminder.id,
+          success: false,
+          error: error.message || 'Processing timeout or crash'
+        });
       }
     }
     
-    console.log(`[REMINDER-PROCESSOR] Processing complete. Processed: ${results.processedCount}, Success: ${results.successCount}, Failed: ${results.failureCount}`);
+    console.log(`[REMINDER-PROCESSOR] Processing complete. Processed: ${dueReminders.length}, Success: ${successCount}, Failed: ${failedCount}`);
     
-    return results;
+    return {
+      processedCount: dueReminders.length,
+      successCount,
+      failedCount,
+      results
+    };
     
   } catch (error) {
-    console.error("[REMINDER-PROCESSOR] Fatal error in processDueReminders:", error);
+    console.error("[REMINDER-PROCESSOR] Error in processDueReminders:", error);
     throw error;
   }
 }
 
 /**
- * Process a single reminder with timeout protection
+ * Process an individual reminder with proper error handling
  */
-async function processReminderWithTimeout(
-  reminder: any,
-  forceSend: boolean,
-  debug: boolean,
-  timeoutMs: number = 30000 // 30 second timeout
-): Promise<boolean> {
-  return new Promise(async (resolve) => {
-    // Set up timeout to prevent infinite processing
-    const timeout = setTimeout(async () => {
-      console.error(`[REMINDER-PROCESSOR] Timeout processing reminder ${reminder.id}`);
-      await updateReminderStatus(reminder.id, 'failed', 'Processing timeout');
-      resolve(false);
-    }, timeoutMs);
-    
-    try {
-      const result = await processSingleReminder(reminder, forceSend, debug);
-      clearTimeout(timeout);
-      resolve(result);
-    } catch (error) {
-      clearTimeout(timeout);
-      console.error(`[REMINDER-PROCESSOR] Error in timeout wrapper:`, error);
-      await updateReminderStatus(reminder.id, 'failed', error.message);
-      resolve(false);
-    }
-  });
-}
-
-/**
- * Process a single reminder and send notifications
- */
-async function processSingleReminder(
-  reminder: any,
-  forceSend: boolean,
-  debug: boolean
-): Promise<boolean> {
+async function processIndividualReminder(reminder: any, debug: boolean = false): Promise<any> {
+  const supabase = supabaseClient();
+  
   try {
-    const supabase = supabaseClient();
-    
     // Get message and condition details
     const { data: messageData, error: messageError } = await supabase
       .from('messages')
       .select(`
         *,
-        message_conditions!inner(*)
+        message_conditions!inner(
+          *,
+          recipients
+        )
       `)
       .eq('id', reminder.message_id)
       .single();
     
     if (messageError || !messageData) {
-      console.error(`[REMINDER-PROCESSOR] Error fetching message ${reminder.message_id}:`, messageError);
-      throw new Error(`Message not found: ${reminder.message_id}`);
+      throw new Error(`Failed to fetch message data: ${messageError?.message}`);
     }
     
-    const message = messageData;
     const condition = messageData.message_conditions[0];
-    
-    console.log(`[REMINDER-PROCESSOR] Processing reminder for message "${message.title}"`);
-    
-    // CRITICAL FIX: Determine correct recipients based on condition type
-    let recipients = [];
-    
-    if (['no_check_in', 'recurring_check_in', 'inactivity_to_date'].includes(condition.condition_type)) {
-      // For check-in conditions, send reminder to the message creator
-      console.log(`[REMINDER-PROCESSOR] Check-in reminder - sending to creator ${message.user_id}`);
-      
-      // Get creator's profile for email
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', message.user_id)
-        .single();
-      
-      if (profile) {
-        recipients = [{
-          email: profile.backup_email || `${message.user_id}@example.com`, // Fallback if no email
-          name: `${profile.first_name} ${profile.last_name}`.trim() || 'User',
-          phone: profile.whatsapp_number
-        }];
-      }
-    } else {
-      // For other conditions, use configured recipients
-      recipients = condition.recipients || [];
+    if (!condition || !condition.recipients) {
+      throw new Error('No condition or recipients found for message');
     }
     
-    if (recipients.length === 0) {
-      console.warn(`[REMINDER-PROCESSOR] No recipients found for reminder ${reminder.id}`);
-      await updateReminderStatus(reminder.id, 'failed', 'No recipients configured');
-      return false;
-    }
+    // Process recipients
+    const recipients = Array.isArray(condition.recipients) ? condition.recipients : [condition.recipients];
+    let emailsSent = 0;
+    let emailsFailed = 0;
     
-    console.log(`[REMINDER-PROCESSOR] Sending to ${recipients.length} recipients`);
-    
-    // Send notifications to all recipients
-    let allSuccessful = true;
-    
-    for (let i = 0; i < recipients.length; i++) {
-      const recipient = recipients[i];
-      
+    for (const recipient of recipients) {
       try {
+        console.log(`[REMINDER-PROCESSOR] Sending email to ${recipient.email}`);
+        
+        const emailResult = await sendEmail({
+          to: recipient.email,
+          subject: `Reminder: ${messageData.title}`,
+          html: generateReminderEmailHtml(messageData, condition, reminder),
+          from: "DeadManSwitch <noreply@deadmanswitch.app>"
+        });
+        
+        if (emailResult.success) {
+          emailsSent++;
+        } else {
+          emailsFailed++;
+          console.error(`[REMINDER-PROCESSOR] Email failed for ${recipient.email}:`, emailResult.error);
+        }
+        
         // Log delivery attempt
-        await logDeliveryAttempt(reminder, recipient, i + 1);
+        await supabase.from('reminder_delivery_log').insert({
+          reminder_id: reminder.id,
+          message_id: reminder.message_id,
+          condition_id: reminder.condition_id,
+          recipient: recipient.email,
+          delivery_channel: 'email',
+          delivery_status: emailResult.success ? 'delivered' : 'failed',
+          error_message: emailResult.error,
+          response_data: emailResult
+        });
         
-        // Send email notification
-        if (recipient.email) {
-          console.log(`[REMINDER-PROCESSOR] Sending email to ${recipient.email}`);
-          
-          const emailResult = await sendEmail({
-            to: recipient.email,
-            subject: `Reminder: ${message.title}`,
-            html: generateReminderEmailContent(message, condition, reminder),
-            from: 'notifications@yourdomain.com'
-          });
-          
-          if (!emailResult.success) {
-            console.error(`[REMINDER-PROCESSOR] Email failed for ${recipient.email}:`, emailResult.error);
-            allSuccessful = false;
-          } else {
-            console.log(`[REMINDER-PROCESSOR] Email sent successfully to ${recipient.email}`);
-          }
-        }
-        
-        // Send WhatsApp notification if phone number available
-        if (recipient.phone) {
-          console.log(`[REMINDER-PROCESSOR] Sending WhatsApp to ${recipient.phone}`);
-          
-          const whatsappResult = await sendWhatsAppMessage({
-            to: recipient.phone,
-            message: generateReminderWhatsAppContent(message, condition, reminder)
-          });
-          
-          if (!whatsappResult.success) {
-            console.error(`[REMINDER-PROCESSOR] WhatsApp failed for ${recipient.phone}:`, whatsappResult.error);
-            // Don't mark as failed if email succeeded
-          } else {
-            console.log(`[REMINDER-PROCESSOR] WhatsApp sent successfully to ${recipient.phone}`);
-          }
-        }
-        
-      } catch (error) {
-        console.error(`[REMINDER-PROCESSOR] Error sending to recipient ${recipient.email}:`, error);
-        allSuccessful = false;
+      } catch (recipientError) {
+        console.error(`[REMINDER-PROCESSOR] Error sending to ${recipient.email}:`, recipientError);
+        emailsFailed++;
       }
     }
     
-    // CRITICAL FIX: Always update status to prevent stuck reminders
-    if (allSuccessful) {
-      await updateReminderStatus(reminder.id, 'sent', null);
-      console.log(`[REMINDER-PROCESSOR] Reminder ${reminder.id} completed successfully`);
-      return true;
-    } else {
-      await updateReminderStatus(reminder.id, 'failed', 'Some deliveries failed');
-      console.log(`[REMINDER-PROCESSOR] Reminder ${reminder.id} completed with failures`);
-      return false;
+    // Update reminder status based on results
+    const finalStatus = emailsSent > 0 ? 'sent' : 'failed';
+    
+    await supabase
+      .from('reminder_schedule')
+      .update({
+        status: finalStatus,
+        last_attempt_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', reminder.id);
+    
+    // Add to sent_reminders table if successful
+    if (finalStatus === 'sent') {
+      await supabase.from('sent_reminders').insert({
+        message_id: reminder.message_id,
+        condition_id: reminder.condition_id,
+        user_id: messageData.user_id,
+        deadline: condition.trigger_date || new Date().toISOString(),
+        scheduled_for: reminder.scheduled_at,
+        sent_at: new Date().toISOString()
+      });
     }
+    
+    return {
+      reminderId: reminder.id,
+      success: finalStatus === 'sent',
+      emailsSent,
+      emailsFailed,
+      error: finalStatus === 'failed' ? 'All email deliveries failed' : null
+    };
     
   } catch (error) {
     console.error(`[REMINDER-PROCESSOR] Error processing reminder ${reminder.id}:`, error);
-    throw error;
-  }
-}
-
-/**
- * Update reminder status with proper error handling
- */
-async function updateReminderStatus(reminderId: string, status: string, errorMessage?: string): Promise<void> {
-  try {
-    const supabase = supabaseClient();
     
-    const updateData: any = {
-      status: status,
-      updated_at: new Date().toISOString()
+    // Mark as failed in database
+    try {
+      await supabase
+        .from('reminder_schedule')
+        .update({
+          status: 'failed',
+          retry_count: (reminder.retry_count || 0) + 1,
+          last_attempt_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', reminder.id);
+    } catch (updateError) {
+      console.error(`[REMINDER-PROCESSOR] Failed to mark reminder as failed:`, updateError);
+    }
+    
+    return {
+      reminderId: reminder.id,
+      success: false,
+      error: error.message || 'Unknown error'
     };
-    
-    if (status === 'failed' && errorMessage) {
-      updateData.retry_count = 0; // Reset retry count on failure
-    }
-    
-    const { error } = await supabase
-      .from('reminder_schedule')
-      .update(updateData)
-      .eq('id', reminderId);
-    
-    if (error) {
-      console.error(`[REMINDER-PROCESSOR] Error updating reminder status:`, error);
-      // Don't throw here as it would cause infinite loops
-    }
-  } catch (error) {
-    console.error(`[REMINDER-PROCESSOR] Exception updating reminder status:`, error);
-    // Don't throw here as it would cause infinite loops
   }
 }
 
 /**
- * Log delivery attempt for tracking
+ * Generate HTML content for reminder emails
  */
-async function logDeliveryAttempt(reminder: any, recipient: any, channelOrder: number): Promise<void> {
-  try {
-    const supabase = supabaseClient();
-    
-    await supabase
-      .from('reminder_delivery_log')
-      .insert({
-        reminder_id: reminder.id,
-        message_id: reminder.message_id,
-        condition_id: reminder.condition_id,
-        recipient: recipient.email || recipient.phone || 'unknown',
-        delivery_channel: 'email',
-        channel_order: channelOrder,
-        delivery_status: 'processing',
-        response_data: { 
-          recipient_name: recipient.name,
-          reminder_type: reminder.reminder_type,
-          scheduled_at: reminder.scheduled_at
+function generateReminderEmailHtml(message: any, condition: any, reminder: any): string {
+  const reminderType = reminder.reminder_type === 'final_delivery' ? 'FINAL DELIVERY' : 'REMINDER';
+  
+  return `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #dc2626;">${reminderType}: ${message.title}</h2>
+      
+      <div style="background-color: #fef2f2; border: 1px solid #fecaca; padding: 16px; border-radius: 8px; margin: 16px 0;">
+        <p><strong>This is an automated ${reminderType.toLowerCase()} from your DeadManSwitch message.</strong></p>
+        
+        ${reminder.reminder_type === 'final_delivery' ? 
+          '<p style="color: #dc2626; font-weight: bold;">⚠️ This is the final delivery of your message. The deadline has been reached.</p>' :
+          '<p>Your check-in deadline is approaching. Please check in to prevent this message from being delivered.</p>'
         }
-      });
-  } catch (error) {
-    console.error("[REMINDER-PROCESSOR] Error logging delivery attempt:", error);
-    // Non-fatal, continue processing
-  }
-}
-
-/**
- * Generate email content for reminders
- */
-function generateReminderEmailContent(message: any, condition: any, reminder: any): string {
-  const isCheckIn = ['no_check_in', 'recurring_check_in', 'inactivity_to_date'].includes(condition.condition_type);
-  
-  if (isCheckIn) {
-    const deadline = condition.last_checked ? 
-      new Date(new Date(condition.last_checked).getTime() + (condition.hours_threshold * 60 * 60 * 1000) + ((condition.minutes_threshold || 0) * 60 * 1000)) :
-      null;
-    
-    return `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #dc2626;">Check-in Reminder</h2>
-        <p>This is a reminder that you need to check in for your message:</p>
-        <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="margin: 0 0 10px 0; color: #1f2937;">${message.title}</h3>
-          <p style="margin: 0; color: #4b5563;">${message.content || message.text_content || ''}</p>
-        </div>
-        ${deadline ? `<p><strong>Deadline:</strong> ${deadline.toLocaleString()}</p>` : ''}
-        ${condition.check_in_code ? `<p><strong>Check-in Code:</strong> ${condition.check_in_code}</p>` : ''}
-        <p>If you don't check in by the deadline, your message will be automatically delivered.</p>
-        <p style="color: #6b7280; font-size: 14px;">This is an automated reminder from your deadman's switch system.</p>
       </div>
-    `;
-  } else {
-    return `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #dc2626;">Message Reminder</h2>
-        <p>This is a reminder about your scheduled message:</p>
-        <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="margin: 0 0 10px 0; color: #1f2937;">${message.title}</h3>
-          <p style="margin: 0; color: #4b5563;">${message.content || message.text_content || ''}</p>
-        </div>
-        <p>Scheduled for: ${new Date(reminder.scheduled_at).toLocaleString()}</p>
-        <p style="color: #6b7280; font-size: 14px;">This is an automated reminder from your messaging system.</p>
+      
+      <div style="background-color: #f9fafb; padding: 16px; border-radius: 8px; margin: 16px 0;">
+        <h3>Message Content:</h3>
+        ${message.text_content ? `<p>${message.text_content}</p>` : ''}
+        ${message.content ? `<p>${message.content}</p>` : ''}
+        
+        ${message.share_location && message.location_name ? 
+          `<p><strong>Location:</strong> ${message.location_name}</p>` : ''
+        }
       </div>
-    `;
-  }
-}
-
-/**
- * Generate WhatsApp content for reminders
- */
-function generateReminderWhatsAppContent(message: any, condition: any, reminder: any): string {
-  const isCheckIn = ['no_check_in', 'recurring_check_in', 'inactivity_to_date'].includes(condition.condition_type);
-  
-  if (isCheckIn) {
-    const deadline = condition.last_checked ? 
-      new Date(new Date(condition.last_checked).getTime() + (condition.hours_threshold * 60 * 60 * 1000) + ((condition.minutes_threshold || 0) * 60 * 1000)) :
-      null;
-    
-    return `🚨 CHECK-IN REMINDER\n\nMessage: ${message.title}\n${deadline ? `Deadline: ${deadline.toLocaleString()}\n` : ''}${condition.check_in_code ? `Code: ${condition.check_in_code}\n` : ''}\nPlease check in to prevent automatic delivery.`;
-  } else {
-    return `⏰ REMINDER\n\nMessage: ${message.title}\nScheduled: ${new Date(reminder.scheduled_at).toLocaleString()}\n\n${message.content || message.text_content || ''}`;
-  }
+      
+      <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e7eb; font-size: 14px; color: #6b7280;">
+        <p>This message was sent automatically by DeadManSwitch. If you believe this was sent in error, please contact the sender.</p>
+        <p>Reminder scheduled for: ${new Date(reminder.scheduled_at).toLocaleString()}</p>
+      </div>
+    </div>
+  `;
 }
