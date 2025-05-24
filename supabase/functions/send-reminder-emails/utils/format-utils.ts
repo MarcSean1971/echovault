@@ -2,8 +2,9 @@
 /**
  * Utility function to format time until deadline for email notifications
  * Converts hours to a human-readable format
+ * FIXED: Removed formatReminderTime function that was causing errors
  */
-export function formatReminderTime(hoursUntilDeadline: number): string {
+export function formatTimeUntilDeadline(hoursUntilDeadline: number): string {
   // Handle negative or zero hours
   if (hoursUntilDeadline <= 0) {
     return "soon";
@@ -32,4 +33,22 @@ export function formatReminderTime(hoursUntilDeadline: number): string {
   // Just hours (for values between 1 and 24)
   const roundedHours = Math.floor(hoursUntilDeadline);
   return roundedHours === 1 ? "1 hour" : `${roundedHours} hours`;
+}
+
+/**
+ * Format reminder time for display in emails and notifications
+ */
+export function formatReminderTimeDisplay(minutesBeforeDeadline: number): string {
+  if (minutesBeforeDeadline < 60) {
+    return `${minutesBeforeDeadline} minutes`;
+  }
+  
+  const hours = Math.floor(minutesBeforeDeadline / 60);
+  const minutes = minutesBeforeDeadline % 60;
+  
+  if (minutes === 0) {
+    return `${hours} ${hours === 1 ? 'hour' : 'hours'}`;
+  }
+  
+  return `${hours} ${hours === 1 ? 'hour' : 'hours'} and ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}`;
 }

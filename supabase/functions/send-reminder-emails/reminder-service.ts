@@ -1,108 +1,234 @@
 
 import { supabaseClient } from "./supabase-client.ts";
+import { formatTimeUntilDeadline } from "./utils/format-utils.ts";
 
 /**
- * Process a single reminder
- * This is a temporary stub for testing purposes
+ * FIXED: Process a single reminder with improved error handling and rate limiting
  */
-export async function processReminder(reminder: any, debug: boolean = false): Promise<any> {
+export async function processReminder(reminder: any, debug: boolean = false): Promise<{ success: boolean; error?: string }> {
+  const supabase = supabaseClient();
+  
   try {
     if (debug) {
       console.log(`Processing reminder ${reminder.id} for message ${reminder.message_id}`);
     }
     
-    const supabase = supabaseClient();
-    
-    // Get the message and condition details
+    // Get message and condition details
     const { data: message, error: messageError } = await supabase
       .from('messages')
-      .select('*')
+      .select('*, message_conditions!inner(*)')
       .eq('id', reminder.message_id)
       .single();
     
-    if (messageError) {
+    if (messageError || !message) {
       console.error(`Error fetching message ${reminder.message_id}:`, messageError);
-      return { 
-        success: false, 
-        error: `Error fetching message: ${messageError.message}`,
-        results: []
-      };
+      return { success: false, error: 'Message not found' };
     }
     
-    // Get user details to send notification
-    const { data: userData, error: userError } = await supabase
-      .from('profiles')
-      .select('id, email, first_name, last_name')
-      .eq('id', message.user_id)
-      .single();
-      
-    if (userError) {
-      console.error(`Error fetching user ${message.user_id}:`, userError);
-      return { 
-        success: false, 
-        error: `Error fetching user: ${userError.message}`,
-        results: []
-      };
+    const condition = message.message_conditions[0];
+    if (!condition) {
+      console.error(`No condition found for message ${reminder.message_id}`);
+      return { success: false, error: 'Condition not found' };
     }
     
-    if (!userData.email) {
-      return { 
-        success: false, 
-        error: `User ${userData.id} has no email address`,
-        results: []
-      };
+    // Calculate deadline and time until deadline
+    let effectiveDeadline: Date;
+    
+    if (['no_check_in', 'recurring_check_in', 'inactivity_to_date'].includes(condition.condition_type)) {
+      // For check-in conditions, calculate virtual deadline
+      const lastChecked = new Date(condition.last_checked);
+      effectiveDeadline = new Date(lastChecked);
+      effectiveDeadline.setHours(effectiveDeadline.getHours() + (condition.hours_threshold || 0));
+      effectiveDeadline.setMinutes(effectiveDeadline.getMinutes() + (condition.minutes_threshold || 0));
+    } else if (condition.trigger_date) {
+      effectiveDeadline = new Date(condition.trigger_date);
+    } else {
+      console.error(`No deadline could be determined for reminder ${reminder.id}`);
+      return { success: false, error: 'No deadline available' };
     }
     
-    // For testing, we'll just return a success message without actually sending an email
-    // In a real implementation, we'd send an email here
-    console.log(`[REMINDER] Would send email to: ${userData.email} for message: ${message.title}`);
+    const now = new Date();
+    const hoursUntilDeadline = (effectiveDeadline.getTime() - now.getTime()) / (1000 * 60 * 60);
+    const timeUntilText = formatTimeUntilDeadline(hoursUntilDeadline);
     
-    // Use the send-message-notifications function to send an actual notification
-    try {
-      const { data, error } = await supabase.functions.invoke("send-message-notifications", {
-        body: {
-          messageId: reminder.message_id,
-          debug: true,
-          forceSend: true,
-          testMode: true,
-          source: "reminder-test-trigger"
+    // Determine recipients based on condition type
+    let recipients: any[] = [];
+    
+    if (['no_check_in', 'recurring_check_in', 'inactivity_to_date'].includes(condition.condition_type)) {
+      // For check-in conditions, send to message creator
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', message.user_id)
+        .single();
+        
+      if (profile) {
+        // Get user email from auth
+        const { data: { user } } = await supabase.auth.admin.getUserById(message.user_id);
+        if (user?.email) {
+          recipients.push({
+            name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'User',
+            email: user.email,
+            phone: profile.whatsapp_number
+          });
         }
-      });
-      
-      if (error) {
-        console.error("Error invoking send-message-notifications:", error);
-        return { 
-          success: false, 
-          error: `Failed to send notification: ${error.message}`,
-          results: []
-        };
       }
-      
-      console.log("Notification function response:", data);
-      
-      return {
-        success: true,
-        results: [{
-          recipient: userData.email,
-          recipientId: userData.id,
-          messageId: message.id,
-          status: "delivered"
-        }]
-      };
-    } catch (notificationError: any) {
-      console.error("Error sending notification:", notificationError);
-      return { 
-        success: false, 
-        error: `Notification error: ${notificationError.message}`,
-        results: []
-      };
+    } else {
+      // For other conditions, use configured recipients
+      recipients = condition.recipients || [];
     }
-  } catch (error: any) {
-    console.error(`Error processing reminder:`, error);
+    
+    if (recipients.length === 0) {
+      console.error(`No recipients found for reminder ${reminder.id}`);
+      return { success: false, error: 'No recipients configured' };
+    }
+    
+    // Send notifications with rate limiting
+    let successCount = 0;
+    let errors: string[] = [];
+    
+    for (const recipient of recipients) {
+      try {
+        // Add delay between recipients to avoid rate limiting
+        if (successCount > 0) {
+          await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay
+        }
+        
+        // Send email notification
+        if (recipient.email) {
+          const emailResult = await sendEmailNotification(recipient, message, condition, timeUntilText, reminder.reminder_type);
+          if (emailResult.success) {
+            successCount++;
+            
+            // Log successful delivery
+            await supabase.from('reminder_delivery_log').insert({
+              reminder_id: reminder.id,
+              message_id: reminder.message_id,
+              condition_id: reminder.condition_id,
+              recipient: recipient.email,
+              delivery_channel: 'email',
+              delivery_status: 'sent',
+              response_data: { sent_at: new Date().toISOString() }
+            });
+          } else {
+            errors.push(`Email to ${recipient.email}: ${emailResult.error}`);
+          }
+        }
+        
+        // Send WhatsApp notification if phone number available
+        if (recipient.phone) {
+          await new Promise(resolve => setTimeout(resolve, 1000)); // Additional delay for WhatsApp
+          
+          const whatsappResult = await sendWhatsAppNotification(recipient, message, condition, timeUntilText, reminder.reminder_type);
+          if (whatsappResult.success) {
+            successCount++;
+            
+            // Log successful delivery
+            await supabase.from('reminder_delivery_log').insert({
+              reminder_id: reminder.id,
+              message_id: reminder.message_id,
+              condition_id: reminder.condition_id,
+              recipient: recipient.phone,
+              delivery_channel: 'whatsapp',
+              delivery_status: 'sent',
+              response_data: { sent_at: new Date().toISOString() }
+            });
+          } else {
+            errors.push(`WhatsApp to ${recipient.phone}: ${whatsappResult.error}`);
+          }
+        }
+        
+      } catch (recipientError: any) {
+        console.error(`Error processing recipient ${recipient.email || recipient.phone}:`, recipientError);
+        errors.push(`${recipient.email || recipient.phone}: ${recipientError.message}`);
+      }
+    }
+    
+    if (debug) {
+      console.log(`Reminder ${reminder.id} processed: ${successCount} successful deliveries, ${errors.length} errors`);
+      if (errors.length > 0) {
+        console.log(`Errors:`, errors);
+      }
+    }
+    
     return { 
-      success: false, 
-      error: error.message || "Unknown error",
-      results: []
+      success: successCount > 0, 
+      error: errors.length > 0 ? errors.join('; ') : undefined 
     };
+    
+  } catch (error: any) {
+    console.error(`Error processing reminder ${reminder.id}:`, error);
+    return { success: false, error: error.message || 'Unknown error' };
+  }
+}
+
+/**
+ * Send email notification with improved error handling
+ */
+async function sendEmailNotification(recipient: any, message: any, condition: any, timeUntilText: string, reminderType: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = supabaseClient();
+    
+    const subject = reminderType === 'final_delivery' 
+      ? `URGENT: ${message.title} - Final Notification`
+      : `Reminder: ${message.title} - ${timeUntilText} remaining`;
+    
+    const body = `
+      <h2>${reminderType === 'final_delivery' ? 'FINAL NOTIFICATION' : 'Reminder'}</h2>
+      <p><strong>Message:</strong> ${message.title}</p>
+      <p><strong>Content:</strong> ${message.content || message.text_content || 'No content'}</p>
+      <p><strong>Time remaining:</strong> ${timeUntilText}</p>
+      ${reminderType === 'final_delivery' ? '<p style="color: red;"><strong>This is the final notification for this message.</strong></p>' : ''}
+    `;
+    
+    const { error } = await supabase.functions.invoke('send-test-email', {
+      body: {
+        recipientName: recipient.name,
+        recipientEmail: recipient.email,
+        senderName: 'EchoVault',
+        messageTitle: subject,
+        messageContent: body
+      }
+    });
+    
+    if (error) {
+      throw error;
+    }
+    
+    return { success: true };
+    
+  } catch (error: any) {
+    console.error('Error sending email notification:', error);
+    return { success: false, error: error.message || 'Email sending failed' };
+  }
+}
+
+/**
+ * Send WhatsApp notification with improved error handling
+ */
+async function sendWhatsAppNotification(recipient: any, message: any, condition: any, timeUntilText: string, reminderType: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = supabaseClient();
+    
+    const whatsappMessage = reminderType === 'final_delivery'
+      ? `🚨 FINAL NOTIFICATION\n\n📋 ${message.title}\n📝 ${message.content || message.text_content || 'No content'}\n⏰ Time remaining: ${timeUntilText}\n\nThis is the final notification for this message.`
+      : `⏰ REMINDER\n\n📋 ${message.title}\n📝 ${message.content || message.text_content || 'No content'}\n⏰ Time remaining: ${timeUntilText}`;
+    
+    const { error } = await supabase.functions.invoke('send-whatsapp-notification', {
+      body: {
+        to: recipient.phone,
+        message: whatsappMessage
+      }
+    });
+    
+    if (error) {
+      throw error;
+    }
+    
+    return { success: true };
+    
+  } catch (error: any) {
+    console.error('Error sending WhatsApp notification:', error);
+    return { success: false, error: error.message || 'WhatsApp sending failed' };
   }
 }
