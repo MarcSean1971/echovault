@@ -2,8 +2,8 @@
 import React from "react";
 import { CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { Message } from "@/types/message";
-import { Video, File } from "lucide-react";
+import { Message, MessageCondition } from "@/types/message";
+import { Video, File, Users } from "lucide-react";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface MessageCardHeaderProps {
@@ -11,14 +11,18 @@ interface MessageCardHeaderProps {
   isArmed: boolean;
   formatDate: (dateString: string) => string;
   isPanicTrigger?: boolean;
+  condition?: MessageCondition | null;
 }
 
-export function MessageCardHeader({ message, isArmed, formatDate, isPanicTrigger = false }: MessageCardHeaderProps) {
+export function MessageCardHeader({ message, isArmed, formatDate, isPanicTrigger = false, condition }: MessageCardHeaderProps) {
   // Check if message has video content
   const hasVideo = message.message_type === 'video' || message.video_content;
   
   // Check if message has file attachments
   const hasAttachments = message.attachments && message.attachments.length > 0;
+
+  // Get recipient count from condition
+  const recipientCount = condition?.recipients?.length || 0;
 
   return (
     <div className="flex justify-between items-start">
@@ -37,6 +41,14 @@ export function MessageCardHeader({ message, isArmed, formatDate, isPanicTrigger
           {/* File icon if message has attachments */}
           {hasAttachments && (
             <File className={`h-3.5 w-3.5 text-muted-foreground ml-1 hover:text-primary ${HOVER_TRANSITION}`} />
+          )}
+
+          {/* Recipients icon with count */}
+          {recipientCount > 0 && (
+            <div className="flex items-center ml-1">
+              <Users className={`h-3.5 w-3.5 text-muted-foreground hover:text-primary ${HOVER_TRANSITION}`} />
+              <span className="text-xs text-muted-foreground ml-0.5">{recipientCount}</span>
+            </div>
           )}
         </p>
       </div>

@@ -1,4 +1,3 @@
-
 import React, { memo, useMemo, useEffect, useState } from "react";
 import { Message } from "@/types/message";
 import { formatDate } from "@/utils/messageFormatUtils";
@@ -86,8 +85,9 @@ function MessageCardInner({ message, onDelete, reminderInfo }: MessageCardProps)
       isArmed={isArmed} 
       formatDate={formatDate}
       isPanicTrigger={isPanicTrigger}
+      condition={condition}
     />
-  ), [message, isArmed, isPanicTrigger]);
+  ), [message, isArmed, isPanicTrigger, condition]);
   
   const content = useMemo(() => (
     <MessageCardContent 
