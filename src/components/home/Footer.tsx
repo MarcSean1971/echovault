@@ -16,6 +16,9 @@ export function Footer() {
     };
 
     try {
+      // Check if we're on HTTPS (required for clipboard API)
+      const isHttps = window.location.protocol === 'https:';
+      
       // Use Web Share API if available (mobile devices)
       if (navigator.share) {
         await navigator.share(shareData);
@@ -23,24 +26,60 @@ export function Footer() {
           title: "Shared successfully",
           description: "Thanks for sharing EchoVault!"
         });
-      } else {
-        // Fallback to clipboard for desktop
+        return;
+      }
+
+      // Try clipboard API if on HTTPS
+      if (isHttps && navigator.clipboard) {
         await navigator.clipboard.writeText(window.location.origin);
         toast({
           title: "Link copied!",
           description: "EchoVault link has been copied to your clipboard"
         });
+        return;
       }
-    } catch (error) {
-      // Handle share cancellation or errors gracefully
-      if (error.name !== 'AbortError') {
-        console.error('Share failed:', error);
+
+      // Fallback: Create temporary input element for manual copying
+      const tempInput = document.createElement('input');
+      tempInput.value = window.location.origin;
+      document.body.appendChild(tempInput);
+      tempInput.select();
+      tempInput.setSelectionRange(0, 99999); // For mobile devices
+
+      // Try document.execCommand as fallback
+      const successful = document.execCommand('copy');
+      document.body.removeChild(tempInput);
+
+      if (successful) {
         toast({
-          title: "Share failed",
-          description: "Please try copying the link manually",
-          variant: "destructive"
+          title: "Link copied!",
+          description: "EchoVault link has been copied to your clipboard"
+        });
+      } else {
+        // Final fallback: Show the URL for manual copying
+        toast({
+          title: "Manual copy needed",
+          description: `Please copy this URL manually: ${window.location.origin}`,
+          duration: 10000 // Show longer for manual copying
         });
       }
+
+    } catch (error) {
+      // Handle share cancellation or errors gracefully
+      if (error.name === 'AbortError') {
+        // User cancelled the share dialog, don't show error
+        return;
+      }
+
+      console.error('Share failed:', error);
+      
+      // Show helpful error message with manual copy option
+      toast({
+        title: "Share not available",
+        description: `Please copy this URL manually: ${window.location.origin}`,
+        duration: 10000,
+        variant: "destructive"
+      });
     }
   };
 
