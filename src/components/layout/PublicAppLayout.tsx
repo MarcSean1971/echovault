@@ -5,30 +5,15 @@ import { Logo } from "./navbar/Logo";
 
 /**
  * Public layout for unauthenticated pages like message access
- * NUCLEAR OPTION: Using inline styles to force white background
+ * Uses clean white background but allows theme colors for UI elements
  */
 export default function PublicAppLayout() {
   return (
-    <div className="min-h-screen bg-white flex flex-col public-message-wrapper">
-      {/* Header with FORCED white background using inline styles */}
-      <header 
-        className="public-header sticky top-0 z-30 w-full border-b shadow-sm md:py-3 py-2"
-        style={{
-          backgroundColor: '#FFFFFF',
-          background: '#FFFFFF',
-          backgroundImage: 'none',
-          backdropFilter: 'none',
-          WebkitBackdropFilter: 'none'
-        }}
-      >
-        <div 
-          className="container mx-auto px-4 flex items-center justify-between"
-          style={{
-            backgroundColor: '#FFFFFF',
-            background: '#FFFFFF'
-          }}
-        >
-          <div className="public-logo">
+    <div className="min-h-screen bg-white flex flex-col">
+      {/* Header with theme colors allowed */}
+      <header className="sticky top-0 z-30 w-full border-b shadow-sm md:py-3 py-2 bg-white">
+        <div className="container mx-auto px-4 flex items-center justify-between">
+          <div>
             <Logo />
           </div>
           <div className="text-sm text-muted-foreground">
@@ -38,7 +23,7 @@ export default function PublicAppLayout() {
       </header>
       
       <Toaster />
-      <main className="flex-1 w-full bg-white">
+      <main className="flex-1 w-full public-message-content">
         <Outlet />
       </main>
     </div>

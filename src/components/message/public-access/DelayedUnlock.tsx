@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Clock } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -59,9 +58,9 @@ export const DelayedUnlock = ({ unlockTime, onUnlock }: DelayedUnlockProps) => {
   }, [unlockTime]);
 
   return (
-    <div className="container mx-auto max-w-3xl px-4 py-8" style={{ backgroundColor: '#FFFFFF' }}>
-      <div className="bg-white" style={{ backgroundColor: '#FFFFFF' }}>
-        <Card className={`p-6 shadow-md border-primary/20 bg-white ${HOVER_TRANSITION}`} style={{ backgroundColor: '#FFFFFF' }}>
+    <div className="container mx-auto max-w-3xl px-4 py-8 bg-white">
+      <div className="bg-white">
+        <Card className={`p-6 shadow-md border-primary/20 bg-white ${HOVER_TRANSITION}`}>
           <div className="flex flex-col items-center justify-center text-center space-y-4 py-8">
             <Clock className={`h-12 w-12 text-primary ${HOVER_TRANSITION}`} />
             <h2 className="text-xl font-semibold">Message Unlock Delayed</h2>

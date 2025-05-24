@@ -87,12 +87,9 @@
     --sidebar-ring: 262 83% 58%;
   }
 
-  /* OVERRIDE BACKGROUNDS FOR PUBLIC MESSAGE PAGES */
-  .public-message-wrapper {
-    --background: 0 0% 100%; /* Force white background */
-    --card: 0 0% 100%;
-    --secondary: 0 0% 100%;
-    --muted: 0 0% 100%;
+  /* Keep only minimal overrides for public message pages - just background */
+  .public-message-content {
+    --background: 0 0% 100%; /* Force white background only for readability */
   }
 }
 
@@ -136,97 +133,9 @@
   .btn-hover-effect {
     @apply shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5;
   }
-}
 
-/* NUCLEAR OPTION: Super aggressive CSS for public message pages */
-.public-message-wrapper,
-.public-message-wrapper *,
-.public-message-wrapper .bg-background,
-.public-message-wrapper .bg-secondary,
-.public-message-wrapper .bg-muted {
-  background-color: #FFFFFF !important;
-  background: #FFFFFF !important;
-  background-image: none !important;
-}
-
-/* NUCLEAR OVERRIDE: Target ALL Tailwind background classes in public wrapper */
-.public-message-wrapper .bg-muted,
-.public-message-wrapper .bg-secondary,
-.public-message-wrapper .bg-background,
-.public-message-wrapper .bg-gray-50,
-.public-message-wrapper .bg-slate-50,
-.public-message-wrapper .bg-stone-50,
-.public-message-wrapper .bg-neutral-50,
-.public-message-wrapper .bg-zinc-50 {
-  background-color: #FFFFFF !important;
-  background: #FFFFFF !important;
-}
-
-/* Header specific overrides */
-header.public-header,
-header.public-header *,
-.public-header,
-.public-header * {
-  background-color: #FFFFFF !important;
-  background-image: none !important;
-  background: #FFFFFF !important;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
-
-/* Force remove any potential background from all child elements */
-header.public-header > *,
-header.public-header > * > *,
-header.public-header > * > * > * {
-  background-color: transparent !important;
-  background-image: none !important;
-  background: transparent !important;
-}
-
-/* Ensure the container itself is white */
-header.public-header .container {
-  background-color: #FFFFFF !important;
-  background: #FFFFFF !important;
-}
-
-/* REMOVED: Logo styling override - let it use natural colors */
-
-/* Override any potential Tailwind classes in public message wrapper */
-.public-message-wrapper .bg-background,
-.public-message-wrapper .bg-secondary,
-.public-message-wrapper .bg-muted,
-.public-message-wrapper .bg-primary,
-.public-message-wrapper .bg-accent {
-  background-color: #FFFFFF !important;
-}
-
-/* Force header background in every possible way */
-header[class*="public"] {
-  background-color: #FFFFFF !important;
-  background-image: none !important;
-  background: #FFFFFF !important;
-}
-
-/* Force card backgrounds to white in public message wrapper */
-.public-message-wrapper .card,
-.public-message-wrapper [class*="Card"] {
-  background-color: #FFFFFF !important;
-  background: #FFFFFF !important;
-}
-
-/* ULTIMATE OVERRIDE: Force white on ALL elements inside public routes */
-.public-message-wrapper * {
-  --tw-bg-opacity: 1 !important;
-}
-
-.public-message-wrapper .bg-muted {
-  background-color: rgb(255 255 255 / var(--tw-bg-opacity)) !important;
-}
-
-.public-message-wrapper .bg-secondary {
-  background-color: rgb(255 255 255 / var(--tw-bg-opacity)) !important;
-}
-
-.public-message-wrapper .bg-background {
-  background-color: rgb(255 255 255 / var(--tw-bg-opacity)) !important;
+  /* Only force white background for content areas, allow UI elements to use theme colors */
+  .public-message-content {
+    background-color: #FFFFFF !important;
+  }
 }

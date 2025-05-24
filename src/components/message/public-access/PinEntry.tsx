@@ -27,9 +27,9 @@ export const PinEntry = ({ onSubmit }: PinEntryProps) => {
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8" style={{ backgroundColor: '#FFFFFF' }}>
-      <div className="bg-white" style={{ backgroundColor: '#FFFFFF' }}>
-        <Card className="p-6 bg-white" style={{ backgroundColor: '#FFFFFF' }}>
+    <div className="max-w-3xl mx-auto px-4 py-8 bg-white">
+      <div className="bg-white">
+        <Card className="p-6 bg-white">
           <div className="flex flex-col items-center justify-center text-center space-y-4 py-8">
             <Key className="h-12 w-12 text-primary" />
             <h2 className="text-xl font-semibold">Secure Message</h2>
@@ -42,7 +42,6 @@ export const PinEntry = ({ onSubmit }: PinEntryProps) => {
                 value={pinCode}
                 onChange={(e) => setPinCode(e.target.value)}
                 className="text-center text-lg bg-white"
-                style={{ backgroundColor: '#FFFFFF' }}
                 autoFocus
               />
               <Button 

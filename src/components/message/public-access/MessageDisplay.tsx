@@ -56,19 +56,19 @@ export const MessageDisplay = ({
 
   if (!message) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-8" style={{ backgroundColor: '#FFFFFF' }}>
-        <Card className="overflow-hidden border-destructive/20 bg-white" style={{ backgroundColor: '#FFFFFF' }}>
-          <CardHeader className="bg-white" style={{ backgroundColor: '#FFFFFF' }}>
+      <div className="max-w-3xl mx-auto px-4 py-8 bg-white">
+        <Card className="overflow-hidden border-destructive/20 bg-white">
+          <CardHeader className="bg-white">
             <CardTitle className="text-center text-destructive">Message Not Available</CardTitle>
           </CardHeader>
-          <CardContent className="p-8 text-center bg-white" style={{ backgroundColor: '#FFFFFF' }}>
+          <CardContent className="p-8 text-center bg-white">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100 mb-6">
               <Lock className={`h-8 w-8 text-destructive ${HOVER_TRANSITION}`} />
             </div>
             <p className="text-muted-foreground mb-6">
               This message may have been deleted, expired, or the link is invalid.
             </p>
-            <Button className={`mt-2 btn-hover-effect ${HOVER_TRANSITION}`} onClick={() => window.location.reload()}>
+            <Button variant="default" className={`mt-2 btn-hover-effect ${HOVER_TRANSITION}`} onClick={() => window.location.reload()}>
               Try Again
             </Button>
           </CardContent>
@@ -78,8 +78,8 @@ export const MessageDisplay = ({
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8 mb-16 animate-fade-in" style={{ backgroundColor: '#FFFFFF' }}>
-      <div className="bg-white" style={{ backgroundColor: '#FFFFFF' }}>
+    <div className="max-w-3xl mx-auto px-4 py-8 mb-16 animate-fade-in bg-white">
+      <div className="bg-white">
         {isPreviewMode && (
           <div className="mb-4 rounded-lg bg-accent/10 p-4 border border-accent/20">
             <div className="flex">
@@ -96,9 +96,9 @@ export const MessageDisplay = ({
           </div>
         )}
         
-        <Card className="overflow-hidden border shadow-sm bg-white" style={{ backgroundColor: '#FFFFFF' }}>
-          {/* Message Header - Force pure white */}
-          <CardHeader className="bg-white p-6 border-b" style={{ backgroundColor: '#FFFFFF' }}>
+        <Card className="overflow-hidden border shadow-sm bg-white">
+          {/* Message Header - Clean white with theme colors for UI elements */}
+          <CardHeader className="bg-white p-6 border-b">
             <CardTitle className="text-2xl font-bold font-serif text-foreground">{message.title}</CardTitle>
             <div className="flex items-center text-muted-foreground text-sm">
               <Calendar className={`h-4 w-4 mr-1 text-primary ${HOVER_TRANSITION}`} />
@@ -106,27 +106,27 @@ export const MessageDisplay = ({
             </div>
           </CardHeader>
           
-          {/* Security Badge - Force white */}
-          <div className="bg-white px-6 py-2 border-b border-gray-200" style={{ backgroundColor: '#FFFFFF' }}>
+          {/* Security Badge - Use theme colors */}
+          <div className="bg-white px-6 py-2 border-b border-gray-200">
             <div className="flex items-center">
               <Shield className={`h-4 w-4 text-primary mr-2 ${HOVER_TRANSITION}`} />
               <span className="text-sm font-medium text-primary">Secure Message</span>
               
-              <Badge variant="default" className="ml-auto bg-primary text-primary-foreground">
+              <Badge variant="default" className="ml-auto">
                 <Clock className={`h-3 w-3 mr-1 ${HOVER_TRANSITION}`} /> {message.expires_at ? 'Expires' : 'No Expiration'}
               </Badge>
             </div>
           </div>
           
-          {/* Message Content - Force white */}
-          <CardContent className="p-6 bg-white" style={{ backgroundColor: '#FFFFFF' }}>
+          {/* Message Content - White background */}
+          <CardContent className="p-6 bg-white">
             <div className="prose max-w-full">
               {message && <MessageContent message={message} deliveryId={deliveryId} recipientEmail={recipientEmail} />}
             </div>
           </CardContent>
           
-          {/* Footer - Force white */}
-          <div className="bg-white px-6 py-4 text-sm text-gray-600 border-t border-gray-200" style={{ backgroundColor: '#FFFFFF' }}>
+          {/* Footer - White background with theme colors for UI elements */}
+          <div className="bg-white px-6 py-4 text-sm text-gray-600 border-t border-gray-200">
             <div className="flex items-center justify-between">
               <div className="flex items-center">
                 <Shield className={`h-4 w-4 mr-2 text-primary ${HOVER_TRANSITION}`} />

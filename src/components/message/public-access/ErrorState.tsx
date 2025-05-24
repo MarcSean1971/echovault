@@ -230,7 +230,7 @@ export const ErrorState = ({ error, isPreviewMode = false }: ErrorStateProps) =>
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
+    <div className="max-w-3xl mx-auto px-4 py-8 bg-white">
       {isPreviewMode && (
         <div className="bg-accent/10 border-l-4 border-accent p-4 mb-4">
           <p className="text-accent">
@@ -239,7 +239,7 @@ export const ErrorState = ({ error, isPreviewMode = false }: ErrorStateProps) =>
         </div>
       )}
       
-      <Card className="p-6 border-primary/20">
+      <Card className="p-6 border-primary/20 bg-white">
         <div className="flex flex-col items-center justify-center text-center space-y-4 py-6">
           <AlertCircle className={`h-12 w-12 text-primary ${HOVER_TRANSITION}`} />
           <h2 className="text-xl font-semibold">Access Error</h2>
