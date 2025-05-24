@@ -96,8 +96,8 @@ export const MessageDisplay = ({
       )}
       
       <Card className="overflow-hidden border shadow-sm">
-        {/* Message Header - Now uses hero-gradient with dark text to match landing page */}
-        <CardHeader className="hero-gradient p-6">
+        {/* Message Header - Now uses pure white background to match landing page */}
+        <CardHeader className="bg-background p-6 border-b">
           <CardTitle className="text-2xl font-bold font-serif text-foreground">{message.title}</CardTitle>
           <div className="flex items-center text-muted-foreground text-sm">
             <Calendar className={`h-4 w-4 mr-1 ${HOVER_TRANSITION}`} />
