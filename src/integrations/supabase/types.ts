@@ -251,6 +251,7 @@ export type Database = {
           backup_contact: string | null
           backup_email: string | null
           created_at: string
+          email: string | null
           first_name: string | null
           id: string
           last_name: string | null
@@ -262,6 +263,7 @@ export type Database = {
           backup_contact?: string | null
           backup_email?: string | null
           created_at?: string
+          email?: string | null
           first_name?: string | null
           id: string
           last_name?: string | null
@@ -273,6 +275,7 @@ export type Database = {
           backup_contact?: string | null
           backup_email?: string | null
           created_at?: string
+          email?: string | null
           first_name?: string | null
           id?: string
           last_name?: string | null
