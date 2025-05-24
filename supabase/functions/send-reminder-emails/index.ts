@@ -2,7 +2,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { supabaseClient } from "./supabase-client.ts";
 import { sendCreatorReminder } from "./services/reminder-sender.ts";
-import { corsHeaders } from "./utils/cors.ts";
+import { corsHeaders } from "./cors-headers.ts";
 
 /**
  * RADICAL FIX: Enhanced reminder processing with creator email from JWT context
