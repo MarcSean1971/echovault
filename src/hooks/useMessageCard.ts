@@ -5,7 +5,7 @@ import { useMessageCardActions } from "@/hooks/useMessageCardActions";
 import { ensureReminderSchedule } from "@/utils/reminder/ensureReminderSchedule";
 
 /**
- * ENHANCED: Custom hook to handle message card state and actions with improved event handling
+ * FIXED: Custom hook to handle message card state with optimized WhatsApp check-in handling
  */
 export function useMessageCard(messageId: string) {
   // Track local force refresh state
@@ -39,20 +39,11 @@ export function useMessageCard(messageId: string) {
       return null;
     }
     
-    console.log(`[MessageCard] Fast arming message ${messageId} with condition ${condition.id}`);
-    
-    // Invalidate cache before arming to ensure fresh data
+    console.log(`[MessageCard] Arming message ${messageId}`);
     invalidateCache();
-    
-    // Arm the message
     const result = await handleArmMessage(condition.id);
-    
-    // Force refresh the component after arming
     setForceRefresh(true);
-    
-    // Increment refresh counter to force timer re-render
     setRefreshCounter(prev => prev + 1);
-    
     return result;
   }, [condition, messageId, invalidateCache, handleArmMessage, setRefreshCounter]);
   
@@ -62,56 +53,51 @@ export function useMessageCard(messageId: string) {
       return;
     }
     
-    console.log(`[MessageCard] Disarming message ${messageId} with condition ${condition.id}`);
-    
-    // Invalidate cache before disarming to ensure fresh data
+    console.log(`[MessageCard] Disarming message ${messageId}`);
     invalidateCache();
-    
-    // Disarm the message
     await handleDisarmMessage(condition.id);
-    
-    // Force refresh the component after disarming
     setForceRefresh(true);
-    
-    // Increment refresh counter to force timer re-render
     setRefreshCounter(prev => prev + 1);
   }, [condition, messageId, invalidateCache, handleDisarmMessage, setRefreshCounter]);
 
-  // ENHANCED: Listen for targeted update events with better handling
+  // FIXED: Optimized WhatsApp check-in event handling
   useEffect(() => {
-    const handleTargetedUpdate = (event: Event) => {
-      if (event instanceof CustomEvent) {
-        const detail = event.detail || {};
+    const handleWhatsAppCheckIn = (event: Event) => {
+      if (!(event instanceof CustomEvent)) return;
+      
+      const detail = event.detail || {};
+      
+      // Check if this event targets the current message
+      if (detail.messageId === messageId) {
+        console.log(`[MessageCard] Received update for message ${messageId}:`, detail);
         
-        // Check if this event targets the current message
-        if (detail.messageId === messageId) {
-          console.log(`[MessageCard] Received targeted update for message ${messageId}:`, detail);
+        // Immediate handling for WhatsApp check-ins
+        if (detail.action === 'check-in' && (detail.source === 'whatsapp' || detail.source === 'whatsapp-realtime')) {
+          console.log(`[MessageCard] WhatsApp check-in detected for message ${messageId} - IMMEDIATE refresh`);
           
-          // Special handling for WhatsApp check-ins
-          if (detail.action === 'check-in' && detail.source === 'whatsapp-realtime') {
-            console.log(`[MessageCard] WhatsApp check-in detected for message ${messageId}, immediate refresh`);
-            // Immediate refresh for WhatsApp check-ins
-            invalidateCache();
-            setForceRefresh(true);
-            setRefreshCounter(prev => prev + 1);
-          } else {
-            // Regular handling for other events
-            invalidateCache();
-            setForceRefresh(true);
-          }
+          // Clear cache and force immediate refresh
+          invalidateCache();
+          setForceRefresh(true);
+          setRefreshCounter(prev => prev + 1);
+        } else {
+          // Regular handling for other events
+          invalidateCache();
+          setForceRefresh(true);
         }
       }
     };
     
-    // Listen for targeted update events
-    window.addEventListener('message-targeted-update', handleTargetedUpdate);
+    // Listen for both targeted updates and general condition updates
+    window.addEventListener('message-targeted-update', handleWhatsAppCheckIn);
+    window.addEventListener('conditions-updated', handleWhatsAppCheckIn);
     
     return () => {
-      window.removeEventListener('message-targeted-update', handleTargetedUpdate);
+      window.removeEventListener('message-targeted-update', handleWhatsAppCheckIn);
+      window.removeEventListener('conditions-updated', handleWhatsAppCheckIn);
     };
   }, [messageId, invalidateCache, setRefreshCounter]);
 
-  // Listen for reminder generation request events
+  // Background reminder generation
   useEffect(() => {
     const handleGenerateReminders = (event: Event) => {
       if (event instanceof CustomEvent) {
@@ -119,7 +105,6 @@ export function useMessageCard(messageId: string) {
         
         if (eventMessageId === messageId && conditionId) {
           console.log(`[MessageCard] Background reminder generation for message ${eventMessageId}`);
-          // Generate reminders in the background
           ensureReminderSchedule(conditionId, false).catch(error => {
             console.error("[MessageCard] Error in background reminder generation:", error);
           });
@@ -132,19 +117,6 @@ export function useMessageCard(messageId: string) {
       window.removeEventListener('generate-message-reminders', handleGenerateReminders);
     };
   }, [messageId]);
-
-  // ADDED: Fallback refresh mechanism for missed events
-  useEffect(() => {
-    const fallbackRefresh = setInterval(() => {
-      if (isArmed && condition) {
-        console.log(`[MessageCard] Fallback refresh for armed message ${messageId}`);
-        invalidateCache();
-        setForceRefresh(true);
-      }
-    }, 45000); // Refresh every 45 seconds for armed messages
-    
-    return () => clearInterval(fallbackRefresh);
-  }, [messageId, isArmed, condition, invalidateCache]);
 
   return {
     isArmed,

@@ -1,8 +1,7 @@
 import { useEffect, useCallback, useRef } from "react";
 
 /**
- * Stable hook to manage condition-related events and listeners
- * FIXED: Prevent excessive listener churn and improve stability
+ * FIXED: Stable hook to manage condition-related events without excessive listener churn
  */
 export function useConditionEvents(
   messageId: string,
@@ -14,7 +13,7 @@ export function useConditionEvents(
   const messageIdRef = useRef(messageId);
 
   /**
-   * Handle conditions-updated event with stable reference
+   * Handle conditions-updated event with stable reference and WhatsApp check-in priority
    */
   const handleConditionsUpdated = useCallback((event: Event) => {
     if (event instanceof CustomEvent) {
@@ -26,25 +25,21 @@ export function useConditionEvents(
       
       // If event is for this specific message or it's a global update
       if (!eventMessageId || eventMessageId === messageIdRef.current) {
-        console.log(`[useConditionEvents ${messageIdRef.current}] Received conditions-updated event:`, 
+        console.log(`[useConditionEvents ${messageIdRef.current}] Received event:`, 
           'action:', action || 'update', 
           'source:', source || 'unknown',
           'messageId:', eventMessageId || 'global',
           'enhanced:', enhanced || false
         );
         
-        // For WhatsApp check-ins, handle immediately
-        if (action === 'check-in' && source === 'whatsapp' && enhanced) {
-          console.log(`[useConditionEvents ${messageIdRef.current}] Enhanced WhatsApp check-in detected, immediate refresh`);
+        // PRIORITY: WhatsApp check-ins get immediate handling
+        if (action === 'check-in' && (source === 'whatsapp' || source === 'whatsapp-realtime')) {
+          console.log(`[useConditionEvents ${messageIdRef.current}] WhatsApp check-in - IMMEDIATE refresh`);
           
-          // Clear cache immediately
+          // Clear cache immediately and refresh
           invalidateCache();
-          
-          // Force refresh with small delay to ensure DB update is complete
-          setTimeout(() => {
-            refreshData();
-            incrementRefreshCounter();
-          }, 100);
+          refreshData();
+          incrementRefreshCounter();
         } else {
           // Regular handling for other events
           invalidateCache();
@@ -57,7 +52,7 @@ export function useConditionEvents(
 
   // Set up event listener only once and keep it stable
   useEffect(() => {
-    console.log(`[useConditionEvents] Setting up STABLE conditions-updated listener for message ${messageId}`);
+    console.log(`[useConditionEvents] Setting up STABLE listener for message ${messageId}`);
     
     // Update the messageId ref
     messageIdRef.current = messageId;
@@ -73,7 +68,7 @@ export function useConditionEvents(
     
     return () => {
       if (listenerRef.current) {
-        console.log(`[useConditionEvents] Removing STABLE conditions-updated listener for message ${messageId}`);
+        console.log(`[useConditionEvents] Removing STABLE listener for message ${messageId}`);
         window.removeEventListener('conditions-updated', listenerRef.current);
         listenerRef.current = null;
       }
