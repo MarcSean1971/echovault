@@ -5,7 +5,7 @@ import { useMessageCardActions } from "@/hooks/useMessageCardActions";
 import { ensureReminderSchedule } from "@/utils/reminder/ensureReminderSchedule";
 
 /**
- * Custom hook to handle message card state and actions
+ * ENHANCED: Custom hook to handle message card state and actions with improved event handling
  */
 export function useMessageCard(messageId: string) {
   // Track local force refresh state
@@ -77,7 +77,7 @@ export function useMessageCard(messageId: string) {
     setRefreshCounter(prev => prev + 1);
   }, [condition, messageId, invalidateCache, handleDisarmMessage, setRefreshCounter]);
 
-  // Listen for targeted update events
+  // ENHANCED: Listen for targeted update events with better handling
   useEffect(() => {
     const handleTargetedUpdate = (event: Event) => {
       if (event instanceof CustomEvent) {
@@ -85,11 +85,20 @@ export function useMessageCard(messageId: string) {
         
         // Check if this event targets the current message
         if (detail.messageId === messageId) {
-          console.log(`[MessageCard] Received targeted update for message ${messageId}, action: ${detail.action}`);
+          console.log(`[MessageCard] Received targeted update for message ${messageId}:`, detail);
           
-          // Invalidate cache and force refresh
-          invalidateCache();
-          setForceRefresh(true);
+          // Special handling for WhatsApp check-ins
+          if (detail.action === 'check-in' && detail.source === 'whatsapp-realtime') {
+            console.log(`[MessageCard] WhatsApp check-in detected for message ${messageId}, immediate refresh`);
+            // Immediate refresh for WhatsApp check-ins
+            invalidateCache();
+            setForceRefresh(true);
+            setRefreshCounter(prev => prev + 1);
+          } else {
+            // Regular handling for other events
+            invalidateCache();
+            setForceRefresh(true);
+          }
         }
       }
     };
@@ -100,7 +109,7 @@ export function useMessageCard(messageId: string) {
     return () => {
       window.removeEventListener('message-targeted-update', handleTargetedUpdate);
     };
-  }, [messageId, invalidateCache]);
+  }, [messageId, invalidateCache, setRefreshCounter]);
 
   // Listen for reminder generation request events
   useEffect(() => {
@@ -111,7 +120,7 @@ export function useMessageCard(messageId: string) {
         if (eventMessageId === messageId && conditionId) {
           console.log(`[MessageCard] Background reminder generation for message ${eventMessageId}`);
           // Generate reminders in the background
-          ensureReminderSchedule(conditionId, false).catch(error => { // Fix: Pass boolean instead of string
+          ensureReminderSchedule(conditionId, false).catch(error => {
             console.error("[MessageCard] Error in background reminder generation:", error);
           });
         }

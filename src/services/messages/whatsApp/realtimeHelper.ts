@@ -5,11 +5,18 @@ import { RealtimeChannel } from "@supabase/supabase-js";
 let realtimeChannel: RealtimeChannel | null = null;
 
 /**
- * Enable Realtime for message_conditions table to get condition updates
+ * ENHANCED: Enable Realtime for message_conditions table with better event handling
  * @returns {Promise<boolean>} Success status
  */
 export async function enableRealtimeForConditions(): Promise<boolean> {
   try {
+    // Clean up existing channel first
+    if (realtimeChannel) {
+      console.log('[REALTIME] Cleaning up existing channel before setup');
+      supabase.removeChannel(realtimeChannel);
+      realtimeChannel = null;
+    }
+
     // Create a channel specifically for message_conditions table
     const channel = supabase
       .channel('message_conditions_changes')
@@ -28,39 +35,76 @@ export async function enableRealtimeForConditions(): Promise<boolean> {
           const lastChecked = payload.new?.last_checked;
           const oldLastChecked = payload.old?.last_checked;
           
-          // Only dispatch event if last_checked timestamp changed
+          // Only dispatch event if last_checked timestamp changed (indicates check-in)
           if (lastChecked && oldLastChecked && lastChecked !== oldLastChecked) {
-            console.log('[REALTIME] Check-in detected, dispatching conditions-updated event');
+            console.log('[REALTIME] WhatsApp check-in detected, dispatching enhanced event');
             
-            // Dispatch global event with check-in information
+            // Dispatch enhanced global event with check-in information
             window.dispatchEvent(
               new CustomEvent('conditions-updated', {
                 detail: {
                   messageId,
                   conditionId,
                   action: 'check-in',
-                  source: 'realtime',
+                  source: 'whatsapp',
                   updatedAt: lastChecked,
+                  timestamp: new Date().toISOString(),
+                  enhanced: true // Flag for enhanced event handling
+                }
+              })
+            );
+
+            // ADDED: Also dispatch a message-specific event for targeted updates
+            window.dispatchEvent(
+              new CustomEvent('message-targeted-update', {
+                detail: {
+                  messageId,
+                  conditionId,
+                  action: 'check-in',
+                  source: 'whatsapp-realtime',
+                  timestamp: new Date().toISOString()
+                }
+              })
+            );
+          } else {
+            console.log('[REALTIME] General condition update (not check-in)');
+            // Dispatch general update event
+            window.dispatchEvent(
+              new CustomEvent('conditions-updated', {
+                detail: {
+                  messageId,
+                  conditionId,
+                  action: 'update',
+                  source: 'realtime',
                   timestamp: new Date().toISOString()
                 }
               })
             );
           }
         })
-      .subscribe();
+      .subscribe((status) => {
+        console.log(`[REALTIME] Subscription status: ${status}`);
+        if (status === 'SUBSCRIBED') {
+          console.log('[REALTIME] Successfully subscribed to message_conditions updates');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('[REALTIME] Channel error - attempting reconnection');
+          // Attempt to reconnect after a delay
+          setTimeout(() => enableRealtimeForConditions(), 2000);
+        }
+      });
       
     realtimeChannel = channel;
     
-    console.log('[REALTIME] Enabled for message_conditions table');
+    console.log('[REALTIME] Enhanced realtime enabled for message_conditions table');
     return true;
   } catch (error) {
-    console.error('[REALTIME] Failed to enable for message_conditions:', error);
+    console.error('[REALTIME] Failed to enable enhanced realtime:', error);
     return false;
   }
 }
 
 /**
- * Check if Realtime is properly connected and subscribed
+ * ENHANCED: Check if Realtime is properly connected and subscribed
  * @returns {Promise<string>} Status of Realtime connection
  */
 export async function checkRealtimeStatus(): Promise<string> {
@@ -70,6 +114,7 @@ export async function checkRealtimeStatus(): Promise<string> {
     }
     
     const status = realtimeChannel.state;
+    console.log(`[REALTIME] Current status: ${status}`);
     return status || 'UNKNOWN';
   } catch (error) {
     console.error('[REALTIME] Error checking status:', error);
@@ -82,8 +127,17 @@ export async function checkRealtimeStatus(): Promise<string> {
  */
 export function cleanupRealtimeConnection() {
   if (realtimeChannel) {
-    console.log('[REALTIME] Cleaning up message_conditions channel');
+    console.log('[REALTIME] Cleaning up enhanced message_conditions channel');
     supabase.removeChannel(realtimeChannel);
     realtimeChannel = null;
   }
+}
+
+/**
+ * ADDED: Force reconnect Realtime if needed
+ */
+export async function reconnectRealtime(): Promise<boolean> {
+  console.log('[REALTIME] Force reconnecting...');
+  cleanupRealtimeConnection();
+  return enableRealtimeForConditions();
 }

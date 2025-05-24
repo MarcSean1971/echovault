@@ -1,12 +1,14 @@
+
 import { useState, useEffect } from "react";
 import { useMessageList } from "@/hooks/useMessageList";
 import { useBatchedReminders } from "@/hooks/useBatchedReminders";
-import { useMessageActions } from "@/hooks/useMessageActions.tsx"; // Explicitly import from .tsx file
+import { useMessageActions } from "@/hooks/useMessageActions.tsx";
 import { MessagesHeader } from "@/components/message/MessagesHeader";
 import { MessageCategories } from "@/components/message/MessageCategories";
+import { enableRealtimeForConditions } from "@/services/messages/whatsApp/realtimeHelper";
 
 export default function Messages() {
-  // Get message data using our custom hook - removed messageType parameter
+  // Get message data using our custom hook
   const { 
     messages, 
     panicMessages, 
@@ -31,7 +33,7 @@ export default function Messages() {
     setRegularMessagesState(regularMessages);
   }, [messages, panicMessages, regularMessages]);
   
-  // Handle actions like delete - fixed the argument count to match the hook
+  // Handle actions like delete
   const { handleDelete } = useMessageActions(
     messages, 
     setMessagesState, 
@@ -43,21 +45,41 @@ export default function Messages() {
   const allMessageIds = messages.map(message => message.id);
   
   // Fetch reminders for all messages in a single batch query
-  // Now using combined refresh trigger from both global and local sources
   const { reminders: reminderData, forceRefresh: forceReminderRefresh } = useBatchedReminders(
     allMessageIds, 
     reminderRefreshTrigger + localReminderRefreshTrigger
   );
 
-  // Listen for condition-updated events that should trigger a refresh
+  // ENHANCED: Initialize Realtime connection on mount
+  useEffect(() => {
+    console.log("[Messages] Initializing enhanced Realtime connection");
+    enableRealtimeForConditions().then(success => {
+      if (success) {
+        console.log("[Messages] Realtime connection established successfully");
+      } else {
+        console.warn("[Messages] Failed to establish Realtime connection");
+      }
+    });
+  }, []);
+
+  // ENHANCED: Listen for condition-updated events with better handling
   useEffect(() => {
     const handleConditionEvents = (event: Event) => {
       if (!(event instanceof CustomEvent)) return;
       
-      const { action } = event.detail || {};
+      const { action, source, enhanced } = event.detail || {};
       
-      // When a message is armed or disarmed, trigger a local reminder refresh
-      if (action === 'arm' || action === 'disarm') {
+      console.log("[Messages] Received condition event:", { action, source, enhanced });
+      
+      // Enhanced handling for WhatsApp check-ins
+      if (action === 'check-in' && source === 'whatsapp' && enhanced) {
+        console.log("[Messages] Enhanced WhatsApp check-in event, immediate refresh");
+        
+        // Immediate refresh for enhanced WhatsApp events
+        forceRefresh();
+        forceReminderRefresh();
+        setLocalReminderRefreshTrigger(prev => prev + 1);
+      } else if (action === 'arm' || action === 'disarm') {
         console.log(`[Messages] Received ${action} event, refreshing reminders`);
         
         // Force refresh message list to update status
@@ -71,8 +93,11 @@ export default function Messages() {
       }
     };
     
+    console.log("[Messages] Setting up enhanced condition event listener");
     window.addEventListener('conditions-updated', handleConditionEvents);
+    
     return () => {
+      console.log("[Messages] Removing condition event listener");
       window.removeEventListener('conditions-updated', handleConditionEvents);
     };
   }, [forceRefresh, forceReminderRefresh]);

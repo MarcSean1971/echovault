@@ -15,7 +15,7 @@ export function useMessageList() {
   const [regularMessages, setRegularMessages] = useState<Message[]>([]);
   const [reminderRefreshTrigger, setReminderRefreshTrigger] = useState(0);
   
-  // Optimized data loading function - removed messageType parameter
+  // Optimized data loading function
   const loadData = useCallback(async () => {
     if (!userId) return;
     
@@ -24,9 +24,9 @@ export function useMessageList() {
     try {
       console.log("Fetching messages and conditions for user:", userId);
       
-      // Fetch messages and conditions in parallel - removed messageType filter
+      // Fetch messages and conditions in parallel
       const [messageData, conditionsData] = await Promise.all([
-        fetchMessageCardsData(), // No longer passing messageType here
+        fetchMessageCardsData(),
         fetchMessageConditions(userId)
       ]);
       
@@ -76,10 +76,11 @@ export function useMessageList() {
     } finally {
       setIsLoading(false);
     }
-  }, [userId]); // Removed messageType from dependencies
+  }, [userId]);
 
   // Force refresh function
   const forceRefresh = useCallback(() => {
+    console.log("[useMessageList] Force refreshing all data");
     if (userId) {
       invalidateConditionsCache(userId);
     }
@@ -92,17 +93,44 @@ export function useMessageList() {
     loadData();
   }, [loadData]);
   
-  // Listen for conditions-updated event
+  // FIXED: Stable event listener for conditions updates
   useEffect(() => {
-    const handleConditionsUpdated = () => {
-      console.log("Messages page received conditions-updated event, refreshing data");
-      forceRefresh();
+    const handleConditionsUpdated = (event: Event) => {
+      if (event instanceof CustomEvent) {
+        const { action, source, messageId } = event.detail || {};
+        console.log("[useMessageList] Received conditions-updated event:", { action, source, messageId });
+        
+        // Force refresh for check-in events from WhatsApp
+        if (action === 'check-in' && source === 'whatsapp') {
+          console.log("[useMessageList] WhatsApp check-in detected, force refreshing");
+          setTimeout(() => forceRefresh(), 100); // Small delay to ensure DB update is complete
+        } else if (action === 'arm' || action === 'disarm') {
+          console.log("[useMessageList] Arm/disarm event, refreshing data");
+          forceRefresh();
+        } else {
+          // Regular refresh for other events
+          forceRefresh();
+        }
+      }
     };
     
+    console.log("[useMessageList] Setting up stable conditions-updated listener");
     window.addEventListener('conditions-updated', handleConditionsUpdated);
+    
     return () => {
+      console.log("[useMessageList] Removing conditions-updated listener");
       window.removeEventListener('conditions-updated', handleConditionsUpdated);
     };
+  }, [forceRefresh]); // Only depend on forceRefresh
+
+  // ADDED: Periodic refresh fallback to catch missed events
+  useEffect(() => {
+    const interval = setInterval(() => {
+      console.log("[useMessageList] Periodic refresh fallback");
+      forceRefresh();
+    }, 30000); // Refresh every 30 seconds as fallback
+    
+    return () => clearInterval(interval);
   }, [forceRefresh]);
 
   return {
