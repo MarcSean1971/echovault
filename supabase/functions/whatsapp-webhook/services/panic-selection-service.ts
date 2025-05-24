@@ -90,14 +90,14 @@ export async function handlePanicMessageSelection(userId: string, phoneNumber: s
   storeSelectionState(userId, phoneNumber, panicConditions);
   
   // Build clean, concise selection message
-  let selectionMessage = "EMERGENCY - Multiple messages found\n\n";
+  let selectionMessage = "EMERGENCY - Select message:\n\n";
   
   panicConditions.forEach((condition, index) => {
-    const title = condition.title || "Emergency Message";
+    const title = condition.messages?.title || "Emergency Message";
     selectionMessage += `${index + 1}. ${title}\n`;
   });
   
-  selectionMessage += "\nReply with number (1, 2, 3...) or CANCEL";
+  selectionMessage += "\nReply: 1, 2, 3... or CANCEL";
   
   // Send selection message
   await sendWhatsAppResponse(phoneNumber, selectionMessage);
@@ -127,7 +127,7 @@ export async function processSelectionResponse(userId: string, phoneNumber: stri
   // Handle cancellation
   if (responseUpper === 'CANCEL' || responseUpper === 'ABORT' || responseUpper === 'STOP') {
     clearSelectionState(userId, phoneNumber);
-    await sendWhatsAppResponse(phoneNumber, "Emergency alert cancelled");
+    await sendWhatsAppResponse(phoneNumber, "Emergency cancelled");
     
     return {
       status: "cancelled",
@@ -141,7 +141,7 @@ export async function processSelectionResponse(userId: string, phoneNumber: stri
   if (isNaN(selectionNumber) || selectionNumber < 1 || selectionNumber > selectionState.panicConditions.length) {
     await sendWhatsAppResponse(
       phoneNumber, 
-      `Invalid selection. Reply with number 1-${selectionState.panicConditions.length} or CANCEL`
+      `Invalid. Reply: 1-${selectionState.panicConditions.length} or CANCEL`
     );
     
     return {
@@ -152,7 +152,7 @@ export async function processSelectionResponse(userId: string, phoneNumber: stri
   
   // Get the selected panic condition
   const selectedCondition = selectionState.panicConditions[selectionNumber - 1];
-  const selectedTitle = selectedCondition.title || "Emergency Message";
+  const selectedTitle = selectedCondition.messages?.title || "Emergency Message";
   
   // Clear the selection state
   clearSelectionState(userId, phoneNumber);
@@ -164,6 +164,6 @@ export async function processSelectionResponse(userId: string, phoneNumber: stri
     message: "Valid selection made",
     selectedCondition,
     selectedTitle,
-    message_id: selectedCondition.message_id  // Fixed: use message_id instead of messageId
+    message_id: selectedCondition.message_id
   };
 }

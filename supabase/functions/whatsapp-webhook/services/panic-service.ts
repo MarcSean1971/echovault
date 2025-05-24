@@ -1,4 +1,3 @@
-
 import { createSupabaseAdmin } from "../../shared/supabase-client.ts";
 import { handlePanicMessageSelection, processSelectionResponse } from "./panic-selection-service.ts";
 
@@ -55,11 +54,10 @@ export async function checkForPanicTrigger(messageBody: string, panicConditions:
     if (messageBody.toLowerCase() === triggerKeyword) {
       console.log(`[PANIC] Match found! "${messageBody}" matches trigger "${triggerKeyword}" for message ${condition.message_id}`);
       matches.push({
-        message_id: condition.message_id,  // Fixed: use message_id consistently
+        message_id: condition.message_id,
         conditionId: condition.id,
         config: config,
-        title: condition.messages?.title || "Emergency Message",
-        content: condition.messages?.text_content || ""
+        messages: condition.messages // Include the messages object for title access
       });
     }
   }
@@ -154,7 +152,7 @@ export async function processPanicTrigger(userId: string, fromNumber: string, me
             messageId: selectionResult.message_id
           };
         } else {
-          await sendWhatsAppResponse(fromNumber, "Failed to trigger emergency message. Please try again.");
+          await sendWhatsAppResponse(fromNumber, "Emergency trigger failed. Try again.");
           
           return {
             status: "error",
@@ -175,7 +173,7 @@ export async function processPanicTrigger(userId: string, fromNumber: string, me
     if (!panicConditions || panicConditions.length === 0) {
       console.log(`[PANIC] No active panic conditions found for user ${userId}`);
       
-      await sendWhatsAppResponse(fromNumber, "No active emergency messages found. Please set up emergency messages in EchoVault first.");
+      await sendWhatsAppResponse(fromNumber, "No emergency messages configured.");
       
       return { 
         status: "error", 
@@ -190,7 +188,7 @@ export async function processPanicTrigger(userId: string, fromNumber: string, me
     if (matches.length === 0) {
       console.log(`[PANIC] Message "${messageBody}" doesn't match any panic triggers`);
       
-      await sendWhatsAppResponse(fromNumber, "Emergency trigger not recognized. Make sure your emergency message is configured for WhatsApp in EchoVault.");
+      await sendWhatsAppResponse(fromNumber, "Emergency trigger not recognized.");
       
       return { 
         status: "error", 
@@ -211,16 +209,17 @@ export async function processPanicTrigger(userId: string, fromNumber: string, me
     const triggerResult = await triggerEmergencyMessage(match.message_id, userId);
     
     if (triggerResult.success) {
-      await sendWhatsAppResponse(fromNumber, `EMERGENCY TRIGGERED: ${match.title}`);
+      const title = match.messages?.title || "Emergency Message";
+      await sendWhatsAppResponse(fromNumber, `EMERGENCY TRIGGERED: ${title}`);
       
-      console.log(`[PANIC] Successfully triggered emergency message: ${match.title}`);
+      console.log(`[PANIC] Successfully triggered emergency message: ${title}`);
       return { 
         status: "success", 
-        message: `Emergency message "${match.title}" triggered`, 
+        message: `Emergency message "${title}" triggered`, 
         messageId: match.message_id
       };
     } else {
-      await sendWhatsAppResponse(fromNumber, "Failed to trigger emergency message. Please try again.");
+      await sendWhatsAppResponse(fromNumber, "Emergency trigger failed. Try again.");
       
       console.log(`[PANIC] Failed to trigger emergency message`);
       return { 
@@ -234,7 +233,7 @@ export async function processPanicTrigger(userId: string, fromNumber: string, me
   } catch (error) {
     console.error(`[PANIC] Error in processPanicTrigger:`, error);
     
-    await sendWhatsAppResponse(fromNumber, "System error processing emergency request. Please try again.");
+    await sendWhatsAppResponse(fromNumber, "System error. Try again.");
     
     return { 
       status: "error", 
