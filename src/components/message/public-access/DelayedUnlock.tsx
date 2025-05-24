@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Clock } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -60,18 +61,18 @@ export const DelayedUnlock = ({ unlockTime, onUnlock }: DelayedUnlockProps) => {
   return (
     <div className="container mx-auto max-w-3xl px-4 py-8 bg-white">
       <div className="bg-white">
-        <Card className={`p-6 shadow-md border-primary/20 bg-white ${HOVER_TRANSITION}`}>
+        <Card className={`p-6 shadow-md border-gray-200 bg-white ${HOVER_TRANSITION}`}>
           <div className="flex flex-col items-center justify-center text-center space-y-4 py-8">
-            <Clock className={`h-12 w-12 text-primary ${HOVER_TRANSITION}`} />
-            <h2 className="text-xl font-semibold">Message Unlock Delayed</h2>
-            <p className="text-muted-foreground">
+            <Clock className={`h-12 w-12 email-icon ${HOVER_TRANSITION}`} />
+            <h2 className="text-xl font-semibold email-text-heading">Message Unlock Delayed</h2>
+            <p className="email-text-muted">
               This message has a time-delayed unlock. It will be available in:
             </p>
             
             <div className={cn(
               "text-2xl font-mono font-semibold mt-2",
-              progressPercent < 20 ? "text-destructive" :
-              progressPercent < 50 ? "text-accent" : "text-primary",
+              progressPercent < 20 ? "text-red-600" :
+              progressPercent < 50 ? "email-icon" : "email-icon",
               HOVER_TRANSITION
             )}>
               {remainingTime}
@@ -82,15 +83,15 @@ export const DelayedUnlock = ({ unlockTime, onUnlock }: DelayedUnlockProps) => {
               <div 
                 className={cn(
                   "h-2.5 rounded-full transition-all",
-                  progressPercent < 20 ? "bg-destructive" :
-                  progressPercent < 50 ? "bg-accent" : "bg-primary",
+                  progressPercent < 20 ? "bg-red-600" :
+                  progressPercent < 50 ? "bg-[var(--email-purple)]" : "bg-[var(--email-purple)]",
                   HOVER_TRANSITION
                 )}
                 style={{ width: `${progressPercent}%` }}
               ></div>
             </div>
             
-            <p className="text-sm text-muted-foreground mt-4">
+            <p className="text-sm email-text-muted mt-4">
               Please check back later or keep this page open to access the message when the timer expires.
             </p>
           </div>

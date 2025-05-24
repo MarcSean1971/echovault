@@ -29,11 +29,11 @@ export const PinEntry = ({ onSubmit }: PinEntryProps) => {
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 bg-white">
       <div className="bg-white">
-        <Card className="p-6 bg-white">
+        <Card className="p-6 bg-white border border-gray-200">
           <div className="flex flex-col items-center justify-center text-center space-y-4 py-8">
-            <Key className="h-12 w-12 text-primary" />
-            <h2 className="text-xl font-semibold">Secure Message</h2>
-            <p className="text-muted-foreground">This message is protected with a PIN code.</p>
+            <Key className="h-12 w-12 email-icon" />
+            <h2 className="text-xl font-semibold email-text-heading">Secure Message</h2>
+            <p className="email-text-muted">This message is protected with a PIN code.</p>
             
             <form onSubmit={handleSubmit} className="w-full max-w-xs space-y-4 mt-4">
               <Input
@@ -41,19 +41,19 @@ export const PinEntry = ({ onSubmit }: PinEntryProps) => {
                 placeholder="Enter PIN code"
                 value={pinCode}
                 onChange={(e) => setPinCode(e.target.value)}
-                className="text-center text-lg bg-white"
+                className="text-center text-lg bg-white border-gray-300"
                 autoFocus
               />
               <Button 
                 type="submit" 
-                className={`w-full btn-hover-effect ${HOVER_TRANSITION}`} 
+                className={`w-full email-button ${HOVER_TRANSITION}`} 
                 disabled={!pinCode || isSubmitting}
               >
                 {isSubmitting ? "Verifying..." : "Access Message"}
               </Button>
             </form>
             
-            <p className="text-sm text-muted-foreground mt-4">
+            <p className="text-sm email-text-muted mt-4">
               If you don't know the PIN code, please contact the sender.
             </p>
           </div>

@@ -46,6 +46,15 @@
     --sidebar-accent-foreground: 240 6% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 262 83% 58%;
+
+    /* Email-specific color scheme variables */
+    --email-purple: #9b87f5;
+    --email-purple-dark: #6E59A5;
+    --email-heading: #1e293b;
+    --email-body: #475569;
+    --email-muted: #64748b;
+    --email-light-bg: #f8fafc;
+    --email-info-bg: #f1f5f9;
   }
 
   .dark {
@@ -87,9 +96,13 @@
     --sidebar-ring: 262 83% 58%;
   }
 
-  /* Keep only minimal overrides for public message pages - just background */
-  .public-message-content {
-    --background: 0 0% 100%; /* Force white background only for readability */
+  /* Email color scheme classes for public pages */
+  .email-theme {
+    --primary: 231 48% 76%; /* #9b87f5 converted to HSL */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 231 48% 66%; /* #6E59A5 converted to HSL */
+    --foreground: 215 25% 27%; /* #1e293b converted to HSL */
+    --muted-foreground: 215 20% 47%; /* #64748b converted to HSL */
   }
 }
 
@@ -134,8 +147,62 @@
     @apply shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5;
   }
 
-  /* Only force white background for content areas, allow UI elements to use theme colors */
-  .public-message-content {
+  /* Email theme styles for public message pages */
+  .email-theme .public-message-content {
     background-color: #FFFFFF !important;
+  }
+
+  .email-theme .email-header {
+    background-color: var(--email-purple) !important;
+    color: white !important;
+  }
+
+  .email-theme .email-button {
+    background-color: var(--email-purple) !important;
+    color: white !important;
+    border-radius: 6px !important;
+    font-weight: 500 !important;
+    border: none !important;
+  }
+
+  .email-theme .email-button:hover {
+    background-color: var(--email-purple-dark) !important;
+  }
+
+  .email-theme .email-button-secondary {
+    background-color: var(--email-info-bg) !important;
+    color: var(--email-purple) !important;
+    border: 1px solid var(--email-purple) !important;
+    border-radius: 6px !important;
+    font-weight: 500 !important;
+  }
+
+  .email-theme .email-button-secondary:hover {
+    background-color: var(--email-purple) !important;
+    color: white !important;
+  }
+
+  .email-theme .email-text-heading {
+    color: var(--email-heading) !important;
+  }
+
+  .email-theme .email-text-body {
+    color: var(--email-body) !important;
+  }
+
+  .email-theme .email-text-muted {
+    color: var(--email-muted) !important;
+  }
+
+  .email-theme .email-icon {
+    color: var(--email-purple) !important;
+  }
+
+  .email-theme .email-info-bg {
+    background-color: var(--email-info-bg) !important;
+  }
+
+  .email-theme .email-light-bg {
+    background-color: var(--email-light-bg) !important;
   }
 }
