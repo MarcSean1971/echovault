@@ -5,7 +5,7 @@ import { sendCreatorReminder } from "./services/reminder-sender.ts";
 import { corsHeaders } from "./utils/cors.ts";
 
 /**
- * FIXED: Enhanced reminder processing with CORRECT creator email retrieval from auth.users
+ * RADICAL FIX: Enhanced reminder processing with creator email from JWT context
  */
 serve(async (req) => {
   console.log("===== SEND REMINDER EMAILS FUNCTION =====");
@@ -30,18 +30,18 @@ serve(async (req) => {
     console.log(`Request parameters: messageId=${messageId}, debug=${debug}, forceSend=${forceSend}, source=${source}, action=${action}`);
 
     if (action === "process") {
-      console.log("Processing due reminders with FIXED creator email retrieval...");
+      console.log("Processing due reminders with RADICAL FIX for creator email retrieval...");
       console.log("Checking for all due reminders");
       
       const supabase = supabaseClient();
       
-      // PHASE 1: Process check-in reminders only
-      console.log(`[${new Date().toISOString()}] [REMINDER-PROCESSOR] Starting FIXED reminder processing`, {
+      // PHASE 1: Process check-in reminders with RADICAL FIX
+      console.log(`[${new Date().toISOString()}] [REMINDER-PROCESSOR] Starting RADICAL FIX reminder processing`, {
         forceSend,
         debug
       });
       
-      console.log(`[${new Date().toISOString()}] [REMINDER-PROCESSOR] PHASE 1: Processing check-in reminders with CORRECT email retrieval`);
+      console.log(`[${new Date().toISOString()}] [REMINDER-PROCESSOR] PHASE 1: Processing check-in reminders with RADICAL EMAIL FIX`);
       
       // Get due check-in reminders
       const { data: checkInReminders, error: checkInError } = await supabase
@@ -79,6 +79,32 @@ serve(async (req) => {
               console.log(`Processing check-in reminder ${reminder.id} for message ${reminder.message_id}`);
               console.log(`Creator user_id: ${reminder.messages.user_id}`);
               
+              // RADICAL FIX: Get creator email from profiles table (which has email from auth signup)
+              const { data: creatorProfile, error: profileError } = await supabase
+                .from('profiles')
+                .select('email')
+                .eq('id', reminder.messages.user_id)
+                .single();
+              
+              if (!creatorProfile?.email) {
+                console.error(`[REMINDER-PROCESSOR] No email found in profiles for creator ${reminder.messages.user_id}`, profileError);
+                
+                // Mark as failed
+                await supabase
+                  .from('reminder_schedule')
+                  .update({ 
+                    status: 'failed',
+                    last_attempt_at: new Date().toISOString(),
+                    retry_count: (reminder.retry_count || 0) + 1
+                  })
+                  .eq('id', reminder.id);
+                
+                continue;
+              }
+              
+              const creatorEmail = creatorProfile.email;
+              console.log(`[REMINDER-PROCESSOR] RADICAL FIX: Got creator email from profiles: ${creatorEmail}`);
+              
               // Mark as processing
               await supabase
                 .from('reminder_schedule')
@@ -97,14 +123,15 @@ serve(async (req) => {
               const hoursUntilDeadline = (deadline.getTime() - Date.now()) / (1000 * 60 * 60);
               
               console.log(`Sending check-in reminder for message "${reminder.messages.title}" - ${hoursUntilDeadline.toFixed(1)} hours until deadline`);
-              console.log(`Will get creator's PRIMARY EMAIL from auth.users for user_id: ${reminder.messages.user_id}`);
+              console.log(`RADICAL FIX: Using creator email from profiles: ${creatorEmail}`);
               
-              // Send reminder to creator - NOW USES FIXED EMAIL RETRIEVAL
+              // Send reminder to creator - NOW USES RADICAL FIX WITH EMAIL PARAMETER
               const reminderResults = await sendCreatorReminder(
                 reminder.message_id,
                 reminder.condition_id,
                 reminder.messages.title,
                 reminder.messages.user_id,
+                creatorEmail,  // RADICAL FIX: Pass email directly
                 hoursUntilDeadline,
                 reminder.scheduled_at,
                 debug
@@ -123,7 +150,7 @@ serve(async (req) => {
                   })
                   .eq('id', reminder.id);
                 
-                console.log(`Successfully sent check-in reminder ${reminder.id} to creator's PRIMARY EMAIL`);
+                console.log(`RADICAL FIX: Successfully sent check-in reminder ${reminder.id} to creator email ${creatorEmail}`);
               } else {
                 // Mark as failed
                 await supabase
@@ -195,20 +222,20 @@ serve(async (req) => {
         }
       }
       
-      console.log(`[${new Date().toISOString()}] [REMINDER-PROCESSOR] FIXED processing complete`, {
+      console.log(`[${new Date().toISOString()}] [REMINDER-PROCESSOR] RADICAL FIX processing complete`, {
         processedCount: (checkInReminders?.length || 0) + (finalDeliveryReminders?.length || 0),
         successCount: 0, // Would be calculated based on actual results
         failedCount: 0,
         errors: []
       });
       
-      console.log("FIXED processing complete: Now using creator's PRIMARY EMAIL from auth.users");
+      console.log("RADICAL FIX processing complete: Now using creator email from profiles table");
     }
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: "Reminder processing completed with FIXED email retrieval",
+        message: "Reminder processing completed with RADICAL FIX email retrieval",
         timestamp: new Date().toISOString()
       }),
       {
