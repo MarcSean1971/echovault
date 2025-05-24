@@ -1,30 +1,37 @@
 
-// Re-export all services for easy imports
-export * from './messageService';
-export * from './conditionService';
-export * from './recipientService';
-export * from './fileService';
-export * from './reminder'; // Changed from './reminderService' to './reminder'
-export * from './notificationService';
-// Export all from whatsApp except triggerManualReminder which we'll handle explicitly
-export { 
-  triggerDeadmanSwitch, 
-  sendTestWhatsAppMessage 
-} from './whatsApp';
-export * from './mediaService';
+/**
+ * Main entry point for the message services
+ * Initializes monitoring and exports all functionality
+ */
 
-// Export the triggerManualReminder from whatsApp, not from reminder
-export { triggerManualReminder } from './whatsApp';
+// Initialize notification monitoring
+import { notificationMonitor } from './monitoring/notificationMonitor';
 
-// Explicitly re-export from transcriptionService to resolve ambiguity
-import { 
-  formatVideoContent, 
-  blobToBase64
-} from './transcriptionService';
+// Start monitoring on service load
+if (typeof window !== 'undefined') {
+  // Start monitoring after a short delay to ensure system is ready
+  setTimeout(() => {
+    notificationMonitor.startMonitoring();
+  }, 2000);
+}
 
-export {
-  formatVideoContent,
-  blobToBase64
-  // parseVideoContent is deliberately not re-exported from here to avoid conflict
-  // with the same named export from mediaService
-};
+// Export types
+export * from "./types";
+
+// Export condition services
+export * from "./conditionService";
+
+// Export message services
+export * from "./messageService";
+
+// Export reminder services
+export * from "./reminder";
+
+// Export notification services
+export * from "./notification";
+
+// Export WhatsApp services
+export * from "./whatsApp";
+
+// Export monitoring services
+export { notificationMonitor } from './monitoring/notificationMonitor';
