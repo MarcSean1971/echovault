@@ -153,8 +153,10 @@ serve(async (req) => {
     
     console.log(`[WEBHOOK] Found user ${userId} for phone ${from}`);
     
-    // Check if this is an SOS message (panic trigger) - this handles both new SOS and selection responses
+    // Check if this is an SOS message or selection response
     const messageUpper = body_text.toUpperCase().trim();
+    
+    // Handle SOS triggers and selection responses
     if (messageUpper === 'SOS' || /^\d+$/.test(body_text.trim()) || ['CANCEL', 'ABORT', 'STOP'].includes(messageUpper)) {
       console.log("[WEBHOOK] Detected SOS panic trigger or selection response");
       
