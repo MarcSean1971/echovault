@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useRef } from "react";
 
 /**
- * ENHANCED: Stable hook to manage condition-related events with improved WhatsApp check-in handling
+ * FIXED: Immediate hook to manage condition-related events with fast WhatsApp check-in handling
  */
 export function useConditionEvents(
   messageId: string,
@@ -13,7 +13,7 @@ export function useConditionEvents(
   const messageIdRef = useRef(messageId);
 
   /**
-   * ENHANCED: Handle conditions-updated event with WhatsApp check-in delays and forced refreshes
+   * FIXED: Handle conditions-updated event with immediate WhatsApp check-in updates
    */
   const handleConditionsUpdated = useCallback((event: Event) => {
     if (event instanceof CustomEvent) {
@@ -32,27 +32,14 @@ export function useConditionEvents(
           'enhanced:', enhanced || false
         );
         
-        // ENHANCED: WhatsApp check-ins get delayed handling with forced refreshes
+        // FIXED: WhatsApp check-ins get IMMEDIATE handling
         if (action === 'check-in' && (source === 'whatsapp' || source === 'whatsapp-realtime')) {
-          console.log(`[useConditionEvents ${messageIdRef.current}] WhatsApp check-in - DELAYED refresh with cache clearing`);
+          console.log(`[useConditionEvents ${messageIdRef.current}] WhatsApp check-in - IMMEDIATE refresh`);
           
-          // CRITICAL FIX: Add delay to ensure database propagation
-          setTimeout(() => {
-            console.log(`[useConditionEvents ${messageIdRef.current}] Executing delayed WhatsApp check-in refresh`);
-            
-            // Clear cache immediately and refresh with forced data fetch
-            invalidateCache();
-            refreshData();
-            incrementRefreshCounter();
-            
-            // Secondary refresh to ensure deadline recalculation
-            setTimeout(() => {
-              console.log(`[useConditionEvents ${messageIdRef.current}] Secondary refresh for deadline update`);
-              refreshData();
-              incrementRefreshCounter();
-            }, 300);
-            
-          }, 600); // 600ms delay to ensure DB operations complete
+          // Immediate cache clearing and refresh
+          invalidateCache();
+          refreshData();
+          incrementRefreshCounter();
           
         } else {
           // Regular handling for other events
@@ -66,7 +53,7 @@ export function useConditionEvents(
 
   // Set up event listener only once and keep it stable
   useEffect(() => {
-    console.log(`[useConditionEvents] Setting up ENHANCED listener for message ${messageId}`);
+    console.log(`[useConditionEvents] Setting up IMMEDIATE listener for message ${messageId}`);
     
     // Update the messageId ref
     messageIdRef.current = messageId;
@@ -82,7 +69,7 @@ export function useConditionEvents(
     
     return () => {
       if (listenerRef.current) {
-        console.log(`[useConditionEvents] Removing ENHANCED listener for message ${messageId}`);
+        console.log(`[useConditionEvents] Removing IMMEDIATE listener for message ${messageId}`);
         window.removeEventListener('conditions-updated', listenerRef.current);
         listenerRef.current = null;
       }

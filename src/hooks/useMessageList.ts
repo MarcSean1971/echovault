@@ -98,27 +98,17 @@ export function useMessageList() {
     loadData();
   }, [loadData]);
   
-  // Listen for conditions updates with WhatsApp check-in delays
+  // FIXED: Listen for conditions updates with immediate WhatsApp check-in handling
   useEffect(() => {
     const handleConditionsUpdated = (event: Event) => {
       if (event instanceof CustomEvent) {
         const { action, source, messageId, enhanced } = event.detail || {};
         console.log("[useMessageList] Received conditions-updated event:", { action, source, messageId, enhanced });
         
-        // Handle WhatsApp check-ins with delays
-        if (action === 'check-in' && source === 'whatsapp' && enhanced) {
-          console.log("[useMessageList] Enhanced WhatsApp check-in detected, delayed force refresh");
-          setTimeout(() => {
-            console.log("[useMessageList] Executing delayed refresh for enhanced WhatsApp check-in");
-            forceRefresh();
-          }, 500);
-          
-        } else if (action === 'check-in' && source === 'whatsapp') {
-          console.log("[useMessageList] Standard WhatsApp check-in detected, delayed force refresh");
-          setTimeout(() => {
-            console.log("[useMessageList] Executing delayed refresh for standard WhatsApp check-in");
-            forceRefresh();
-          }, 1200);
+        // IMMEDIATE handling for WhatsApp check-ins - no delays
+        if (action === 'check-in' && source === 'whatsapp') {
+          console.log("[useMessageList] WhatsApp check-in detected, IMMEDIATE force refresh");
+          forceRefresh();
           
         } else if (action === 'arm' || action === 'disarm') {
           console.log("[useMessageList] Arm/disarm event, refreshing data");

@@ -65,7 +65,7 @@ export default function Messages() {
     initializeRealtime();
   }, []);
 
-  // Listen for condition-updated events
+  // FIXED: Listen for condition-updated events with immediate WhatsApp handling
   useEffect(() => {
     const handleConditionEvents = (event: Event) => {
       if (!(event instanceof CustomEvent)) return;
@@ -74,26 +74,13 @@ export default function Messages() {
       
       console.log("[Messages] Received condition event:", { action, source, enhanced, messageId });
       
-      // Handle WhatsApp check-ins with appropriate delays
-      if (action === 'check-in' && source === 'whatsapp' && enhanced) {
-        console.log("[Messages] Enhanced WhatsApp check-in event, delayed refresh");
+      // IMMEDIATE handling for WhatsApp check-ins - no delays
+      if (action === 'check-in' && source === 'whatsapp') {
+        console.log("[Messages] WhatsApp check-in event, IMMEDIATE refresh");
         
-        setTimeout(() => {
-          console.log("[Messages] Executing delayed refresh for enhanced WhatsApp check-in");
-          forceRefresh();
-          forceReminderRefresh();
-          setLocalReminderRefreshTrigger(prev => prev + 1);
-        }, 700);
-        
-      } else if (action === 'check-in' && source === 'whatsapp') {
-        console.log("[Messages] Standard WhatsApp check-in event, delayed refresh");
-        
-        setTimeout(() => {
-          console.log("[Messages] Executing delayed refresh for standard WhatsApp check-in");
-          forceRefresh();
-          forceReminderRefresh();
-          setLocalReminderRefreshTrigger(prev => prev + 1);
-        }, 1000);
+        forceRefresh();
+        forceReminderRefresh();
+        setLocalReminderRefreshTrigger(prev => prev + 1);
         
       } else if (action === 'arm' || action === 'disarm') {
         console.log(`[Messages] Received ${action} event, refreshing reminders`);
