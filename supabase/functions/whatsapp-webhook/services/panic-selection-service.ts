@@ -208,21 +208,3 @@ export async function processSelectionResponse(userId: string, phoneNumber: stri
     message_id: selectedCondition.message_id
   };
 }
-
-/**
- * Send WhatsApp response message
- */
-async function sendWhatsAppResponse(toNumber: string, message: string) {
-  const supabase = createSupabaseAdmin();
-  
-  try {
-    await supabase.functions.invoke("send-whatsapp-notification", {
-      body: {
-        to: toNumber,
-        message: message
-      }
-    });
-  } catch (error) {
-    console.error(`[PANIC-SELECTION] Error sending WhatsApp response: ${error.message}`);
-  }
-}
