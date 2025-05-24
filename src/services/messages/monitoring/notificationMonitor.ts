@@ -1,9 +1,10 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { EmergencyRecoveryService } from "./emergencyRecovery";
 
 /**
  * Notification monitoring service to detect and fix stuck reminders
+ * UPDATED: Now uses the new emergency recovery system
  */
 class NotificationMonitor {
   private monitoringInterval: NodeJS.Timeout | null = null;
@@ -19,9 +20,9 @@ class NotificationMonitor {
     }
 
     this.isMonitoring = true;
-    console.log("[NOTIFICATION-MONITOR] Starting notification monitoring");
+    console.log("[NOTIFICATION-MONITOR] Starting notification monitoring with emergency recovery");
 
-    // Check every 30 seconds for stuck reminders
+    // Check every 30 seconds for stuck reminders - now uses emergency recovery
     this.monitoringInterval = setInterval(async () => {
       try {
         await this.checkForStuckReminders();
@@ -58,6 +59,7 @@ class NotificationMonitor {
 
   /**
    * Check for conditions that have reached their deadline
+   * UPDATED: Uses emergency recovery for better reliability
    */
   private async checkForReachedDeadlines() {
     try {
@@ -101,21 +103,21 @@ class NotificationMonitor {
           deadlineDate = new Date(baseTime.getTime() + hoursInMs + minutesInMs);
         }
         
-        // If deadline has passed, trigger automatic delivery
+        // If deadline has passed, use emergency recovery to trigger delivery
         if (deadlineDate && now >= deadlineDate) {
-          console.log(`[NOTIFICATION-MONITOR] Deadline reached for condition ${condition.id}, triggering delivery`);
+          console.log(`[NOTIFICATION-MONITOR] Deadline reached for condition ${condition.id}, using emergency recovery`);
           
           try {
-            // Disarm the condition first
+            // Use emergency recovery service for reliable delivery
+            await EmergencyRecoveryService.forceDeliverMessage(condition.message_id);
+            
+            // Disarm the condition
             await supabase
               .from('message_conditions')
               .update({ active: false })
               .eq('id', condition.id);
             
-            // Trigger the message delivery
-            await this.triggerMessageDelivery(condition.message_id, condition.id);
-            
-            // Emit a deadline-reached event for UI updates
+            // Emit events for UI updates
             window.dispatchEvent(new CustomEvent('deadline-reached', { 
               detail: { 
                 deadlineTime: deadlineDate.getTime(),
@@ -125,13 +127,12 @@ class NotificationMonitor {
               }
             }));
             
-            // Emit conditions-updated event for UI refresh
             window.dispatchEvent(new CustomEvent('conditions-updated', { 
               detail: { 
                 messageId: condition.message_id,
                 conditionId: condition.id,
                 action: 'deadline-reached',
-                source: 'notification-monitor',
+                source: 'notification-monitor-v2',
                 timestamp: now.toISOString()
               }
             }));
@@ -147,36 +148,8 @@ class NotificationMonitor {
   }
 
   /**
-   * Trigger message delivery for a specific condition
-   */
-  private async triggerMessageDelivery(messageId: string, conditionId: string) {
-    try {
-      console.log(`[NOTIFICATION-MONITOR] Triggering delivery for message ${messageId}`);
-      
-      const { error } = await supabase.functions.invoke("send-message-notifications", {
-        body: {
-          messageId: messageId,
-          debug: true,
-          forceSend: true,
-          source: "deadline-reached",
-          conditionId: conditionId
-        }
-      });
-
-      if (error) {
-        console.error(`[NOTIFICATION-MONITOR] Error triggering message delivery:`, error);
-        throw error;
-      }
-      
-      console.log(`[NOTIFICATION-MONITOR] Successfully triggered delivery for message ${messageId}`);
-    } catch (error) {
-      console.error(`[NOTIFICATION-MONITOR] Error in triggerMessageDelivery:`, error);
-      throw error;
-    }
-  }
-
-  /**
    * Check for reminders stuck in processing state
+   * UPDATED: Uses emergency recovery system
    */
   private async checkForStuckReminders() {
     try {
@@ -196,40 +169,10 @@ class NotificationMonitor {
       }
 
       if (stuckReminders && stuckReminders.length > 0) {
-        console.warn(`[NOTIFICATION-MONITOR] Found ${stuckReminders.length} stuck reminders`);
+        console.warn(`[NOTIFICATION-MONITOR] Found ${stuckReminders.length} stuck reminders, using emergency recovery`);
         
-        // Reset stuck reminders to pending status
-        const { error: resetError } = await supabase
-          .from('reminder_schedule')
-          .update({
-            status: 'pending',
-            retry_count: 0,
-            updated_at: new Date().toISOString()
-          })
-          .in('id', stuckReminders.map(r => r.id));
-
-        if (resetError) {
-          console.error("[NOTIFICATION-MONITOR] Error resetting stuck reminders:", resetError);
-          return;
-        }
-
-        console.log(`[NOTIFICATION-MONITOR] Reset ${stuckReminders.length} stuck reminders to pending`);
-
-        // Trigger immediate processing for each affected message
-        for (const reminder of stuckReminders) {
-          try {
-            await this.triggerImmediateProcessing(reminder.message_id);
-          } catch (triggerError) {
-            console.error(`[NOTIFICATION-MONITOR] Error triggering processing for message ${reminder.message_id}:`, triggerError);
-          }
-        }
-
-        // Show user notification about recovery
-        toast({
-          title: "System Recovery",
-          description: `Recovered ${stuckReminders.length} stuck notification(s)`,
-          duration: 5000,
-        });
+        // Use emergency recovery to fix all stuck reminders at once
+        await EmergencyRecoveryService.fixStuckNotifications();
       }
     } catch (error) {
       console.error("[NOTIFICATION-MONITOR] Error in checkForStuckReminders:", error);
@@ -237,69 +180,16 @@ class NotificationMonitor {
   }
 
   /**
-   * Trigger immediate processing for a specific message
-   */
-  private async triggerImmediateProcessing(messageId: string) {
-    try {
-      console.log(`[NOTIFICATION-MONITOR] Triggering immediate processing for message ${messageId}`);
-      
-      const { error } = await supabase.functions.invoke("send-reminder-emails", {
-        body: {
-          messageId: messageId,
-          debug: true,
-          forceSend: true,
-          source: "notification-monitor-recovery",
-          bypassDeduplication: true
-        }
-      });
-
-      if (error) {
-        console.error(`[NOTIFICATION-MONITOR] Error triggering immediate processing:`, error);
-        
-        // Try backup method
-        await supabase.functions.invoke("send-message-notifications", {
-          body: {
-            messageId: messageId,
-            debug: true,
-            forceSend: true,
-            source: "notification-monitor-backup",
-            bypassDeduplication: true
-          }
-        });
-      }
-    } catch (error) {
-      console.error(`[NOTIFICATION-MONITOR] Error in triggerImmediateProcessing:`, error);
-    }
-  }
-
-  /**
    * Force check all pending reminders right now
+   * UPDATED: Uses emergency recovery
    */
   async forceCheckAllReminders() {
-    console.log("[NOTIFICATION-MONITOR] Force checking all pending reminders");
+    console.log("[NOTIFICATION-MONITOR] Force checking all reminders using emergency recovery");
     
     try {
-      const { error } = await supabase.functions.invoke("send-reminder-emails", {
-        body: {
-          debug: true,
-          forceSend: true,
-          source: "force-check-all",
-          action: "process"
-        }
-      });
-
-      if (error) {
-        console.error("[NOTIFICATION-MONITOR] Error in force check:", error);
-        throw error;
-      }
-
-      toast({
-        title: "Reminder Check Triggered",
-        description: "Forced processing of all pending reminders",
-        duration: 3000,
-      });
+      await EmergencyRecoveryService.fixStuckNotifications();
     } catch (error) {
-      console.error("[NOTIFICATION-MONITOR] Error forcing reminder check:", error);
+      console.error("[NOTIFICATION-MONITOR] Error in force check:", error);
       toast({
         title: "Error",
         description: "Failed to trigger reminder check",

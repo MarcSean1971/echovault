@@ -1,93 +1,98 @@
-import { useState, useEffect } from "react";
-import { useMessageList } from "@/hooks/useMessageList";
-import { useBatchedReminders } from "@/hooks/useBatchedReminders";
-import { useMessageActions } from "@/hooks/useMessageActions.tsx"; // Explicitly import from .tsx file
-import { MessagesHeader } from "@/components/message/MessagesHeader";
-import { MessageCategories } from "@/components/message/MessageCategories";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { MessageCard } from "@/components/message/MessageCard";
+import { MessageFilters } from "@/components/message/MessageFilters";
+import { CreateMessageButton } from "@/components/message/CreateMessageButton";
+import { useMessages } from "@/hooks/useMessages";
+import { useReminderBatch } from "@/hooks/useReminderBatch";
+import { MessageSkeleton } from "@/components/message/MessageSkeleton";
+import { EmergencyRecoveryButton } from "@/components/debug/EmergencyRecoveryButton";
+import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 export default function Messages() {
-  // Get message data using our custom hook - removed messageType parameter
-  const { 
-    messages, 
-    panicMessages, 
-    regularMessages, 
-    isLoading, 
-    reminderRefreshTrigger,
-    forceRefresh 
-  } = useMessageList();
+  const navigate = useNavigate();
+  const [statusFilter, setStatusFilter] = useState<"all" | "armed" | "disarmed">("all");
+  const [typeFilter, setTypeFilter] = useState<"all" | "no_check_in" | "scheduled" | "panic_trigger">("all");
   
-  // State management for messages
-  const [messagesState, setMessagesState] = useState(messages);
-  const [panicMessagesState, setPanicMessagesState] = useState(panicMessages);
-  const [regularMessagesState, setRegularMessagesState] = useState(regularMessages);
+  const { messages, isLoading, deleteMessage, refreshMessages } = useMessages();
   
-  // Local refresh counter to force reminder updates
-  const [localReminderRefreshTrigger, setLocalReminderRefreshTrigger] = useState(0);
+  const { reminderInfo } = useReminderBatch(messages || []);
   
-  // Keep state in sync with the data from useMessageList
   useEffect(() => {
-    setMessagesState(messages);
-    setPanicMessagesState(panicMessages);
-    setRegularMessagesState(regularMessages);
-  }, [messages, panicMessages, regularMessages]);
-  
-  // Handle actions like delete - fixed the argument count to match the hook
-  const { handleDelete } = useMessageActions(
-    messages, 
-    setMessagesState, 
-    setPanicMessagesState, 
-    setRegularMessagesState
-  );
-  
-  // Get all message IDs for reminder fetching
-  const allMessageIds = messages.map(message => message.id);
-  
-  // Fetch reminders for all messages in a single batch query
-  // Now using combined refresh trigger from both global and local sources
-  const { reminders: reminderData, forceRefresh: forceReminderRefresh } = useBatchedReminders(
-    allMessageIds, 
-    reminderRefreshTrigger + localReminderRefreshTrigger
-  );
-
-  // Listen for condition-updated events that should trigger a refresh
-  useEffect(() => {
-    const handleConditionEvents = (event: Event) => {
-      if (!(event instanceof CustomEvent)) return;
-      
-      const { action } = event.detail || {};
-      
-      // When a message is armed or disarmed, trigger a local reminder refresh
-      if (action === 'arm' || action === 'disarm') {
-        console.log(`[Messages] Received ${action} event, refreshing reminders`);
-        
-        // Force refresh message list to update status
-        forceRefresh();
-        
-        // Force refresh reminders directly
-        forceReminderRefresh();
-        
-        // Also increment local trigger for safety
-        setLocalReminderRefreshTrigger(prev => prev + 1);
-      }
+    const handleConditionsUpdated = () => {
+      refreshMessages();
     };
     
-    window.addEventListener('conditions-updated', handleConditionEvents);
-    return () => {
-      window.removeEventListener('conditions-updated', handleConditionEvents);
-    };
-  }, [forceRefresh, forceReminderRefresh]);
+    window.addEventListener('conditions-updated', handleConditionsUpdated);
+    return () => window.removeEventListener('conditions-updated', handleConditionsUpdated);
+  }, [refreshMessages]);
+
+  const filteredMessages = messages?.filter((message) => {
+    if (statusFilter !== "all") {
+      const isArmed = message.condition?.active === true;
+      if ((statusFilter === "armed" && !isArmed) || (statusFilter === "disarmed" && isArmed)) {
+        return false;
+      }
+    }
+
+    if (typeFilter !== "all") {
+      if (message.condition?.condition_type !== typeFilter) {
+        return false;
+      }
+    }
+    return true; // placeholder
+  }) || [];
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto p-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+          <h1 className="text-3xl font-bold">Messages</h1>
+          <CreateMessageButton />
+        </div>
+        <div className="grid gap-6">
+          {[...Array(3)].map((_, i) => (
+            <MessageSkeleton key={i} />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
-      <MessagesHeader />
+    <div className="container mx-auto p-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <h1 className="text-3xl font-bold">Messages</h1>
+        <div className="flex items-center gap-2">
+          <EmergencyRecoveryButton />
+          <CreateMessageButton />
+        </div>
+      </div>
       
-      <MessageCategories 
-        panicMessages={panicMessages}
-        regularMessages={regularMessages}
-        isLoading={isLoading}
-        onDelete={handleDelete}
-        reminderData={reminderData}
+      <MessageFilters
+        statusFilter={statusFilter}
+        onStatusFilterChange={setStatusFilter}
+        typeFilter={typeFilter}
+        onTypeFilterChange={setTypeFilter}
       />
+
+      {filteredMessages.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-muted-foreground mb-4">No messages found.</p>
+          <CreateMessageButton />
+        </div>
+      ) : (
+        <div className="grid gap-6">
+          {filteredMessages.map((message) => (
+            <MessageCard
+              key={message.id}
+              message={message}
+              onDelete={deleteMessage}
+              reminderInfo={reminderInfo[message.id]}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
