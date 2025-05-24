@@ -59,7 +59,7 @@ const handler = async (req: Request): Promise<Response> => {
       bypassDeduplication = false // NEW: Parameter to explicitly bypass deduplication
     } = requestData;
     
-    console.log(`===== SEND MESSAGE NOTIFICATIONS =====`);
+    console.log(`===== SEND MESSAGE NOTIFICATIONS WITH DEADLINE VALIDATION =====`);
     console.log(`Starting notification process at ${new Date().toISOString()}`);
     console.log(`DEBUG MODE: ${debug ? 'Enabled' : 'Disabled'}`);
     console.log(`Processing message notifications${messageId ? ` for message ID: ${messageId}` : ''}`);
@@ -137,9 +137,10 @@ const handler = async (req: Request): Promise<Response> => {
     // CRITICAL FIX: Always use forceSend for WhatsApp or reminder triggers
     const effectiveForceSend = forceSend || isFromWhatsApp || isReminderTriggered;
     
-    // Get messages that need notification
+    // Get messages that need notification with ENHANCED deadline validation
+    console.log(`[DEADLINE-CHECK] Fetching messages with strict deadline validation (forceSend: ${effectiveForceSend})`);
     const messagesToNotify = await getMessagesToNotify(messageId, effectiveForceSend); 
-    console.log(`Found ${messagesToNotify.length} messages to notify out of ${messageId ? '1 requested' : 'all active conditions'}`);
+    console.log(`[DEADLINE-CHECK] Found ${messagesToNotify.length} messages that passed deadline validation out of ${messageId ? '1 requested' : 'all active conditions'}`);
     
     if (messagesToNotify.length === 0 && messageId) {
       // If we have a specific messageId but couldn't find it for notification,
@@ -153,23 +154,40 @@ const handler = async (req: Request): Promise<Response> => {
         
       const { data: conditionData, error: conditionError } = await supabase
         .from('message_conditions')
-        .select('id, condition_type, active')
+        .select('id, condition_type, active, last_checked, hours_threshold, minutes_threshold')
         .eq('message_id', messageId)
         .single();
       
       if (messageData) {
-        console.log(`Requested message ${messageId} exists with title: "${messageData.title}"`);
+        console.log(`[DEADLINE-CHECK] Requested message ${messageId} exists with title: "${messageData.title}"`);
         
         if (conditionData) {
-          console.log(`Message has condition type: ${conditionData.condition_type}, active: ${conditionData.active}`);
+          console.log(`[DEADLINE-CHECK] Message has condition type: ${conditionData.condition_type}, active: ${conditionData.active}`);
+          
+          // Check deadline for this specific condition
+          if (conditionData.condition_type === 'no_check_in' && conditionData.last_checked) {
+            const now = new Date();
+            const lastChecked = new Date(conditionData.last_checked);
+            const actualDeadline = new Date(lastChecked);
+            actualDeadline.setHours(actualDeadline.getHours() + (conditionData.hours_threshold || 0));
+            actualDeadline.setMinutes(actualDeadline.getMinutes() + (conditionData.minutes_threshold || 0));
+            
+            const minutesUntilDeadline = (actualDeadline.getTime() - now.getTime()) / (1000 * 60);
+            
+            console.log(`[DEADLINE-CHECK] Deadline analysis - Last checked: ${lastChecked.toISOString()}, Deadline: ${actualDeadline.toISOString()}, Minutes until: ${minutesUntilDeadline.toFixed(2)}`);
+            
+            if (minutesUntilDeadline > 0) {
+              console.log(`[DEADLINE-CHECK] Message NOT included because deadline not reached yet (${minutesUntilDeadline.toFixed(2)} minutes remaining)`);
+            }
+          }
           
           // Log additional debugging information about why the message didn't qualify
           if (!conditionData.active) {
-            console.log("Message condition is not active, that's why it wasn't included");
+            console.log("[DEADLINE-CHECK] Message condition is not active, that's why it wasn't included");
             
             // CRITICAL FIX: If forceSend, WhatsApp, or reminder trigger, include it anyway
             if (effectiveForceSend) {
-              console.log("Force send, WhatsApp trigger, or reminder trigger is enabled, trying to process this message anyway");
+              console.log("[DEADLINE-CHECK] Force send, WhatsApp trigger, or reminder trigger is enabled, trying to process this message anyway");
               
               // Get the full message and condition data
               const { data: fullMessageData } = await supabase
@@ -191,7 +209,7 @@ const handler = async (req: Request): Promise<Response> => {
                   condition: fullConditionData
                 };
                 
-                console.log("Forcing notification for:", forcedMessage);
+                console.log("[DEADLINE-CHECK] Forcing notification for:", forcedMessage);
                 
                 // Send notification
                 await sendMessageNotification(forcedMessage, {
@@ -221,16 +239,16 @@ const handler = async (req: Request): Promise<Response> => {
             }
           }
         } else {
-          console.log(`Message exists but has no conditions: ${conditionError?.message || 'No condition found'}`);
+          console.log(`[DEADLINE-CHECK] Message exists but has no conditions: ${conditionError?.message || 'No condition found'}`);
         }
       } else {
-        console.log(`Requested message ID ${messageId} not found: ${messageError?.message || 'Message not found'}`);
+        console.log(`[DEADLINE-CHECK] Requested message ID ${messageId} not found: ${messageError?.message || 'Message not found'}`);
       }
       
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: "No messages found to notify",
+          error: "No messages found to notify - deadline not reached or conditions not met",
           requestedMessageId: messageId || null,
           source: source,
           forceSend: forceSend,
@@ -247,12 +265,12 @@ const handler = async (req: Request): Promise<Response> => {
     }
     
     if (messagesToNotify.length === 0) {
-      console.log("No messages found to notify! Check the active status and other parameters.");
+      console.log("[DEADLINE-CHECK] No messages found to notify! Check the active status and deadline validation.");
       
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: "No messages found to notify",
+          error: "No messages found to notify - deadlines not reached",
           requestedMessageId: messageId || null,
           timestamp: new Date().toISOString()
         }),
@@ -278,7 +296,8 @@ const handler = async (req: Request): Promise<Response> => {
       });
     }
 
-    // Send notifications for each message
+    // Send notifications for each message with ENHANCED deadline validation
+    console.log(`[DEADLINE-CHECK] Processing ${messagesToNotify.length} messages with enhanced deadline validation`);
     const results = await Promise.all(
       messagesToNotify.map(message => 
         sendMessageNotification(message, {
@@ -296,7 +315,7 @@ const handler = async (req: Request): Promise<Response> => {
     const failed = results.filter(r => !r.success).length;
     
     // Log detailed results
-    console.log(`===== NOTIFICATION RESULTS =====`);
+    console.log(`===== NOTIFICATION RESULTS WITH DEADLINE VALIDATION =====`);
     console.log(`Success: ${successful}, Failed: ${failed}`);
     console.log("Detailed results:", JSON.stringify(results, null, 2));
     console.log(`===== END NOTIFICATION PROCESS =====`);
@@ -308,7 +327,8 @@ const handler = async (req: Request): Promise<Response> => {
         successful_notifications: successful,
         failed_notifications: failed,
         results: results,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        deadlineValidationApplied: true
       }),
       {
         status: 200,

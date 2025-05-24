@@ -24,6 +24,59 @@ interface NotificationOptions {
   source?: string;           // ADDED: Source of the notification request
 }
 
+/**
+ * ENHANCED: Added strict deadline validation to prevent premature final delivery
+ */
+function validateDeadlineForRecipientNotification(condition: Condition, debug: boolean = false): boolean {
+  const now = new Date();
+  
+  // Only apply deadline validation for check-in based conditions
+  if (condition.condition_type === 'no_check_in' && condition.last_checked) {
+    const lastChecked = new Date(condition.last_checked);
+    const hoursThreshold = condition.hours_threshold || 0;
+    const minutesThreshold = condition.minutes_threshold || 0;
+    const actualDeadline = new Date(lastChecked);
+    
+    actualDeadline.setHours(actualDeadline.getHours() + hoursThreshold);
+    actualDeadline.setMinutes(actualDeadline.getMinutes() + minutesThreshold);
+    
+    const minutesUntilDeadline = (actualDeadline.getTime() - now.getTime()) / (1000 * 60);
+    
+    if (debug) {
+      console.log(`[RECIPIENT-VALIDATION] Deadline check for condition ${condition.id}`);
+      console.log(`[RECIPIENT-VALIDATION] Last checked: ${lastChecked.toISOString()}`);
+      console.log(`[RECIPIENT-VALIDATION] Actual deadline: ${actualDeadline.toISOString()}`);
+      console.log(`[RECIPIENT-VALIDATION] Current time: ${now.toISOString()}`);
+      console.log(`[RECIPIENT-VALIDATION] Minutes until deadline: ${minutesUntilDeadline.toFixed(2)}`);
+    }
+    
+    // STRICT VALIDATION: Must be past the actual deadline
+    if (now < actualDeadline) {
+      if (debug) {
+        console.log(`[RECIPIENT-VALIDATION] BLOCKING recipient notification - deadline not reached (${minutesUntilDeadline.toFixed(2)} minutes remaining)`);
+      }
+      return false;
+    }
+    
+    // ADDITIONAL SAFEGUARD: Check for recent check-ins (within last 5 minutes)
+    const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+    if (lastChecked > fiveMinutesAgo) {
+      if (debug) {
+        console.log(`[RECIPIENT-VALIDATION] BLOCKING recipient notification - recent check-in detected at ${lastChecked.toISOString()}`);
+      }
+      return false;
+    }
+    
+    if (debug) {
+      console.log(`[RECIPIENT-VALIDATION] APPROVED recipient notification - deadline passed and no recent check-in`);
+    }
+    return true;
+  }
+  
+  // For other condition types, allow notification (they have their own validation logic)
+  return true;
+}
+
 export async function sendMessageNotification(
   data: {message: Message, condition: Condition}, 
   options: NotificationOptions = {}
@@ -59,6 +112,21 @@ export async function sendMessageNotification(
       console.log(`Deduplication ID: ${deduplicationId || "None"}`);
       console.log(`Timestamp: ${timestamp || "None"}`);
       console.log(`Condition data:`, JSON.stringify(condition, null, 2));
+    }
+    
+    // CRITICAL NEW VALIDATION: Check deadline before proceeding with recipient notifications
+    if (!forceSend && !isEmergency) {
+      const deadlineValid = validateDeadlineForRecipientNotification(condition, debug);
+      if (!deadlineValid) {
+        if (debug) {
+          console.log(`[NOTIFICATION-SERVICE] BLOCKED - Deadline validation failed for message ${message.id}`);
+        }
+        return { 
+          success: false, 
+          error: "Deadline not reached or recent check-in detected",
+          details: "Notification blocked by deadline validation"
+        };
+      }
     }
     
     // Check if this is from WhatsApp or a reminder trigger
