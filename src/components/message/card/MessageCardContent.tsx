@@ -23,7 +23,7 @@ interface MessageCardContentProps {
   upcomingReminders: string[];
 }
 
-// Use React.memo with a custom comparison function to reduce unnecessary re-renders
+// Use React.memo with a less restrictive comparison function that prioritizes correctness over performance
 export const MessageCardContent = memo(function MessageCardContent({
   message,
   isArmed,
@@ -132,19 +132,29 @@ export const MessageCardContent = memo(function MessageCardContent({
     </div>
   );
 }, (prevProps, nextProps) => {
-  // Custom comparison function to prevent unnecessary re-renders
-  
-  // Always re-render if armed status changes
-  if (prevProps.isArmed !== nextProps.isArmed) return false;
+  // CRITICAL FIX: Much less restrictive memo function that prioritizes correctness
   
   // Always re-render if message changes
   if (prevProps.message.id !== nextProps.message.id) return false;
   
-  // Re-render when deadline progress significantly changes
-  if (Math.abs(prevProps.deadlineProgress - nextProps.deadlineProgress) > 2) return false;
+  // Always re-render if armed status changes
+  if (prevProps.isArmed !== nextProps.isArmed) return false;
   
-  // Re-render when time display changes (including seconds)
+  // CRITICAL: Always re-render if check-in data changes
+  if (prevProps.lastCheckIn !== nextProps.lastCheckIn) return false;
+  if (prevProps.rawCheckInTime !== nextProps.rawCheckInTime) return false;
+  
+  // CRITICAL: Always re-render if deadline changes
+  if (prevProps.deadline?.getTime() !== nextProps.deadline?.getTime()) return false;
+  
+  // CRITICAL: Always re-render if condition last_checked changes
+  if (prevProps.condition?.last_checked !== nextProps.condition?.last_checked) return false;
+  
+  // Always re-render when time display changes
   if (prevProps.timeLeft !== nextProps.timeLeft) return false;
+  
+  // Always re-render when deadline progress changes significantly
+  if (Math.abs(prevProps.deadlineProgress - nextProps.deadlineProgress) > 1) return false;
   
   // Re-render when reminders change
   if (prevProps.nextReminder !== nextProps.nextReminder) return false;
@@ -152,6 +162,6 @@ export const MessageCardContent = memo(function MessageCardContent({
   // Check if the length of upcoming reminders changed
   if ((prevProps.upcomingReminders?.length || 0) !== (nextProps.upcomingReminders?.length || 0)) return false;
   
-  // Default to not re-rendering
+  // For any other case, allow re-render to ensure we catch all check-in updates
   return true;
 });

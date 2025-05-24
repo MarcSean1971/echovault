@@ -207,22 +207,26 @@ function MessageCardInner({ message, onDelete, reminderInfo }: MessageCardProps)
   );
 }
 
-// Memoize the component with a custom comparison function
+// Memoize the component with a MUCH less restrictive comparison function that prioritizes correctness
 export const MessageCard = memo(MessageCardInner, (prevProps, nextProps) => {
   // Always re-render if message IDs are different
   if (prevProps.message.id !== nextProps.message.id) return false;
+  
+  // Always re-render if message content has changed
+  if (prevProps.message.updated_at !== nextProps.message.updated_at) return false;
   
   // Check if reminder info has changed substantially
   const prevReminder = prevProps.reminderInfo?.formattedNextReminder;
   const nextReminder = nextProps.reminderInfo?.formattedNextReminder;
   
-  // Only trigger re-render if reminders have changed
+  // Re-render if reminders have changed
   if (prevReminder !== nextReminder) return false;
   
   // Check if reminder count has changed
   if ((prevProps.reminderInfo?.upcomingReminders?.length || 0) !== 
       (nextProps.reminderInfo?.upcomingReminders?.length || 0)) return false;
-  
-  // Don't re-render for minor updates that might cause flickering
+
+  // For most other cases, allow re-render to ensure we don't miss critical updates
+  // This is less performant but ensures correctness, especially for check-in updates
   return true;
 });
