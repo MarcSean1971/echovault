@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { RealtimeChannel } from "@supabase/supabase-js";
+import { RealtimeChannel, REALTIME_SUBSCRIBE_STATES } from "@supabase/supabase-js";
 
 let realtimeChannel: RealtimeChannel | null = null;
 let connectionAttempts = 0;
@@ -111,10 +111,10 @@ export async function enableRealtimeForConditions(): Promise<boolean> {
       .subscribe((status) => {
         console.log(`[REALTIME] Subscription status: ${status}`);
         
-        if (status === 'SUBSCRIBED') {
+        if (status === REALTIME_SUBSCRIBE_STATES.SUBSCRIBED) {
           console.log('[REALTIME] Successfully subscribed to message_conditions updates');
           connectionAttempts = 0; // Reset attempts on successful connection
-        } else if (status === 'CHANNEL_ERROR') {
+        } else if (status === REALTIME_SUBSCRIBE_STATES.CHANNEL_ERROR) {
           connectionAttempts++;
           console.error(`[REALTIME] Channel error - attempt ${connectionAttempts}/${MAX_RECONNECTION_ATTEMPTS}`);
           
@@ -126,7 +126,7 @@ export async function enableRealtimeForConditions(): Promise<boolean> {
           } else {
             console.error('[REALTIME] Max reconnection attempts reached, giving up');
           }
-        } else if (status === 'CLOSED') {
+        } else if (status === REALTIME_SUBSCRIBE_STATES.CLOSED) {
           console.warn('[REALTIME] Connection closed, attempting reconnect');
           setTimeout(() => enableRealtimeForConditions(), 2000);
         }
@@ -203,7 +203,7 @@ export function getConnectionHealth(): {
   status: string;
 } {
   return {
-    isConnected: realtimeChannel?.state === 'SUBSCRIBED',
+    isConnected: realtimeChannel?.state === REALTIME_SUBSCRIBE_STATES.SUBSCRIBED,
     attempts: connectionAttempts,
     maxAttempts: MAX_RECONNECTION_ATTEMPTS,
     status: realtimeChannel?.state || 'NOT_INITIALIZED'
