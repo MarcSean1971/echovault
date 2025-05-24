@@ -14,7 +14,7 @@ export async function performUserCheckIn(userId: string): Promise<boolean> {
     // Get all active conditions for this user
     const { data: conditions, error: fetchError } = await supabase
       .from("message_conditions")
-      .select("id, message_id, condition_type, hours_threshold, minutes_threshold")
+      .select("id, message_id, condition_type, hours_threshold, minutes_threshold, reminder_hours")
       .eq("active", true)
       .in("condition_type", ["no_check_in", "recurring_check_in", "inactivity_to_date"]);
     
@@ -40,25 +40,105 @@ export async function performUserCheckIn(userId: string): Promise<boolean> {
     
     console.log("[CHECK-IN-SERVICE] Successfully updated last_checked timestamps");
     
-    // CRITICAL FIX: Regenerate reminder schedules for each condition
-    console.log("[CHECK-IN-SERVICE] Regenerating reminder schedules after check-in");
+    // CRITICAL FIX: First mark existing reminders as obsolete, then regenerate
+    console.log("[CHECK-IN-SERVICE] Marking existing reminders as obsolete and regenerating schedules");
     
     for (const condition of conditions) {
       try {
-        console.log(`[CHECK-IN-SERVICE] Regenerating reminders for condition ${condition.id}, message ${condition.message_id}`);
+        console.log(`[CHECK-IN-SERVICE] Processing condition ${condition.id}, message ${condition.message_id}`);
         
-        // Use ensureReminderSchedule to regenerate the schedule
-        const result = await ensureReminderSchedule(condition.id, false); // false = not an edit, it's a check-in
+        // STEP 1: Mark existing reminders as obsolete to prevent duplicates
+        const { error: obsoleteError } = await supabase
+          .from('reminder_schedule')
+          .update({ status: 'obsolete' })
+          .eq('message_id', condition.message_id)
+          .eq('condition_id', condition.id)
+          .eq('status', 'pending');
         
-        if (result) {
-          console.log(`[CHECK-IN-SERVICE] Successfully regenerated reminders for condition ${condition.id}`);
+        if (obsoleteError) {
+          console.error(`[CHECK-IN-SERVICE] Error marking reminders obsolete for condition ${condition.id}:`, obsoleteError);
         } else {
-          console.warn(`[CHECK-IN-SERVICE] Failed to regenerate reminders for condition ${condition.id}`);
+          console.log(`[CHECK-IN-SERVICE] Marked existing reminders as obsolete for condition ${condition.id}`);
         }
+        
+        // STEP 2: Only regenerate reminders if the condition has reminder_hours configured
+        if (condition.reminder_hours && condition.reminder_hours.length > 0) {
+          console.log(`[CHECK-IN-SERVICE] Regenerating reminders for condition ${condition.id} with ${condition.reminder_hours.length} reminder times`);
+          
+          // Calculate new deadline based on updated last_checked
+          const now = new Date();
+          const newDeadline = new Date(now);
+          newDeadline.setHours(newDeadline.getHours() + (condition.hours_threshold || 0));
+          newDeadline.setMinutes(newDeadline.getMinutes() + (condition.minutes_threshold || 0));
+          
+          console.log(`[CHECK-IN-SERVICE] New deadline for condition ${condition.id}: ${newDeadline.toISOString()}`);
+          
+          // Create new reminder schedule entries
+          const reminderEntries = condition.reminder_hours.map((minutes: number) => {
+            const scheduledAt = new Date(newDeadline.getTime() - (minutes * 60 * 1000));
+            
+            return {
+              message_id: condition.message_id,
+              condition_id: condition.id,
+              scheduled_at: scheduledAt.toISOString(),
+              reminder_type: 'reminder',
+              status: 'pending',
+              delivery_priority: minutes < 60 ? 'high' : 'normal',
+              retry_strategy: 'standard'
+            };
+          });
+          
+          // Add final delivery entry
+          reminderEntries.push({
+            message_id: condition.message_id,
+            condition_id: condition.id,
+            scheduled_at: newDeadline.toISOString(),
+            reminder_type: 'final_delivery',
+            status: 'pending',
+            delivery_priority: 'critical',
+            retry_strategy: 'aggressive'
+          });
+          
+          // Insert new reminder schedule
+          const { error: insertError } = await supabase
+            .from('reminder_schedule')
+            .insert(reminderEntries);
+          
+          if (insertError) {
+            console.error(`[CHECK-IN-SERVICE] Error creating new reminder schedule for condition ${condition.id}:`, insertError);
+          } else {
+            console.log(`[CHECK-IN-SERVICE] Successfully created ${reminderEntries.length} new reminder entries for condition ${condition.id}`);
+          }
+        } else {
+          console.log(`[CHECK-IN-SERVICE] No reminder_hours configured for condition ${condition.id}, skipping reminder generation`);
+        }
+        
       } catch (reminderError) {
-        console.error(`[CHECK-IN-SERVICE] Error regenerating reminders for condition ${condition.id}:`, reminderError);
-        // Don't fail the entire check-in if reminder regeneration fails
+        console.error(`[CHECK-IN-SERVICE] Error processing reminders for condition ${condition.id}:`, reminderError);
+        // Don't fail the entire check-in if reminder processing fails
       }
+    }
+    
+    // STEP 3: Trigger immediate processing of any due reminders
+    try {
+      console.log("[CHECK-IN-SERVICE] Triggering immediate reminder processing");
+      
+      const { error: triggerError } = await supabase.functions.invoke("send-reminder-emails", {
+        body: {
+          debug: true,
+          forceSend: false, // Don't force send, just process due ones
+          source: "check-in-service-trigger",
+          action: "process"
+        }
+      });
+      
+      if (triggerError) {
+        console.error("[CHECK-IN-SERVICE] Error triggering reminder processing:", triggerError);
+      } else {
+        console.log("[CHECK-IN-SERVICE] Successfully triggered reminder processing");
+      }
+    } catch (triggerError) {
+      console.error("[CHECK-IN-SERVICE] Exception triggering reminder processing:", triggerError);
     }
     
     // Dispatch event for UI updates

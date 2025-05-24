@@ -1,5 +1,9 @@
 
 import { supabase } from "@/integrations/supabase/client";
+import { reminderMonitor } from "@/services/messages/monitoring/reminderMonitor";
+
+// Start monitoring when the utility is loaded
+reminderMonitor.startMonitoring();
 
 /**
  * Mark existing reminders obsolete - replaced by more specific function
@@ -104,3 +108,17 @@ export function getEffectiveDeadline(condition: any): Date | null {
 
 // Add an alias for backward compatibility
 export const markExistingRemindersObsolete = markRemindersAsObsolete;
+
+/**
+ * Force check all reminders immediately (for debugging)
+ */
+export async function forceCheckAllReminders() {
+  return reminderMonitor.forceProcessAllReminders();
+}
+
+/**
+ * Get reminder system statistics
+ */
+export async function getReminderSystemStats() {
+  return reminderMonitor.getSystemStats();
+}
