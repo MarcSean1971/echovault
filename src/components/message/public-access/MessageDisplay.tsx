@@ -56,13 +56,13 @@ export const MessageDisplay = ({
 
   if (!message) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-8">
-        <Card className="overflow-hidden border-destructive/20 bg-white">
-          <CardHeader className="bg-red-50">
+      <div className="max-w-3xl mx-auto px-4 py-8" style={{ backgroundColor: '#FFFFFF' }}>
+        <Card className="overflow-hidden border-destructive/20 bg-white" style={{ backgroundColor: '#FFFFFF' }}>
+          <CardHeader className="bg-white" style={{ backgroundColor: '#FFFFFF' }}>
             <CardTitle className="text-center text-destructive">Message Not Available</CardTitle>
           </CardHeader>
-          <CardContent className="p-8 text-center bg-white">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10 mb-6">
+          <CardContent className="p-8 text-center bg-white" style={{ backgroundColor: '#FFFFFF' }}>
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100 mb-6">
               <Lock className={`h-8 w-8 text-destructive ${HOVER_TRANSITION}`} />
             </div>
             <p className="text-muted-foreground mb-6">
@@ -78,68 +78,70 @@ export const MessageDisplay = ({
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8 mb-16 animate-fade-in">
-      {isPreviewMode && (
-        <div className="mb-4 rounded-lg bg-blue-50 p-4 border border-blue-200">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <Eye className={`h-5 w-5 text-accent ${HOVER_TRANSITION}`} aria-hidden="true" />
+    <div className="max-w-3xl mx-auto px-4 py-8 mb-16 animate-fade-in" style={{ backgroundColor: '#FFFFFF' }}>
+      <div className="bg-white" style={{ backgroundColor: '#FFFFFF' }}>
+        {isPreviewMode && (
+          <div className="mb-4 rounded-lg bg-blue-50 p-4 border border-blue-200">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <Eye className={`h-5 w-5 text-accent ${HOVER_TRANSITION}`} aria-hidden="true" />
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-secondary-foreground">Preview Mode</h3>
+                <p className="text-sm text-muted-foreground">
+                  You're viewing this message in preview mode. Some features may be limited.
+                </p>
+              </div>
             </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-secondary-foreground">Preview Mode</h3>
-              <p className="text-sm text-muted-foreground">
-                You're viewing this message in preview mode. Some features may be limited.
-              </p>
+          </div>
+        )}
+        
+        <Card className="overflow-hidden border shadow-sm bg-white" style={{ backgroundColor: '#FFFFFF' }}>
+          {/* Message Header - Force pure white */}
+          <CardHeader className="bg-white p-6 border-b" style={{ backgroundColor: '#FFFFFF' }}>
+            <CardTitle className="text-2xl font-bold font-serif text-foreground">{message.title}</CardTitle>
+            <div className="flex items-center text-muted-foreground text-sm">
+              <Calendar className={`h-4 w-4 mr-1 ${HOVER_TRANSITION}`} />
+              <span>{formatMessageDate(message.created_at)}</span>
             </div>
-          </div>
-        </div>
-      )}
-      
-      <Card className="overflow-hidden border shadow-sm bg-white">
-        {/* Message Header - Now uses pure white background to match landing page */}
-        <CardHeader className="bg-white p-6 border-b">
-          <CardTitle className="text-2xl font-bold font-serif text-foreground">{message.title}</CardTitle>
-          <div className="flex items-center text-muted-foreground text-sm">
-            <Calendar className={`h-4 w-4 mr-1 ${HOVER_TRANSITION}`} />
-            <span>{formatMessageDate(message.created_at)}</span>
-          </div>
-        </CardHeader>
-        
-        {/* Security Badge */}
-        <div className="bg-gray-50 px-6 py-2 border-b border-gray-200">
-          <div className="flex items-center">
-            <Shield className={`h-4 w-4 text-primary mr-2 ${HOVER_TRANSITION}`} />
-            <span className="text-sm font-medium text-secondary-foreground">Secure Message</span>
-            
-            <Badge variant="outline" className="ml-auto border-gray-300 text-gray-600">
-              <Clock className={`h-3 w-3 mr-1 ${HOVER_TRANSITION}`} /> {message.expires_at ? 'Expires' : 'No Expiration'}
-            </Badge>
-          </div>
-        </div>
-        
-        {/* Message Content */}
-        <CardContent className="p-6 bg-white">
-          <div className="prose max-w-full">
-            {message && <MessageContent message={message} deliveryId={deliveryId} recipientEmail={recipientEmail} />}
-          </div>
-        </CardContent>
-        
-        {/* Footer */}
-        <div className="bg-gray-50 px-6 py-4 text-sm text-gray-600 border-t border-gray-200">
-          <div className="flex items-center justify-between">
+          </CardHeader>
+          
+          {/* Security Badge - Force white */}
+          <div className="bg-white px-6 py-2 border-b border-gray-200" style={{ backgroundColor: '#FFFFFF' }}>
             <div className="flex items-center">
-              <Shield className={`h-4 w-4 mr-2 text-primary ${HOVER_TRANSITION}`} />
-              <span>This message was delivered securely</span>
-            </div>
-            
-            <div>
-              {message.sender_name && (
-                <span>From: {message.sender_name}</span>
-              )}
+              <Shield className={`h-4 w-4 text-primary mr-2 ${HOVER_TRANSITION}`} />
+              <span className="text-sm font-medium text-secondary-foreground">Secure Message</span>
+              
+              <Badge variant="outline" className="ml-auto border-gray-300 text-gray-600">
+                <Clock className={`h-3 w-3 mr-1 ${HOVER_TRANSITION}`} /> {message.expires_at ? 'Expires' : 'No Expiration'}
+              </Badge>
             </div>
           </div>
-        </div>
-      </Card>
+          
+          {/* Message Content - Force white */}
+          <CardContent className="p-6 bg-white" style={{ backgroundColor: '#FFFFFF' }}>
+            <div className="prose max-w-full">
+              {message && <MessageContent message={message} deliveryId={deliveryId} recipientEmail={recipientEmail} />}
+            </div>
+          </CardContent>
+          
+          {/* Footer - Force white */}
+          <div className="bg-white px-6 py-4 text-sm text-gray-600 border-t border-gray-200" style={{ backgroundColor: '#FFFFFF' }}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Shield className={`h-4 w-4 mr-2 text-primary ${HOVER_TRANSITION}`} />
+                <span>This message was delivered securely</span>
+              </div>
+              
+              <div>
+                {message.sender_name && (
+                  <span>From: {message.sender_name}</span>
+                )}
+              </div>
+            </div>
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }

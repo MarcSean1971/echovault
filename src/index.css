@@ -92,7 +92,7 @@
     --background: 0 0% 100%; /* Force white background */
     --card: 0 0% 100%;
     --secondary: 0 0% 100%;
-    --muted: 245 15% 96%;
+    --muted: 0 0% 100%;
   }
 }
 
@@ -147,6 +147,19 @@
   background-color: #FFFFFF !important;
   background: #FFFFFF !important;
   background-image: none !important;
+}
+
+/* NUCLEAR OVERRIDE: Target ALL Tailwind background classes in public wrapper */
+.public-message-wrapper .bg-muted,
+.public-message-wrapper .bg-secondary,
+.public-message-wrapper .bg-background,
+.public-message-wrapper .bg-gray-50,
+.public-message-wrapper .bg-slate-50,
+.public-message-wrapper .bg-stone-50,
+.public-message-wrapper .bg-neutral-50,
+.public-message-wrapper .bg-zinc-50 {
+  background-color: #FFFFFF !important;
+  background: #FFFFFF !important;
 }
 
 /* Header specific overrides */
@@ -212,4 +225,21 @@ header[class*="public"] {
 .public-message-wrapper [class*="Card"] {
   background-color: #FFFFFF !important;
   background: #FFFFFF !important;
+}
+
+/* ULTIMATE OVERRIDE: Force white on ALL elements inside public routes */
+.public-message-wrapper * {
+  --tw-bg-opacity: 1 !important;
+}
+
+.public-message-wrapper .bg-muted {
+  background-color: rgb(255 255 255 / var(--tw-bg-opacity)) !important;
+}
+
+.public-message-wrapper .bg-secondary {
+  background-color: rgb(255 255 255 / var(--tw-bg-opacity)) !important;
+}
+
+.public-message-wrapper .bg-background {
+  background-color: rgb(255 255 255 / var(--tw-bg-opacity)) !important;
 }
