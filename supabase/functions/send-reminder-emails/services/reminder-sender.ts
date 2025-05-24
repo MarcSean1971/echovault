@@ -1,4 +1,3 @@
-
 import { supabaseClient } from "../supabase-client.ts";
 import { Resend } from "npm:resend@2.0.0";
 import { generateAccessUrl } from "../utils/url-generator.ts";

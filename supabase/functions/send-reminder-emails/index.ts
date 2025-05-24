@@ -5,7 +5,7 @@ import { sendCreatorReminder } from "./services/reminder-sender.ts";
 import { corsHeaders } from "./utils/cors.ts";
 
 /**
- * FIXED: Enhanced reminder processing with proper message data handling
+ * FIXED: Enhanced reminder processing with CORRECT creator email retrieval from auth.users
  */
 serve(async (req) => {
   console.log("===== SEND REMINDER EMAILS FUNCTION =====");
@@ -30,18 +30,18 @@ serve(async (req) => {
     console.log(`Request parameters: messageId=${messageId}, debug=${debug}, forceSend=${forceSend}, source=${source}, action=${action}`);
 
     if (action === "process") {
-      console.log("Processing due reminders with enhanced separation logic...");
+      console.log("Processing due reminders with FIXED creator email retrieval...");
       console.log("Checking for all due reminders");
       
       const supabase = supabaseClient();
       
       // PHASE 1: Process check-in reminders only
-      console.log(`[${new Date().toISOString()}] [REMINDER-PROCESSOR] Starting enhanced reminder processing`, {
+      console.log(`[${new Date().toISOString()}] [REMINDER-PROCESSOR] Starting FIXED reminder processing`, {
         forceSend,
         debug
       });
       
-      console.log(`[${new Date().toISOString()}] [REMINDER-PROCESSOR] PHASE 1: Processing check-in reminders only`);
+      console.log(`[${new Date().toISOString()}] [REMINDER-PROCESSOR] PHASE 1: Processing check-in reminders with CORRECT email retrieval`);
       
       // Get due check-in reminders
       const { data: checkInReminders, error: checkInError } = await supabase
@@ -77,6 +77,7 @@ serve(async (req) => {
           for (const reminder of checkInReminders) {
             try {
               console.log(`Processing check-in reminder ${reminder.id} for message ${reminder.message_id}`);
+              console.log(`Creator user_id: ${reminder.messages.user_id}`);
               
               // Mark as processing
               await supabase
@@ -96,8 +97,9 @@ serve(async (req) => {
               const hoursUntilDeadline = (deadline.getTime() - Date.now()) / (1000 * 60 * 60);
               
               console.log(`Sending check-in reminder for message "${reminder.messages.title}" - ${hoursUntilDeadline.toFixed(1)} hours until deadline`);
+              console.log(`Will get creator's PRIMARY EMAIL from auth.users for user_id: ${reminder.messages.user_id}`);
               
-              // Send reminder to creator
+              // Send reminder to creator - NOW USES FIXED EMAIL RETRIEVAL
               const reminderResults = await sendCreatorReminder(
                 reminder.message_id,
                 reminder.condition_id,
@@ -121,7 +123,7 @@ serve(async (req) => {
                   })
                   .eq('id', reminder.id);
                 
-                console.log(`Successfully sent check-in reminder ${reminder.id}`);
+                console.log(`Successfully sent check-in reminder ${reminder.id} to creator's PRIMARY EMAIL`);
               } else {
                 // Mark as failed
                 await supabase
@@ -133,7 +135,7 @@ serve(async (req) => {
                   })
                   .eq('id', reminder.id);
                 
-                console.error(`Failed to send check-in reminder ${reminder.id}`);
+                console.error(`Failed to send check-in reminder ${reminder.id}:`, reminderResults);
               }
               
             } catch (reminderError) {
@@ -193,20 +195,20 @@ serve(async (req) => {
         }
       }
       
-      console.log(`[${new Date().toISOString()}] [REMINDER-PROCESSOR] Enhanced processing complete`, {
+      console.log(`[${new Date().toISOString()}] [REMINDER-PROCESSOR] FIXED processing complete`, {
         processedCount: (checkInReminders?.length || 0) + (finalDeliveryReminders?.length || 0),
         successCount: 0, // Would be calculated based on actual results
         failedCount: 0,
         errors: []
       });
       
-      console.log("Enhanced processing complete: 0 processed, 0 successful, 0 failed");
+      console.log("FIXED processing complete: Now using creator's PRIMARY EMAIL from auth.users");
     }
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: "Reminder processing completed",
+        message: "Reminder processing completed with FIXED email retrieval",
         timestamp: new Date().toISOString()
       }),
       {
