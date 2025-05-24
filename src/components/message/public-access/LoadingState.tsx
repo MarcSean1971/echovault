@@ -7,11 +7,11 @@ export const LoadingState = () => {
   return (
     <div className="container mx-auto max-w-3xl px-4 py-8">
       <Card className="overflow-hidden border shadow-sm">
-        {/* Animated Header - Now uses hero-gradient to match landing page */}
+        {/* Animated Header - Now uses hero-gradient with dark skeleton elements to match landing page */}
         <div className="hero-gradient p-6">
-          <Skeleton className="h-8 w-3/4 bg-white/20" />
+          <Skeleton className="h-8 w-3/4 bg-muted/30" />
           <div className="flex items-center mt-2">
-            <Skeleton className="h-4 w-32 bg-white/20" />
+            <Skeleton className="h-4 w-32 bg-muted/30" />
           </div>
         </div>
         
