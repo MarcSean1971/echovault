@@ -232,8 +232,8 @@ export const ErrorState = ({ error, isPreviewMode = false }: ErrorStateProps) =>
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
       {isPreviewMode && (
-        <div className="bg-amber-100 border-l-4 border-amber-500 p-4 mb-4">
-          <p className="text-amber-700">
+        <div className="bg-accent/10 border-l-4 border-accent p-4 mb-4">
+          <p className="text-accent">
             <strong>PREVIEW MODE</strong> - This is a test view with a simulated delivery ID which will show an access error. This is expected behavior.
           </p>
         </div>
@@ -301,10 +301,10 @@ export const ErrorState = ({ error, isPreviewMode = false }: ErrorStateProps) =>
           )}
           
           {isAttachmentError ? (
-            <div className="bg-amber-50 border border-amber-100 rounded-md p-4 mt-2 w-full max-w-md">
+            <div className="bg-accent/10 border border-accent/20 rounded-md p-4 mt-2 w-full max-w-md">
               <div className="flex items-start">
-                <HelpCircle className={`h-5 w-5 text-amber-500 mr-2 mt-0.5 flex-shrink-0 ${HOVER_TRANSITION}`} />
-                <div className="text-sm text-amber-700 text-left">
+                <HelpCircle className={`h-5 w-5 text-accent mr-2 mt-0.5 flex-shrink-0 ${HOVER_TRANSITION}`} />
+                <div className="text-sm text-accent text-left">
                   <p className="font-medium mb-1">Attachment access issues:</p>
                   <ul className="list-disc pl-5 space-y-1">
                     <li>The attachment may have expired or been deleted</li>
@@ -327,10 +327,10 @@ export const ErrorState = ({ error, isPreviewMode = false }: ErrorStateProps) =>
               </div>
             </div>
           ) : (
-            <div className="bg-amber-50 border border-amber-100 rounded-md p-4 mt-2 w-full max-w-md">
+            <div className="bg-accent/10 border border-accent/20 rounded-md p-4 mt-2 w-full max-w-md">
               <div className="flex items-start">
-                <HelpCircle className={`h-5 w-5 text-amber-500 mr-2 mt-0.5 flex-shrink-0 ${HOVER_TRANSITION}`} />
-                <div className="text-sm text-amber-700 text-left">
+                <HelpCircle className={`h-5 w-5 text-accent mr-2 mt-0.5 flex-shrink-0 ${HOVER_TRANSITION}`} />
+                <div className="text-sm text-accent text-left">
                   <p className="font-medium mb-1">Possible issues:</p>
                   <ul className="list-disc pl-5 space-y-1">
                     <li>The URL may have been copied incorrectly from your email</li>
@@ -386,7 +386,7 @@ export const ErrorState = ({ error, isPreviewMode = false }: ErrorStateProps) =>
           <div className="flex flex-wrap gap-3 mt-2 justify-center">
             <Button 
               onClick={retryAccess}
-              className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default} flex items-center gap-2`}
+              className={`btn-hover-effect ${HOVER_TRANSITION} flex items-center gap-2`}
             >
               <RefreshCw className={`h-4 w-4 ${HOVER_TRANSITION}`} />
               Try Again

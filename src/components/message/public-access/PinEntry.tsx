@@ -47,7 +47,7 @@ export const PinEntry = ({ onSubmit }: PinEntryProps) => {
               />
               <Button 
                 type="submit" 
-                className={`w-full ${HOVER_TRANSITION}`} 
+                className={`w-full btn-hover-effect ${HOVER_TRANSITION}`} 
                 disabled={!pinCode || isSubmitting}
               >
                 {isSubmitting ? "Verifying..." : "Access Message"}
