@@ -68,18 +68,14 @@ export async function processCheckIn(userId: string, phoneNumber: string) {
       }
     }
     
-    // Clean the phone number - remove whatsapp: prefix like SOS system does
-    let cleanPhone = phoneNumber;
-    if (cleanPhone.startsWith('whatsapp:')) {
-      cleanPhone = cleanPhone.replace('whatsapp:', '');
-    }
-    
-    console.log(`[CHECK-IN] Sending confirmation to clean phone: ${cleanPhone} (original: ${phoneNumber})`);
+    // FIXED: Use the same sending mechanism as SOS responses - preserve whatsapp: prefix
+    console.log(`[CHECK-IN] Sending confirmation to phone: ${phoneNumber} (keeping original format)`);
     
     try {
-      const { data: confirmationResult, error: confirmationError } = await supabase.functions.invoke("send-whatsapp", {
+      // Use send-whatsapp-notification function like SOS responses do
+      const { data: confirmationResult, error: confirmationError } = await supabase.functions.invoke("send-whatsapp-notification", {
         body: {
-          to: cleanPhone, // Send clean phone number without whatsapp: prefix
+          to: phoneNumber, // Keep the original whatsapp: prefix intact
           message: `✅ Check-in received! Your deadman's switch timers have been reset. Time: ${new Date().toLocaleTimeString()}`
         }
       });

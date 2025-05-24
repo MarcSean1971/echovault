@@ -91,6 +91,29 @@ serve(async (req) => {
         }
       }
       
+      // FIXED: Send confirmation using the same mechanism as SOS responses
+      if (phoneNumber) {
+        console.log(`[CHECK-IN] Sending confirmation to phone: ${phoneNumber} (preserving format)`);
+        
+        try {
+          // Use send-whatsapp-notification function like SOS responses do
+          const { data: confirmationResult, error: confirmationError } = await supabase.functions.invoke("send-whatsapp-notification", {
+            body: {
+              to: phoneNumber, // Keep the original whatsapp: prefix intact  
+              message: `✅ Check-in received! Your deadman's switch timers have been reset. Time: ${new Date().toLocaleTimeString()}`
+            }
+          });
+          
+          if (confirmationError) {
+            console.error("[CHECK-IN] Error sending confirmation:", confirmationError);
+          } else {
+            console.log("[CHECK-IN] Confirmation message sent successfully");
+          }
+        } catch (confirmationError) {
+          console.error("[CHECK-IN] Exception sending confirmation:", confirmationError);
+        }
+      }
+      
       // Trigger realtime event for UI updates
       console.log("[CHECK-IN] Triggering realtime event for UI updates");
       
