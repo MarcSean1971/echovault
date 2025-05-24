@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useMessageList } from "@/hooks/useMessageList";
 import { useBatchedReminders } from "@/hooks/useBatchedReminders";
@@ -50,42 +49,23 @@ export default function Messages() {
     reminderRefreshTrigger + localReminderRefreshTrigger
   );
 
-  // ENHANCED: Initialize Realtime connection with health monitoring
+  // Initialize Realtime connection (once)
   useEffect(() => {
-    console.log("[Messages] Initializing ENHANCED Realtime connection with monitoring");
+    console.log("[Messages] Initializing Realtime connection");
     
     const initializeRealtime = async () => {
       const success = await enableRealtimeForConditions();
       if (success) {
         console.log("[Messages] Realtime connection established successfully");
-        
-        // Check connection health periodically
-        const healthCheck = setInterval(async () => {
-          const status = await checkRealtimeStatus();
-          console.log(`[Messages] Realtime health check: ${status}`);
-          
-          if (status === 'CHANNEL_ERROR' || status === 'NOT_INITIALIZED') {
-            console.warn(`[Messages] Realtime connection issue detected (${status}), attempting reconnect`);
-            await reconnectRealtime();
-          }
-        }, 30000); // Check every 30 seconds
-        
-        return () => clearInterval(healthCheck);
       } else {
         console.warn("[Messages] Failed to establish Realtime connection");
-        
-        // Retry after 5 seconds
-        setTimeout(initializeRealtime, 5000);
       }
     };
     
-    const cleanup = initializeRealtime();
-    return () => {
-      if (cleanup instanceof Function) cleanup();
-    };
+    initializeRealtime();
   }, []);
 
-  // ENHANCED: Listen for condition-updated events with improved WhatsApp check-in handling
+  // Listen for condition-updated events
   useEffect(() => {
     const handleConditionEvents = (event: Event) => {
       if (!(event instanceof CustomEvent)) return;
@@ -94,11 +74,10 @@ export default function Messages() {
       
       console.log("[Messages] Received condition event:", { action, source, enhanced, messageId });
       
-      // ENHANCED: WhatsApp check-ins get delayed refresh to ensure DB propagation
+      // Handle WhatsApp check-ins with appropriate delays
       if (action === 'check-in' && source === 'whatsapp' && enhanced) {
-        console.log("[Messages] Enhanced WhatsApp check-in event, delayed immediate refresh");
+        console.log("[Messages] Enhanced WhatsApp check-in event, delayed refresh");
         
-        // Delayed refresh for enhanced WhatsApp events to ensure DB updates complete
         setTimeout(() => {
           console.log("[Messages] Executing delayed refresh for enhanced WhatsApp check-in");
           forceRefresh();
@@ -107,11 +86,10 @@ export default function Messages() {
         }, 700);
         
       } else if (action === 'check-in' && source === 'whatsapp') {
-        console.log("[Messages] Standard WhatsApp check-in event, extended delayed refresh");
+        console.log("[Messages] Standard WhatsApp check-in event, delayed refresh");
         
-        // Extended delay for standard WhatsApp check-ins to ensure DB update is complete
         setTimeout(() => {
-          console.log("[Messages] Executing extended delayed refresh for standard WhatsApp check-in");
+          console.log("[Messages] Executing delayed refresh for standard WhatsApp check-in");
           forceRefresh();
           forceReminderRefresh();
           setLocalReminderRefreshTrigger(prev => prev + 1);
@@ -120,13 +98,8 @@ export default function Messages() {
       } else if (action === 'arm' || action === 'disarm') {
         console.log(`[Messages] Received ${action} event, refreshing reminders`);
         
-        // Force refresh message list to update status
         forceRefresh();
-        
-        // Force refresh reminders directly
         forceReminderRefresh();
-        
-        // Also increment local trigger for safety
         setLocalReminderRefreshTrigger(prev => prev + 1);
       } else if (action === 'update') {
         console.log("[Messages] General update event, refreshing data");
@@ -134,7 +107,7 @@ export default function Messages() {
       }
     };
     
-    console.log("[Messages] Setting up ENHANCED condition event listener with WhatsApp delays");
+    console.log("[Messages] Setting up condition event listener");
     window.addEventListener('conditions-updated', handleConditionEvents);
     
     return () => {
@@ -142,16 +115,6 @@ export default function Messages() {
       window.removeEventListener('conditions-updated', handleConditionEvents);
     };
   }, [forceRefresh, forceReminderRefresh]);
-
-  // ADDED: Fallback refresh mechanism for missed updates
-  useEffect(() => {
-    const fallbackInterval = setInterval(() => {
-      console.log("[Messages] Fallback refresh - checking for missed updates");
-      forceRefresh();
-    }, 60000); // Every 60 seconds as safety net
-    
-    return () => clearInterval(fallbackInterval);
-  }, [forceRefresh]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">

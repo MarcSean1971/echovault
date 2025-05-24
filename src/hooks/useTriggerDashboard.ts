@@ -7,7 +7,6 @@ import { useEffect, useState, useCallback } from "react";
 /**
  * Main hook for the dashboard trigger system
  * Combines data fetching, check-in functionality, and navigation
- * Fixed to avoid circular dependencies and handle errors properly
  */
 export function useTriggerDashboard() {
   const navigate = useNavigate();
@@ -87,7 +86,6 @@ export function useTriggerDashboard() {
     }
   }, [userId]);
 
-  // Log deadline information to help with debugging
   console.log("useTriggerDashboard - current nextDeadline:", nextDeadline);
 
   return {

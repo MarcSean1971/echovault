@@ -98,27 +98,27 @@ export function useMessageList() {
     loadData();
   }, [loadData]);
   
-  // ENHANCED: Stable event listener for conditions updates with WhatsApp check-in delays
+  // Listen for conditions updates with WhatsApp check-in delays
   useEffect(() => {
     const handleConditionsUpdated = (event: Event) => {
       if (event instanceof CustomEvent) {
         const { action, source, messageId, enhanced } = event.detail || {};
         console.log("[useMessageList] Received conditions-updated event:", { action, source, messageId, enhanced });
         
-        // ENHANCED: For WhatsApp check-ins, add delays to ensure DB propagation
+        // Handle WhatsApp check-ins with delays
         if (action === 'check-in' && source === 'whatsapp' && enhanced) {
           console.log("[useMessageList] Enhanced WhatsApp check-in detected, delayed force refresh");
           setTimeout(() => {
             console.log("[useMessageList] Executing delayed refresh for enhanced WhatsApp check-in");
             forceRefresh();
-          }, 500); // 500ms delay for enhanced events
+          }, 500);
           
         } else if (action === 'check-in' && source === 'whatsapp') {
-          console.log("[useMessageList] Standard WhatsApp check-in detected, extended delayed force refresh");
+          console.log("[useMessageList] Standard WhatsApp check-in detected, delayed force refresh");
           setTimeout(() => {
-            console.log("[useMessageList] Executing extended delayed refresh for standard WhatsApp check-in");
+            console.log("[useMessageList] Executing delayed refresh for standard WhatsApp check-in");
             forceRefresh();
-          }, 1200); // 1.2s delay for standard check-ins to ensure DB completion
+          }, 1200);
           
         } else if (action === 'arm' || action === 'disarm') {
           console.log("[useMessageList] Arm/disarm event, refreshing data");
@@ -131,37 +131,12 @@ export function useMessageList() {
       }
     };
     
-    console.log("[useMessageList] Setting up ENHANCED conditions-updated listener with WhatsApp delays");
+    console.log("[useMessageList] Setting up conditions-updated listener");
     window.addEventListener('conditions-updated', handleConditionsUpdated);
     
     return () => {
       console.log("[useMessageList] Removing conditions-updated listener");
       window.removeEventListener('conditions-updated', handleConditionsUpdated);
-    };
-  }, [forceRefresh]); // Only depend on forceRefresh
-
-  // ENHANCED: Periodic refresh fallback with smarter intervals
-  useEffect(() => {
-    // More aggressive refresh for the first 5 minutes, then slower
-    let interval: NodeJS.Timeout;
-    
-    const startTime = Date.now();
-    const checkAndRefresh = () => {
-      const elapsed = Date.now() - startTime;
-      const refreshInterval = elapsed < 300000 ? 45000 : 120000; // 45s for first 5min, then 2min
-      
-      console.log("[useMessageList] Periodic refresh fallback");
-      forceRefresh();
-      
-      // Schedule next refresh
-      interval = setTimeout(checkAndRefresh, refreshInterval);
-    };
-    
-    // Start the periodic refresh
-    interval = setTimeout(checkAndRefresh, 45000); // First refresh after 45s
-    
-    return () => {
-      if (interval) clearTimeout(interval);
     };
   }, [forceRefresh]);
 
