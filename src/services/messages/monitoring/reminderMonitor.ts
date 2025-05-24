@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 
@@ -75,7 +74,7 @@ class ReminderMonitor {
    */
   private async resetStuckRemindersWithSecurityDefiner() {
     try {
-      const { data, error } = await supabase.rpc('reset_stuck_reminders');
+      const { data, error } = await supabase.rpc('reset_stuck_reminders' as any);
       
       if (error) {
         console.error("[REMINDER-MONITOR] Error calling reset_stuck_reminders:", error);
@@ -104,7 +103,7 @@ class ReminderMonitor {
     try {
       console.log("[REMINDER-MONITOR] Performing system health check...");
       
-      const { data, error } = await supabase.rpc('get_reminder_system_health');
+      const { data, error } = await supabase.rpc('get_reminder_system_health' as any);
       
       if (error) {
         console.error("[REMINDER-MONITOR] Error getting system health:", error);
@@ -233,7 +232,7 @@ class ReminderMonitor {
    */
   async getSystemStats() {
     try {
-      const { data, error } = await supabase.rpc('get_reminder_system_health');
+      const { data, error } = await supabase.rpc('get_reminder_system_health' as any);
 
       if (error) {
         console.error("[REMINDER-MONITOR] Error getting health stats:", error);
@@ -254,7 +253,7 @@ class ReminderMonitor {
     try {
       console.log("[REMINDER-MONITOR] Manually resetting stuck reminders");
       
-      const { data, error } = await supabase.rpc('reset_stuck_reminders');
+      const { data, error } = await supabase.rpc('reset_stuck_reminders' as any);
       
       if (error) {
         console.error("[REMINDER-MONITOR] Error in manual reset:", error);
