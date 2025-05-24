@@ -128,4 +128,20 @@
   .btn-hover-effect {
     @apply shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5;
   }
+
+  /* Public message access page specific styles */
+  .public-header {
+    background-color: #FFFFFF !important;
+  }
+
+  .public-logo {
+    color: #C4B5FD !important;
+  }
+
+  .public-logo .bg-gradient-to-r {
+    background: #C4B5FD !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+  }
 }
