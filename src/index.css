@@ -128,27 +128,62 @@
   .btn-hover-effect {
     @apply shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5;
   }
+}
 
-  /* Public message access page specific styles - FORCE white background */
-  header.public-header {
-    background-color: #FFFFFF !important;
-    background: #FFFFFF !important;
-  }
+/* NUCLEAR OPTION: Super aggressive CSS for public header */
+header.public-header,
+header.public-header *,
+.public-header,
+.public-header * {
+  background-color: #FFFFFF !important;
+  background-image: none !important;
+  background: #FFFFFF !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
 
-  /* Force backdrop to be transparent on public header */
-  header.public-header.backdrop-blur-md {
-    background-color: #FFFFFF !important;
-    backdrop-filter: none !important;
-  }
+/* Force remove any potential background from all child elements */
+header.public-header > *,
+header.public-header > * > *,
+header.public-header > * > * > * {
+  background-color: transparent !important;
+  background-image: none !important;
+  background: transparent !important;
+}
 
-  .public-logo {
-    color: #C4B5FD !important;
-  }
+/* Ensure the container itself is white */
+header.public-header .container {
+  background-color: #FFFFFF !important;
+  background: #FFFFFF !important;
+}
 
-  .public-logo .bg-gradient-to-r {
-    background: #C4B5FD !important;
-    -webkit-background-clip: text !important;
-    -webkit-text-fill-color: transparent !important;
-    background-clip: text !important;
-  }
+/* Logo styling with exact color */
+.public-logo,
+.public-logo * {
+  color: #C4B5FD !important;
+}
+
+.public-logo .bg-gradient-to-r,
+.public-logo [class*="bg-gradient"] {
+  background: linear-gradient(to right, #C4B5FD, #C4B5FD) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+  color: transparent !important;
+}
+
+/* Override any potential Tailwind classes */
+.bg-background,
+.bg-secondary,
+.bg-muted,
+.bg-primary,
+.bg-accent {
+  background-color: #FFFFFF !important;
+}
+
+/* Force header background in every possible way */
+header[class*="public"] {
+  background-color: #FFFFFF !important;
+  background-image: none !important;
+  background: #FFFFFF !important;
 }
