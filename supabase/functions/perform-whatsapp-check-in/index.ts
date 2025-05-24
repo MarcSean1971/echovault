@@ -63,11 +63,37 @@ serve(async (req) => {
       
       console.log("[CHECK-IN] Successfully updated conditions with new check-in time");
       
-      // ADDED: Trigger realtime event for UI updates like SOS system does
+      // CRITICAL FIX: Regenerate reminder schedules for each updated condition
+      console.log("[CHECK-IN] Regenerating reminder schedules after check-in");
+      
+      for (const condition of conditionsData) {
+        try {
+          console.log(`[CHECK-IN] Regenerating reminders for condition ${condition.id}, message ${condition.message_id}`);
+          
+          // Call the reminder function to regenerate schedules
+          const { error: reminderError } = await supabase.functions.invoke("send-reminder-emails", {
+            body: {
+              messageId: condition.message_id,
+              action: "regenerate-schedule",
+              source: "edge-function-check-in",
+              debug: true,
+              isEdit: false // This is a check-in, not an edit
+            }
+          });
+          
+          if (reminderError) {
+            console.error(`[CHECK-IN] Error regenerating reminders for condition ${condition.id}:`, reminderError);
+          } else {
+            console.log(`[CHECK-IN] Successfully regenerated reminders for condition ${condition.id}`);
+          }
+        } catch (reminderError) {
+          console.error(`[CHECK-IN] Exception regenerating reminders for condition ${condition.id}:`, reminderError);
+        }
+      }
+      
+      // Trigger realtime event for UI updates
       console.log("[CHECK-IN] Triggering realtime event for UI updates");
       
-      // For each updated condition, we could potentially trigger individual events
-      // but for now, we'll trigger a general conditions-updated event
       conditionsData.forEach(condition => {
         console.log(`[CHECK-IN] Condition ${condition.id} updated for message ${condition.message_id}`);
       });
@@ -78,7 +104,8 @@ serve(async (req) => {
     return createSuccessResponse({
       timestamp: now,
       method: method,
-      conditions_updated: conditionsData?.length || 0
+      conditions_updated: conditionsData?.length || 0,
+      reminders_regenerated: true
     });
     
   } catch (error) {

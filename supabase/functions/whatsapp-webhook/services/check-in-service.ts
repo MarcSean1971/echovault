@@ -38,9 +38,37 @@ export async function processCheckIn(userId: string, phoneNumber: string) {
       }
       
       console.log("[CHECK-IN] Successfully updated conditions with new check-in time");
+      
+      // CRITICAL FIX: Regenerate reminder schedules for each updated condition
+      console.log("[CHECK-IN] Regenerating reminder schedules after check-in");
+      
+      for (const condition of conditionsData) {
+        try {
+          console.log(`[CHECK-IN] Regenerating reminders for condition ${condition.id}`);
+          
+          // Call the reminder function to regenerate schedules
+          const { error: reminderError } = await supabase.functions.invoke("send-reminder-emails", {
+            body: {
+              messageId: condition.message_id,
+              action: "regenerate-schedule",
+              source: "whatsapp-check-in",
+              debug: true,
+              isEdit: false // This is a check-in, not an edit
+            }
+          });
+          
+          if (reminderError) {
+            console.error(`[CHECK-IN] Error regenerating reminders for condition ${condition.id}:`, reminderError);
+          } else {
+            console.log(`[CHECK-IN] Successfully regenerated reminders for condition ${condition.id}`);
+          }
+        } catch (reminderError) {
+          console.error(`[CHECK-IN] Exception regenerating reminders for condition ${condition.id}:`, reminderError);
+        }
+      }
     }
     
-    // FIXED: Clean the phone number - remove whatsapp: prefix like SOS system does
+    // Clean the phone number - remove whatsapp: prefix like SOS system does
     let cleanPhone = phoneNumber;
     if (cleanPhone.startsWith('whatsapp:')) {
       cleanPhone = cleanPhone.replace('whatsapp:', '');
@@ -65,11 +93,15 @@ export async function processCheckIn(userId: string, phoneNumber: string) {
       console.error("[CHECK-IN] Exception sending confirmation:", confirmationError);
     }
     
+    // Trigger realtime event for UI updates
+    console.log("[CHECK-IN] Triggering realtime events for UI updates");
+    
     return {
       success: true,
       timestamp: now,
       conditions_updated: conditionsData?.length || 0,
-      message: "Check-in processed successfully"
+      message: "Check-in processed successfully",
+      reminders_regenerated: true
     };
     
   } catch (error) {
