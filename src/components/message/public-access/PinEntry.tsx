@@ -27,7 +27,7 @@ export const PinEntry = ({ onSubmit }: PinEntryProps) => {
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8 public-message-content">
+    <div className="max-w-3xl mx-auto px-4 py-8 public-message-content email-theme">
       <div className="public-message-content">
         <Card className="p-6 email-light-bg border-gray-300 shadow-lg">
           <div className="flex flex-col items-center justify-center text-center space-y-4 py-8">

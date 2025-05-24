@@ -147,7 +147,7 @@
     @apply shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5;
   }
 
-  /* Email theme styles for public message pages - IMPROVED */
+  /* Email theme styles for public message pages - FIXED BUTTONS */
   .email-theme .public-message-content {
     background-color: #FFFFFF !important;
   }
@@ -158,7 +158,10 @@
     border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
   }
 
-  .email-theme .email-button {
+  /* CRITICAL FIX: Stronger specificity for email buttons to override shadcn/ui */
+  .email-theme .public-message-content button.email-button,
+  .email-theme .public-message-content .email-button,
+  .email-theme button.email-button {
     background: linear-gradient(135deg, var(--email-purple) 0%, var(--email-purple-dark) 100%) !important;
     color: white !important;
     border-radius: 6px !important;
@@ -168,13 +171,28 @@
     transition: all 0.2s ease !important;
   }
 
-  .email-theme .email-button:hover {
+  .email-theme .public-message-content button.email-button:hover,
+  .email-theme .public-message-content .email-button:hover,
+  .email-theme button.email-button:hover:not(:disabled) {
     background: linear-gradient(135deg, var(--email-purple-dark) 0%, #553C7B 100%) !important;
     transform: translateY(-1px) !important;
     box-shadow: 0 4px 8px rgba(155, 135, 245, 0.3) !important;
   }
 
-  .email-theme .email-button-secondary {
+  .email-theme .public-message-content button.email-button:disabled,
+  .email-theme .public-message-content .email-button:disabled,
+  .email-theme button.email-button:disabled {
+    background: #cbd5e1 !important;
+    color: #64748b !important;
+    transform: none !important;
+    box-shadow: none !important;
+    cursor: not-allowed !important;
+  }
+
+  /* CRITICAL FIX: Stronger specificity for secondary buttons */
+  .email-theme .public-message-content button.email-button-secondary,
+  .email-theme .public-message-content .email-button-secondary,
+  .email-theme button.email-button-secondary {
     background-color: transparent !important;
     color: var(--email-purple) !important;
     border: 2px solid var(--email-purple) !important;
@@ -183,11 +201,24 @@
     transition: all 0.2s ease !important;
   }
 
-  .email-theme .email-button-secondary:hover {
+  .email-theme .public-message-content button.email-button-secondary:hover,
+  .email-theme .public-message-content .email-button-secondary:hover,
+  .email-theme button.email-button-secondary:hover:not(:disabled) {
     background-color: var(--email-purple) !important;
     color: white !important;
     transform: translateY(-1px) !important;
     box-shadow: 0 4px 8px rgba(155, 135, 245, 0.3) !important;
+  }
+
+  .email-theme .public-message-content button.email-button-secondary:disabled,
+  .email-theme .public-message-content .email-button-secondary:disabled,
+  .email-theme button.email-button-secondary:disabled {
+    background-color: transparent !important;
+    color: #94a3b8 !important;
+    border-color: #94a3b8 !important;
+    transform: none !important;
+    box-shadow: none !important;
+    cursor: not-allowed !important;
   }
 
   .email-theme .email-text-heading {

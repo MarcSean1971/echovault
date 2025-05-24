@@ -7,7 +7,7 @@ import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { useEffect, useState } from "react";
 import { Separator } from "@/components/ui/separator";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
 interface ErrorStateProps {
@@ -231,7 +231,7 @@ export const ErrorState = ({ error, isPreviewMode = false }: ErrorStateProps) =>
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8 public-message-content">
+    <div className="max-w-3xl mx-auto px-4 py-8 public-message-content email-theme">
       {isPreviewMode && (
         <div className="email-info-bg border-l-4 border-purple-400 p-4 mb-4 rounded">
           <p className="email-text-heading font-medium">

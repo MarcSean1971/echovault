@@ -56,7 +56,7 @@ export const MessageDisplay = ({
 
   if (!message) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-8 public-message-content">
+      <div className="max-w-3xl mx-auto px-4 py-8 public-message-content email-theme">
         <Card className="overflow-hidden border-red-200 email-light-bg">
           <CardHeader className="email-light-bg border-b border-red-200">
             <CardTitle className="text-center text-red-600 email-text-heading">Message Not Available</CardTitle>
@@ -78,7 +78,7 @@ export const MessageDisplay = ({
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8 mb-16 animate-fade-in public-message-content">
+    <div className="max-w-3xl mx-auto px-4 py-8 mb-16 animate-fade-in public-message-content email-theme">
       <div className="public-message-content">
         {isPreviewMode && (
           <div className="mb-4 rounded-lg email-info-bg p-4 border border-purple-300">

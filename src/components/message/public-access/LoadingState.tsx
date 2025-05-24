@@ -5,7 +5,7 @@ import { Shield } from "lucide-react";
 
 export const LoadingState = () => {
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8 public-message-content">
+    <div className="max-w-3xl mx-auto px-4 py-8 public-message-content email-theme">
       <div className="public-message-content">
         <Card className="overflow-hidden border-gray-300 shadow-lg email-light-bg">
           {/* Header */}
