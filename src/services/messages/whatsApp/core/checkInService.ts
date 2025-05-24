@@ -25,7 +25,7 @@ export async function sendWhatsAppCheckIn(
       formattedPhone : 
       `+${formattedPhone.replace(/\D/g, '')}`;
       
-    // Update all user conditions (using our new function)
+    // CRITICAL FIX: Use the same check-in logic as the app's check-in process
     const checkInResult = await performUserCheckIn(userId);
     
     if (!checkInResult) {

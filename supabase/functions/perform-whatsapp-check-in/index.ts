@@ -38,9 +38,10 @@ serve(async (req) => {
     // Get all active conditions for this user
     const { data: conditionsData, error: conditionsError } = await supabase
       .from("message_conditions")
-      .select("id, message_id, messages!inner(user_id)")
+      .select("id, message_id, condition_type, hours_threshold, minutes_threshold, reminder_hours, messages!inner(user_id)")
       .eq("messages.user_id", userId)
-      .eq("active", true);
+      .eq("active", true)
+      .in("condition_type", ["no_check_in", "recurring_check_in", "inactivity_to_date"]);
       
     if (conditionsError) {
       throw new Error(`Error fetching conditions: ${conditionsError.message}`);
@@ -68,26 +69,92 @@ serve(async (req) => {
       
       for (const condition of conditionsData) {
         try {
-          console.log(`[CHECK-IN] Regenerating reminders for condition ${condition.id}, message ${condition.message_id}`);
+          console.log(`[CHECK-IN] Processing condition ${condition.id}, message ${condition.message_id}`);
           
-          // Call the reminder function to regenerate schedules
-          const { error: reminderError } = await supabase.functions.invoke("send-reminder-emails", {
-            body: {
-              messageId: condition.message_id,
-              action: "regenerate-schedule",
-              source: "edge-function-check-in",
-              debug: true,
-              isEdit: false // This is a check-in, not an edit
-            }
-          });
+          // STEP 1: Mark existing reminders as obsolete to prevent duplicates
+          const { error: obsoleteError } = await supabase
+            .from('reminder_schedule')
+            .update({ status: 'obsolete' })
+            .eq('message_id', condition.message_id)
+            .eq('condition_id', condition.id)
+            .eq('status', 'pending');
           
-          if (reminderError) {
-            console.error(`[CHECK-IN] Error regenerating reminders for condition ${condition.id}:`, reminderError);
+          if (obsoleteError) {
+            console.error(`[CHECK-IN] Error marking reminders obsolete for condition ${condition.id}:`, obsoleteError);
           } else {
-            console.log(`[CHECK-IN] Successfully regenerated reminders for condition ${condition.id}`);
+            console.log(`[CHECK-IN] Marked existing reminders as obsolete for condition ${condition.id}`);
           }
+          
+          // STEP 2: Only regenerate reminders if the condition has reminder_hours configured
+          if (condition.reminder_hours && condition.reminder_hours.length > 0) {
+            console.log(`[CHECK-IN] Regenerating reminders for condition ${condition.id} with ${condition.reminder_hours.length} reminder times`);
+            
+            // Calculate new deadline based on updated last_checked
+            const newDeadline = new Date(now);
+            newDeadline.setHours(newDeadline.getHours() + (condition.hours_threshold || 0));
+            newDeadline.setMinutes(newDeadline.getMinutes() + (condition.minutes_threshold || 0));
+            
+            console.log(`[CHECK-IN] New deadline for condition ${condition.id}: ${newDeadline.toISOString()}`);
+            
+            // CRITICAL FIX: Filter out reminder times that would be in the past
+            const validReminderMinutes = condition.reminder_hours.filter((minutes: number) => {
+              const reminderTime = new Date(newDeadline.getTime() - (minutes * 60 * 1000));
+              if (reminderTime <= new Date()) {
+                console.warn(`[CHECK-IN] Skipping reminder ${minutes} minutes before deadline (would be in the past)`);
+                return false;
+              }
+              return true;
+            });
+            
+            console.log(`[CHECK-IN] Creating ${validReminderMinutes.length} valid reminder entries`);
+            
+            // Create new reminder schedule entries
+            const reminderEntries = validReminderMinutes.map((minutes: number) => {
+              const scheduledAt = new Date(newDeadline.getTime() - (minutes * 60 * 1000));
+              
+              return {
+                message_id: condition.message_id,
+                condition_id: condition.id,
+                scheduled_at: scheduledAt.toISOString(),
+                reminder_type: 'reminder',
+                status: 'pending',
+                delivery_priority: minutes < 60 ? 'high' : 'normal',
+                retry_strategy: 'standard'
+              };
+            });
+            
+            // Add final delivery entry if deadline is in the future
+            if (newDeadline > new Date()) {
+              reminderEntries.push({
+                message_id: condition.message_id,
+                condition_id: condition.id,
+                scheduled_at: newDeadline.toISOString(),
+                reminder_type: 'final_delivery',
+                status: 'pending',
+                delivery_priority: 'critical',
+                retry_strategy: 'aggressive'
+              });
+            }
+            
+            // Insert new reminder schedule
+            if (reminderEntries.length > 0) {
+              const { error: insertError } = await supabase
+                .from('reminder_schedule')
+                .insert(reminderEntries);
+              
+              if (insertError) {
+                console.error(`[CHECK-IN] Error creating new reminder schedule for condition ${condition.id}:`, insertError);
+              } else {
+                console.log(`[CHECK-IN] Successfully created ${reminderEntries.length} new reminder entries for condition ${condition.id}`);
+              }
+            }
+          } else {
+            console.log(`[CHECK-IN] No reminder_hours configured for condition ${condition.id}, skipping reminder generation`);
+          }
+          
         } catch (reminderError) {
-          console.error(`[CHECK-IN] Exception regenerating reminders for condition ${condition.id}:`, reminderError);
+          console.error(`[CHECK-IN] Error processing reminders for condition ${condition.id}:`, reminderError);
+          // Don't fail the entire check-in if reminder processing fails
         }
       }
       
