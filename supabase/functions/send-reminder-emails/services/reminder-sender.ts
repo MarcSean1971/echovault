@@ -5,6 +5,7 @@ import { generateAccessUrl } from "../utils/url-generator.ts";
 import { sendWhatsApp } from "./whatsapp-service.ts";
 import { getAppUrl } from "./whatsapp-service.ts";
 import { formatTimeUntilDeadline } from "./whatsapp-service.ts";
+import { recordMessageDelivery } from "../../send-message-notifications/db/delivery-tracking.ts";
 
 // Initialize email client with API key
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
@@ -19,8 +20,7 @@ interface ReminderResult {
 }
 
 /**
- * Send reminder to creator about their check-in deadline
- * FIXED: Updated retrieval of creator email to properly get it from auth.users
+ * FIXED: Send reminder to creator using the same proven infrastructure as final delivery
  */
 export async function sendCreatorReminder(
   messageId: string,
@@ -101,10 +101,22 @@ export async function sendCreatorReminder(
         error: "No email found for creator" 
       });
     } else {
+      // CRITICAL FIX: Generate delivery ID and create delivery record like final delivery does
+      const deliveryId = crypto.randomUUID();
+      
+      // CRITICAL FIX: Create delivery record in database BEFORE sending email (same as final delivery)
+      try {
+        await recordMessageDelivery(messageId, conditionId, creatorUserId, deliveryId);
+        console.log(`[REMINDER-SENDER] Created delivery record for check-in reminder: ${deliveryId}`);
+      } catch (deliveryError) {
+        console.error(`[REMINDER-SENDER] Error creating delivery record:`, deliveryError);
+        // Continue anyway - don't fail the reminder for logging issues
+      }
+      
       // Format the time remaining in a user-friendly way
       const timeRemaining = formatTimeRemaining(hoursUntilDeadline);
       
-      // Generate the access URL for the message
+      // CRITICAL FIX: Generate the access URL using the SAME system as final delivery
       const accessUrl = generateAccessUrl(messageId, creatorEmail);
       
       // FIXED: Use proper HTML template specific for creator check-in reminders
@@ -235,12 +247,21 @@ export async function sendCreatorReminder(
           success: true,
           recipient: creatorEmail,
           channel: 'email',
-          messageId: typeof emailResponse.id === 'string' ? emailResponse.id : undefined
+          messageId: typeof emailResponse.id === 'string' ? emailResponse.id : deliveryId
         });
         
         // Also try sending to backup email if available
         if (profileData?.backup_email && profileData.backup_email !== creatorEmail) {
           try {
+            const backupDeliveryId = crypto.randomUUID();
+            
+            // Create separate delivery record for backup email
+            try {
+              await recordMessageDelivery(messageId, conditionId, creatorUserId, backupDeliveryId);
+            } catch (backupDeliveryError) {
+              console.error(`[REMINDER-SENDER] Error creating backup delivery record:`, backupDeliveryError);
+            }
+            
             const backupEmailResponse = await resend.emails.send({
               from: `EchoVault <notifications@echo-vault.app>`,
               to: [profileData.backup_email],
@@ -256,7 +277,7 @@ export async function sendCreatorReminder(
               success: true,
               recipient: profileData.backup_email,
               channel: 'email',
-              messageId: typeof backupEmailResponse.id === 'string' ? backupEmailResponse.id : undefined
+              messageId: typeof backupEmailResponse.id === 'string' ? backupEmailResponse.id : backupDeliveryId
             });
           } catch (backupError: any) {
             console.error(`[REMINDER-SENDER] Error sending backup email:`, backupError);
@@ -283,6 +304,15 @@ export async function sendCreatorReminder(
     // ADDED: WhatsApp integration for creator check-in reminders
     if (creatorPhone) {
       try {
+        const whatsAppDeliveryId = crypto.randomUUID();
+        
+        // Create delivery record for WhatsApp
+        try {
+          await recordMessageDelivery(messageId, conditionId, creatorUserId, whatsAppDeliveryId);
+        } catch (whatsAppDeliveryError) {
+          console.error(`[REMINDER-SENDER] Error creating WhatsApp delivery record:`, whatsAppDeliveryError);
+        }
+        
         const appUrl = await getAppUrl();
         const formattedTime = formatTimeUntilDeadline(new Date(scheduledAt));
         
@@ -299,7 +329,7 @@ export async function sendCreatorReminder(
           },
           {
             timeUntilDeadline: formattedTime,
-            appUrl: accessUrl || appUrl,
+            appUrl: generateAccessUrl(messageId, creatorEmail || 'user@example.com') || appUrl,
             debug: debug
           }
         );
@@ -313,7 +343,7 @@ export async function sendCreatorReminder(
             success: true,
             recipient: creatorPhone,
             channel: 'whatsapp',
-            messageId: whatsAppResult.messageId
+            messageId: whatsAppResult.messageId || whatsAppDeliveryId
           });
         } else {
           console.error(`[REMINDER-SENDER] Failed to send WhatsApp message:`, whatsAppResult.error);
@@ -373,6 +403,19 @@ export async function sendRecipientReminders(
       if (!recipient.email) {
         console.warn(`Recipient has no email address: ${recipient.name || 'Unknown'}`);
         continue;
+      }
+      
+      // CRITICAL FIX: Generate delivery ID and create delivery record like final delivery does
+      const deliveryId = crypto.randomUUID();
+      const recipientId = recipient.id || recipient.user_id || crypto.randomUUID();
+      
+      // Create delivery record in database BEFORE sending email (same as final delivery)
+      try {
+        await recordMessageDelivery(messageId, recipientId, recipientId, deliveryId);
+        console.log(`[REMINDER-SENDER] Created delivery record for recipient reminder: ${deliveryId}`);
+      } catch (deliveryError) {
+        console.error(`[REMINDER-SENDER] Error creating recipient delivery record:`, deliveryError);
+        // Continue anyway - don't fail the reminder for logging issues
       }
       
       // Generate access URL for this recipient
@@ -563,7 +606,7 @@ export async function sendRecipientReminders(
         success: true,
         recipient: recipient.email,
         channel: 'email',
-        messageId: typeof emailResponse.id === 'string' ? emailResponse.id : undefined
+        messageId: typeof emailResponse.id === 'string' ? emailResponse.id : deliveryId
       });
     } catch (error: any) {
       console.error(`[REMINDER-SENDER] Error sending email to ${recipient.email}:`, error);
