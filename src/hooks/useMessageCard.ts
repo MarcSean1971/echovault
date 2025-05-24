@@ -133,6 +133,19 @@ export function useMessageCard(messageId: string) {
     };
   }, [messageId]);
 
+  // ADDED: Fallback refresh mechanism for missed events
+  useEffect(() => {
+    const fallbackRefresh = setInterval(() => {
+      if (isArmed && condition) {
+        console.log(`[MessageCard] Fallback refresh for armed message ${messageId}`);
+        invalidateCache();
+        setForceRefresh(true);
+      }
+    }, 45000); // Refresh every 45 seconds for armed messages
+    
+    return () => clearInterval(fallbackRefresh);
+  }, [messageId, isArmed, condition, invalidateCache]);
+
   return {
     isArmed,
     deadline,

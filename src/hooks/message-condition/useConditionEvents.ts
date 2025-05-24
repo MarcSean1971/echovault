@@ -1,9 +1,8 @@
-
 import { useEffect, useCallback, useRef } from "react";
 
 /**
  * Stable hook to manage condition-related events and listeners
- * Fixed to prevent excessive listener churn
+ * FIXED: Prevent excessive listener churn and improve stability
  */
 export function useConditionEvents(
   messageId: string,
@@ -12,7 +11,7 @@ export function useConditionEvents(
   incrementRefreshCounter: () => void
 ) {
   const listenerRef = useRef<((event: Event) => void) | null>(null);
-  const isSetupRef = useRef(false);
+  const messageIdRef = useRef(messageId);
 
   /**
    * Handle conditions-updated event with stable reference
@@ -23,35 +22,45 @@ export function useConditionEvents(
       const eventMessageId = detail.messageId;
       const action = detail.action;
       const source = detail.source;
+      const enhanced = detail.enhanced;
       
       // If event is for this specific message or it's a global update
-      if (!eventMessageId || eventMessageId === messageId) {
-        console.log(`[useConditionEvents ${messageId}] Received conditions-updated event:`, 
+      if (!eventMessageId || eventMessageId === messageIdRef.current) {
+        console.log(`[useConditionEvents ${messageIdRef.current}] Received conditions-updated event:`, 
           'action:', action || 'update', 
           'source:', source || 'unknown',
-          'messageId:', eventMessageId || 'global'
+          'messageId:', eventMessageId || 'global',
+          'enhanced:', enhanced || false
         );
         
-        // Clear cache for this message
-        invalidateCache();
-        
-        // Reload data
-        refreshData();
-        
-        // Increment refresh counter to force re-render of timer
-        incrementRefreshCounter();
+        // For WhatsApp check-ins, handle immediately
+        if (action === 'check-in' && source === 'whatsapp' && enhanced) {
+          console.log(`[useConditionEvents ${messageIdRef.current}] Enhanced WhatsApp check-in detected, immediate refresh`);
+          
+          // Clear cache immediately
+          invalidateCache();
+          
+          // Force refresh with small delay to ensure DB update is complete
+          setTimeout(() => {
+            refreshData();
+            incrementRefreshCounter();
+          }, 100);
+        } else {
+          // Regular handling for other events
+          invalidateCache();
+          refreshData();
+          incrementRefreshCounter();
+        }
       }
     }
-  }, [messageId, refreshData, invalidateCache, incrementRefreshCounter]);
+  }, [refreshData, invalidateCache, incrementRefreshCounter]);
 
-  // Set up event listener only once per messageId
+  // Set up event listener only once and keep it stable
   useEffect(() => {
-    // Skip if already set up for this messageId
-    if (isSetupRef.current && listenerRef.current) {
-      return;
-    }
-
-    console.log(`[useConditionEvents] Setting up stable conditions-updated listener for message ${messageId}`);
+    console.log(`[useConditionEvents] Setting up STABLE conditions-updated listener for message ${messageId}`);
+    
+    // Update the messageId ref
+    messageIdRef.current = messageId;
     
     // Remove any existing listener
     if (listenerRef.current) {
@@ -61,17 +70,15 @@ export function useConditionEvents(
     // Create and store the stable listener
     listenerRef.current = handleConditionsUpdated;
     window.addEventListener('conditions-updated', listenerRef.current);
-    isSetupRef.current = true;
     
     return () => {
       if (listenerRef.current) {
-        console.log(`[useConditionEvents] Removing stable conditions-updated listener for message ${messageId}`);
+        console.log(`[useConditionEvents] Removing STABLE conditions-updated listener for message ${messageId}`);
         window.removeEventListener('conditions-updated', listenerRef.current);
         listenerRef.current = null;
-        isSetupRef.current = false;
       }
     };
-  }, [messageId]); // Only depend on messageId, not the callback
+  }, [messageId]); // Only messageId dependency to avoid listener recreation
 
   // Update the callback reference without recreating listener
   useEffect(() => {

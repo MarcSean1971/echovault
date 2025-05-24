@@ -3,9 +3,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { RealtimeChannel } from "@supabase/supabase-js";
 
 let realtimeChannel: RealtimeChannel | null = null;
+let connectionAttempts = 0;
+const MAX_RECONNECTION_ATTEMPTS = 5;
 
 /**
- * ENHANCED: Enable Realtime for message_conditions table with better event handling
+ * ENHANCED: Enable Realtime for message_conditions table with improved stability
  * @returns {Promise<boolean>} Success status
  */
 export async function enableRealtimeForConditions(): Promise<boolean> {
@@ -19,7 +21,7 @@ export async function enableRealtimeForConditions(): Promise<boolean> {
 
     // Create a channel specifically for message_conditions table
     const channel = supabase
-      .channel('message_conditions_changes')
+      .channel('message_conditions_changes_enhanced')
       .on('postgres_changes', 
         { 
           event: 'UPDATE', 
@@ -34,10 +36,12 @@ export async function enableRealtimeForConditions(): Promise<boolean> {
           const conditionId = payload.new?.id;
           const lastChecked = payload.new?.last_checked;
           const oldLastChecked = payload.old?.last_checked;
+          const isArmed = payload.new?.is_armed;
+          const oldIsArmed = payload.old?.is_armed;
           
-          // Only dispatch event if last_checked timestamp changed (indicates check-in)
+          // Handle check-in events (last_checked timestamp changed)
           if (lastChecked && oldLastChecked && lastChecked !== oldLastChecked) {
-            console.log('[REALTIME] WhatsApp check-in detected, dispatching enhanced event');
+            console.log('[REALTIME] WhatsApp check-in detected, dispatching ENHANCED events');
             
             // Dispatch enhanced global event with check-in information
             window.dispatchEvent(
@@ -54,7 +58,7 @@ export async function enableRealtimeForConditions(): Promise<boolean> {
               })
             );
 
-            // ADDED: Also dispatch a message-specific event for targeted updates
+            // Also dispatch a message-specific event for targeted updates
             window.dispatchEvent(
               new CustomEvent('message-targeted-update', {
                 detail: {
@@ -62,12 +66,34 @@ export async function enableRealtimeForConditions(): Promise<boolean> {
                   conditionId,
                   action: 'check-in',
                   source: 'whatsapp-realtime',
-                  timestamp: new Date().toISOString()
+                  timestamp: new Date().toISOString(),
+                  lastChecked: lastChecked
                 }
               })
             );
-          } else {
-            console.log('[REALTIME] General condition update (not check-in)');
+          } 
+          // Handle arm/disarm events (is_armed status changed)
+          else if (isArmed !== oldIsArmed) {
+            const action = isArmed ? 'arm' : 'disarm';
+            console.log(`[REALTIME] ${action} event detected for message ${messageId}`);
+            
+            // Dispatch arm/disarm event
+            window.dispatchEvent(
+              new CustomEvent('conditions-updated', {
+                detail: {
+                  messageId,
+                  conditionId,
+                  action: action,
+                  source: 'realtime',
+                  timestamp: new Date().toISOString(),
+                  isArmed: isArmed
+                }
+              })
+            );
+          } 
+          // Handle other general updates
+          else {
+            console.log('[REALTIME] General condition update (not check-in or arm/disarm)');
             // Dispatch general update event
             window.dispatchEvent(
               new CustomEvent('conditions-updated', {
@@ -84,11 +110,24 @@ export async function enableRealtimeForConditions(): Promise<boolean> {
         })
       .subscribe((status) => {
         console.log(`[REALTIME] Subscription status: ${status}`);
+        
         if (status === 'SUBSCRIBED') {
           console.log('[REALTIME] Successfully subscribed to message_conditions updates');
+          connectionAttempts = 0; // Reset attempts on successful connection
         } else if (status === 'CHANNEL_ERROR') {
-          console.error('[REALTIME] Channel error - attempting reconnection');
-          // Attempt to reconnect after a delay
+          connectionAttempts++;
+          console.error(`[REALTIME] Channel error - attempt ${connectionAttempts}/${MAX_RECONNECTION_ATTEMPTS}`);
+          
+          if (connectionAttempts < MAX_RECONNECTION_ATTEMPTS) {
+            // Exponential backoff for reconnection
+            const delay = Math.min(1000 * Math.pow(2, connectionAttempts), 30000);
+            console.log(`[REALTIME] Attempting reconnection in ${delay}ms`);
+            setTimeout(() => enableRealtimeForConditions(), delay);
+          } else {
+            console.error('[REALTIME] Max reconnection attempts reached, giving up');
+          }
+        } else if (status === 'CLOSED') {
+          console.warn('[REALTIME] Connection closed, attempting reconnect');
           setTimeout(() => enableRealtimeForConditions(), 2000);
         }
       });
@@ -99,6 +138,13 @@ export async function enableRealtimeForConditions(): Promise<boolean> {
     return true;
   } catch (error) {
     console.error('[REALTIME] Failed to enable enhanced realtime:', error);
+    connectionAttempts++;
+    
+    if (connectionAttempts < MAX_RECONNECTION_ATTEMPTS) {
+      console.log(`[REALTIME] Retrying connection (attempt ${connectionAttempts}/${MAX_RECONNECTION_ATTEMPTS})`);
+      setTimeout(() => enableRealtimeForConditions(), 5000);
+    }
+    
     return false;
   }
 }
@@ -114,7 +160,7 @@ export async function checkRealtimeStatus(): Promise<string> {
     }
     
     const status = realtimeChannel.state;
-    console.log(`[REALTIME] Current status: ${status}`);
+    console.log(`[REALTIME] Current status check: ${status}`);
     return status || 'UNKNOWN';
   } catch (error) {
     console.error('[REALTIME] Error checking status:', error);
@@ -130,14 +176,36 @@ export function cleanupRealtimeConnection() {
     console.log('[REALTIME] Cleaning up enhanced message_conditions channel');
     supabase.removeChannel(realtimeChannel);
     realtimeChannel = null;
+    connectionAttempts = 0;
   }
 }
 
 /**
- * ADDED: Force reconnect Realtime if needed
+ * ENHANCED: Force reconnect Realtime with better error handling
  */
 export async function reconnectRealtime(): Promise<boolean> {
-  console.log('[REALTIME] Force reconnecting...');
+  console.log('[REALTIME] Force reconnecting with enhanced stability...');
   cleanupRealtimeConnection();
+  
+  // Small delay before reconnecting
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  
   return enableRealtimeForConditions();
+}
+
+/**
+ * ADDED: Get connection health information
+ */
+export function getConnectionHealth(): { 
+  isConnected: boolean; 
+  attempts: number; 
+  maxAttempts: number;
+  status: string;
+} {
+  return {
+    isConnected: realtimeChannel?.state === 'SUBSCRIBED',
+    attempts: connectionAttempts,
+    maxAttempts: MAX_RECONNECTION_ATTEMPTS,
+    status: realtimeChannel?.state || 'NOT_INITIALIZED'
+  };
 }
