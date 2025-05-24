@@ -11,7 +11,7 @@ import { MessageRecipientProvider } from "@/components/message/detail/MessageRec
 import { useMessageActions } from "@/hooks/useMessageActions";
 import { useMessageDeliveryStatus } from "@/hooks/useMessageDeliveryStatus";
 import { triggerDeadmanSwitch } from "@/services/messages/whatsApp";
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
@@ -84,16 +84,48 @@ export default function MessageDetail() {
     window.addEventListener('conditions-updated', handleConditionUpdated);
     
     // Listen for deadline reached event
-    const handleDeadlineReached = (event: Event) => {
-      if (!id || !isArmed) return;
+    const handleDeadlineReached = async (event: Event) => {
+      if (!id || !isArmed || !(event instanceof CustomEvent)) return;
       
-      // Check if this is a deadman's switch
-      if (condition && condition.condition_type === 'no_check_in') {
-        console.log('[MessageDetail] Deadline reached event received');
+      const { messageId, conditionId: eventConditionId } = event.detail || {};
+      
+      // Only handle if this event is for this specific message
+      if (messageId && messageId !== id) return;
+      
+      console.log('[MessageDetail] Deadline reached event received for this message');
+      
+      try {
+        // Show immediate feedback
+        toast({
+          title: "Message Delivered",
+          description: "Your message deadline was reached and has been automatically delivered.",
+          duration: 8000,
+        });
         
-        // Attempt automatic delivery
-        triggerDeadmanSwitch(id).catch(error => {
-          console.error('[MessageDetail] Failed to trigger deadman switch:', error);
+        // Check if this is a deadman's switch
+        if (condition && condition.condition_type === 'no_check_in') {
+          console.log('[MessageDetail] Triggering deadman switch delivery');
+          await triggerDeadmanSwitch(id);
+        }
+        
+        // Force refresh the condition state
+        window.dispatchEvent(new CustomEvent('conditions-updated', { 
+          detail: { 
+            messageId: id,
+            conditionId: eventConditionId || conditionId,
+            action: 'deadline-reached-refresh',
+            source: 'message-detail-page',
+            timestamp: new Date().toISOString()
+          }
+        }));
+        
+      } catch (error) {
+        console.error('[MessageDetail] Failed to handle deadline reached:', error);
+        toast({
+          title: "Delivery Error",
+          description: "There was an issue delivering your message. Please check manually.",
+          variant: "destructive",
+          duration: 8000,
         });
       }
     };
@@ -104,7 +136,7 @@ export default function MessageDetail() {
       window.removeEventListener('conditions-updated', handleConditionUpdated);
       window.removeEventListener('deadline-reached', handleDeadlineReached);
     };
-  }, [id, isArmed, condition]);
+  }, [id, isArmed, condition, conditionId]);
   
   // Show minimal loading state just for a brief moment
   if (isLoading && !message) {

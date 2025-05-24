@@ -20,7 +20,9 @@ export function useCountdownTimer({
   const [isUrgent, setIsUrgent] = useState(false);
   const [isVeryUrgent, setIsVeryUrgent] = useState(false);
   const [lastDeadlineTime, setLastDeadlineTime] = useState<number | null>(null);
+  const [hasReachedZero, setHasReachedZero] = useState(false);
   const intervalRef = useRef<number | null>(null);
+  const deadlineEventFiredRef = useRef<boolean>(false);
   
   useEffect(() => {
     // Log for debugging
@@ -35,6 +37,8 @@ export function useCountdownTimer({
       setTimeLeft("--:--:--");
       setIsUrgent(false);
       setIsVeryUrgent(false);
+      setHasReachedZero(false);
+      deadlineEventFiredRef.current = false;
       
       // Clear any existing interval
       if (intervalRef.current !== null) {
@@ -51,6 +55,8 @@ export function useCountdownTimer({
     if (lastDeadlineTime !== currentDeadlineTime) {
       console.log(`[useCountdownTimer] Deadline changed from ${lastDeadlineTime} to ${currentDeadlineTime}`);
       setLastDeadlineTime(currentDeadlineTime);
+      setHasReachedZero(false);
+      deadlineEventFiredRef.current = false;
     }
     
     const calculateTimeLeft = () => {
@@ -61,12 +67,13 @@ export function useCountdownTimer({
         // Time's up - ensure we flag this as urgent for UI updates
         setIsUrgent(true);
         setIsVeryUrgent(true);
+        setHasReachedZero(true);
         
-        // Try to trigger the message if countdown has reached zero
-        if (difference >= -5000 && difference <= 0) {
-          // Dispatch an event when we're very close to or just past the deadline
-          // This will allow components to react to the deadline being reached
+        // Fire the deadline-reached event only once per deadline
+        if (!deadlineEventFiredRef.current && difference >= -5000 && difference <= 1000) {
           console.log('[useCountdownTimer] Dispatching deadline-reached event');
+          deadlineEventFiredRef.current = true;
+          
           window.dispatchEvent(new CustomEvent('deadline-reached', { 
             detail: { 
               deadlineTime: deadline.getTime(),
@@ -76,6 +83,12 @@ export function useCountdownTimer({
         }
         
         return "00:00:00";
+      }
+      
+      // Reset the zero state if we're back above zero (shouldn't happen normally)
+      if (hasReachedZero) {
+        setHasReachedZero(false);
+        deadlineEventFiredRef.current = false;
       }
       
       // Calculate hours, minutes, seconds
@@ -129,12 +142,13 @@ export function useCountdownTimer({
         intervalRef.current = null;
       }
     };
-  }, [deadline, isArmed, refreshTrigger, lastDeadlineTime]);
+  }, [deadline, isArmed, refreshTrigger, lastDeadlineTime, hasReachedZero]);
 
   return {
     timeLeft,
     timePercentage,
     isUrgent,
-    isVeryUrgent
+    isVeryUrgent,
+    hasReachedZero
   };
 }
