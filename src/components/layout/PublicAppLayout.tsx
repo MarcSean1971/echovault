@@ -14,7 +14,7 @@ export default function PublicAppLayout() {
       <header className="sticky top-0 z-30 w-full border-b bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60 shadow-sm md:py-3 py-2 md:h-auto">
         <div className="container mx-auto px-4 flex items-center justify-between">
           <div>
-            <Logo />
+            <Logo isPublicView={true} />
           </div>
           <div className="text-sm text-muted-foreground">
             Secure Message Access
