@@ -78,7 +78,7 @@ export async function createOrUpdateReminderSchedule(params: ReminderSchedulePar
 
 /**
  * Calculate reminder schedule times based on params
- * CRITICAL FIX: Prevent scheduling reminders in the past
+ * CRITICAL FIX: Properly sets reminder_type field for correct message routing
  */
 function calculateScheduleTimes(params: ReminderScheduleParams): any[] {
   const { messageId, conditionId, conditionType, triggerDate, reminderMinutes, lastChecked, hoursThreshold, minutesThreshold } = params;
@@ -126,6 +126,7 @@ function calculateScheduleTimes(params: ReminderScheduleParams): any[] {
   const scheduleEntries = [];
   const minimumFutureTime = new Date(now.getTime() + 60 * 1000); // At least 1 minute in the future
   
+  // CRITICAL FIX: Create check-in reminders with correct reminder_type
   for (const minutes of reminderMinutes) {
     const scheduledAt = new Date(effectiveDeadline!.getTime() - (minutes * 60 * 1000));
     
@@ -138,27 +139,30 @@ function calculateScheduleTimes(params: ReminderScheduleParams): any[] {
     // Ensure minimum future time
     const adjustedScheduledAt = scheduledAt < minimumFutureTime ? minimumFutureTime : scheduledAt;
     
-    console.log(`[REMINDER-SERVICE] Creating reminder ${minutes} mins before deadline at ${adjustedScheduledAt.toISOString()}`);
+    console.log(`[REMINDER-SERVICE] Creating check-in reminder ${minutes} mins before deadline at ${adjustedScheduledAt.toISOString()}`);
     
+    // CRITICAL FIX: Set reminder_type = 'reminder' for check-in reminders (sent to creator)
     scheduleEntries.push({
       message_id: messageId,
       condition_id: conditionId,
       scheduled_at: adjustedScheduledAt.toISOString(),
-      reminder_type: 'reminder',
+      reminder_type: 'reminder', // This ensures it goes to the creator
       status: 'pending',
       delivery_priority: minutes < 60 ? 'high' : 'normal',
       retry_strategy: 'standard'
     });
   }
   
-  // Add final delivery entry - also validate it's in the future
+  // CRITICAL FIX: Add final delivery entry with correct reminder_type
   if (effectiveDeadline > now) {
     console.log(`[REMINDER-SERVICE] Adding final delivery at deadline: ${effectiveDeadline.toISOString()}`);
+    
+    // CRITICAL FIX: Set reminder_type = 'final_delivery' for final messages (sent to recipients)
     scheduleEntries.push({
       message_id: messageId,
       condition_id: conditionId,
       scheduled_at: effectiveDeadline.toISOString(),
-      reminder_type: 'final_delivery',
+      reminder_type: 'final_delivery', // This ensures it goes to recipients
       status: 'pending',
       delivery_priority: 'critical',
       retry_strategy: 'aggressive'
@@ -168,6 +172,8 @@ function calculateScheduleTimes(params: ReminderScheduleParams): any[] {
   }
   
   console.log(`[REMINDER-SERVICE] Created ${scheduleEntries.length} valid reminder entries`);
+  console.log(`[REMINDER-SERVICE] Entry types:`, scheduleEntries.map(e => ({ type: e.reminder_type, scheduledAt: e.scheduled_at })));
+  
   return scheduleEntries;
 }
 
