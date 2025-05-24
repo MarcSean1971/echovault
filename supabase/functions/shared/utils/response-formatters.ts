@@ -1,47 +1,34 @@
 
 import { corsHeaders } from "./cors-headers.ts";
 
-/**
- * Create a standardized error response
- * @param message Error message or error object
- * @param status HTTP status code
- * @returns Response object
- */
-export function createErrorResponse(message: string | Error, status: number = 400): Response {
-  const errorMessage = message instanceof Error ? message.message : message;
-  
+export function createSuccessResponse(data: any, status: number = 200) {
   return new Response(
-    JSON.stringify({
-      success: false,
-      error: errorMessage
-    }),
-    {
-      status: status,
-      headers: {
-        "Content-Type": "application/json",
-        ...corsHeaders
-      }
+    JSON.stringify({ success: true, data }),
+    { 
+      status,
+      headers: { 
+        'Content-Type': 'application/json',
+        ...corsHeaders 
+      } 
     }
   );
 }
 
-/**
- * Create a standardized success response
- * @param data Response data
- * @returns Response object
- */
-export function createSuccessResponse(data: any): Response {
+export function createErrorResponse(error: any, status: number = 500) {
+  const errorMessage = typeof error === 'string' ? error : error?.message || 'Unknown error';
+  
   return new Response(
-    JSON.stringify({
-      success: true,
-      ...data
+    JSON.stringify({ 
+      success: false, 
+      error: errorMessage,
+      timestamp: new Date().toISOString()
     }),
-    {
-      status: 200,
-      headers: {
-        "Content-Type": "application/json",
-        ...corsHeaders
-      }
+    { 
+      status,
+      headers: { 
+        'Content-Type': 'application/json',
+        ...corsHeaders 
+      } 
     }
   );
 }

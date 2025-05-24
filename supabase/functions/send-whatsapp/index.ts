@@ -39,7 +39,7 @@ serve(async (req) => {
       return createErrorResponse("Template ID is required when using templates", 400);
     }
     
-    console.log(`Sending WhatsApp message to ${to}${useTemplate ? ` using template ${templateId}` : ''}`);
+    console.log(`[SEND-WHATSAPP] Sending WhatsApp message to ${to}${useTemplate ? ` using template ${templateId}` : ''}`);
     
     // Send the WhatsApp message using our shared function
     const result = await sendWhatsAppMessage({
@@ -52,8 +52,11 @@ serve(async (req) => {
     });
     
     if (!result.success) {
+      console.error(`[SEND-WHATSAPP] Failed to send message: ${result.error}`);
       return createErrorResponse(result.error || "Failed to send WhatsApp message", 500);
     }
+    
+    console.log(`[SEND-WHATSAPP] Message sent successfully, ID: ${result.messageId}`);
     
     return createSuccessResponse({
       messageId: result.messageId,
@@ -63,6 +66,7 @@ serve(async (req) => {
       templateId: result.templateId
     });
   } catch (error) {
+    console.error(`[SEND-WHATSAPP] Exception:`, error);
     return createErrorResponse(error);
   }
 });
