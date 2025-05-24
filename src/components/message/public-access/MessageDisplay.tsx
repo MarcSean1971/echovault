@@ -96,10 +96,10 @@ export const MessageDisplay = ({
       )}
       
       <Card className="overflow-hidden border shadow-sm">
-        {/* Message Header - Now uses lighter secondary background for consistency */}
-        <CardHeader className="bg-secondary p-6 text-secondary-foreground">
+        {/* Message Header - Now uses hero-gradient to match landing page */}
+        <CardHeader className="hero-gradient p-6 text-white">
           <CardTitle className="text-2xl font-bold font-serif">{message.title}</CardTitle>
-          <div className="flex items-center text-secondary-foreground/70 text-sm">
+          <div className="flex items-center text-white/80 text-sm">
             <Calendar className={`h-4 w-4 mr-1 ${HOVER_TRANSITION}`} />
             <span>{formatMessageDate(message.created_at)}</span>
           </div>
