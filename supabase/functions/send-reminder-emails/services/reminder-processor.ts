@@ -13,8 +13,173 @@ function logWithTimestamp(message: string, data?: any) {
 }
 
 /**
+ * CRITICAL FIX: Enhanced reminder processing with proper separation of reminder types
+ * This function now ensures check-in reminders and final delivery are processed separately
+ */
+export async function processDueReminders(
+  messageId?: string,
+  forceSend: boolean = false,
+  debug: boolean = false
+): Promise<{ processedCount: number; successCount: number; failedCount: number; errors: string[] }> {
+  const supabase = supabaseClient();
+  const results = {
+    processedCount: 0,
+    successCount: 0,
+    failedCount: 0,
+    errors: [] as string[]
+  };
+  
+  logWithTimestamp(`[REMINDER-PROCESSOR] Starting enhanced reminder processing`, {
+    messageId,
+    forceSend,
+    debug
+  });
+  
+  try {
+    // CRITICAL FIX: Process check-in reminders FIRST and separately
+    logWithTimestamp(`[REMINDER-PROCESSOR] PHASE 1: Processing check-in reminders only`);
+    
+    let checkInQuery = supabase
+      .from('reminder_schedule')
+      .select('*')
+      .eq('reminder_type', 'reminder') // ONLY check-in reminders
+      .eq('status', 'pending')
+      .lte('scheduled_at', new Date().toISOString());
+    
+    if (messageId) {
+      checkInQuery = checkInQuery.eq('message_id', messageId);
+    }
+    
+    const { data: checkInReminders, error: checkInError } = await checkInQuery.limit(25);
+    
+    if (checkInError) {
+      logWithTimestamp(`[REMINDER-PROCESSOR] Error fetching check-in reminders:`, checkInError);
+      results.errors.push(`Check-in query error: ${checkInError.message}`);
+    } else if (checkInReminders && checkInReminders.length > 0) {
+      logWithTimestamp(`[REMINDER-PROCESSOR] Found ${checkInReminders.length} due check-in reminders`);
+      
+      for (const reminder of checkInReminders) {
+        const checkInResult = await processIndividualReminderWithRecovery(reminder, debug);
+        results.processedCount++;
+        
+        if (checkInResult.success) {
+          results.successCount++;
+          logWithTimestamp(`[REMINDER-PROCESSOR] Check-in reminder ${reminder.id} processed successfully`);
+        } else {
+          results.failedCount++;
+          results.errors.push(`Check-in reminder ${reminder.id}: ${checkInResult.error}`);
+          logWithTimestamp(`[REMINDER-PROCESSOR] Check-in reminder ${reminder.id} failed:`, checkInResult.error);
+        }
+      }
+    } else {
+      logWithTimestamp(`[REMINDER-PROCESSOR] No due check-in reminders found`);
+    }
+    
+    // CRITICAL FIX: Process final delivery messages ONLY if no check-in reminders are pending for the same message
+    logWithTimestamp(`[REMINDER-PROCESSOR] PHASE 2: Processing final delivery messages (with safeguards)`);
+    
+    let finalDeliveryQuery = supabase
+      .from('reminder_schedule')
+      .select('*')
+      .eq('reminder_type', 'final_delivery') // ONLY final delivery
+      .eq('status', 'pending')
+      .lte('scheduled_at', new Date().toISOString());
+    
+    if (messageId) {
+      finalDeliveryQuery = finalDeliveryQuery.eq('message_id', messageId);
+    }
+    
+    const { data: finalDeliveryReminders, error: finalDeliveryError } = await finalDeliveryQuery.limit(25);
+    
+    if (finalDeliveryError) {
+      logWithTimestamp(`[REMINDER-PROCESSOR] Error fetching final delivery reminders:`, finalDeliveryError);
+      results.errors.push(`Final delivery query error: ${finalDeliveryError.message}`);
+    } else if (finalDeliveryReminders && finalDeliveryReminders.length > 0) {
+      logWithTimestamp(`[REMINDER-PROCESSOR] Found ${finalDeliveryReminders.length} due final delivery reminders`);
+      
+      for (const reminder of finalDeliveryReminders) {
+        // CRITICAL SAFEGUARD: Check if there are still pending check-in reminders for this message
+        const { data: pendingCheckIns, error: pendingError } = await supabase
+          .from('reminder_schedule')
+          .select('id')
+          .eq('message_id', reminder.message_id)
+          .eq('reminder_type', 'reminder')
+          .eq('status', 'pending')
+          .limit(1);
+        
+        if (pendingError) {
+          logWithTimestamp(`[REMINDER-PROCESSOR] Error checking pending check-ins:`, pendingError);
+          continue;
+        }
+        
+        if (pendingCheckIns && pendingCheckIns.length > 0) {
+          logWithTimestamp(`[REMINDER-PROCESSOR] SAFEGUARD: Skipping final delivery for message ${reminder.message_id} - pending check-in reminders exist`);
+          continue;
+        }
+        
+        // ADDITIONAL SAFEGUARD: Verify the message condition is still active and at deadline
+        const { data: condition, error: conditionError } = await supabase
+          .from('message_conditions')
+          .select('id, active, last_checked, hours_threshold, minutes_threshold')
+          .eq('id', reminder.condition_id)
+          .single();
+        
+        if (conditionError || !condition) {
+          logWithTimestamp(`[REMINDER-PROCESSOR] Condition not found for final delivery ${reminder.id}`);
+          continue;
+        }
+        
+        if (!condition.active) {
+          logWithTimestamp(`[REMINDER-PROCESSOR] SAFEGUARD: Condition ${reminder.condition_id} is not active, skipping final delivery`);
+          continue;
+        }
+        
+        // CRITICAL: Verify we're actually at the deadline
+        const now = new Date();
+        const lastChecked = new Date(condition.last_checked);
+        const deadline = new Date(lastChecked);
+        deadline.setHours(deadline.getHours() + (condition.hours_threshold || 0));
+        deadline.setMinutes(deadline.getMinutes() + (condition.minutes_threshold || 0));
+        
+        const timeUntilDeadline = deadline.getTime() - now.getTime();
+        const minutesUntilDeadline = timeUntilDeadline / (1000 * 60);
+        
+        if (minutesUntilDeadline > 5 && !forceSend) { // 5-minute grace period
+          logWithTimestamp(`[REMINDER-PROCESSOR] SAFEGUARD: Final delivery for ${reminder.id} is premature - ${minutesUntilDeadline.toFixed(2)} minutes until deadline`);
+          continue;
+        }
+        
+        logWithTimestamp(`[REMINDER-PROCESSOR] Processing final delivery ${reminder.id} - deadline reached`);
+        
+        const finalResult = await processIndividualReminderWithRecovery(reminder, debug);
+        results.processedCount++;
+        
+        if (finalResult.success) {
+          results.successCount++;
+          logWithTimestamp(`[REMINDER-PROCESSOR] Final delivery ${reminder.id} processed successfully`);
+        } else {
+          results.failedCount++;
+          results.errors.push(`Final delivery ${reminder.id}: ${finalResult.error}`);
+          logWithTimestamp(`[REMINDER-PROCESSOR] Final delivery ${reminder.id} failed:`, finalResult.error);
+        }
+      }
+    } else {
+      logWithTimestamp(`[REMINDER-PROCESSOR] No due final delivery reminders found`);
+    }
+    
+    logWithTimestamp(`[REMINDER-PROCESSOR] Enhanced processing complete`, results);
+    return results;
+    
+  } catch (error: any) {
+    logWithTimestamp(`[REMINDER-PROCESSOR] Critical error in enhanced processing:`, error);
+    results.errors.push(`Critical processing error: ${error.message}`);
+    return results;
+  }
+}
+
+/**
  * Process a single reminder with proper type handling and recovery
- * FIXED: Uses reminder_type field as primary determinant for message routing
+ * ENHANCED: Uses reminder_type field as primary determinant for message routing
  */
 export async function processIndividualReminderWithRecovery(
   reminder: any,
@@ -30,7 +195,7 @@ export async function processIndividualReminderWithRecovery(
       scheduledAt: reminder.scheduled_at
     });
     
-    // CRITICAL FIX: Use reminder_type as the PRIMARY determinant
+    // CRITICAL FIX: Use reminder_type as the PRIMARY and ONLY determinant
     const isCheckInReminder = reminder.reminder_type === 'reminder';
     const isFinalDelivery = reminder.reminder_type === 'final_delivery';
     
@@ -213,45 +378,4 @@ export async function processIndividualReminderWithRecovery(
       error: error.message || 'Unknown processing error' 
     };
   }
-}
-
-/**
- * Process multiple reminders with proper batching and error handling
- */
-export async function processDueReminders(
-  reminders: any[],
-  debug: boolean = false
-): Promise<{ processed: number; successful: number; failed: number; errors: string[] }> {
-  const results = {
-    processed: 0,
-    successful: 0,
-    failed: 0,
-    errors: [] as string[]
-  };
-  
-  logWithTimestamp(`[REMINDER-PROCESSOR] Processing ${reminders.length} due reminders`);
-  
-  for (const reminder of reminders) {
-    try {
-      const result = await processIndividualReminderWithRecovery(reminder, debug);
-      results.processed++;
-      
-      if (result.success) {
-        results.successful++;
-      } else {
-        results.failed++;
-        if (result.error) {
-          results.errors.push(`Reminder ${reminder.id}: ${result.error}`);
-        }
-      }
-    } catch (error: any) {
-      results.processed++;
-      results.failed++;
-      results.errors.push(`Reminder ${reminder.id}: ${error.message}`);
-      logWithTimestamp(`[REMINDER-PROCESSOR] Unexpected error processing reminder ${reminder.id}:`, error);
-    }
-  }
-  
-  logWithTimestamp(`[REMINDER-PROCESSOR] Batch processing complete`, results);
-  return results;
 }

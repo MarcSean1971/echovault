@@ -1,6 +1,7 @@
 
 /**
  * Service functions for creating and managing reminder schedules
+ * ENHANCED: Improved separation of check-in reminders and final delivery
  */
 
 import { supabase } from "@/integrations/supabase/client";
@@ -10,7 +11,7 @@ import { ReminderScheduleParams, ReminderResult } from "./types";
 
 /**
  * Create or update reminder schedule - uses upsert with the unique constraint
- * Updated to properly handle RLS security constraints
+ * ENHANCED: Better separation of reminder types and improved timing
  */
 export async function createOrUpdateReminderSchedule(params: ReminderScheduleParams, isEdit: boolean = false): Promise<boolean> {
   try {
@@ -20,15 +21,19 @@ export async function createOrUpdateReminderSchedule(params: ReminderSchedulePar
     // Mark existing reminders as obsolete first (safety measure)
     await markRemindersAsObsolete(params.messageId, params.conditionId, isEdit);
     
-    // Calculate scheduled times
-    const scheduleTimes = calculateScheduleTimes(params);
+    // Calculate scheduled times with enhanced separation
+    const scheduleTimes = calculateEnhancedScheduleTimes(params);
     
     if (scheduleTimes.length === 0) {
       console.warn("[REMINDER-SERVICE] No schedule times generated");
       return false;
     }
     
-    console.log(`[REMINDER-SERVICE] Generated ${scheduleTimes.length} schedule entries`);
+    console.log(`[REMINDER-SERVICE] Generated ${scheduleTimes.length} schedule entries with enhanced separation`);
+    console.log(`[REMINDER-SERVICE] Entry breakdown:`, {
+      checkInReminders: scheduleTimes.filter(s => s.reminder_type === 'reminder').length,
+      finalDelivery: scheduleTimes.filter(s => s.reminder_type === 'final_delivery').length
+    });
     
     // Create reminder entries with proper conflict handling using our unique constraint
     const { data, error } = await supabase
@@ -54,7 +59,7 @@ export async function createOrUpdateReminderSchedule(params: ReminderSchedulePar
       return false;
     }
     
-    console.log(`[REMINDER-SERVICE] Successfully created ${scheduleTimes.length} reminder schedule entries`);
+    console.log(`[REMINDER-SERVICE] Successfully created ${scheduleTimes.length} reminder schedule entries with enhanced separation`);
     
     // Broadcast an update event
     window.dispatchEvent(new CustomEvent('conditions-updated', { 
@@ -77,10 +82,10 @@ export async function createOrUpdateReminderSchedule(params: ReminderSchedulePar
 }
 
 /**
- * Calculate reminder schedule times based on params
- * CRITICAL FIX: Properly sets reminder_type field for correct message routing
+ * Calculate reminder schedule times with enhanced separation logic
+ * CRITICAL FIX: Ensures proper temporal separation between check-in and final delivery
  */
-function calculateScheduleTimes(params: ReminderScheduleParams): any[] {
+function calculateEnhancedScheduleTimes(params: ReminderScheduleParams): any[] {
   const { messageId, conditionId, conditionType, triggerDate, reminderMinutes, lastChecked, hoursThreshold, minutesThreshold } = params;
   
   // For check-in conditions, we need to create a virtual deadline
@@ -115,18 +120,18 @@ function calculateScheduleTimes(params: ReminderScheduleParams): any[] {
   // CRITICAL FIX: Validate deadline is in the future
   if (effectiveDeadline <= now) {
     console.warn(`[REMINDER-SERVICE] Deadline ${effectiveDeadline.toISOString()} is in the past, adjusting to minimum future time`);
-    // Set deadline to at least 5 minutes in the future
-    effectiveDeadline = new Date(now.getTime() + 5 * 60 * 1000);
+    // Set deadline to at least 10 minutes in the future for testing
+    effectiveDeadline = new Date(now.getTime() + 10 * 60 * 1000);
   }
   
-  // Generate schedule entries, ensuring reminder times are correct
+  // Generate schedule entries with enhanced separation
   console.log(`[REMINDER-SERVICE] Generating reminders for ${reminderMinutes.length} times:`, reminderMinutes);
   console.log(`[REMINDER-SERVICE] Using deadline: ${effectiveDeadline.toISOString()}`);
   
   const scheduleEntries = [];
-  const minimumFutureTime = new Date(now.getTime() + 60 * 1000); // At least 1 minute in the future
+  const minimumFutureTime = new Date(now.getTime() + 2 * 60 * 1000); // At least 2 minutes in the future
   
-  // CRITICAL FIX: Create check-in reminders with correct reminder_type
+  // CRITICAL FIX: Create check-in reminders with proper temporal separation
   for (const minutes of reminderMinutes) {
     const scheduledAt = new Date(effectiveDeadline!.getTime() - (minutes * 60 * 1000));
     
@@ -138,6 +143,18 @@ function calculateScheduleTimes(params: ReminderScheduleParams): any[] {
     
     // Ensure minimum future time
     const adjustedScheduledAt = scheduledAt < minimumFutureTime ? minimumFutureTime : scheduledAt;
+    
+    // CRITICAL FIX: Ensure at least 5 minutes separation from final delivery
+    const timeTillDeadline = effectiveDeadline!.getTime() - adjustedScheduledAt.getTime();
+    if (timeTillDeadline < 5 * 60 * 1000) { // Less than 5 minutes before deadline
+      console.warn(`[REMINDER-SERVICE] Check-in reminder too close to deadline (${timeTillDeadline / 60000} minutes), adjusting`);
+      const adjustedTime = new Date(effectiveDeadline!.getTime() - 5 * 60 * 1000);
+      if (adjustedTime <= now) {
+        console.warn(`[REMINDER-SERVICE] Cannot create properly separated check-in reminder, skipping`);
+        continue;
+      }
+      adjustedScheduledAt.setTime(adjustedTime.getTime());
+    }
     
     console.log(`[REMINDER-SERVICE] Creating check-in reminder ${minutes} mins before deadline at ${adjustedScheduledAt.toISOString()}`);
     
@@ -153,15 +170,28 @@ function calculateScheduleTimes(params: ReminderScheduleParams): any[] {
     });
   }
   
-  // CRITICAL FIX: Add final delivery entry with correct reminder_type
+  // CRITICAL FIX: Add final delivery entry with proper temporal separation
   if (effectiveDeadline > now) {
-    console.log(`[REMINDER-SERVICE] Adding final delivery at deadline: ${effectiveDeadline.toISOString()}`);
+    // Ensure final delivery is at least 3 minutes after the last check-in reminder
+    let finalDeliveryTime = new Date(effectiveDeadline);
+    
+    if (scheduleEntries.length > 0) {
+      const lastCheckInTime = new Date(Math.max(...scheduleEntries.map(e => new Date(e.scheduled_at).getTime())));
+      const minFinalTime = new Date(lastCheckInTime.getTime() + 3 * 60 * 1000);
+      
+      if (finalDeliveryTime < minFinalTime) {
+        finalDeliveryTime = minFinalTime;
+        console.log(`[REMINDER-SERVICE] Adjusted final delivery time to ensure separation: ${finalDeliveryTime.toISOString()}`);
+      }
+    }
+    
+    console.log(`[REMINDER-SERVICE] Adding final delivery at: ${finalDeliveryTime.toISOString()}`);
     
     // CRITICAL FIX: Set reminder_type = 'final_delivery' for final messages (sent to recipients)
     scheduleEntries.push({
       message_id: messageId,
       condition_id: conditionId,
-      scheduled_at: effectiveDeadline.toISOString(),
+      scheduled_at: finalDeliveryTime.toISOString(),
       reminder_type: 'final_delivery', // This ensures it goes to recipients
       status: 'pending',
       delivery_priority: 'critical',
@@ -171,8 +201,12 @@ function calculateScheduleTimes(params: ReminderScheduleParams): any[] {
     console.warn(`[REMINDER-SERVICE] Final delivery deadline ${effectiveDeadline.toISOString()} is in the past, skipping`);
   }
   
-  console.log(`[REMINDER-SERVICE] Created ${scheduleEntries.length} valid reminder entries`);
-  console.log(`[REMINDER-SERVICE] Entry types:`, scheduleEntries.map(e => ({ type: e.reminder_type, scheduledAt: e.scheduled_at })));
+  console.log(`[REMINDER-SERVICE] Created ${scheduleEntries.length} valid reminder entries with enhanced separation`);
+  console.log(`[REMINDER-SERVICE] Entry types and times:`, scheduleEntries.map(e => ({ 
+    type: e.reminder_type, 
+    scheduledAt: e.scheduled_at,
+    minutesFromNow: Math.round((new Date(e.scheduled_at).getTime() - now.getTime()) / (1000 * 60))
+  })));
   
   return scheduleEntries;
 }

@@ -1,7 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { supabaseClient } from "./supabase-client.ts";
-import { processDueReminders } from "./reminder-processor.ts";
+import { processDueReminders } from "./services/reminder-processor.ts";
 import { cleanupFailedReminders } from "./cleanup-service.ts";
 
 const corsHeaders = {
@@ -86,8 +86,8 @@ serve(async (req) => {
       });
     }
     
-    // Default action: process reminders
-    console.log("Processing due reminders with enhanced error handling...");
+    // Default action: process reminders with enhanced logic
+    console.log("Processing due reminders with enhanced separation logic...");
     
     if (messageId) {
       console.log(`Checking for reminders for specific message: ${messageId}`);
@@ -95,51 +95,18 @@ serve(async (req) => {
       console.log("Checking for all due reminders");
     }
     
-    // CRITICAL FIX: Add proper time filtering in the query
-    console.log("[REMINDER-CHECKER] Checking for due reminders...");
-    const supabase = supabaseClient();
-    
-    let query = supabase
-      .from('reminder_schedule')
-      .select('*')
-      .eq('status', 'pending')
-      .lte('scheduled_at', new Date().toISOString()); // FIXED: Only get reminders that are actually due
-    
-    if (messageId) {
-      query = query.eq('message_id', messageId);
-    }
-    
-    const { data: dueReminders, error: queryError } = await query.limit(50);
-    
-    if (queryError) {
-      console.error("[REMINDER-CHECKER] Error querying due reminders:", queryError);
-      throw queryError;
-    }
-    
-    console.log(`[REMINDER-CHECKER] Found ${dueReminders?.length || 0} due reminders`);
-    
-    if (!dueReminders || dueReminders.length === 0) {
-      console.log("No due reminders found");
-      return new Response(JSON.stringify({
-        success: true,
-        processedCount: 0,
-        successCount: 0,
-        failedCount: 0,
-        message: "No due reminders found"
-      }), {
-        status: 200,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
-    }
-    
-    // Process the reminders
+    // CRITICAL FIX: Use the enhanced processDueReminders function
     const result = await processDueReminders(messageId, forceSend, debug);
     
-    console.log(`Processed ${result.processedCount} reminders. Success: ${result.successCount}, Failed: ${result.failedCount}`);
+    console.log(`Enhanced processing complete: ${result.processedCount} processed, ${result.successCount} successful, ${result.failedCount} failed`);
     
     return new Response(JSON.stringify({
       success: true,
-      ...result
+      processedCount: result.processedCount,
+      successCount: result.successCount,
+      failedCount: result.failedCount,
+      errors: result.errors,
+      message: result.processedCount === 0 ? "No due reminders found" : "Reminders processed successfully"
     }), {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },
