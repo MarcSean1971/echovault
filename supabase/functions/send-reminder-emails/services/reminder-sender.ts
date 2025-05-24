@@ -1,11 +1,10 @@
-
 import { supabaseClient } from "../supabase-client.ts";
 import { Resend } from "npm:resend@2.0.0";
 import { generateAccessUrl } from "../utils/url-generator.ts";
 import { sendWhatsApp } from "./whatsapp-service.ts";
 import { getAppUrl } from "./whatsapp-service.ts";
 import { formatTimeUntilDeadline } from "./whatsapp-service.ts";
-import { recordMessageDelivery } from "../../send-message-notifications/db/delivery-tracking.ts";
+import { recordMessageDelivery } from "../db/delivery-tracking.ts";
 
 // Initialize email client with API key
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
