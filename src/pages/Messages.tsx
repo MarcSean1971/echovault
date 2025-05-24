@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
-import { MessageCard } from "@/components/message/card/MessageCard";
+import { MessageCard } from "@/components/message/MessageCard";
 import { useMessageList } from "@/hooks/useMessageList";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
