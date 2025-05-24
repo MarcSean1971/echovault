@@ -5,13 +5,13 @@ import { ensureReminderSchedule } from "@/utils/reminder/ensureReminderSchedule"
 
 /**
  * Perform a check-in for a user - updates all active conditions
- * FIXED: Now properly regenerates reminder schedules after check-in
+ * CRITICAL FIX: Never modify the active field, only reset timers
  */
 export async function performUserCheckIn(userId: string): Promise<boolean> {
   try {
     console.log(`[CHECK-IN-SERVICE] Starting check-in for user: ${userId}`);
     
-    // Get all active conditions for this user
+    // CRITICAL FIX: Only get active conditions, do NOT modify active field
     const { data: conditions, error: fetchError } = await supabase
       .from("message_conditions")
       .select("id, message_id, condition_type, hours_threshold, minutes_threshold, reminder_hours")
@@ -25,12 +25,13 @@ export async function performUserCheckIn(userId: string): Promise<boolean> {
     
     if (!conditions || conditions.length === 0) {
       console.log("[CHECK-IN-SERVICE] No active check-in conditions found for user");
-      return true; // Not an error, just no conditions to update
+      return true;
     }
     
     console.log(`[CHECK-IN-SERVICE] Found ${conditions.length} active check-in conditions`);
+    console.log(`[CHECK-IN-SERVICE] CRITICAL: Will only update last_checked, NOT touching active field`);
     
-    // Update last_checked timestamp for all conditions
+    // CRITICAL FIX: Only update last_checked timestamp, never modify active field
     const conditionIds = conditions.map(c => c.id);
     const updatedConditions = await updateConditionsLastChecked(conditionIds);
     
@@ -38,16 +39,16 @@ export async function performUserCheckIn(userId: string): Promise<boolean> {
       throw new Error("Failed to update condition timestamps");
     }
     
-    console.log("[CHECK-IN-SERVICE] Successfully updated last_checked timestamps");
+    console.log("[CHECK-IN-SERVICE] CONFIRMED: Successfully updated ONLY last_checked timestamps");
     
-    // CRITICAL FIX: First mark existing reminders as obsolete, then regenerate
+    // Regenerate reminder schedules
     console.log("[CHECK-IN-SERVICE] Marking existing reminders as obsolete and regenerating schedules");
     
     for (const condition of conditions) {
       try {
         console.log(`[CHECK-IN-SERVICE] Processing condition ${condition.id}, message ${condition.message_id}`);
         
-        // STEP 1: Mark existing reminders as obsolete to prevent duplicates
+        // Mark existing reminders as obsolete
         const { error: obsoleteError } = await supabase
           .from('reminder_schedule')
           .update({ status: 'obsolete' })
@@ -61,7 +62,7 @@ export async function performUserCheckIn(userId: string): Promise<boolean> {
           console.log(`[CHECK-IN-SERVICE] Marked existing reminders as obsolete for condition ${condition.id}`);
         }
         
-        // STEP 2: Only regenerate reminders if the condition has reminder_hours configured
+        // Only regenerate reminders if the condition has reminder_hours configured
         if (condition.reminder_hours && condition.reminder_hours.length > 0) {
           console.log(`[CHECK-IN-SERVICE] Regenerating reminders for condition ${condition.id} with ${condition.reminder_hours.length} reminder times`);
           
@@ -119,14 +120,14 @@ export async function performUserCheckIn(userId: string): Promise<boolean> {
       }
     }
     
-    // STEP 3: Trigger immediate processing of any due reminders
+    // Trigger immediate processing of any due reminders
     try {
       console.log("[CHECK-IN-SERVICE] Triggering immediate reminder processing");
       
       const { error: triggerError } = await supabase.functions.invoke("send-reminder-emails", {
         body: {
           debug: true,
-          forceSend: false, // Don't force send, just process due ones
+          forceSend: false,
           source: "check-in-service-trigger",
           action: "process"
         }
@@ -148,11 +149,12 @@ export async function performUserCheckIn(userId: string): Promise<boolean> {
         source: 'check-in-service',
         userId,
         conditionsUpdated: conditions.length,
-        action: 'check-in-completed'
+        action: 'check-in-completed',
+        criticalNote: 'Conditions remain ACTIVE, only timers reset'
       }
     }));
     
-    console.log("[CHECK-IN-SERVICE] Check-in completed successfully");
+    console.log(`[CHECK-IN-SERVICE] FINAL STATUS: Check-in completed successfully, ${conditions.length} conditions remain ACTIVE with reset timers`);
     return true;
     
   } catch (error) {

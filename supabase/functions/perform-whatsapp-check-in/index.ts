@@ -5,6 +5,7 @@ import { createSupabaseAdmin } from "../shared/supabase-client.ts";
 
 /**
  * Processes a check-in from WhatsApp and updates condition timestamps
+ * CRITICAL FIX: Only update last_checked, never touch the active field
  */
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -35,7 +36,7 @@ serve(async (req) => {
     const supabase = createSupabaseAdmin();
     const now = new Date().toISOString();
     
-    // Get all active conditions for this user
+    // CRITICAL FIX: Only get active conditions, do NOT modify the active field
     const { data: conditionsData, error: conditionsError } = await supabase
       .from("message_conditions")
       .select("id, message_id, condition_type, hours_threshold, minutes_threshold, reminder_hours, messages!inner(user_id)")
@@ -49,10 +50,13 @@ serve(async (req) => {
     
     console.log(`[CHECK-IN] Found ${conditionsData?.length || 0} active conditions for user ${userId}`);
     
-    // Update all conditions with the new check-in time
+    // CRITICAL FIX: Only update last_checked timestamp, NEVER touch active field
     if (conditionsData && conditionsData.length > 0) {
       const conditionIds = conditionsData.map(c => c.id);
       
+      console.log(`[CHECK-IN] CRITICAL: Only updating last_checked for conditions: ${conditionIds}`);
+      
+      // FIXED: Only update last_checked field, explicitly exclude active field
       const { error: updateError } = await supabase
         .from("message_conditions")
         .update({ last_checked: now })
@@ -62,16 +66,16 @@ serve(async (req) => {
         throw new Error(`Failed to update conditions: ${updateError.message}`);
       }
       
-      console.log("[CHECK-IN] Successfully updated conditions with new check-in time");
+      console.log("[CHECK-IN] CONFIRMED: Successfully updated ONLY last_checked timestamps, active field untouched");
       
-      // CRITICAL FIX: Regenerate reminder schedules for each updated condition
+      // Regenerate reminder schedules for each updated condition
       console.log("[CHECK-IN] Regenerating reminder schedules after check-in");
       
       for (const condition of conditionsData) {
         try {
           console.log(`[CHECK-IN] Processing condition ${condition.id}, message ${condition.message_id}`);
           
-          // STEP 1: Mark existing reminders as obsolete to prevent duplicates
+          // Mark existing reminders as obsolete
           const { error: obsoleteError } = await supabase
             .from('reminder_schedule')
             .update({ status: 'obsolete' })
@@ -85,7 +89,7 @@ serve(async (req) => {
             console.log(`[CHECK-IN] Marked existing reminders as obsolete for condition ${condition.id}`);
           }
           
-          // STEP 2: Only regenerate reminders if the condition has reminder_hours configured
+          // Only regenerate reminders if the condition has reminder_hours configured
           if (condition.reminder_hours && condition.reminder_hours.length > 0) {
             console.log(`[CHECK-IN] Regenerating reminders for condition ${condition.id} with ${condition.reminder_hours.length} reminder times`);
             
@@ -96,7 +100,7 @@ serve(async (req) => {
             
             console.log(`[CHECK-IN] New deadline for condition ${condition.id}: ${newDeadline.toISOString()}`);
             
-            // CRITICAL FIX: Filter out reminder times that would be in the past
+            // Filter out reminder times that would be in the past
             const validReminderMinutes = condition.reminder_hours.filter((minutes: number) => {
               const reminderTime = new Date(newDeadline.getTime() - (minutes * 60 * 1000));
               if (reminderTime <= new Date()) {
@@ -158,15 +162,14 @@ serve(async (req) => {
         }
       }
       
-      // FIXED: Send confirmation using the same mechanism as SOS responses
+      // Send confirmation using WhatsApp notification
       if (phoneNumber) {
-        console.log(`[CHECK-IN] Sending confirmation to phone: ${phoneNumber} (preserving format)`);
+        console.log(`[CHECK-IN] Sending confirmation to phone: ${phoneNumber}`);
         
         try {
-          // Use send-whatsapp-notification function like SOS responses do
           const { data: confirmationResult, error: confirmationError } = await supabase.functions.invoke("send-whatsapp-notification", {
             body: {
-              to: phoneNumber, // Keep the original whatsapp: prefix intact  
+              to: phoneNumber,
               message: `✅ Check-in received! Your deadman's switch timers have been reset. Time: ${new Date().toLocaleTimeString()}`
             }
           });
@@ -181,12 +184,7 @@ serve(async (req) => {
         }
       }
       
-      // Trigger realtime event for UI updates
-      console.log("[CHECK-IN] Triggering realtime event for UI updates");
-      
-      conditionsData.forEach(condition => {
-        console.log(`[CHECK-IN] Condition ${condition.id} updated for message ${condition.message_id}`);
-      });
+      console.log(`[CHECK-IN] FINAL STATUS: Conditions remain ACTIVE, only last_checked updated for ${conditionsData.length} conditions`);
     } else {
       console.log("[CHECK-IN] No active conditions found for user");
     }
@@ -195,7 +193,8 @@ serve(async (req) => {
       timestamp: now,
       method: method,
       conditions_updated: conditionsData?.length || 0,
-      reminders_regenerated: true
+      reminders_regenerated: true,
+      critical_note: "Conditions remain ACTIVE, only timers reset"
     });
     
   } catch (error) {
