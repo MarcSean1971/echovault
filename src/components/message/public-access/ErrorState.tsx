@@ -1,4 +1,3 @@
-
 import { AlertCircle, HelpCircle, ArrowLeft, RefreshCw, FileText, Bug } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -231,7 +230,7 @@ export const ErrorState = ({ error, isPreviewMode = false }: ErrorStateProps) =>
   };
 
   return (
-    <div className="container mx-auto max-w-3xl px-4 py-8">
+    <div className="max-w-3xl mx-auto px-4 py-8">
       {isPreviewMode && (
         <div className="bg-amber-100 border-l-4 border-amber-500 p-4 mb-4">
           <p className="text-amber-700">

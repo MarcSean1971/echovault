@@ -27,7 +27,7 @@ export const PinEntry = ({ onSubmit }: PinEntryProps) => {
   };
 
   return (
-    <div className="container mx-auto max-w-3xl px-4 py-8">
+    <div className="max-w-3xl mx-auto px-4 py-8">
       <Card className="p-6">
         <div className="flex flex-col items-center justify-center text-center space-y-4 py-8">
           <Key className="h-12 w-12 text-primary" />

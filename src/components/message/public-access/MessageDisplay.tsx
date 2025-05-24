@@ -56,7 +56,7 @@ export const MessageDisplay = ({
 
   if (!message) {
     return (
-      <div className="container mx-auto max-w-3xl px-4 py-8">
+      <div className="max-w-3xl mx-auto px-4 py-8">
         <Card className="overflow-hidden border-destructive/20">
           <CardHeader className="bg-destructive/10">
             <CardTitle className="text-center text-destructive">Message Not Available</CardTitle>
@@ -78,7 +78,7 @@ export const MessageDisplay = ({
   }
 
   return (
-    <div className="container mx-auto max-w-3xl px-4 py-8 mb-16 animate-fade-in">
+    <div className="max-w-3xl mx-auto px-4 py-8 mb-16 animate-fade-in">
       {isPreviewMode && (
         <div className="mb-4 rounded-lg bg-secondary/50 p-4 border border-secondary">
           <div className="flex">

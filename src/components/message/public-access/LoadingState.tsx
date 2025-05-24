@@ -5,7 +5,7 @@ import { Shield } from "lucide-react";
 
 export const LoadingState = () => {
   return (
-    <div className="container mx-auto max-w-3xl px-4 py-8">
+    <div className="max-w-3xl mx-auto px-4 py-8">
       <Card className="overflow-hidden border shadow-sm">
         {/* Animated Header - Now uses hero-gradient with dark skeleton elements to match landing page */}
         <div className="hero-gradient p-6">
