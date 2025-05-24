@@ -189,15 +189,15 @@ header.public-header .container {
   background: #FFFFFF !important;
 }
 
-/* Logo styling with exact color */
+/* FIXED: Logo styling to use neutral colors instead of purple */
 .public-logo,
 .public-logo * {
-  color: #C4B5FD !important;
+  color: #374151 !important; /* Gray-700 for professional look */
 }
 
 .public-logo .bg-gradient-to-r,
 .public-logo [class*="bg-gradient"] {
-  background: linear-gradient(to right, #C4B5FD, #C4B5FD) !important;
+  background: #374151 !important; /* Use solid gray instead of purple gradient */
   -webkit-background-clip: text !important;
   -webkit-text-fill-color: transparent !important;
   background-clip: text !important;
