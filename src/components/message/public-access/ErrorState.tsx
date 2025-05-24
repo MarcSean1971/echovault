@@ -240,12 +240,12 @@ export const ErrorState = ({ error, isPreviewMode = false }: ErrorStateProps) =>
         </div>
       )}
       
-      <Card className="p-6 border-purple-200">
+      <Card className="p-6 border-primary/20">
         <div className="flex flex-col items-center justify-center text-center space-y-4 py-6">
-          <AlertCircle className={`h-12 w-12 text-purple-500 ${HOVER_TRANSITION}`} />
+          <AlertCircle className={`h-12 w-12 text-primary ${HOVER_TRANSITION}`} />
           <h2 className="text-xl font-semibold">Access Error</h2>
           
-          <Alert variant="purple" className="mb-2">
+          <Alert variant="default" className="mb-2 border-primary/20">
             <AlertTitle>Error accessing {isAttachmentError ? 'attachment' : 'message'}</AlertTitle>
             <AlertDescription>
               {isPreviewMode ? 'This is expected in preview mode. Use the Debug button for options.' : error}
@@ -283,7 +283,7 @@ export const ErrorState = ({ error, isPreviewMode = false }: ErrorStateProps) =>
           </div>
           
           {showDebug && (
-            <div className="bg-slate-50 border rounded p-4 text-left w-full overflow-auto">
+            <div className="bg-secondary/30 border border-secondary rounded p-4 text-left w-full overflow-auto">
               <h3 className="font-semibold mb-2">Debug Information:</h3>
               <p className="text-sm"><strong>Message ID:</strong> {messageId || '(not found)'}</p>
               <p className="text-sm"><strong>Delivery ID:</strong> {deliveryId || '(not found)'}</p>
@@ -293,7 +293,7 @@ export const ErrorState = ({ error, isPreviewMode = false }: ErrorStateProps) =>
               {deliveryData && (
                 <>
                   <h4 className="font-medium mt-3 mb-1">Database Records:</h4>
-                  <div className="text-xs overflow-auto max-h-48 bg-slate-100 p-2">
+                  <div className="text-xs overflow-auto max-h-48 bg-secondary/20 p-2">
                     <pre>{JSON.stringify(deliveryData, null, 2)}</pre>
                   </div>
                 </>
@@ -346,10 +346,10 @@ export const ErrorState = ({ error, isPreviewMode = false }: ErrorStateProps) =>
           )}
           
           {isPreviewMode && (
-            <div className="bg-purple-50 border border-purple-100 rounded-md p-4 w-full max-w-md">
+            <div className="bg-secondary/30 border border-secondary rounded-md p-4 w-full max-w-md">
               <div className="flex items-start">
-                <HelpCircle className={`h-5 w-5 text-purple-500 mr-2 mt-0.5 flex-shrink-0 ${HOVER_TRANSITION}`} />
-                <div className="text-sm text-purple-700 text-left">
+                <HelpCircle className={`h-5 w-5 text-primary mr-2 mt-0.5 flex-shrink-0 ${HOVER_TRANSITION}`} />
+                <div className="text-sm text-secondary-foreground text-left">
                   <p className="font-medium mb-1">Preview Mode Information:</p>
                   <ul className="list-disc pl-5 space-y-1">
                     <li>This is a test view using a simulated delivery ID</li>
@@ -364,10 +364,10 @@ export const ErrorState = ({ error, isPreviewMode = false }: ErrorStateProps) =>
           
           <Separator className="my-2" />
           
-          <div className="bg-purple-50 border border-purple-100 rounded-md p-4 w-full max-w-md">
+          <div className="bg-secondary/30 border border-secondary rounded-md p-4 w-full max-w-md">
             <div className="flex items-start">
-              <HelpCircle className={`h-5 w-5 text-purple-500 mr-2 mt-0.5 flex-shrink-0 ${HOVER_TRANSITION}`} />
-              <div className="text-sm text-purple-700 text-left">
+              <HelpCircle className={`h-5 w-5 text-primary mr-2 mt-0.5 flex-shrink-0 ${HOVER_TRANSITION}`} />
+              <div className="text-sm text-secondary-foreground text-left">
                 <p className="font-medium mb-1">Troubleshooting steps:</p>
                 <ul className="list-disc pl-5 space-y-1">
                   <li>Open the original email and click the link directly</li>
@@ -387,7 +387,7 @@ export const ErrorState = ({ error, isPreviewMode = false }: ErrorStateProps) =>
           <div className="flex flex-wrap gap-3 mt-2 justify-center">
             <Button 
               onClick={retryAccess}
-              className={`bg-purple-600 hover:bg-purple-700 ${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default} flex items-center gap-2`}
+              className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default} flex items-center gap-2`}
             >
               <RefreshCw className={`h-4 w-4 ${HOVER_TRANSITION}`} />
               Try Again
