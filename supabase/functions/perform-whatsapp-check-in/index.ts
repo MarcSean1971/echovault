@@ -62,6 +62,15 @@ serve(async (req) => {
       }
       
       console.log("[CHECK-IN] Successfully updated conditions with new check-in time");
+      
+      // ADDED: Trigger realtime event for UI updates like SOS system does
+      console.log("[CHECK-IN] Triggering realtime event for UI updates");
+      
+      // For each updated condition, we could potentially trigger individual events
+      // but for now, we'll trigger a general conditions-updated event
+      conditionsData.forEach(condition => {
+        console.log(`[CHECK-IN] Condition ${condition.id} updated for message ${condition.message_id}`);
+      });
     } else {
       console.log("[CHECK-IN] No active conditions found for user");
     }

@@ -28,18 +28,18 @@ export async function sendWhatsAppMessage(params: {
       return { success: false, error: "Missing message content or template configuration" };
     }
     
-    // CRITICAL FIX: Preserve the original phone format if it's already WhatsApp format
-    let formattedPhone = to;
-    
-    // Only add whatsapp: prefix if it's not already there
-    if (!formattedPhone.startsWith('whatsapp:')) {
-      // Clean and format the number
-      const cleanNumber = formattedPhone.replace(/[^\d+]/g, '');
-      const numberWithPlus = cleanNumber.startsWith('+') ? cleanNumber : `+${cleanNumber}`;
-      formattedPhone = `whatsapp:${numberWithPlus}`;
+    // FIXED: Clean phone number like SOS system - remove whatsapp: prefix and ensure clean format
+    let cleanPhone = to;
+    if (cleanPhone.startsWith('whatsapp:')) {
+      cleanPhone = cleanPhone.replace('whatsapp:', '');
     }
     
-    console.log(`[WHATSAPP-SERVICE] Original phone: ${to}, Formatted phone: ${formattedPhone}`);
+    // Ensure proper format with + prefix
+    if (!cleanPhone.startsWith('+')) {
+      cleanPhone = `+${cleanPhone.replace(/[^\d]/g, '')}`;
+    }
+    
+    console.log(`[WHATSAPP-SERVICE] Original phone: ${to}, Clean phone: ${cleanPhone}`);
     
     // Get Twilio credentials from environment variables
     const accountSid = Deno.env.get("TWILIO_ACCOUNT_SID");
@@ -73,7 +73,7 @@ export async function sendWhatsAppMessage(params: {
         
         // Implement different strategies based on template vs regular message
         if (useTemplate && templateId) {
-          console.log(`Sending WhatsApp template message to ${formattedPhone} using template ${templateId}`);
+          console.log(`Sending WhatsApp template message to ${cleanPhone} using template ${templateId}`);
           
           // Use the Content API for templates
           twilioEndpoint = `https://content.twilio.com/v1/Content`;
@@ -94,7 +94,7 @@ export async function sendWhatsAppMessage(params: {
           // Create the request body for template messages
           requestBody = {
             contentSid: templateId,
-            to: formattedPhone,
+            to: `whatsapp:${cleanPhone}`, // Twilio expects whatsapp: prefix for To field
             messagingServiceSid: messagingServiceSid,
             contentVariables: JSON.stringify(attributes)
           };
@@ -104,14 +104,14 @@ export async function sendWhatsAppMessage(params: {
           // Log the template parameters for debugging
           console.log(`Template parameters:`, JSON.stringify(attributes));
         } else {
-          console.log(`Sending WhatsApp text message to ${formattedPhone}`);
+          console.log(`Sending WhatsApp text message to ${cleanPhone}`);
           
           // Use the standard Messages API for text messages
           twilioEndpoint = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
           
-          // Create the request body for text messages - CRITICAL: Use proper From field
+          // FIXED: Follow SOS pattern exactly - use clean numbers and proper From field
           requestBody = {
-            To: formattedPhone,
+            To: `whatsapp:${cleanPhone}`, // Twilio expects whatsapp: prefix for To field
             Body: message,
             From: whatsappNumber || `whatsapp:+14155238886`, // Use proper WhatsApp sender number
           };
@@ -133,7 +133,7 @@ export async function sendWhatsAppMessage(params: {
           .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`)
           .join('&');
         
-        console.log(`[WHATSAPP-SERVICE] Request body: To=${requestBody.To}, From=${requestBody.From || requestBody.MessagingServiceSid}`);
+        console.log(`[WHATSAPP-SERVICE] Request to Twilio: To=${requestBody.To}, From=${requestBody.From || requestBody.MessagingServiceSid}`);
         
         // Send the request to Twilio
         const response = await fetch(twilioEndpoint, {
