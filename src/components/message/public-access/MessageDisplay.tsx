@@ -96,8 +96,8 @@ export const MessageDisplay = ({
       )}
       
       <Card className="overflow-hidden border shadow-sm">
-        {/* Message Header - Shows immediately */}
-        <CardHeader className="bg-gradient-to-r from-primary to-accent p-6 text-primary-foreground">
+        {/* Message Header - Now uses consistent purple background */}
+        <CardHeader className="bg-primary p-6 text-primary-foreground">
           <CardTitle className="text-2xl font-bold font-serif">{message.title}</CardTitle>
           <div className="flex items-center text-primary-foreground/80 text-sm">
             <Calendar className={`h-4 w-4 mr-1 ${HOVER_TRANSITION}`} />

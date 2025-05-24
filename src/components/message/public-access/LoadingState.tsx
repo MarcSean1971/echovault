@@ -7,8 +7,8 @@ export const LoadingState = () => {
   return (
     <div className="container mx-auto max-w-3xl px-4 py-8">
       <Card className="overflow-hidden border shadow-sm">
-        {/* Animated Header */}
-        <div className="bg-gradient-to-r from-primary to-accent p-6">
+        {/* Animated Header - Now uses consistent purple background */}
+        <div className="bg-primary p-6">
           <Skeleton className="h-8 w-3/4 bg-white/20" />
           <div className="flex items-center mt-2">
             <Skeleton className="h-4 w-32 bg-white/20" />
