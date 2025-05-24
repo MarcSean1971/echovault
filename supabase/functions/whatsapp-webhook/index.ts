@@ -1,6 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { processCheckIn } from "./services/check-in-service.ts";
+import { processPanicTrigger } from "./services/panic-service.ts";
 import { createSupabaseAdmin } from "../shared/services/whatsapp-service.ts";
 
 const corsHeaders = {
@@ -8,6 +9,98 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
 };
+
+/**
+ * Parse incoming webhook data - handles both JSON and form-encoded payloads
+ */
+async function parseWebhookData(req: Request) {
+  const contentType = req.headers.get('content-type') || '';
+  
+  console.log(`[WEBHOOK] Content-Type: ${contentType}`);
+  
+  try {
+    // Handle form-encoded data (typical for Twilio webhooks)
+    if (contentType.includes('application/x-www-form-urlencoded')) {
+      const formData = await req.formData();
+      const body: Record<string, string> = {};
+      
+      for (const [key, value] of formData.entries()) {
+        body[key] = value.toString();
+      }
+      
+      console.log("[WEBHOOK] Parsed form data:", JSON.stringify(body, null, 2));
+      return body;
+    }
+    
+    // Handle JSON data
+    if (contentType.includes('application/json')) {
+      const body = await req.json();
+      console.log("[WEBHOOK] Parsed JSON data:", JSON.stringify(body, null, 2));
+      return body;
+    }
+    
+    // Fallback: try to parse as text and then as form data
+    const text = await req.text();
+    console.log(`[WEBHOOK] Raw text data: ${text}`);
+    
+    // Try to parse as URL-encoded form data
+    if (text.includes('=') && text.includes('&')) {
+      const params = new URLSearchParams(text);
+      const body: Record<string, string> = {};
+      
+      for (const [key, value] of params.entries()) {
+        body[key] = value;
+      }
+      
+      console.log("[WEBHOOK] Parsed URL-encoded data:", JSON.stringify(body, null, 2));
+      return body;
+    }
+    
+    // If all else fails, try JSON
+    return JSON.parse(text);
+    
+  } catch (error) {
+    console.error("[WEBHOOK] Error parsing request data:", error);
+    throw new Error(`Failed to parse request data: ${error.message}`);
+  }
+}
+
+/**
+ * Find user by phone number using multiple lookup strategies
+ */
+async function findUserByPhone(phone: string) {
+  const supabase = createSupabaseAdmin();
+  const cleanPhone = phone.replace('whatsapp:', '').replace('+', '').trim();
+  
+  console.log(`[WEBHOOK] Looking up user for phone: ${phone} (clean: ${cleanPhone})`);
+  
+  // Strategy 1: Direct profile lookup by whatsapp_number
+  const { data: profileData, error: profileError } = await supabase
+    .from('profiles')
+    .select('id')
+    .or(`whatsapp_number.eq.${phone},whatsapp_number.eq.${cleanPhone},whatsapp_number.eq.+${cleanPhone}`)
+    .single();
+  
+  if (!profileError && profileData) {
+    console.log(`[WEBHOOK] Found user via profile: ${profileData.id}`);
+    return profileData.id;
+  }
+  
+  // Strategy 2: Recipients table lookup
+  const { data: recipientData, error: recipientError } = await supabase
+    .from('recipients')
+    .select('user_id')
+    .or(`phone.eq.${phone},phone.eq.${cleanPhone},phone.eq.+${cleanPhone}`)
+    .single();
+  
+  if (!recipientError && recipientData) {
+    console.log(`[WEBHOOK] Found user via recipients: ${recipientData.user_id}`);
+    return recipientData.user_id;
+  }
+  
+  console.log(`[WEBHOOK] No user found for phone: ${phone}`);
+  return null;
+}
 
 serve(async (req) => {
   console.log("[WEBHOOK] WhatsApp webhook received request");
@@ -19,19 +112,12 @@ serve(async (req) => {
   }
   
   try {
-    console.log("[WEBHOOK] Processing request body");
-    
-    // Parse the request body
-    const body = await req.json();
-    
-    // Log the request for debugging
-    console.log("[WEBHOOK] Request body:", JSON.stringify(body));
+    // Parse the request data
+    const body = await parseWebhookData(req);
     
     // If this is a verification request from WhatsApp/Twilio, handle it
     if (body.type === "verification") {
       console.log("[WEBHOOK] Handling verification request");
-      
-      // Verify that the request is legitimate (in a real implementation you would validate the challenge)
       return new Response(
         JSON.stringify({ success: true, verified: true }),
         { headers: { 'Content-Type': 'application/json', ...corsHeaders } }
@@ -44,118 +130,95 @@ serve(async (req) => {
     const to = body.To || '';
     const body_text = body.Body || '';
     
-    console.log(`[WEBHOOK] Message from ${from} to ${to}: ${body_text}`);
+    console.log(`[WEBHOOK] Message from ${from} to ${to}: "${body_text}"`);
+    
+    if (!body_text) {
+      console.log("[WEBHOOK] No message body found");
+      return new Response(
+        JSON.stringify({ success: true, message: "No message body" }),
+        { headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+    
+    // Find the user who sent this message
+    const userId = await findUserByPhone(from);
+    
+    if (!userId) {
+      console.log("[WEBHOOK] No user found for this phone number");
+      return new Response(
+        JSON.stringify({ success: false, error: "User not found for this phone number" }),
+        { headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+    
+    // Check if this is an SOS message (panic trigger)
+    const messageUpper = body_text.toUpperCase().trim();
+    if (messageUpper === 'SOS') {
+      console.log("[WEBHOOK] Detected SOS panic trigger message");
+      
+      const panicResult = await processPanicTrigger(userId, from, body_text);
+      
+      return new Response(
+        JSON.stringify(panicResult),
+        { headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
     
     // Check if this is a check-in message
-    if (body_text && (body_text.toUpperCase() === 'CHECKIN' || body_text.toUpperCase().includes('CHECK') || body_text.toUpperCase().includes('OK'))) {
+    if (messageUpper === 'CHECKIN' || messageUpper === 'CHECK' || messageUpper === 'OK' || messageUpper === 'OKOK') {
       console.log("[WEBHOOK] Detected check-in message");
       
-      // Extract the user ID from the phone number
-      // In a real implementation, you would look up the user based on the phone number
-      // For now, we'll use a database query to find the user
-      const supabase = createSupabaseAdmin();
+      const checkInResult = await processCheckIn(userId, from);
       
-      // Remove WhatsApp prefix and any spaces
-      const cleanPhone = from.replace('whatsapp:', '').trim();
-      
-      // Look up the profile by phone number
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('whatsapp_number', cleanPhone)
-        .single();
-      
-      if (profileError || !profileData) {
-        console.error("[WEBHOOK] Error finding user by phone number:", profileError || "No user found");
-        
-        // Try an alternative lookup method - find the user through recipients table
-        const { data: recipientData, error: recipientError } = await supabase
-          .from('recipients')
-          .select('user_id')
-          .eq('phone', cleanPhone)
-          .single();
-        
-        if (recipientError || !recipientData) {
-          console.error("[WEBHOOK] Error finding user through recipients:", recipientError || "No recipient found");
+      return new Response(
+        JSON.stringify(checkInResult),
+        { headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+    
+    // Check for custom check-in codes
+    const supabase = createSupabaseAdmin();
+    const { data: conditions, error: conditionsError } = await supabase
+      .from('message_conditions')
+      .select('id, message_id, check_in_code, messages!inner(user_id)')
+      .eq('messages.user_id', userId)
+      .eq('active', true)
+      .not('check_in_code', 'is', null);
+    
+    if (!conditionsError && conditions && conditions.length > 0) {
+      for (const condition of conditions) {
+        if (condition.check_in_code && messageUpper === condition.check_in_code.toUpperCase()) {
+          console.log(`[WEBHOOK] Detected custom check-in code: ${condition.check_in_code}`);
+          
+          const checkInResult = await processCheckIn(userId, from);
+          
           return new Response(
-            JSON.stringify({ success: false, error: "User not found" }),
+            JSON.stringify(checkInResult),
             { headers: { 'Content-Type': 'application/json', ...corsHeaders } }
           );
         }
-        
-        // Process the check-in for the user found through recipients
-        const result = await processCheckIn(recipientData.user_id, cleanPhone);
-        
-        return new Response(
-          JSON.stringify(result),
-          { headers: { 'Content-Type': 'application/json', ...corsHeaders } }
-        );
       }
-      
-      // Process the check-in for the user
-      const result = await processCheckIn(profileData.id, cleanPhone);
-      
-      return new Response(
-        JSON.stringify(result),
-        { headers: { 'Content-Type': 'application/json', ...corsHeaders } }
-      );
     }
     
-    // If this is a message with a verification code or other structured info
-    if (body_text && body_text.toUpperCase().includes('OKOK')) {
-      console.log("[WEBHOOK] Received message with check-in code OKOK");
-      
-      // Handle this similarly to the check-in flow
-      // Get the user ID based on the phone number
-      const supabase = createSupabaseAdmin();
-      const cleanPhone = from.replace('whatsapp:', '').trim();
-      
-      // Find users with active check-in conditions and this check-in code
-      const { data: conditions, error: conditionsError } = await supabase
-        .from('message_conditions')
-        .select('id, message_id, user_id:messages(user_id)')
-        .eq('check_in_code', 'OKOK')
-        .eq('active', true);
-      
-      if (conditionsError || !conditions || conditions.length === 0) {
-        console.error("[WEBHOOK] No active conditions with matching code found:", conditionsError || "No conditions found");
-        return new Response(
-          JSON.stringify({ success: false, error: "No matching conditions found" }),
-          { headers: { 'Content-Type': 'application/json', ...corsHeaders } }
-        );
-      }
-      
-      // Use the user_id from the first matching condition
-      const userId = conditions[0].user_id?.user_id;
-      
-      if (!userId) {
-        console.error("[WEBHOOK] Could not determine user ID for check-in");
-        return new Response(
-          JSON.stringify({ success: false, error: "User ID not found" }),
-          { headers: { 'Content-Type': 'application/json', ...corsHeaders } }
-        );
-      }
-      
-      // Process the check-in
-      const result = await processCheckIn(userId, cleanPhone);
-      
-      return new Response(
-        JSON.stringify(result),
-        { headers: { 'Content-Type': 'application/json', ...corsHeaders } }
-      );
-    }
-    
-    // If nothing specific was detected, just acknowledge the message
+    // If no specific action was detected, acknowledge the message
     console.log("[WEBHOOK] No specific action detected for this message");
     return new Response(
-      JSON.stringify({ success: true, message: "Message received" }),
+      JSON.stringify({ 
+        success: true, 
+        message: "Message received but no action taken",
+        hint: "Send 'SOS' for emergency or 'CHECKIN' to check in"
+      }),
       { headers: { 'Content-Type': 'application/json', ...corsHeaders } }
     );
     
   } catch (error) {
     console.error("[WEBHOOK] Error processing webhook:", error);
     return new Response(
-      JSON.stringify({ success: false, error: error.message || "Unknown error" }),
+      JSON.stringify({ 
+        success: false, 
+        error: error.message || "Unknown error",
+        timestamp: new Date().toISOString()
+      }),
       { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
     );
   }
