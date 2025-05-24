@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { BUTTON_HOVER_EFFECTS } from "@/utils/hoverEffects";
 
 export function Footer() {
   const { toast } = useToast();
@@ -59,7 +59,7 @@ export function Footer() {
                 variant="ghost"
                 size="sm"
                 onClick={handleShare}
-                className={`text-muted-foreground hover:text-primary ${HOVER_TRANSITION}`}
+                className={`text-muted-foreground hover:text-primary ${BUTTON_HOVER_EFFECTS.ghost}`}
                 aria-label="Share EchoVault"
               >
                 <Share2 className="h-4 w-4 mr-2" />
