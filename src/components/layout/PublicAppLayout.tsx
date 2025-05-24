@@ -9,7 +9,7 @@ import { Logo } from "./navbar/Logo";
  */
 export default function PublicAppLayout() {
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-white flex flex-col public-message-wrapper">
       {/* Header with FORCED white background using inline styles */}
       <header 
         className="public-header sticky top-0 z-30 w-full border-b shadow-sm md:py-3 py-2"
@@ -38,7 +38,7 @@ export default function PublicAppLayout() {
       </header>
       
       <Toaster />
-      <main className="flex-1 w-full">
+      <main className="flex-1 w-full bg-white">
         <Outlet />
       </main>
     </div>

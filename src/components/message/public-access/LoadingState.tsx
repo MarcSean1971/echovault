@@ -6,9 +6,9 @@ import { Shield } from "lucide-react";
 export const LoadingState = () => {
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
-      <Card className="overflow-hidden border shadow-sm">
+      <Card className="overflow-hidden border shadow-sm bg-white">
         {/* Animated Header - Now uses pure white background to match landing page */}
-        <div className="bg-background p-6 border-b">
+        <div className="bg-white p-6 border-b">
           <Skeleton className="h-8 w-3/4 bg-muted/50" />
           <div className="flex items-center mt-2">
             <Skeleton className="h-4 w-32 bg-muted/50" />
@@ -16,13 +16,13 @@ export const LoadingState = () => {
         </div>
         
         {/* Security Badge */}
-        <div className="bg-secondary/30 px-6 py-2 border-b border-secondary flex items-center">
+        <div className="bg-gray-50 px-6 py-2 border-b border-secondary flex items-center">
           <Shield className="h-4 w-4 text-primary mr-2 animate-pulse" />
           <Skeleton className="h-4 w-24 bg-secondary/50" />
         </div>
         
         {/* Content Loading */}
-        <div className="p-6 space-y-4">
+        <div className="p-6 space-y-4 bg-white">
           <Skeleton className="h-4 w-full" />
           <Skeleton className="h-4 w-11/12" />
           <Skeleton className="h-4 w-10/12" />
@@ -35,7 +35,7 @@ export const LoadingState = () => {
             </div>
             
             <div className="space-y-3">
-              <div className="flex items-center justify-between border rounded-md p-3">
+              <div className="flex items-center justify-between border rounded-md p-3 bg-white">
                 <div className="flex items-center space-x-3">
                   <Skeleton className="h-10 w-10 rounded-md" />
                   <div>
@@ -53,7 +53,7 @@ export const LoadingState = () => {
         </div>
         
         {/* Footer */}
-        <div className="bg-secondary/30 px-6 py-4 border-t border-secondary">
+        <div className="bg-gray-50 px-6 py-4 border-t border-secondary">
           <div className="flex justify-between">
             <Skeleton className="h-4 w-48" />
             <Skeleton className="h-4 w-32" />

@@ -57,11 +57,11 @@ export const MessageDisplay = ({
   if (!message) {
     return (
       <div className="max-w-3xl mx-auto px-4 py-8">
-        <Card className="overflow-hidden border-destructive/20">
-          <CardHeader className="bg-destructive/10">
+        <Card className="overflow-hidden border-destructive/20 bg-white">
+          <CardHeader className="bg-red-50">
             <CardTitle className="text-center text-destructive">Message Not Available</CardTitle>
           </CardHeader>
-          <CardContent className="p-8 text-center">
+          <CardContent className="p-8 text-center bg-white">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10 mb-6">
               <Lock className={`h-8 w-8 text-destructive ${HOVER_TRANSITION}`} />
             </div>
@@ -80,7 +80,7 @@ export const MessageDisplay = ({
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 mb-16 animate-fade-in">
       {isPreviewMode && (
-        <div className="mb-4 rounded-lg bg-secondary/50 p-4 border border-secondary">
+        <div className="mb-4 rounded-lg bg-blue-50 p-4 border border-blue-200">
           <div className="flex">
             <div className="flex-shrink-0">
               <Eye className={`h-5 w-5 text-accent ${HOVER_TRANSITION}`} aria-hidden="true" />
@@ -95,9 +95,9 @@ export const MessageDisplay = ({
         </div>
       )}
       
-      <Card className="overflow-hidden border shadow-sm">
+      <Card className="overflow-hidden border shadow-sm bg-white">
         {/* Message Header - Now uses pure white background to match landing page */}
-        <CardHeader className="bg-background p-6 border-b">
+        <CardHeader className="bg-white p-6 border-b">
           <CardTitle className="text-2xl font-bold font-serif text-foreground">{message.title}</CardTitle>
           <div className="flex items-center text-muted-foreground text-sm">
             <Calendar className={`h-4 w-4 mr-1 ${HOVER_TRANSITION}`} />
@@ -106,26 +106,26 @@ export const MessageDisplay = ({
         </CardHeader>
         
         {/* Security Badge */}
-        <div className="bg-secondary/30 px-6 py-2 border-b border-secondary">
+        <div className="bg-gray-50 px-6 py-2 border-b border-gray-200">
           <div className="flex items-center">
             <Shield className={`h-4 w-4 text-primary mr-2 ${HOVER_TRANSITION}`} />
             <span className="text-sm font-medium text-secondary-foreground">Secure Message</span>
             
-            <Badge variant="outline" className="ml-auto border-secondary text-secondary-foreground">
+            <Badge variant="outline" className="ml-auto border-gray-300 text-gray-600">
               <Clock className={`h-3 w-3 mr-1 ${HOVER_TRANSITION}`} /> {message.expires_at ? 'Expires' : 'No Expiration'}
             </Badge>
           </div>
         </div>
         
         {/* Message Content */}
-        <CardContent className="p-6">
+        <CardContent className="p-6 bg-white">
           <div className="prose max-w-full">
             {message && <MessageContent message={message} deliveryId={deliveryId} recipientEmail={recipientEmail} />}
           </div>
         </CardContent>
         
         {/* Footer */}
-        <div className="bg-secondary/30 px-6 py-4 text-sm text-secondary-foreground border-t border-secondary">
+        <div className="bg-gray-50 px-6 py-4 text-sm text-gray-600 border-t border-gray-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <Shield className={`h-4 w-4 mr-2 text-primary ${HOVER_TRANSITION}`} />

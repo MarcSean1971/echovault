@@ -86,6 +86,14 @@
     --sidebar-border: 215 27% 17%;
     --sidebar-ring: 262 83% 58%;
   }
+
+  /* OVERRIDE BACKGROUNDS FOR PUBLIC MESSAGE PAGES */
+  .public-message-wrapper {
+    --background: 0 0% 100%; /* Force white background */
+    --card: 0 0% 100%;
+    --secondary: 0 0% 100%;
+    --muted: 245 15% 96%;
+  }
 }
 
 @layer base {
@@ -130,7 +138,18 @@
   }
 }
 
-/* NUCLEAR OPTION: Super aggressive CSS for public header */
+/* NUCLEAR OPTION: Super aggressive CSS for public message pages */
+.public-message-wrapper,
+.public-message-wrapper *,
+.public-message-wrapper .bg-background,
+.public-message-wrapper .bg-secondary,
+.public-message-wrapper .bg-muted {
+  background-color: #FFFFFF !important;
+  background: #FFFFFF !important;
+  background-image: none !important;
+}
+
+/* Header specific overrides */
 header.public-header,
 header.public-header *,
 .public-header,
@@ -172,12 +191,12 @@ header.public-header .container {
   color: transparent !important;
 }
 
-/* Override any potential Tailwind classes */
-.bg-background,
-.bg-secondary,
-.bg-muted,
-.bg-primary,
-.bg-accent {
+/* Override any potential Tailwind classes in public message wrapper */
+.public-message-wrapper .bg-background,
+.public-message-wrapper .bg-secondary,
+.public-message-wrapper .bg-muted,
+.public-message-wrapper .bg-primary,
+.public-message-wrapper .bg-accent {
   background-color: #FFFFFF !important;
 }
 
@@ -185,5 +204,12 @@ header.public-header .container {
 header[class*="public"] {
   background-color: #FFFFFF !important;
   background-image: none !important;
+  background: #FFFFFF !important;
+}
+
+/* Force card backgrounds to white in public message wrapper */
+.public-message-wrapper .card,
+.public-message-wrapper [class*="Card"] {
+  background-color: #FFFFFF !important;
   background: #FFFFFF !important;
 }
