@@ -19,7 +19,7 @@ export async function processDueReminders(
     console.log("[REMINDER-PROCESSOR] Cleaning up stuck reminders...");
     await cleanupStuckReminders(supabase, debug);
     
-    // Step 2: Acquire due reminders with proper locking
+    // Step 2: Acquire due reminders with proper locking and TIME VALIDATION
     let dueReminders;
     if (messageId) {
       const { data, error } = await supabase.rpc('acquire_message_reminders', {
@@ -45,9 +45,20 @@ export async function processDueReminders(
       dueReminders = data || [];
     }
     
-    console.log(`[REMINDER-PROCESSOR] Found ${dueReminders.length} reminders to process`);
+    // CRITICAL FIX: Filter out reminders that aren't actually due yet
+    const now = new Date();
+    const actuallyDueReminders = dueReminders.filter(reminder => {
+      const scheduledAt = new Date(reminder.scheduled_at);
+      const isDue = scheduledAt <= now;
+      if (!isDue) {
+        console.log(`[REMINDER-PROCESSOR] Reminder ${reminder.id} not yet due: scheduled for ${scheduledAt.toISOString()}, current time ${now.toISOString()}`);
+      }
+      return isDue || forceSend;
+    });
     
-    if (dueReminders.length === 0) {
+    console.log(`[REMINDER-PROCESSOR] Found ${dueReminders.length} acquired reminders, ${actuallyDueReminders.length} actually due`);
+    
+    if (actuallyDueReminders.length === 0) {
       return {
         processedCount: 0,
         successCount: 0,
@@ -61,7 +72,7 @@ export async function processDueReminders(
     let successCount = 0;
     let failedCount = 0;
     
-    for (const reminder of dueReminders) {
+    for (const reminder of actuallyDueReminders) {
       try {
         console.log(`[REMINDER-PROCESSOR] Processing reminder ${reminder.id} for message ${reminder.message_id}`);
         
@@ -92,10 +103,10 @@ export async function processDueReminders(
       }
     }
     
-    console.log(`[REMINDER-PROCESSOR] Processing complete. Processed: ${dueReminders.length}, Success: ${successCount}, Failed: ${failedCount}`);
+    console.log(`[REMINDER-PROCESSOR] Processing complete. Processed: ${actuallyDueReminders.length}, Success: ${successCount}, Failed: ${failedCount}`);
     
     return {
-      processedCount: dueReminders.length,
+      processedCount: actuallyDueReminders.length,
       successCount,
       failedCount,
       results
@@ -211,7 +222,7 @@ async function processIndividualReminderWithRecovery(reminder: any, debug: boole
           to: recipient.email,
           subject: `Reminder: ${messageData.title}`,
           html: generateReminderEmailHtml(messageData, condition, reminder),
-          from: "DeadManSwitch <noreply@deadmanswitch.app>"
+          from: "EchoVault <notifications@echo-vault.app>" // FIXED: Using correct domain
         });
         
         if (emailResult.success) {

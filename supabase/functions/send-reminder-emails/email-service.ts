@@ -27,9 +27,14 @@ export async function sendEmail(params: {
       return { success: false, error: "Missing RESEND_API_KEY configuration" };
     }
     
+    // FIXED: Ensure we use the correct verified domain
+    const fromEmail = params.from.includes("@echo-vault.app") 
+      ? params.from 
+      : "EchoVault <notifications@echo-vault.app>";
+    
     // Prepare email payload with validation
     const emailPayload = {
-      from: params.from,
+      from: fromEmail,
       to: [params.to],
       subject: params.subject,
       html: params.html,
