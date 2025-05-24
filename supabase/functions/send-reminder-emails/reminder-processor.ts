@@ -1,9 +1,8 @@
-
 import { supabaseClient } from "./supabase-client.ts";
 import { sendEmail } from "./email-service.ts";
 
 /**
- * FIXED: Enhanced reminder processor with comprehensive error handling and cleanup
+ * FIXED: Enhanced reminder processor with proper recipient logic for different reminder types
  */
 export async function processDueReminders(
   messageId?: string,
@@ -74,7 +73,7 @@ export async function processDueReminders(
     
     for (const reminder of actuallyDueReminders) {
       try {
-        console.log(`[REMINDER-PROCESSOR] Processing reminder ${reminder.id} for message ${reminder.message_id}`);
+        console.log(`[REMINDER-PROCESSOR] Processing reminder ${reminder.id} for message ${reminder.message_id}, type: ${reminder.reminder_type}`);
         
         const result = await processIndividualReminderWithRecovery(reminder, debug, supabase);
         
@@ -162,7 +161,7 @@ async function cleanupStuckReminders(supabase: any, debug: boolean): Promise<voi
 }
 
 /**
- * Process an individual reminder with comprehensive recovery logic
+ * FIXED: Process an individual reminder with proper recipient logic
  */
 async function processIndividualReminderWithRecovery(reminder: any, debug: boolean, supabase: any): Promise<any> {
   try {
@@ -193,16 +192,49 @@ async function processIndividualReminderWithRecovery(reminder: any, debug: boole
       throw new Error('No condition found for message');
     }
     
-    if (!condition.recipients) {
-      throw new Error('No recipients found in condition');
-    }
+    // CRITICAL FIX: Determine recipients based on reminder type and condition type
+    let recipients = [];
+    const isCheckInCondition = ['no_check_in', 'recurring_check_in', 'inactivity_to_date'].includes(condition.condition_type);
     
-    // Process recipients with enhanced validation
-    const recipients = Array.isArray(condition.recipients) ? condition.recipients : [condition.recipients];
+    if (isCheckInCondition && reminder.reminder_type === 'reminder') {
+      // FIXED: For check-in reminders, send ONLY to the message creator
+      console.log(`[REMINDER-PROCESSOR] Check-in reminder - sending to creator only for message ${reminder.message_id}`);
+      
+      // Get user profile and email
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', messageData.user_id)
+        .single();
+        
+      if (profile) {
+        // Get user email from auth
+        const { data: { user } } = await supabase.auth.admin.getUserById(messageData.user_id);
+        if (user?.email) {
+          recipients.push({
+            name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'User',
+            email: user.email,
+            phone: profile.whatsapp_number
+          });
+          console.log(`[REMINDER-PROCESSOR] Added creator ${user.email} as recipient for check-in reminder`);
+        }
+      }
+    } else {
+      // FIXED: For final delivery or non-check-in conditions, use configured recipients
+      console.log(`[REMINDER-PROCESSOR] Final delivery or non-check-in condition - sending to all configured recipients for message ${reminder.message_id}`);
+      
+      if (!condition.recipients) {
+        throw new Error('No recipients found in condition');
+      }
+      
+      recipients = Array.isArray(condition.recipients) ? condition.recipients : [condition.recipients];
+    }
     
     if (recipients.length === 0) {
-      throw new Error('Recipients array is empty');
+      throw new Error('No valid recipients determined');
     }
+    
+    console.log(`[REMINDER-PROCESSOR] Processing ${recipients.length} recipients for reminder ${reminder.id}, type: ${reminder.reminder_type}`);
     
     let emailsSent = 0;
     let emailsFailed = 0;
@@ -216,13 +248,17 @@ async function processIndividualReminderWithRecovery(reminder: any, debug: boole
       }
       
       try {
-        console.log(`[REMINDER-PROCESSOR] Sending email to ${recipient.email}`);
+        console.log(`[REMINDER-PROCESSOR] Sending ${reminder.reminder_type} email to ${recipient.email} for condition ${condition.condition_type}`);
+        
+        // FIXED: Generate proper subject and content based on reminder type and condition
+        const emailSubject = generateEmailSubject(messageData, condition, reminder);
+        const emailHtml = generateReminderEmailHtml(messageData, condition, reminder);
         
         const emailResult = await sendEmail({
           to: recipient.email,
-          subject: `Reminder: ${messageData.title}`,
-          html: generateReminderEmailHtml(messageData, condition, reminder),
-          from: "EchoVault <notifications@echo-vault.app>" // FIXED: Using correct domain
+          subject: emailSubject,
+          html: emailHtml,
+          from: "EchoVault <notifications@echo-vault.app>"
         });
         
         if (emailResult.success) {
@@ -252,7 +288,9 @@ async function processIndividualReminderWithRecovery(reminder: any, debug: boole
           response_data: {
             messageId: emailResult.messageId,
             timestamp: new Date().toISOString(),
-            emailLength: generateReminderEmailHtml(messageData, condition, reminder).length
+            reminderType: reminder.reminder_type,
+            conditionType: condition.condition_type,
+            emailLength: emailHtml.length
           }
         });
         
@@ -325,6 +363,21 @@ async function processIndividualReminderWithRecovery(reminder: any, debug: boole
 }
 
 /**
+ * FIXED: Generate proper email subject based on reminder type and condition
+ */
+function generateEmailSubject(message: any, condition: any, reminder: any): string {
+  const isCheckInCondition = ['no_check_in', 'recurring_check_in', 'inactivity_to_date'].includes(condition.condition_type);
+  
+  if (isCheckInCondition && reminder.reminder_type === 'reminder') {
+    return `Check-in Reminder: ${message.title}`;
+  } else if (reminder.reminder_type === 'final_delivery') {
+    return `URGENT: ${message.title} - Final Notification`;
+  } else {
+    return `Reminder: ${message.title}`;
+  }
+}
+
+/**
  * Mark a reminder as failed with proper error tracking
  */
 async function markReminderAsFailed(supabase: any, reminderId: string, errorMessage: string, debug: boolean): Promise<void> {
@@ -349,22 +402,34 @@ async function markReminderAsFailed(supabase: any, reminderId: string, errorMess
 }
 
 /**
- * Generate HTML content for reminder emails
+ * FIXED: Generate HTML content for reminder emails with proper context
  */
 function generateReminderEmailHtml(message: any, condition: any, reminder: any): string {
-  const reminderType = reminder.reminder_type === 'final_delivery' ? 'FINAL DELIVERY' : 'REMINDER';
+  const isCheckInCondition = ['no_check_in', 'recurring_check_in', 'inactivity_to_date'].includes(condition.condition_type);
+  const isFinalDelivery = reminder.reminder_type === 'final_delivery';
+  
+  let reminderTypeText = 'REMINDER';
+  let mainMessage = '';
+  let urgencyColor = '#dc2626';
+  
+  if (isCheckInCondition && !isFinalDelivery) {
+    reminderTypeText = 'CHECK-IN REMINDER';
+    mainMessage = 'This is a reminder that you need to check in to prevent your deadman\'s switch message from being delivered.';
+    urgencyColor = '#f59e0b'; // amber for check-in reminders
+  } else if (isFinalDelivery) {
+    reminderTypeText = 'FINAL DELIVERY';
+    mainMessage = '⚠️ This is the final delivery of your message. The deadline has been reached.';
+  } else {
+    mainMessage = 'Your check-in deadline is approaching. Please check in to prevent this message from being delivered.';
+  }
   
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: #dc2626;">${reminderType}: ${message.title}</h2>
+      <h2 style="color: ${urgencyColor};">${reminderTypeText}: ${message.title}</h2>
       
       <div style="background-color: #fef2f2; border: 1px solid #fecaca; padding: 16px; border-radius: 8px; margin: 16px 0;">
-        <p><strong>This is an automated ${reminderType.toLowerCase()} from your DeadManSwitch message.</strong></p>
-        
-        ${reminder.reminder_type === 'final_delivery' ? 
-          '<p style="color: #dc2626; font-weight: bold;">⚠️ This is the final delivery of your message. The deadline has been reached.</p>' :
-          '<p>Your check-in deadline is approaching. Please check in to prevent this message from being delivered.</p>'
-        }
+        <p><strong>This is an automated ${reminderTypeText.toLowerCase()} from your DeadManSwitch message.</strong></p>
+        <p>${mainMessage}</p>
       </div>
       
       <div style="background-color: #f9fafb; padding: 16px; border-radius: 8px; margin: 16px 0;">
@@ -380,6 +445,7 @@ function generateReminderEmailHtml(message: any, condition: any, reminder: any):
       <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e7eb; font-size: 14px; color: #6b7280;">
         <p>This message was sent automatically by DeadManSwitch. If you believe this was sent in error, please contact the sender.</p>
         <p>Reminder scheduled for: ${new Date(reminder.scheduled_at).toLocaleString()}</p>
+        <p>Condition type: ${condition.condition_type.replace('_', ' ')}</p>
       </div>
     </div>
   `;
