@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { processCheckIn } from "./services/check-in-service.ts";
 import { processPanicTrigger } from "./services/panic-service.ts";
@@ -151,10 +150,10 @@ serve(async (req) => {
       );
     }
     
-    // Check if this is an SOS message (panic trigger)
+    // Check if this is an SOS message (panic trigger) - this handles both new SOS and selection responses
     const messageUpper = body_text.toUpperCase().trim();
-    if (messageUpper === 'SOS') {
-      console.log("[WEBHOOK] Detected SOS panic trigger message");
+    if (messageUpper === 'SOS' || /^\d+$/.test(body_text.trim()) || ['CANCEL', 'ABORT', 'STOP'].includes(messageUpper)) {
+      console.log("[WEBHOOK] Detected SOS panic trigger or selection response");
       
       const panicResult = await processPanicTrigger(userId, from, body_text);
       

@@ -1,5 +1,6 @@
 
 import { createSupabaseAdmin } from "../../shared/supabase-client.ts";
+import { handlePanicMessageSelection, processSelectionResponse } from "./panic-selection-service.ts";
 
 /**
  * Get active panic trigger conditions for a specific user
@@ -42,7 +43,6 @@ export async function getPanicConditions(userId: string) {
  * @returns Object with match status and matched message details
  */
 export async function checkForPanicTrigger(messageBody: string, panicConditions: any[]) {
-  const supabase = createSupabaseAdmin();
   const matches = [];
   
   for (const condition of panicConditions) {
@@ -138,6 +138,39 @@ export async function processPanicTrigger(userId: string, fromNumber: string, me
   try {
     console.log(`[PANIC] Processing panic trigger for user ${userId} from phone ${fromNumber}, message: ${messageBody}`);
     
+    // First, check if this might be a selection response
+    const selectionResult = await processSelectionResponse(userId, fromNumber, messageBody);
+    
+    if (selectionResult) {
+      // This was a selection response
+      if (selectionResult.status === "selected") {
+        // User made a valid selection, trigger the selected message
+        const triggerResult = await triggerEmergencyMessage(selectionResult.messageId, userId);
+        
+        if (triggerResult.success) {
+          await sendWhatsAppResponse(fromNumber, `⚠️ EMERGENCY ALERT TRIGGERED! Your emergency message "${selectionResult.selectedTitle}" has been sent to all recipients.`);
+          
+          return {
+            status: "success",
+            message: `Emergency message "${selectionResult.selectedTitle}" triggered`,
+            messageId: selectionResult.messageId
+          };
+        } else {
+          await sendWhatsAppResponse(fromNumber, "❌ Failed to trigger emergency message. Please try again or contact support.");
+          
+          return {
+            status: "error",
+            message: "Failed to trigger selected emergency message",
+            code: "TRIGGER_FAILED"
+          };
+        }
+      } else {
+        // Selection was cancelled or invalid
+        return selectionResult;
+      }
+    }
+    
+    // Not a selection response, treat as new SOS trigger
     // Get the panic conditions for this specific user
     const panicConditions = await getPanicConditions(userId);
     
@@ -168,46 +201,35 @@ export async function processPanicTrigger(userId: string, fromNumber: string, me
       };
     }
     
-    // If we have matches, trigger them
-    const results = [];
-    let successCount = 0;
-    
-    for (const match of matches) {
-      const triggerResult = await triggerEmergencyMessage(match.messageId, userId);
-      results.push({
-        messageId: match.messageId,
-        title: match.title,
-        result: triggerResult
-      });
+    // If we have multiple matches, ask user to select
+    if (matches.length > 1) {
+      console.log(`[PANIC] Multiple panic messages found (${matches.length}), requesting user selection`);
       
-      if (triggerResult.success) {
-        successCount++;
-      }
+      return await handlePanicMessageSelection(userId, fromNumber, matches);
     }
     
-    if (successCount > 0) {
-      const responseMessage = successCount === 1 ? 
-        `⚠️ EMERGENCY ALERT TRIGGERED! Your emergency message "${matches[0].title}" has been sent to all recipients.` :
-        `⚠️ EMERGENCY ALERTS TRIGGERED! ${successCount} emergency messages have been sent to all recipients.`;
-        
-      await sendWhatsAppResponse(fromNumber, responseMessage);
+    // Single match, trigger it immediately
+    const match = matches[0];
+    const triggerResult = await triggerEmergencyMessage(match.messageId, userId);
+    
+    if (triggerResult.success) {
+      await sendWhatsAppResponse(fromNumber, `⚠️ EMERGENCY ALERT TRIGGERED! Your emergency message "${match.title}" has been sent to all recipients.`);
       
-      console.log(`[PANIC] Successfully triggered ${successCount} emergency messages`);
+      console.log(`[PANIC] Successfully triggered emergency message: ${match.title}`);
       return { 
         status: "success", 
-        message: `${successCount} emergency messages triggered`, 
-        results: results,
-        successCount: successCount
+        message: `Emergency message "${match.title}" triggered`, 
+        messageId: match.messageId
       };
     } else {
-      await sendWhatsAppResponse(fromNumber, "❌ Failed to trigger emergency messages. Please try again or contact support.");
+      await sendWhatsAppResponse(fromNumber, "❌ Failed to trigger emergency message. Please try again or contact support.");
       
-      console.log(`[PANIC] Failed to trigger any emergency messages`);
+      console.log(`[PANIC] Failed to trigger emergency message`);
       return { 
         status: "error", 
-        message: "Failed to trigger emergency messages", 
+        message: "Failed to trigger emergency message", 
         code: "TRIGGER_FAILED",
-        results: results
+        details: triggerResult
       };
     }
     
