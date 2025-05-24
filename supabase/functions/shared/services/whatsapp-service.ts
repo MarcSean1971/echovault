@@ -28,7 +28,7 @@ export async function sendWhatsAppMessage(params: {
       return { success: false, error: "Missing message content or template configuration" };
     }
     
-    // FIXED: Clean phone number like SOS system - remove whatsapp: prefix and ensure clean format
+    // FIXED: Clean phone number - remove whatsapp: prefix and ensure clean format
     let cleanPhone = to;
     if (cleanPhone.startsWith('whatsapp:')) {
       cleanPhone = cleanPhone.replace('whatsapp:', '');
@@ -91,10 +91,10 @@ export async function sendWhatsAppMessage(params: {
             });
           }
           
-          // Create the request body for template messages
+          // FIXED: Remove whatsapp: prefix from To field
           requestBody = {
             contentSid: templateId,
-            to: `whatsapp:${cleanPhone}`, // Twilio expects whatsapp: prefix for To field
+            to: cleanPhone, // Use clean phone number without whatsapp: prefix
             messagingServiceSid: messagingServiceSid,
             contentVariables: JSON.stringify(attributes)
           };
@@ -109,11 +109,11 @@ export async function sendWhatsAppMessage(params: {
           // Use the standard Messages API for text messages
           twilioEndpoint = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
           
-          // FIXED: Follow SOS pattern exactly - use clean numbers and proper From field
+          // FIXED: Remove whatsapp: prefix from both To and From fields
           requestBody = {
-            To: `whatsapp:${cleanPhone}`, // Twilio expects whatsapp: prefix for To field
+            To: cleanPhone, // Use clean phone number without whatsapp: prefix
             Body: message,
-            From: whatsappNumber || `whatsapp:+14155238886`, // Use proper WhatsApp sender number
+            From: whatsappNumber || '+14155238886', // Use clean phone number without whatsapp: prefix
           };
           
           // Only add MessagingServiceSid if we have it and no From number
