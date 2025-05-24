@@ -2,7 +2,7 @@ import { supabaseClient } from "./supabase-client.ts";
 import { sendEmail } from "./email-service.ts";
 
 /**
- * FIXED: Enhanced reminder processor with proper recipient logic for different reminder types
+ * FIXED: Enhanced reminder processor with CORRECT recipient logic for different reminder types
  */
 export async function processDueReminders(
   messageId?: string,
@@ -161,7 +161,7 @@ async function cleanupStuckReminders(supabase: any, debug: boolean): Promise<voi
 }
 
 /**
- * FIXED: Process an individual reminder with proper recipient logic
+ * CRITICAL FIX: Process an individual reminder with CORRECT recipient logic
  */
 async function processIndividualReminderWithRecovery(reminder: any, debug: boolean, supabase: any): Promise<any> {
   try {
@@ -192,36 +192,56 @@ async function processIndividualReminderWithRecovery(reminder: any, debug: boole
       throw new Error('No condition found for message');
     }
     
-    // CRITICAL FIX: Determine recipients based on reminder type and condition type
+    // CRITICAL FIX: Determine if this is an actual deadline delivery or just a check-in reminder
     let recipients = [];
     const isCheckInCondition = ['no_check_in', 'recurring_check_in', 'inactivity_to_date'].includes(condition.condition_type);
     
-    if (isCheckInCondition && reminder.reminder_type === 'reminder') {
-      // FIXED: For check-in reminders, send ONLY to the message creator
-      console.log(`[REMINDER-PROCESSOR] Check-in reminder - sending to creator only for message ${reminder.message_id}`);
+    if (isCheckInCondition) {
+      // CRITICAL DECISION: For check-in conditions, we need to check if this is the ACTUAL deadline
+      const now = new Date();
+      const lastChecked = new Date(condition.last_checked);
+      const actualDeadline = new Date(lastChecked);
+      actualDeadline.setHours(actualDeadline.getHours() + (condition.hours_threshold || 0));
+      actualDeadline.setMinutes(actualDeadline.getMinutes() + (condition.minutes_threshold || 0));
       
-      // Get user profile and email
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', messageData.user_id)
-        .single();
+      const isActualDeadline = Math.abs(new Date(reminder.scheduled_at).getTime() - actualDeadline.getTime()) < 60000; // Within 1 minute
+      
+      if (isActualDeadline && reminder.reminder_type === 'final_delivery') {
+        // FINAL DELIVERY: Send to all configured recipients
+        console.log(`[REMINDER-PROCESSOR] FINAL DELIVERY for check-in condition - sending to all recipients for message ${reminder.message_id}`);
         
-      if (profile) {
-        // Get user email from auth
-        const { data: { user } } = await supabase.auth.admin.getUserById(messageData.user_id);
-        if (user?.email) {
-          recipients.push({
-            name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'User',
-            email: user.email,
-            phone: profile.whatsapp_number
-          });
-          console.log(`[REMINDER-PROCESSOR] Added creator ${user.email} as recipient for check-in reminder`);
+        if (!condition.recipients) {
+          throw new Error('No recipients found in condition for final delivery');
+        }
+        
+        recipients = Array.isArray(condition.recipients) ? condition.recipients : [condition.recipients];
+      } else {
+        // CHECK-IN REMINDER: Send ONLY to the message creator
+        console.log(`[REMINDER-PROCESSOR] Check-in reminder - sending to creator only for message ${reminder.message_id}`);
+        
+        // Get user profile and email
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', messageData.user_id)
+          .single();
+          
+        if (profile) {
+          // Get user email from auth
+          const { data: { user } } = await supabase.auth.admin.getUserById(messageData.user_id);
+          if (user?.email) {
+            recipients.push({
+              name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'User',
+              email: user.email,
+              phone: profile.whatsapp_number
+            });
+            console.log(`[REMINDER-PROCESSOR] Added creator ${user.email} as recipient for check-in reminder`);
+          }
         }
       }
     } else {
-      // FIXED: For final delivery or non-check-in conditions, use configured recipients
-      console.log(`[REMINDER-PROCESSOR] Final delivery or non-check-in condition - sending to all configured recipients for message ${reminder.message_id}`);
+      // NON-CHECK-IN CONDITIONS: Always use configured recipients
+      console.log(`[REMINDER-PROCESSOR] Non-check-in condition - sending to all configured recipients for message ${reminder.message_id}`);
       
       if (!condition.recipients) {
         throw new Error('No recipients found in condition');
@@ -369,9 +389,9 @@ function generateEmailSubject(message: any, condition: any, reminder: any): stri
   const isCheckInCondition = ['no_check_in', 'recurring_check_in', 'inactivity_to_date'].includes(condition.condition_type);
   
   if (isCheckInCondition && reminder.reminder_type === 'reminder') {
-    return `Check-in Reminder: ${message.title}`;
+    return `Check-in Required: ${message.title}`;
   } else if (reminder.reminder_type === 'final_delivery') {
-    return `URGENT: ${message.title} - Final Notification`;
+    return `Message Delivered: ${message.title}`;
   } else {
     return `Reminder: ${message.title}`;
   }
@@ -402,51 +422,322 @@ async function markReminderAsFailed(supabase: any, reminderId: string, errorMess
 }
 
 /**
- * FIXED: Generate HTML content for reminder emails with proper context
+ * REDESIGNED: Generate beautiful HTML content for check-in reminder emails
  */
 function generateReminderEmailHtml(message: any, condition: any, reminder: any): string {
   const isCheckInCondition = ['no_check_in', 'recurring_check_in', 'inactivity_to_date'].includes(condition.condition_type);
   const isFinalDelivery = reminder.reminder_type === 'final_delivery';
   
-  let reminderTypeText = 'REMINDER';
-  let mainMessage = '';
-  let urgencyColor = '#dc2626';
-  
+  // Calculate time until deadline for check-in reminders
+  let timeUntilDeadline = '';
   if (isCheckInCondition && !isFinalDelivery) {
-    reminderTypeText = 'CHECK-IN REMINDER';
-    mainMessage = 'This is a reminder that you need to check in to prevent your deadman\'s switch message from being delivered.';
-    urgencyColor = '#f59e0b'; // amber for check-in reminders
-  } else if (isFinalDelivery) {
-    reminderTypeText = 'FINAL DELIVERY';
-    mainMessage = '⚠️ This is the final delivery of your message. The deadline has been reached.';
-  } else {
-    mainMessage = 'Your check-in deadline is approaching. Please check in to prevent this message from being delivered.';
+    const now = new Date();
+    const lastChecked = new Date(condition.last_checked);
+    const deadline = new Date(lastChecked);
+    deadline.setHours(deadline.getHours() + (condition.hours_threshold || 0));
+    deadline.setMinutes(deadline.getMinutes() + (condition.minutes_threshold || 0));
+    
+    const diffMs = deadline.getTime() - now.getTime();
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (diffHours > 0) {
+      timeUntilDeadline = `${diffHours} hour${diffHours !== 1 ? 's' : ''}${diffMinutes > 0 ? ` and ${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''}` : ''}`;
+    } else if (diffMinutes > 0) {
+      timeUntilDeadline = `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''}`;
+    } else {
+      timeUntilDeadline = 'less than 1 minute';
+    }
   }
   
-  return `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2 style="color: ${urgencyColor};">${reminderTypeText}: ${message.title}</h2>
-      
-      <div style="background-color: #fef2f2; border: 1px solid #fecaca; padding: 16px; border-radius: 8px; margin: 16px 0;">
-        <p><strong>This is an automated ${reminderTypeText.toLowerCase()} from your DeadManSwitch message.</strong></p>
-        <p>${mainMessage}</p>
-      </div>
-      
-      <div style="background-color: #f9fafb; padding: 16px; border-radius: 8px; margin: 16px 0;">
-        <h3>Message Content:</h3>
-        ${message.text_content ? `<p>${message.text_content}</p>` : ''}
-        ${message.content ? `<p>${message.content}</p>` : ''}
-        
-        ${message.share_location && message.location_name ? 
-          `<p><strong>Location:</strong> ${message.location_name}</p>` : ''
-        }
-      </div>
-      
-      <div style="margin-top: 24px; padding-top: 16px; border-top: 1px solid #e5e7eb; font-size: 14px; color: #6b7280;">
-        <p>This message was sent automatically by DeadManSwitch. If you believe this was sent in error, please contact the sender.</p>
-        <p>Reminder scheduled for: ${new Date(reminder.scheduled_at).toLocaleString()}</p>
-        <p>Condition type: ${condition.condition_type.replace('_', ' ')}</p>
-      </div>
-    </div>
-  `;
+  if (isCheckInCondition && !isFinalDelivery) {
+    // REDESIGNED CHECK-IN REMINDER EMAIL
+    return `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Check-in Required</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+          body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #1e293b;
+            background-color: #f8fafc;
+            margin: 0;
+            padding: 20px;
+          }
+          .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+          }
+          .header {
+            background: linear-gradient(135deg, #9b87f5 0%, #8b5cf6 100%);
+            padding: 32px 24px;
+            text-align: center;
+            color: white;
+          }
+          .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+          }
+          .content {
+            padding: 32px 24px;
+          }
+          .alert-box {
+            background: #fef3c7;
+            border: 2px solid #f59e0b;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 24px 0;
+            text-align: center;
+          }
+          .alert-box .time {
+            font-size: 20px;
+            font-weight: 700;
+            color: #d97706;
+            margin-bottom: 8px;
+          }
+          .message-title {
+            background: #f1f5f9;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 20px 0;
+            font-weight: 500;
+            border-left: 4px solid #9b87f5;
+          }
+          .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #9b87f5 0%, #8b5cf6 100%);
+            color: white;
+            text-decoration: none;
+            padding: 14px 28px;
+            border-radius: 8px;
+            font-weight: 600;
+            margin: 24px 0;
+            box-shadow: 0 4px 14px 0 rgba(139, 92, 246, 0.25);
+          }
+          .footer {
+            background: #f8fafc;
+            padding: 20px 24px;
+            text-align: center;
+            font-size: 14px;
+            color: #64748b;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>⏰ Check-in Required</h1>
+          </div>
+          <div class="content">
+            <p>Hello,</p>
+            
+            <p>This is a reminder that you need to check in to prevent your message from being delivered.</p>
+            
+            <div class="message-title">
+              <strong>Message:</strong> ${message.title}
+            </div>
+            
+            <div class="alert-box">
+              <div class="time">Time remaining: ${timeUntilDeadline}</div>
+              <p>Your message will be delivered automatically if you don't check in before the deadline.</p>
+            </div>
+            
+            <div style="text-align: center;">
+              <a href="https://echo-vault.app/messages" class="cta-button">Check In Now</a>
+            </div>
+            
+            <p style="font-size: 14px; color: #64748b; margin-top: 24px;">
+              If you're unable to click the button, please visit: <br>
+              <strong>https://echo-vault.app/messages</strong>
+            </p>
+          </div>
+          <div class="footer">
+            <p>This is an automated reminder from EchoVault.<br>
+            © ${new Date().getFullYear()} EchoVault - Secure Message Delivery</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  } else if (isFinalDelivery) {
+    // FINAL DELIVERY EMAIL
+    return `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Message Delivered</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+          body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #1e293b;
+            background-color: #f8fafc;
+            margin: 0;
+            padding: 20px;
+          }
+          .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+          }
+          .header {
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            padding: 32px 24px;
+            text-align: center;
+            color: white;
+          }
+          .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+          }
+          .content {
+            padding: 32px 24px;
+          }
+          .message-content {
+            background: #f9fafb;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 24px 0;
+            border-left: 4px solid #dc2626;
+          }
+          .footer {
+            background: #f8fafc;
+            padding: 20px 24px;
+            text-align: center;
+            font-size: 14px;
+            color: #64748b;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>📨 Message Delivered</h1>
+          </div>
+          <div class="content">
+            <p><strong>Hello,</strong></p>
+            
+            <p>You have received an important message:</p>
+            
+            <div class="message-content">
+              <h3 style="margin-top: 0; color: #dc2626;">${message.title}</h3>
+              ${message.text_content ? `<p>${message.text_content}</p>` : ''}
+              ${message.content ? `<p>${message.content}</p>` : ''}
+              
+              ${message.share_location && message.location_name ? 
+                `<p><strong>Location:</strong> ${message.location_name}</p>` : ''
+              }
+            </div>
+          </div>
+          <div class="footer">
+            <p>This message was delivered automatically by EchoVault.<br>
+            © ${new Date().getFullYear()} EchoVault - Secure Message Delivery</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  } else {
+    // STANDARD REMINDER EMAIL
+    return `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Reminder</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+          body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #1e293b;
+            background-color: #f8fafc;
+            margin: 0;
+            padding: 20px;
+          }
+          .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+          }
+          .header {
+            background: linear-gradient(135deg, #9b87f5 0%, #8b5cf6 100%);
+            padding: 32px 24px;
+            text-align: center;
+            color: white;
+          }
+          .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+          }
+          .content {
+            padding: 32px 24px;
+          }
+          .message-content {
+            background: #f9fafb;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 24px 0;
+            border-left: 4px solid #9b87f5;
+          }
+          .footer {
+            background: #f8fafc;
+            padding: 20px 24px;
+            text-align: center;
+            font-size: 14px;
+            color: #64748b;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>🔔 Reminder</h1>
+          </div>
+          <div class="content">
+            <p><strong>Hello,</strong></p>
+            
+            <p>This is a reminder about:</p>
+            
+            <div class="message-content">
+              <h3 style="margin-top: 0; color: #9b87f5;">${message.title}</h3>
+              ${message.text_content ? `<p>${message.text_content}</p>` : ''}
+              ${message.content ? `<p>${message.content}</p>` : ''}
+              
+              ${message.share_location && message.location_name ? 
+                `<p><strong>Location:</strong> ${message.location_name}</p>` : ''
+              }
+            </div>
+          </div>
+          <div class="footer">
+            <p>This is an automated reminder from EchoVault.<br>
+            © ${new Date().getFullYear()} EchoVault - Secure Message Delivery</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
 }

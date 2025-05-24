@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { RealtimeChannel, REALTIME_SUBSCRIBE_STATES, CHANNEL_STATES } from "@supabase/supabase-js";
+import { RealtimeChannel, REALTIME_SUBSCRIBE_STATES } from "@supabase/supabase-js";
 
 let realtimeChannel: RealtimeChannel | null = null;
 let connectionAttempts = 0;
@@ -202,7 +202,7 @@ export function getConnectionHealth(): {
   status: string;
 } {
   return {
-    isConnected: realtimeChannel?.state === CHANNEL_STATES.JOINED,
+    isConnected: realtimeChannel?.state === REALTIME_SUBSCRIBE_STATES.SUBSCRIBED,
     attempts: connectionAttempts,
     maxAttempts: MAX_RECONNECTION_ATTEMPTS,
     status: realtimeChannel?.state || 'NOT_INITIALIZED'
