@@ -11,7 +11,7 @@ export default function PublicAppLayout() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header with pure white background (#FFFFFF) and exact landing page logo color */}
-      <header className="public-header sticky top-0 z-30 w-full border-b backdrop-blur-md supports-[backdrop-filter]:bg-background/60 shadow-sm md:py-3 py-2">
+      <header className="public-header sticky top-0 z-30 w-full border-b backdrop-blur-md shadow-sm md:py-3 py-2">
         <div className="container mx-auto px-4 flex items-center justify-between">
           <div className="public-logo">
             <Logo />

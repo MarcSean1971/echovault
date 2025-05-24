@@ -129,9 +129,16 @@
     @apply shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5;
   }
 
-  /* Public message access page specific styles */
-  .public-header {
+  /* Public message access page specific styles - FORCE white background */
+  header.public-header {
     background-color: #FFFFFF !important;
+    background: #FFFFFF !important;
+  }
+
+  /* Force backdrop to be transparent on public header */
+  header.public-header.backdrop-blur-md {
+    background-color: #FFFFFF !important;
+    backdrop-filter: none !important;
   }
 
   .public-logo {
