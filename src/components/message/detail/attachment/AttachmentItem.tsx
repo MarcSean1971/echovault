@@ -72,27 +72,39 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
   };
   
   return (
-    <div className={`border rounded-md p-3 transition-all duration-200 hover:shadow-sm ${HOVER_TRANSITION} ${
+    <div className={`border rounded-md p-3 md:p-4 transition-all duration-200 hover:shadow-sm ${HOVER_TRANSITION} ${
       hasError ? 'border-red-300 bg-red-50' : 
       downloadActive ? 'border-blue-200 bg-blue-50' : 
       'hover:border-blue-200 hover:bg-blue-50/30'
     }`}>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3 overflow-hidden">
-          {getFileIcon()}
-          <div className="truncate">
-            <div className="flex items-center gap-2">
-              <span className={`block truncate font-medium ${HOVER_TRANSITION}`}>{attachment.name}</span>
+      {/* Mobile-first: Stack vertically, then horizontal on md+ screens */}
+      <div className="flex flex-col space-y-3 md:flex-row md:items-center md:justify-between md:space-y-0">
+        {/* File info section */}
+        <div className="flex items-start space-x-3 overflow-hidden min-w-0 flex-1">
+          <div className="mt-0.5 flex-shrink-0">
+            {getFileIcon()}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 mb-2">
+              <span className={`block truncate font-medium text-sm md:text-base ${HOVER_TRANSITION}`}>
+                {attachment.name}
+              </span>
             </div>
-            <div className="flex items-center flex-wrap gap-2 mt-1">
-              <AttachmentBadge method={downloadMethod} />
-              <MethodStatusBadge status={currentMethodStatus} />
-              <span className={`text-xs text-muted-foreground ${HOVER_TRANSITION}`}>{formatFileSize(attachment.size)}</span>
+            {/* Mobile: Stack badges and file size vertically for better readability */}
+            <div className="flex flex-col space-y-2 sm:flex-row sm:items-center sm:flex-wrap sm:gap-2 sm:space-y-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <AttachmentBadge method={downloadMethod} />
+                <MethodStatusBadge status={currentMethodStatus} />
+              </div>
+              <span className={`text-xs text-muted-foreground ${HOVER_TRANSITION}`}>
+                {formatFileSize(attachment.size)}
+              </span>
             </div>
           </div>
         </div>
         
-        <div className="flex space-x-2">
+        {/* Action buttons section - mobile: full width with proper spacing, desktop: compact */}
+        <div className="flex space-x-2 md:space-x-2 justify-start md:justify-end flex-shrink-0 mt-1 md:mt-0">
           {/* Download Method Toggle */}
           <MethodToggleButton
             downloadMethod={downloadMethod}
