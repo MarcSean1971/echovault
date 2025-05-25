@@ -1,11 +1,25 @@
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { format } from "date-fns";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { CheckCircle, XCircle, User, Mail, Calendar, Clock } from "lucide-react";
+
+interface AuthUser {
+  id: string;
+  email: string;
+  email_confirmed_at: string | null;
+  created_at: string;
+  updated_at: string;
+  last_sign_in_at: string | null;
+  has_profile: boolean;
+  first_name: string | null;
+  last_name: string | null;
+}
 
 interface UserProfile {
   id: string;
@@ -22,26 +36,43 @@ interface UserProfile {
 interface UserDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
-  user: UserProfile | null;
+  user: AuthUser | null;
 }
 
 export default function UserDetailModal({ isOpen, onClose, user }: UserDetailModalProps) {
   const [loading, setLoading] = useState(false);
-  const [userData, setUserData] = useState<any>(null);
+  const [profileData, setProfileData] = useState<UserProfile | null>(null);
+  const [activityData, setActivityData] = useState<any>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     if (isOpen && user) {
-      fetchUserData(user.id);
+      fetchUserDetails(user.id);
     } else {
-      setUserData(null);
+      setProfileData(null);
+      setActivityData(null);
     }
   }, [isOpen, user]);
 
-  const fetchUserData = async (userId: string) => {
+  const fetchUserDetails = async (userId: string) => {
     try {
       setLoading(true);
       
+      // Fetch profile data if user has a profile
+      if (user?.has_profile) {
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .single();
+        
+        if (profileError && profileError.code !== 'PGRST116') {
+          throw profileError;
+        }
+        
+        setProfileData(profile);
+      }
+
       // Fetch user's messages count
       const { count: messagesCount, error: messagesError } = await supabase
         .from('messages')
@@ -58,12 +89,12 @@ export default function UserDetailModal({ isOpen, onClose, user }: UserDetailMod
         
       if (recipientsError) throw recipientsError;
 
-      setUserData({
+      setActivityData({
         messagesCount: messagesCount || 0,
         recipientsCount: recipientsCount || 0,
       });
     } catch (err) {
-      console.error("Error fetching user data:", err);
+      console.error("Error fetching user details:", err);
       toast({
         title: "Error",
         description: "Failed to load user details",
@@ -76,9 +107,15 @@ export default function UserDetailModal({ isOpen, onClose, user }: UserDetailMod
 
   const getUserInitials = () => {
     if (!user) return "U";
-    const firstInitial = user.first_name ? user.first_name[0] : "";
-    const lastInitial = user.last_name ? user.last_name[0] : "";
-    return (firstInitial + lastInitial).toUpperCase() || "U";
+    
+    if (user.first_name && user.last_name) {
+      return (user.first_name[0] + user.last_name[0]).toUpperCase();
+    } else if (user.first_name) {
+      return user.first_name[0].toUpperCase();
+    } else if (user.email) {
+      return user.email[0].toUpperCase();
+    }
+    return "U";
   };
 
   const getUserFullName = () => {
@@ -89,7 +126,7 @@ export default function UserDetailModal({ isOpen, onClose, user }: UserDetailMod
     } else if (user.first_name) {
       return user.first_name;
     } else {
-      return "User";
+      return user.email || "User";
     }
   };
 
@@ -97,84 +134,169 @@ export default function UserDetailModal({ isOpen, onClose, user }: UserDetailMod
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>User Details</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <User className="h-5 w-5" />
+            User Details
+          </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
           {/* User Profile Section */}
           <div className="flex items-center space-x-4">
             <Avatar className="h-16 w-16">
-              {user.avatar_url ? (
-                <AvatarImage src={user.avatar_url} alt={getUserFullName()} />
+              {profileData?.avatar_url ? (
+                <AvatarImage src={profileData.avatar_url} alt={getUserFullName()} />
               ) : null}
               <AvatarFallback className="text-lg">{getUserInitials()}</AvatarFallback>
             </Avatar>
             
-            <div>
+            <div className="flex-1">
               <h3 className="text-lg font-medium">{getUserFullName()}</h3>
               <p className="text-sm text-muted-foreground">User ID: {user.id}</p>
+              <div className="flex gap-2 mt-2">
+                <Badge variant={user.email_confirmed_at ? "default" : "destructive"}>
+                  {user.email_confirmed_at ? (
+                    <><CheckCircle className="h-3 w-3 mr-1" />Email Verified</>
+                  ) : (
+                    <><XCircle className="h-3 w-3 mr-1" />Email Unverified</>
+                  )}
+                </Badge>
+                <Badge variant={user.has_profile ? "default" : "secondary"}>
+                  {user.has_profile ? "Profile Complete" : "Profile Incomplete"}
+                </Badge>
+              </div>
             </div>
           </div>
 
-          {/* User Data */}
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm font-medium">Contact Information</p>
-                <div className="space-y-2 mt-1">
-                  {user.backup_email && (
-                    <p className="text-sm">Email: {user.backup_email}</p>
-                  )}
-                  {user.backup_contact && (
-                    <p className="text-sm">Contact: {user.backup_contact}</p>
-                  )}
-                  {user.whatsapp_number && (
-                    <p className="text-sm">WhatsApp: {user.whatsapp_number}</p>
-                  )}
-                  {!user.backup_email && !user.backup_contact && !user.whatsapp_number && (
-                    <p className="text-sm text-muted-foreground">No contact information available</p>
+          {/* Auth Information */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <h4 className="font-medium flex items-center gap-2">
+                <Mail className="h-4 w-4" />
+                Authentication Details
+              </h4>
+              <div className="space-y-2 text-sm">
+                <div>
+                  <span className="font-medium">Email:</span> {user.email}
+                </div>
+                <div>
+                  <span className="font-medium">Email Confirmed:</span>{' '}
+                  {user.email_confirmed_at ? (
+                    <span className="text-green-600">
+                      {format(new Date(user.email_confirmed_at), 'PPpp')}
+                    </span>
+                  ) : (
+                    <span className="text-red-600">Not confirmed</span>
                   )}
                 </div>
-              </div>
-              
-              <div>
-                <p className="text-sm font-medium">User Since</p>
-                <p className="text-sm">{format(new Date(user.created_at), 'PPpp')}</p>
-                
-                <p className="text-sm font-medium mt-2">Last Active</p>
-                <p className="text-sm">{format(new Date(user.updated_at), 'PPpp')}</p>
+                <div>
+                  <span className="font-medium">Last Sign In:</span>{' '}
+                  {user.last_sign_in_at ? (
+                    format(new Date(user.last_sign_in_at), 'PPpp')
+                  ) : (
+                    <span className="text-muted-foreground">Never</span>
+                  )}
+                </div>
               </div>
             </div>
 
-            {loading ? (
-              <div className="flex justify-center py-4">
-                <div className="animate-pulse text-primary font-medium">Loading activity data...</div>
+            <div className="space-y-4">
+              <h4 className="font-medium flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Account Timeline
+              </h4>
+              <div className="space-y-2 text-sm">
+                <div>
+                  <span className="font-medium">Account Created:</span>{' '}
+                  {format(new Date(user.created_at), 'PPpp')}
+                </div>
+                <div>
+                  <span className="font-medium">Last Updated:</span>{' '}
+                  {format(new Date(user.updated_at), 'PPpp')}
+                </div>
+                {profileData && (
+                  <div>
+                    <span className="font-medium">Profile Created:</span>{' '}
+                    {format(new Date(profileData.created_at), 'PPpp')}
+                  </div>
+                )}
               </div>
-            ) : userData ? (
-              <div>
-                <p className="text-sm font-medium">User Activity</p>
-                <div className="grid grid-cols-2 gap-2 mt-1">
-                  <div className="rounded-md border p-3">
-                    <p className="text-sm text-muted-foreground">Messages</p>
-                    <p className="text-2xl font-bold">{userData.messagesCount}</p>
-                  </div>
-                  <div className="rounded-md border p-3">
-                    <p className="text-sm text-muted-foreground">Recipients</p>
-                    <p className="text-2xl font-bold">{userData.recipientsCount}</p>
-                  </div>
+            </div>
+          </div>
+
+          {/* Profile Information */}
+          {user.has_profile && profileData ? (
+            <div className="space-y-4">
+              <h4 className="font-medium flex items-center gap-2">
+                <User className="h-4 w-4" />
+                Profile Information
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2 text-sm">
+                  {profileData.backup_email && (
+                    <div>
+                      <span className="font-medium">Backup Email:</span> {profileData.backup_email}
+                    </div>
+                  )}
+                  {profileData.backup_contact && (
+                    <div>
+                      <span className="font-medium">Backup Contact:</span> {profileData.backup_contact}
+                    </div>
+                  )}
+                  {profileData.whatsapp_number && (
+                    <div>
+                      <span className="font-medium">WhatsApp:</span> {profileData.whatsapp_number}
+                    </div>
+                  )}
                 </div>
               </div>
-            ) : null}
-          </div>
+              {!profileData.backup_email && !profileData.backup_contact && !profileData.whatsapp_number && (
+                <p className="text-sm text-muted-foreground">No additional contact information available</p>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <h4 className="font-medium flex items-center gap-2">
+                <User className="h-4 w-4" />
+                Profile Information
+              </h4>
+              <div className="bg-muted/50 p-4 rounded-md">
+                <p className="text-sm text-muted-foreground">
+                  This user has not completed their profile setup yet.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Activity Data */}
+          {loading ? (
+            <div className="flex justify-center py-4">
+              <div className="animate-pulse text-primary font-medium">Loading activity data...</div>
+            </div>
+          ) : activityData ? (
+            <div className="space-y-4">
+              <h4 className="font-medium flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                User Activity
+              </h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="rounded-md border p-4 text-center">
+                  <p className="text-sm text-muted-foreground">Messages</p>
+                  <p className="text-2xl font-bold">{activityData.messagesCount}</p>
+                </div>
+                <div className="rounded-md border p-4 text-center">
+                  <p className="text-sm text-muted-foreground">Recipients</p>
+                  <p className="text-2xl font-bold">{activityData.recipientsCount}</p>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
-          <Button
-            variant="outline"
-            onClick={onClose}
-          >
+          <Button variant="outline" onClick={onClose}>
             Close
           </Button>
         </DialogFooter>

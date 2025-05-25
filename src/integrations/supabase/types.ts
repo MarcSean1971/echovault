@@ -520,6 +520,20 @@ export type Database = {
         Args: { target_message_id: string }
         Returns: undefined
       }
+      get_all_users_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          email: string
+          email_confirmed_at: string
+          created_at: string
+          updated_at: string
+          last_sign_in_at: string
+          has_profile: boolean
+          first_name: string
+          last_name: string
+        }[]
+      }
       get_system_reminder_stats: {
         Args: Record<PropertyKey, never>
         Returns: {

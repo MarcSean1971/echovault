@@ -8,13 +8,20 @@ import UserStatsSection from "./UserStatsSection";
 import { supabase } from "@/integrations/supabase/client";
 import { UserStatsData } from "./types/admin";
 
+type ExtendedUserStatsData = UserStatsData & {
+  unconfirmedEmails: number;
+  usersWithoutProfiles: number;
+};
+
 export default function UserManagement() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [userStats, setUserStats] = useState<UserStatsData>({
+  const [userStats, setUserStats] = useState<ExtendedUserStatsData>({
     totalUsers: 0,
     activeUsers: 0,
-    newUsers: 0
+    newUsers: 0,
+    unconfirmedEmails: 0,
+    usersWithoutProfiles: 0
   });
 
   useEffect(() => {
@@ -25,32 +32,33 @@ export default function UserManagement() {
     try {
       setLoading(true);
       
-      // Fetch all users to calculate stats
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*');
+      // Get all users from auth.users via our function
+      const { data: authUsers, error: usersError } = await supabase.rpc('get_all_users_admin');
 
-      if (profilesError) throw profilesError;
+      if (usersError) throw usersError;
 
-      if (profiles) {
+      if (authUsers) {
         const now = new Date();
         const oneMonthAgo = new Date(now.setMonth(now.getMonth() - 1));
         const oneWeekAgo = new Date(now.setDate(now.getDate() - 7));
         
-        const activeUsers = profiles.filter(profile => {
-          const updatedAt = new Date(profile.updated_at);
-          return updatedAt >= oneMonthAgo;
+        const activeUsers = authUsers.filter(user => {
+          return user.last_sign_in_at && new Date(user.last_sign_in_at) >= oneMonthAgo;
         });
 
-        const newUsers = profiles.filter(profile => {
-          const createdAt = new Date(profile.created_at);
-          return createdAt >= oneWeekAgo;
+        const newUsers = authUsers.filter(user => {
+          return new Date(user.created_at) >= oneWeekAgo;
         });
+
+        const unconfirmedEmails = authUsers.filter(user => !user.email_confirmed_at);
+        const usersWithoutProfiles = authUsers.filter(user => !user.has_profile);
 
         setUserStats({
-          totalUsers: profiles.length,
+          totalUsers: authUsers.length,
           activeUsers: activeUsers.length,
-          newUsers: newUsers.length
+          newUsers: newUsers.length,
+          unconfirmedEmails: unconfirmedEmails.length,
+          usersWithoutProfiles: usersWithoutProfiles.length
         });
       }
     } catch (err: any) {
@@ -81,11 +89,19 @@ function UserManagementHeader() {
   );
 }
 
-function UserTabsCard({ userStats }: { userStats: UserStatsData }) {
+function UserTabsCard({ userStats }: { userStats: ExtendedUserStatsData }) {
   return (
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-lg">Users</CardTitle>
+        <div className="flex flex-wrap gap-2 mt-2">
+          <Badge variant="outline">
+            {userStats.unconfirmedEmails} Unconfirmed Emails
+          </Badge>
+          <Badge variant="outline">
+            {userStats.usersWithoutProfiles} Incomplete Profiles
+          </Badge>
+        </div>
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="all" className="w-full">

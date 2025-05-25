@@ -2,19 +2,22 @@
 import { useState, useEffect } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Eye, Lock, UserX } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Eye, Lock, UserX, CheckCircle, XCircle, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import UserDetailModal from "./UserDetailModal";
 
-type UserProfile = {
+type AuthUser = {
   id: string;
-  first_name: string | null;
-  last_name: string | null;
-  avatar_url: string | null;
+  email: string;
+  email_confirmed_at: string | null;
   created_at: string;
   updated_at: string;
-  email?: string;
+  last_sign_in_at: string | null;
+  has_profile: boolean;
+  first_name: string | null;
+  last_name: string | null;
 };
 
 interface UserTableProps {
@@ -22,10 +25,10 @@ interface UserTableProps {
 }
 
 export default function UserTable({ filter }: UserTableProps) {
-  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [users, setUsers] = useState<AuthUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+  const [selectedUser, setSelectedUser] = useState<AuthUser | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   
   useEffect(() => {
@@ -36,26 +39,29 @@ export default function UserTable({ filter }: UserTableProps) {
     try {
       setLoading(true);
       
-      // Build the query based on filter
-      let query = supabase.from('profiles').select('*');
+      // Call the database function to get all auth users
+      const { data, error } = await supabase.rpc('get_all_users_admin');
+      
+      if (error) throw error;
+      
+      // Filter users based on the selected filter
+      let filteredUsers = data || [];
       
       if (filter === 'active') {
         const thirtyDaysAgo = new Date();
         thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        query = query.gt('updated_at', thirtyDaysAgo.toISOString());
+        filteredUsers = filteredUsers.filter(user => 
+          user.last_sign_in_at && new Date(user.last_sign_in_at) >= thirtyDaysAgo
+        );
       } else if (filter === 'new') {
         const sevenDaysAgo = new Date();
         sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        query = query.gt('created_at', sevenDaysAgo.toISOString());
+        filteredUsers = filteredUsers.filter(user => 
+          new Date(user.created_at) >= sevenDaysAgo
+        );
       }
       
-      const { data, error } = await query.order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      
-      // We need to fetch emails from auth.users, but we don't have direct access
-      // For now, we'll just use the profiles data
-      setUsers(data || []);
+      setUsers(filteredUsers);
     } catch (err: any) {
       console.error("Error fetching users:", err);
       setError(err.message || "Failed to fetch users");
@@ -64,19 +70,24 @@ export default function UserTable({ filter }: UserTableProps) {
     }
   };
 
-  const handleViewUser = (user: UserProfile) => {
+  const handleViewUser = (user: AuthUser) => {
     setSelectedUser(user);
     setIsDetailModalOpen(true);
   };
 
-  const formatName = (user: UserProfile) => {
+  const formatName = (user: AuthUser) => {
     if (user.first_name && user.last_name) {
       return `${user.first_name} ${user.last_name}`;
     } else if (user.first_name) {
       return user.first_name;
     } else {
-      return "User";
+      return user.email || "Unknown User";
     }
+  };
+
+  const formatLastSignIn = (lastSignIn: string | null) => {
+    if (!lastSignIn) return "Never";
+    return format(new Date(lastSignIn), 'PP');
   };
 
   if (error) {
@@ -94,25 +105,57 @@ export default function UserTable({ filter }: UserTableProps) {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead className="hidden md:table-cell">Created</TableHead>
-                <TableHead className="hidden md:table-cell">Last Updated</TableHead>
+                <TableHead>User</TableHead>
+                <TableHead className="hidden md:table-cell">Email Status</TableHead>
+                <TableHead className="hidden lg:table-cell">Profile</TableHead>
+                <TableHead className="hidden md:table-cell">Last Sign In</TableHead>
+                <TableHead className="hidden lg:table-cell">Created</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {users.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-8">
+                  <TableCell colSpan={6} className="text-center py-8">
                     No users found
                   </TableCell>
                 </TableRow>
               ) : (
                 users.map((user) => (
                   <TableRow key={user.id}>
-                    <TableCell className="font-medium">{formatName(user)}</TableCell>
-                    <TableCell className="hidden md:table-cell">{format(new Date(user.created_at), 'PP')}</TableCell>
-                    <TableCell className="hidden md:table-cell">{format(new Date(user.updated_at), 'PP')}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="font-medium">{formatName(user)}</span>
+                        <span className="text-sm text-muted-foreground md:hidden">{user.email}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-sm">{user.email}</span>
+                        <Badge variant={user.email_confirmed_at ? "default" : "destructive"} className="w-fit">
+                          {user.email_confirmed_at ? (
+                            <><CheckCircle className="h-3 w-3 mr-1" />Verified</>
+                          ) : (
+                            <><XCircle className="h-3 w-3 mr-1" />Unverified</>
+                          )}
+                        </Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      <Badge variant={user.has_profile ? "default" : "secondary"}>
+                        {user.has_profile ? (
+                          <><User className="h-3 w-3 mr-1" />Complete</>
+                        ) : (
+                          <><User className="h-3 w-3 mr-1" />Incomplete</>
+                        )}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      {formatLastSignIn(user.last_sign_in_at)}
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      {format(new Date(user.created_at), 'PP')}
+                    </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
                         <Button 
