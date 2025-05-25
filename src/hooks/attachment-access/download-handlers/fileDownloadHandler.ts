@@ -183,6 +183,8 @@ export function useFileDownloadHandler({ props, utilities }: DownloadHandlerProp
       return false;
     } finally {
       setIsLoading(false);
+      // Reset downloadActive state after download completion (success or failure)
+      setDownloadActive(false);
     }
   };
 
