@@ -19,9 +19,10 @@ interface NotificationOptions {
   debug?: boolean;
   deduplicationId?: string;
   timestamp?: number;
-  forceSend?: boolean;       // ADDED: Force send option
-  bypassDeduplication?: boolean; // ADDED: Option to explicitly bypass deduplication
-  source?: string;           // ADDED: Source of the notification request
+  forceSend?: boolean;
+  bypassDeduplication?: boolean;
+  source?: string;
+  skipRecipientNotifications?: boolean; // NEW: Option to skip recipient notifications
 }
 
 /**
@@ -89,8 +90,23 @@ export async function sendMessageNotification(
     timestamp, 
     forceSend = false,
     bypassDeduplication = false, 
-    source = 'api'
+    source = 'api',
+    skipRecipientNotifications = false // NEW: Default to false to maintain existing behavior
   } = options;
+  
+  // CRITICAL FIX: If skipRecipientNotifications is true, skip all recipient logic
+  if (skipRecipientNotifications) {
+    if (debug) {
+      console.log(`[NOTIFICATION-SERVICE] SKIPPING recipient notifications for message ${message.id} - source: ${source}`);
+      console.log(`[NOTIFICATION-SERVICE] This prevents dual notifications when reminder system handles check-in reminders`);
+    }
+    
+    return { 
+      success: true, 
+      details: "Skipped recipient notifications to prevent dual notifications",
+      skipReason: "Reminder system handles notifications separately"
+    };
+  }
   
   // Skip if no recipients
   if (!condition.recipients || condition.recipients.length === 0) {
@@ -106,12 +122,9 @@ export async function sendMessageNotification(
       console.log(`Force send flag: ${forceSend}`);
       console.log(`Bypass deduplication flag: ${bypassDeduplication}`);
       console.log(`Source: ${source}`);
+      console.log(`Skip recipient notifications: ${skipRecipientNotifications}`);
       console.log(`Message title: "${message.title}"`);
       console.log(`Number of recipients: ${condition.recipients.length}`);
-      console.log(`User ID: ${message.user_id}`);
-      console.log(`Deduplication ID: ${deduplicationId || "None"}`);
-      console.log(`Timestamp: ${timestamp || "None"}`);
-      console.log(`Condition data:`, JSON.stringify(condition, null, 2));
     }
     
     // CRITICAL NEW VALIDATION: Check deadline before proceeding with recipient notifications
@@ -298,8 +311,8 @@ export async function sendMessageNotification(
         retryDelay,
         isWhatsAppEnabled,
         triggerKeyword,
-        forceSend, // Pass through the forceSend flag
-        source     // Pass through the source
+        forceSend,
+        source
       });
     }));
     

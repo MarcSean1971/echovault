@@ -1,11 +1,10 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { getMessagesToNotify } from "./db/index.ts";
 import { sendMessageNotification } from "./notification-service.ts";
 import { MessageNotificationRequest } from "./types.ts";
 import { supabaseClient } from "./supabase-client.ts";
 import { getSystemHealthStatus } from "./db/system-health.ts";
-import { sendCreatorTestNotification } from "./test-notification-service.ts"; // New import for test mode
+import { sendCreatorTestNotification } from "./test-notification-service.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -40,11 +39,9 @@ const handler = async (req: Request): Promise<Response> => {
     let requestData: MessageNotificationRequest;
     
     try {
-      // Try to parse the request body as JSON
       requestData = await req.json();
     } catch (parseError) {
       console.error("Error parsing request body:", parseError);
-      // Default to empty object if JSON parsing fails
       requestData = {};
     }
     
@@ -55,8 +52,8 @@ const handler = async (req: Request): Promise<Response> => {
       keepArmed = undefined, 
       forceSend = false, 
       source = 'api',
-      testMode = false, // New parameter for test mode
-      bypassDeduplication = false // NEW: Parameter to explicitly bypass deduplication
+      testMode = false,
+      bypassDeduplication = false
     } = requestData;
     
     console.log(`===== SEND MESSAGE NOTIFICATIONS WITH DEADLINE VALIDATION =====`);
@@ -65,9 +62,42 @@ const handler = async (req: Request): Promise<Response> => {
     console.log(`Processing message notifications${messageId ? ` for message ID: ${messageId}` : ''}`);
     console.log(`Is emergency notification: ${isEmergency ? 'YES' : 'No'}`);
     console.log(`Force send: ${forceSend ? 'YES' : 'No'}`);
-    console.log(`Bypass deduplication: ${bypassDeduplication ? 'YES' : 'No'}`); // NEW: Log bypass setting
+    console.log(`Bypass deduplication: ${bypassDeduplication ? 'YES' : 'No'}`);
     console.log(`Test mode: ${testMode ? 'YES' : 'No'}`);
     console.log(`Source: ${source}`);
+    
+    // CRITICAL FIX: Check if this is reminder-triggered and should skip recipient notifications
+    const isReminderTriggered = source && (
+      source === 'reminder_schedule_trigger' ||
+      source === 'reminder-schedule-direct-trigger' ||
+      source === 'reminder-schedule-update' ||
+      source === 'obsolete-immediate-check' ||
+      source === 'reliable-trigger-primary' ||
+      source === 'reliable-trigger-backup'
+    );
+    
+    const skipRecipientNotifications = isReminderTriggered;
+    
+    if (skipRecipientNotifications) {
+      console.log(`CRITICAL FIX: Reminder-triggered notification detected from ${source}`);
+      console.log(`SKIPPING recipient notifications - this should ONLY send check-in reminders to creators`);
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: "Reminder-triggered: Skipping recipient notifications to prevent dual notifications",
+          source: source,
+          skipReason: "Reminder system handles check-in notifications to creators only",
+          timestamp: new Date().toISOString()
+        }),
+        {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders,
+          },
+        }
+      );
+    }
     
     // Check if this is from WhatsApp selection
     const isFromWhatsApp = source && (
@@ -75,23 +105,11 @@ const handler = async (req: Request): Promise<Response> => {
       source === 'whatsapp_selection_single' || 
       source === 'whatsapp_selection_all' ||
       source === 'whatsapp_selection_fallback' ||
-      source === 'whatsapp-checkin'  // CRITICAL FIX: Added this source
+      source === 'whatsapp-checkin'
     );
     
     if (isFromWhatsApp) {
       console.log(`SPECIAL HANDLING: This is a WhatsApp-triggered notification from ${source}`);
-    }
-    
-    // CRITICAL FIX: Check if this is reminder-triggered
-    const isReminderTriggered = source && (
-      source === 'reminder_schedule_trigger' ||
-      source === 'reminder-schedule-direct-trigger' ||
-      source === 'reminder-schedule-update' ||
-      source === 'obsolete-immediate-check'
-    );
-    
-    if (isReminderTriggered) {
-      console.log(`REMINDER HANDLING: This is a reminder-triggered notification from ${source}`);
     }
     
     // New: Handle test mode specially
@@ -124,7 +142,6 @@ const handler = async (req: Request): Promise<Response> => {
       console.log(`TRIGGER SOURCE DETECTED: ${source}`);
       console.log(`This notification was triggered by database trigger`);
       
-      // Log additional info about the trigger
       if (source === 'reminder_schedule_trigger') {
         console.log(`Triggered by reminder_schedule status change to 'sent'`);
       }
@@ -134,8 +151,8 @@ const handler = async (req: Request): Promise<Response> => {
       console.log(`Keep armed flag explicitly set to: ${keepArmed}`);
     }
     
-    // CRITICAL FIX: Always use forceSend for WhatsApp or reminder triggers
-    const effectiveForceSend = forceSend || isFromWhatsApp || isReminderTriggered;
+    // CRITICAL FIX: Always use forceSend for WhatsApp triggers (but not reminder triggers)
+    const effectiveForceSend = forceSend || isFromWhatsApp;
     
     // Get messages that need notification with ENHANCED deadline validation
     console.log(`[DEADLINE-CHECK] Fetching messages with strict deadline validation (forceSend: ${effectiveForceSend})`);
@@ -143,8 +160,6 @@ const handler = async (req: Request): Promise<Response> => {
     console.log(`[DEADLINE-CHECK] Found ${messagesToNotify.length} messages that passed deadline validation out of ${messageId ? '1 requested' : 'all active conditions'}`);
     
     if (messagesToNotify.length === 0 && messageId) {
-      // If we have a specific messageId but couldn't find it for notification,
-      // let's check if it exists and log additional details
       const supabase = supabaseClient();
       const { data: messageData, error: messageError } = await supabase
         .from('messages')
@@ -164,7 +179,6 @@ const handler = async (req: Request): Promise<Response> => {
         if (conditionData) {
           console.log(`[DEADLINE-CHECK] Message has condition type: ${conditionData.condition_type}, active: ${conditionData.active}`);
           
-          // Check deadline for this specific condition
           if (conditionData.condition_type === 'no_check_in' && conditionData.last_checked) {
             const now = new Date();
             const lastChecked = new Date(conditionData.last_checked);
@@ -181,15 +195,12 @@ const handler = async (req: Request): Promise<Response> => {
             }
           }
           
-          // Log additional debugging information about why the message didn't qualify
           if (!conditionData.active) {
             console.log("[DEADLINE-CHECK] Message condition is not active, that's why it wasn't included");
             
-            // CRITICAL FIX: If forceSend, WhatsApp, or reminder trigger, include it anyway
             if (effectiveForceSend) {
-              console.log("[DEADLINE-CHECK] Force send, WhatsApp trigger, or reminder trigger is enabled, trying to process this message anyway");
+              console.log("[DEADLINE-CHECK] Force send or WhatsApp trigger is enabled, trying to process this message anyway");
               
-              // Get the full message and condition data
               const { data: fullMessageData } = await supabase
                 .from('messages')
                 .select('*')
@@ -203,7 +214,6 @@ const handler = async (req: Request): Promise<Response> => {
                 .single();
                 
               if (fullMessageData && fullConditionData) {
-                // Create a synthetic message notification object
                 const forcedMessage = {
                   message: fullMessageData,
                   condition: fullConditionData
@@ -211,12 +221,12 @@ const handler = async (req: Request): Promise<Response> => {
                 
                 console.log("[DEADLINE-CHECK] Forcing notification for:", forcedMessage);
                 
-                // Send notification
                 await sendMessageNotification(forcedMessage, {
                   isEmergency,
-                  debug: true, // Always enable debug mode for forced messages
+                  debug: true,
                   forceSend: true,
-                  bypassDeduplication: isFromWhatsApp || bypassDeduplication || isReminderTriggered
+                  bypassDeduplication: isFromWhatsApp || bypassDeduplication,
+                  skipRecipientNotifications: false // Allow recipients for forced messages
                 });
                 
                 return new Response(
@@ -289,7 +299,6 @@ const handler = async (req: Request): Promise<Response> => {
       messagesToNotify.forEach(message => {
         if (message.condition.condition_type === 'panic_trigger' && 
             message.condition.panic_config) {
-          // Update the panic_config with the explicit keepArmed value
           message.condition.panic_config.keep_armed = keepArmed;
           console.log(`Updated panic_config.keep_armed to ${keepArmed} for message ${message.message.id}`);
         }
@@ -302,10 +311,11 @@ const handler = async (req: Request): Promise<Response> => {
       messagesToNotify.map(message => 
         sendMessageNotification(message, {
           isEmergency,
-          debug: debug || isEmergency, // Always enable debug mode for emergency messages
-          forceSend: effectiveForceSend, // CRITICAL FIX: Use effective force send flag
-          bypassDeduplication: isFromWhatsApp || bypassDeduplication || isReminderTriggered, // FIXED: Bypass for all important sources
-          source: source // ADDED: Pass source to notification service
+          debug: debug || isEmergency,
+          forceSend: effectiveForceSend,
+          bypassDeduplication: isFromWhatsApp || bypassDeduplication,
+          source: source,
+          skipRecipientNotifications: false // Normal notifications should send to recipients
         })
       )
     );
