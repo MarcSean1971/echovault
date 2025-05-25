@@ -103,6 +103,41 @@ export function usePanicCore(
     cancelPanicTrigger
   );
   
+  // ENHANCED: Listen for panic delivery completion to reset all states
+  useEffect(() => {
+    const handlePanicDeliveryComplete = (event: Event) => {
+      if (!(event instanceof CustomEvent)) return;
+      
+      const { deliveryType, messageId } = event.detail || {};
+      
+      // Only reset if this was a panic delivery
+      if (deliveryType === 'panic' || deliveryType === 'emergency') {
+        console.log('[PanicCore] Panic delivery completed, resetting all panic states');
+        
+        // Reset all panic-related states
+        setPanicMode(false);
+        setIsConfirming(false);
+        setTriggerInProgress(false);
+        setPanicStateCountDown(0);
+        setRetryAttempts(0);
+        setSelectedMessageId(null);
+        setIsSelectorOpen(false);
+        setInCancelWindow(false);
+        
+        // Navigate back to messages with refresh
+        setTimeout(() => {
+          navigate('/messages');
+        }, 1000);
+      }
+    };
+    
+    window.addEventListener('message-delivery-complete', handlePanicDeliveryComplete);
+    
+    return () => {
+      window.removeEventListener('message-delivery-complete', handlePanicDeliveryComplete);
+    };
+  }, [setPanicMode, setIsConfirming, setTriggerInProgress, setPanicStateCountDown, setRetryAttempts, setSelectedMessageId, setIsSelectorOpen, setInCancelWindow, navigate]);
+  
   return {
     panicMode,
     isConfirming,

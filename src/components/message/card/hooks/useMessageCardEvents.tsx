@@ -55,19 +55,18 @@ export function useMessageCardEvents({
           await triggerDeadmanSwitch(message.id);
         }
         
-        // Force refresh the message condition data
-        setLocalReminderRefreshCounter(prev => prev + 1);
-        
-        // Emit a global event to refresh all related components
-        window.dispatchEvent(new CustomEvent('conditions-updated', { 
+        // ENHANCED: Emit delivery completion event to reset card state
+        window.dispatchEvent(new CustomEvent('message-delivery-complete', { 
           detail: { 
             messageId: message.id,
             conditionId: condition.id,
-            action: 'deadline-reached',
-            source: 'automatic-delivery',
-            timestamp: new Date().toISOString()
+            messageTitle: message.title,
+            deliveryType: 'automatic',
+            completedAt: new Date().toISOString()
           }
         }));
+        
+        console.log(`[MessageCard ${message.id}] Delivery completion event emitted`);
         
       } catch (error) {
         console.error(`[MessageCard ${message.id}] Error during automatic delivery:`, error);
@@ -85,7 +84,50 @@ export function useMessageCardEvents({
     return () => {
       window.removeEventListener('deadline-reached', handleDeadlineReached);
     };
-  }, [message.id, isArmed, deadline, condition, message.title, isDeadmansSwitch, setLocalReminderRefreshCounter]);
+  }, [message.id, isArmed, deadline, condition, message.title, isDeadmansSwitch]);
+  
+  // ENHANCED: Listen for delivery completion events to reset card state
+  useEffect(() => {
+    const handleDeliveryComplete = (event: Event) => {
+      if (!(event instanceof CustomEvent)) return;
+      
+      const { messageId: eventMessageId, deliveryType } = event.detail || {};
+      
+      // Only handle events for this specific message
+      if (eventMessageId === messageId) {
+        console.log(`[MessageCard ${messageId}] Delivery completed, resetting card state`);
+        
+        // Force immediate refresh of the message card
+        setLocalReminderRefreshCounter(prev => prev + 1);
+        
+        // Emit a comprehensive reset event
+        window.dispatchEvent(new CustomEvent('conditions-updated', { 
+          detail: { 
+            messageId: messageId,
+            conditionId: condition?.id,
+            action: 'delivery-complete-reset',
+            source: 'message-card-reset',
+            deliveryType: deliveryType,
+            timestamp: new Date().toISOString(),
+            forceReset: true
+          }
+        }));
+        
+        // Show completion feedback
+        toast({
+          title: "Message Delivered",
+          description: `Your message "${message.title}" has been delivered and the system has been reset.`,
+          duration: 6000,
+        });
+      }
+    };
+    
+    window.addEventListener('message-delivery-complete', handleDeliveryComplete);
+    
+    return () => {
+      window.removeEventListener('message-delivery-complete', handleDeliveryComplete);
+    };
+  }, [messageId, condition?.id, message.title, setLocalReminderRefreshCounter]);
   
   // Listen for specific reminder updates for this card
   useEffect(() => {

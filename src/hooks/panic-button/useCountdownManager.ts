@@ -6,7 +6,7 @@ import { getCancelWindowSeconds } from "./messageConfigUtils";
 import { startCountdown } from "./countdownUtils";
 
 /**
- * Hook for managing countdown related functionality
+ * Hook for managing countdown related functionality with delivery completion reset
  */
 export function useCountdownManager() {
   const [countDown, setCountDown] = useState(0);
@@ -88,6 +88,19 @@ export function useCountdownManager() {
           }
         });
         window.dispatchEvent(event);
+        
+        // ENHANCED: Emit delivery completion event for panic triggers
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('message-delivery-complete', { 
+            detail: { 
+              messageId: messageToUse.message_id,
+              conditionId: messageToUse.id,
+              deliveryType: 'panic',
+              source: 'countdown-manager',
+              completedAt: new Date().toISOString()
+            }
+          }));
+        }, 1000); // Small delay to allow delivery to complete
       }
     );
     

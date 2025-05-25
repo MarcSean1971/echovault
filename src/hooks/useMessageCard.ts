@@ -5,7 +5,7 @@ import { useMessageCardActions } from "@/hooks/useMessageCardActions";
 import { ensureReminderSchedule } from "@/utils/reminder/ensureReminderSchedule";
 
 /**
- * Custom hook to handle message card state with immediate WhatsApp check-in handling
+ * Custom hook to handle message card state with enhanced delivery completion reset
  */
 export function useMessageCard(messageId: string) {
   // Track local force refresh state
@@ -60,7 +60,48 @@ export function useMessageCard(messageId: string) {
     setRefreshCounter(prev => prev + 1);
   }, [condition, messageId, invalidateCache, handleDisarmMessage, setRefreshCounter]);
 
-  // FIXED: Immediate WhatsApp check-in event handling without delays
+  // ENHANCED: Listen for delivery completion events to reset card state
+  useEffect(() => {
+    const handleDeliveryComplete = (event: Event) => {
+      if (!(event instanceof CustomEvent)) return;
+      
+      const detail = event.detail || {};
+      
+      // Check if this event targets the current message
+      if (detail.messageId === messageId) {
+        console.log(`[MessageCard] Delivery completed for message ${messageId}, performing comprehensive reset`);
+        
+        // Immediate and aggressive cache invalidation
+        invalidateCache();
+        
+        // Multiple refresh cycles to ensure complete state reset
+        setForceRefresh(true);
+        setRefreshCounter(prev => prev + 1);
+        
+        // Additional refresh after a short delay to ensure all async operations complete
+        setTimeout(() => {
+          console.log(`[MessageCard] Secondary refresh for delivery completion - message ${messageId}`);
+          invalidateCache();
+          setForceRefresh(true);
+          setRefreshCounter(prev => prev + 1);
+        }, 500);
+        
+        // Final refresh to ensure UI consistency
+        setTimeout(() => {
+          console.log(`[MessageCard] Final refresh for delivery completion - message ${messageId}`);
+          setRefreshCounter(prev => prev + 1);
+        }, 1500);
+      }
+    };
+    
+    window.addEventListener('message-delivery-complete', handleDeliveryComplete);
+    
+    return () => {
+      window.removeEventListener('message-delivery-complete', handleDeliveryComplete);
+    };
+  }, [messageId, invalidateCache, setRefreshCounter]);
+
+  // ENHANCED: Immediate WhatsApp check-in event handling with delivery completion support
   useEffect(() => {
     const handleWhatsAppCheckIn = (event: Event) => {
       if (!(event instanceof CustomEvent)) return;
@@ -70,6 +111,18 @@ export function useMessageCard(messageId: string) {
       // Check if this event targets the current message
       if (detail.messageId === messageId) {
         console.log(`[MessageCard] Received update for message ${messageId}:`, detail);
+        
+        // ENHANCED: Handle delivery completion resets with special priority
+        if (detail.action === 'delivery-complete-reset') {
+          console.log(`[MessageCard] Delivery completion reset for message ${messageId} - aggressive refresh`);
+          
+          // Immediate aggressive reset
+          invalidateCache();
+          setForceRefresh(true);
+          setRefreshCounter(prev => prev + 1);
+          
+          return; // Don't process as regular update
+        }
         
         // IMMEDIATE handling for WhatsApp check-ins - no delays
         if (detail.action === 'check-in' && (detail.source === 'whatsapp' || detail.source === 'whatsapp-realtime')) {

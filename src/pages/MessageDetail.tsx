@@ -74,7 +74,7 @@ export default function MessageDetail() {
     </Button>
   );
   
-  // Set up event listeners for conditions and deadline
+  // ENHANCED: Set up event listeners for conditions, deadline, and delivery completion
   useEffect(() => {
     // Listen for condition updates to refresh data
     const handleConditionUpdated = () => {
@@ -82,6 +82,45 @@ export default function MessageDetail() {
     };
     
     window.addEventListener('conditions-updated', handleConditionUpdated);
+    
+    // ENHANCED: Listen for delivery completion events
+    const handleDeliveryComplete = async (event: Event) => {
+      if (!id || !(event instanceof CustomEvent)) return;
+      
+      const { messageId, deliveryType } = event.detail || {};
+      
+      // Only handle if this event is for this specific message
+      if (messageId && messageId !== id) return;
+      
+      console.log('[MessageDetail] Delivery completion event received for this message');
+      
+      try {
+        // Show completion feedback
+        toast({
+          title: "Message Delivered Successfully",
+          description: "Your message has been delivered and the system has been reset.",
+          duration: 8000,
+        });
+        
+        // Force refresh the condition state immediately
+        window.dispatchEvent(new CustomEvent('conditions-updated', { 
+          detail: { 
+            messageId: id,
+            conditionId: conditionId,
+            action: 'delivery-complete-page-refresh',
+            source: 'message-detail-page',
+            deliveryType: deliveryType,
+            timestamp: new Date().toISOString(),
+            forceReset: true
+          }
+        }));
+        
+      } catch (error) {
+        console.error('[MessageDetail] Failed to handle delivery completion:', error);
+      }
+    };
+    
+    window.addEventListener('message-delivery-complete', handleDeliveryComplete);
     
     // Listen for deadline reached event
     const handleDeadlineReached = async (event: Event) => {
@@ -106,18 +145,18 @@ export default function MessageDetail() {
         if (condition && condition.condition_type === 'no_check_in') {
           console.log('[MessageDetail] Triggering deadman switch delivery');
           await triggerDeadmanSwitch(id);
+          
+          // Emit delivery completion event after successful delivery
+          window.dispatchEvent(new CustomEvent('message-delivery-complete', { 
+            detail: { 
+              messageId: id,
+              conditionId: eventConditionId || conditionId,
+              deliveryType: 'deadline-automatic',
+              source: 'message-detail-page',
+              completedAt: new Date().toISOString()
+            }
+          }));
         }
-        
-        // Force refresh the condition state
-        window.dispatchEvent(new CustomEvent('conditions-updated', { 
-          detail: { 
-            messageId: id,
-            conditionId: eventConditionId || conditionId,
-            action: 'deadline-reached-refresh',
-            source: 'message-detail-page',
-            timestamp: new Date().toISOString()
-          }
-        }));
         
       } catch (error) {
         console.error('[MessageDetail] Failed to handle deadline reached:', error);
@@ -134,6 +173,7 @@ export default function MessageDetail() {
     
     return () => {
       window.removeEventListener('conditions-updated', handleConditionUpdated);
+      window.removeEventListener('message-delivery-complete', handleDeliveryComplete);
       window.removeEventListener('deadline-reached', handleDeadlineReached);
     };
   }, [id, isArmed, condition, conditionId]);
