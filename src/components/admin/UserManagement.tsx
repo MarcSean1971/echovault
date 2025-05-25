@@ -120,21 +120,6 @@ function UserTabsCard({ userStats }: { userStats: ExtendedUserStatsData }) {
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="all" className="w-full">
-          <TabsList className="mb-4 w-full sm:w-auto">
-            <TabsTrigger value="all" className="flex-1 sm:flex-none">
-              All Users
-              <Badge variant="secondary" className="ml-2">{userStats.totalUsers}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="active" className="flex-1 sm:flex-none">
-              Active
-              <Badge variant="secondary" className="ml-2">{userStats.activeUsers}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="new" className="flex-1 sm:flex-none">
-              New
-              <Badge variant="secondary" className="ml-2">{userStats.newUsers}</Badge>
-            </TabsTrigger>
-          </TabsList>
-          
           <TabsContent value="all" className="mt-0">
             <UserTable filter="all" />
           </TabsContent>
