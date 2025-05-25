@@ -1,42 +1,52 @@
 
 import { TableCell, TableRow } from "@/components/ui/table";
-import { format } from "date-fns";
-import { AuthUser } from "./types";
-import { formatName, formatLastSignIn } from "./utils";
-import { EmailVerificationBadge, ProfileCompletionBadge } from "./UserTableBadges";
 import { UserTableActions } from "./UserTableActions";
+import { UserTableBadges } from "./UserTableBadges";
+import { AuthUser } from "./types";
+import { formatDistanceToNow } from "date-fns";
 
 interface UserTableRowProps {
   user: AuthUser;
   onViewUser: (user: AuthUser) => void;
+  onUserDeleted: (userId: string) => void;
 }
 
-export function UserTableRow({ user, onViewUser }: UserTableRowProps) {
+export function UserTableRow({ user, onViewUser, onUserDeleted }: UserTableRowProps) {
   return (
-    <TableRow>
+    <TableRow key={user.id}>
       <TableCell>
-        <div className="flex flex-col">
-          <span className="font-medium">{formatName(user)}</span>
-          <span className="text-sm text-muted-foreground md:hidden">{user.email}</span>
+        <div className="space-y-1">
+          <div className="font-medium">
+            {user.first_name && user.last_name 
+              ? `${user.first_name} ${user.last_name}` 
+              : 'No name set'
+            }
+          </div>
+          <div className="text-sm text-muted-foreground">{user.email}</div>
         </div>
       </TableCell>
-      <TableCell className="hidden md:table-cell">
-        <div className="flex flex-col gap-1">
-          <span className="text-sm">{user.email}</span>
-          <EmailVerificationBadge user={user} />
-        </div>
-      </TableCell>
-      <TableCell className="hidden lg:table-cell">
-        <ProfileCompletionBadge user={user} />
-      </TableCell>
-      <TableCell className="hidden md:table-cell">
-        {formatLastSignIn(user.last_sign_in_at)}
-      </TableCell>
-      <TableCell className="hidden lg:table-cell">
-        {format(new Date(user.created_at), 'PP')}
-      </TableCell>
+      
       <TableCell>
-        <UserTableActions user={user} onViewUser={onViewUser} />
+        <UserTableBadges user={user} />
+      </TableCell>
+      
+      <TableCell className="text-sm text-muted-foreground">
+        {formatDistanceToNow(new Date(user.created_at), { addSuffix: true })}
+      </TableCell>
+      
+      <TableCell className="text-sm text-muted-foreground">
+        {user.last_sign_in_at 
+          ? formatDistanceToNow(new Date(user.last_sign_in_at), { addSuffix: true })
+          : 'Never'
+        }
+      </TableCell>
+      
+      <TableCell className="text-right">
+        <UserTableActions 
+          user={user} 
+          onViewUser={onViewUser}
+          onUserDeleted={onUserDeleted}
+        />
       </TableCell>
     </TableRow>
   );

@@ -6,13 +6,18 @@ import { useUserData } from "./user-table/useUserData";
 import { UserTableContent } from "./user-table/UserTableContent";
 
 export default function UserTable({ filter }: UserTableProps) {
-  const { users, loading, error } = useUserData(filter);
+  const { users, loading, error, refetch } = useUserData(filter);
   const [selectedUser, setSelectedUser] = useState<AuthUser | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   const handleViewUser = (user: AuthUser) => {
     setSelectedUser(user);
     setIsDetailModalOpen(true);
+  };
+
+  const handleUserDeleted = (userId: string) => {
+    // Refresh the user data to update the list
+    refetch();
   };
 
   if (error) {
@@ -26,7 +31,11 @@ export default function UserTable({ filter }: UserTableProps) {
           <div className="animate-pulse text-primary font-medium">Loading users...</div>
         </div>
       ) : (
-        <UserTableContent users={users} onViewUser={handleViewUser} />
+        <UserTableContent 
+          users={users} 
+          onViewUser={handleViewUser}
+          onUserDeleted={handleUserDeleted}
+        />
       )}
       
       <UserDetailModal 

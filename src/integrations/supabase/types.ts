@@ -516,6 +516,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      delete_user_completely: {
+        Args: { target_user_id: string }
+        Returns: undefined
+      }
       force_process_message_reminders: {
         Args: { target_message_id: string }
         Returns: undefined

@@ -47,5 +47,5 @@ export function useUserData(filter: 'all' | 'active' | 'new') {
     fetchUsers();
   }, [filter]);
 
-  return { users, loading, error };
+  return { users, loading, error, refetch: fetchUsers };
 }

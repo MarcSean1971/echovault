@@ -1,37 +1,50 @@
 
-import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
-import { AuthUser } from "./types";
-import { UserTableHeader } from "./UserTableHeader";
+import {
+  Table,
+  TableBody,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { UserTableRow } from "./UserTableRow";
+import { AuthUser } from "./types";
 
 interface UserTableContentProps {
   users: AuthUser[];
   onViewUser: (user: AuthUser) => void;
+  onUserDeleted: (userId: string) => void;
 }
 
-export function UserTableContent({ users, onViewUser }: UserTableContentProps) {
+export function UserTableContent({ users, onViewUser, onUserDeleted }: UserTableContentProps) {
+  if (users.length === 0) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        No users found
+      </div>
+    );
+  }
+
   return (
-    <div className="rounded-md border overflow-hidden">
-      <Table>
-        <UserTableHeader />
-        <TableBody>
-          {users.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={6} className="text-center py-8">
-                No users found
-              </TableCell>
-            </TableRow>
-          ) : (
-            users.map((user) => (
-              <UserTableRow
-                key={user.id}
-                user={user}
-                onViewUser={onViewUser}
-              />
-            ))
-          )}
-        </TableBody>
-      </Table>
-    </div>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>User</TableHead>
+          <TableHead>Status</TableHead>
+          <TableHead>Created</TableHead>
+          <TableHead>Last Sign In</TableHead>
+          <TableHead className="text-right">Actions</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {users.map((user) => (
+          <UserTableRow
+            key={user.id}
+            user={user}
+            onViewUser={onViewUser}
+            onUserDeleted={onUserDeleted}
+          />
+        ))}
+      </TableBody>
+    </Table>
   );
 }
