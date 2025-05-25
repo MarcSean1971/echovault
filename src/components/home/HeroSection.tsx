@@ -1,7 +1,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Clock, FileCheck, MessageSquare } from "lucide-react";
+import { Clock, FileCheck, MessageSquare, AlertCircle } from "lucide-react";
 
 export function HeroSection() {
   return (
@@ -14,8 +14,8 @@ export function HeroSection() {
               Under Your <span className="gradient-text">Control</span>
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground max-w-md">
-              Send messages to loved ones, even when you can't be there.
-              EchoVault ensures your legacy lives on your terms.
+              Send messages to loved ones and ensure help reaches you in emergencies, 
+              even when you can't be there. EchoVault ensures your legacy lives on your terms.
             </p>
             <div className="pt-4 flex flex-wrap gap-4">
               <Button asChild size="lg" className="bg-gradient-to-r from-primary to-accent hover:opacity-90 transition-opacity">
@@ -44,6 +44,13 @@ export function HeroSection() {
                     <div>
                       <h3 className="font-medium">Important Documents</h3>
                       <p className="text-sm text-muted-foreground">For family access</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <AlertCircle className="h-5 w-5 mt-1 text-red-500" />
+                    <div>
+                      <h3 className="font-medium">Emergency Alert</h3>
+                      <p className="text-sm text-muted-foreground">Ready for activation</p>
                     </div>
                   </div>
                   <div className="flex items-start space-x-3">

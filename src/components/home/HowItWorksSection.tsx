@@ -21,6 +21,10 @@ export function HowItWorksSection() {
     {
       title: "Regular Check-ins",
       description: "Confirm your status regularly to prevent premature message delivery."
+    },
+    {
+      title: "Emergency Response",
+      description: "Access instant panic button for emergencies that immediately alerts your contacts with location."
     }
   ];
 
@@ -30,7 +34,7 @@ export function HowItWorksSection() {
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">How It Works</h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            Simple steps to ensure your messages reach the right people at the right time.
+            Simple steps to ensure your messages reach the right people at the right time, plus emergency protection when you need it most.
           </p>
         </div>
 
