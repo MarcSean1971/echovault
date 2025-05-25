@@ -20,6 +20,7 @@ export function MessageCardHeader({ message, isArmed, formatDate, isPanicTrigger
   
   // Check if message has file attachments
   const hasAttachments = message.attachments && message.attachments.length > 0;
+  const attachmentCount = message.attachments?.length || 0;
 
   // Get recipient count from condition
   const recipientCount = condition?.recipients?.length || 0;
@@ -38,9 +39,12 @@ export function MessageCardHeader({ message, isArmed, formatDate, isPanicTrigger
             <Video className={`h-3.5 w-3.5 text-muted-foreground ml-1 hover:text-primary ${HOVER_TRANSITION}`} />
           )}
           
-          {/* File icon if message has attachments */}
+          {/* File icon with count if message has attachments */}
           {hasAttachments && (
-            <File className={`h-3.5 w-3.5 text-muted-foreground ml-1 hover:text-primary ${HOVER_TRANSITION}`} />
+            <div className="flex items-center ml-1">
+              <File className={`h-3.5 w-3.5 text-muted-foreground hover:text-primary ${HOVER_TRANSITION}`} />
+              <span className="text-xs text-muted-foreground ml-0.5">{attachmentCount}</span>
+            </div>
           )}
 
           {/* Recipients icon with count */}
