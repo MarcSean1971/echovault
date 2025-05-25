@@ -19,7 +19,6 @@ export function checkProfileCompletion(profile: ProfileData | null): ProfileComp
   const requiredFields = [
     { key: 'first_name', label: 'First Name' },
     { key: 'last_name', label: 'Last Name' },
-    { key: 'email', label: 'Email' },
     { key: 'whatsapp_number', label: 'WhatsApp Number' }
   ];
 
