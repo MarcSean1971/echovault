@@ -1,79 +1,128 @@
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { User, Shield, Activity, FileText } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { X, Mail, Phone, MessageCircle, Calendar, Activity } from "lucide-react";
 import { UserDetailModalProps } from "./types";
 import { useUserDetailData } from "./useUserDetailData";
-import { OverviewTab } from "./tabs/OverviewTab";
-import { ProfileTab } from "./tabs/ProfileTab";
-import { AuthTab } from "./tabs/AuthTab";
-import { ActivityTab } from "./tabs/ActivityTab";
+import { format } from "date-fns";
 
 export function UserDetailModal({ isOpen, onClose, user }: UserDetailModalProps) {
   const { loading, profileData, activityData } = useUserDetailData(isOpen, user);
 
   if (!user) return null;
 
+  const getUserInitials = () => {
+    const firstName = user.first_name || profileData?.first_name || "";
+    const lastName = user.last_name || profileData?.last_name || "";
+    return `${firstName[0] || ""}${lastName[0] || ""}`.toUpperCase() || "U";
+  };
+
+  const getUserFullName = () => {
+    const firstName = user.first_name || profileData?.first_name || "";
+    const lastName = user.last_name || profileData?.last_name || "";
+    return `${firstName} ${lastName}`.trim() || user.email || "Unknown User";
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-hidden p-0 w-[95vw]">
-        <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-4 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
-          <DialogTitle className="flex items-center gap-3 text-lg sm:text-xl">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <User className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
-            </div>
-            <span className="truncate">User Profile Details</span>
-          </DialogTitle>
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-hidden p-0 w-[95vw]">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b">
+          <DialogTitle className="text-lg font-medium">User Details</DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-hidden">
-          <Tabs defaultValue="overview" className="h-full flex flex-col">
-            <TabsList className="grid w-full grid-cols-4 mx-4 sm:mx-6 mt-4 bg-muted/50">
-              <TabsTrigger value="overview" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-                <User className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="hidden xs:inline">Overview</span>
-              </TabsTrigger>
-              <TabsTrigger value="profile" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-                <FileText className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="hidden xs:inline">Profile</span>
-              </TabsTrigger>
-              <TabsTrigger value="auth" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-                <Shield className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="hidden xs:inline">Auth</span>
-              </TabsTrigger>
-              <TabsTrigger value="activity" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-                <Activity className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="hidden xs:inline">Activity</span>
-              </TabsTrigger>
-            </TabsList>
-
-            <div className="flex-1 overflow-y-auto px-4 sm:px-6 pb-4 sm:pb-6">
-              <TabsContent value="overview" className="mt-4 space-y-0">
-                <OverviewTab 
-                  user={user} 
-                  profileData={profileData} 
-                  activityData={activityData}
-                  loading={loading}
-                />
-              </TabsContent>
-
-              <TabsContent value="profile" className="mt-4 space-y-0">
-                <ProfileTab user={user} profileData={profileData} />
-              </TabsContent>
-
-              <TabsContent value="auth" className="mt-4 space-y-0">
-                <AuthTab user={user} profileData={profileData} />
-              </TabsContent>
-
-              <TabsContent value="activity" className="mt-4 space-y-0">
-                <ActivityTab 
-                  user={user} 
-                  activityData={activityData} 
-                  loading={loading} 
-                />
-              </TabsContent>
+        <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-6">
+          {/* User Profile Section */}
+          <div className="flex items-center space-x-4">
+            <Avatar className="h-16 w-16">
+              {profileData?.avatar_url ? (
+                <AvatarImage src={profileData.avatar_url} alt={getUserFullName()} />
+              ) : null}
+              <AvatarFallback className="text-lg font-medium">{getUserInitials()}</AvatarFallback>
+            </Avatar>
+            
+            <div className="flex-1 min-w-0">
+              <h3 className="text-lg font-medium text-gray-900 truncate">{getUserFullName()}</h3>
+              <p className="text-sm text-gray-500 truncate">{user.email}</p>
+              <div className="flex gap-2 mt-2 text-xs">
+                <span className={`px-2 py-1 rounded ${user.email_confirmed_at ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                  {user.email_confirmed_at ? 'Email Verified' : 'Email Unverified'}
+                </span>
+                <span className={`px-2 py-1 rounded ${user.profile_complete ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700'}`}>
+                  {user.profile_complete ? 'Profile Complete' : 'Profile Incomplete'}
+                </span>
+              </div>
             </div>
-          </Tabs>
+          </div>
+
+          <div className="border-t pt-4 space-y-4">
+            {/* Contact Information */}
+            {profileData && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-900 mb-3">Contact Information</h4>
+                <div className="space-y-2 text-sm">
+                  {profileData.whatsapp_number && (
+                    <div className="flex items-center gap-2">
+                      <MessageCircle className="h-4 w-4 text-gray-400" />
+                      <span className="text-gray-600">WhatsApp:</span>
+                      <span className="text-gray-900">{profileData.whatsapp_number}</span>
+                    </div>
+                  )}
+                  {profileData.backup_email && (
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-gray-400" />
+                      <span className="text-gray-600">Backup Email:</span>
+                      <span className="text-gray-900">{profileData.backup_email}</span>
+                    </div>
+                  )}
+                  {profileData.backup_contact && (
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-gray-400" />
+                      <span className="text-gray-600">Backup Phone:</span>
+                      <span className="text-gray-900">{profileData.backup_contact}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Activity Summary */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-900 mb-3">Activity</h4>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-gray-600">Messages:</span>
+                  <span className="ml-2 font-medium text-gray-900">
+                    {loading ? "..." : activityData?.messagesCount || 0}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-600">Recipients:</span>
+                  <span className="ml-2 font-medium text-gray-900">
+                    {loading ? "..." : activityData?.recipientsCount || 0}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Account Dates */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-900 mb-3">Account Information</h4>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-gray-400" />
+                  <span className="text-gray-600">Created:</span>
+                  <span className="text-gray-900">{format(new Date(user.created_at), 'PPP')}</span>
+                </div>
+                {user.last_sign_in_at && (
+                  <div className="flex items-center gap-2">
+                    <Activity className="h-4 w-4 text-gray-400" />
+                    <span className="text-gray-600">Last Sign In:</span>
+                    <span className="text-gray-900">{format(new Date(user.last_sign_in_at), 'PPp')}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
