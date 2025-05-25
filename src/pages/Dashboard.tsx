@@ -22,7 +22,7 @@ export default function Dashboard() {
     
     const loadCheckInData = async () => {
       try {
-        const deadline = await getNextCheckInDeadline(userId);
+        const deadline = await getNextCheckInDeadline(); // Fixed function call
         
         if (deadline) {
           const now = new Date();

@@ -1,6 +1,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { MessageCondition, TriggerType } from "@/types/message";
+import { Recipient } from "@/types/recipient";
 
 // Cache for conditions to reduce database calls
 const conditionsCache = new Map<string, { data: MessageCondition[]; timestamp: number }>();
@@ -40,7 +41,8 @@ export async function fetchMessageConditions(userId: string): Promise<MessageCon
     // Transform and type-cast the data properly
     const conditions = (data || []).map(item => ({
       ...item,
-      condition_type: item.condition_type as TriggerType
+      condition_type: item.condition_type as TriggerType,
+      recipients: (item.recipients as any) as Recipient[] // Type cast Json to Recipient[]
     })) as MessageCondition[];
     
     // Update cache
@@ -86,10 +88,11 @@ export async function getConditionByMessageId(messageId: string): Promise<Messag
       throw error;
     }
     
-    // Type-cast the condition_type properly
+    // Type-cast the condition_type and recipients properly
     return {
       ...data,
-      condition_type: data.condition_type as TriggerType
+      condition_type: data.condition_type as TriggerType,
+      recipients: (data.recipients as any) as Recipient[]
     } as MessageCondition;
   } catch (error) {
     console.error("Error in getConditionByMessageId:", error);
@@ -200,10 +203,11 @@ export async function createMessageCondition(
     // Invalidate cache for this user
     invalidateConditionsCache(user.id);
 
-    // Type-cast the condition_type properly
+    // Type-cast the condition_type and recipients properly
     return {
       ...data,
-      condition_type: data.condition_type as TriggerType
+      condition_type: data.condition_type as TriggerType,
+      recipients: (data.recipients as any) as Recipient[]
     } as MessageCondition;
   } catch (error) {
     console.error("Error in createMessageCondition:", error);
@@ -249,10 +253,11 @@ export async function updateMessageCondition(
     // Invalidate cache for this user
     invalidateConditionsCache(user.id);
 
-    // Type-cast the condition_type properly
+    // Type-cast the condition_type and recipients properly
     return {
       ...data,
-      condition_type: data.condition_type as TriggerType
+      condition_type: data.condition_type as TriggerType,
+      recipients: (data.recipients as any) as Recipient[]
     } as MessageCondition;
   } catch (error) {
     console.error("Error in updateMessageCondition:", error);
@@ -404,7 +409,7 @@ export async function getNextCheckInDeadline(): Promise<Date | null> {
       .eq('active', true)
       .order('next_check', { ascending: true })
       .limit(1)
-      .single();
+      .maybeSingle();
 
     if (error || !data) {
       return null;

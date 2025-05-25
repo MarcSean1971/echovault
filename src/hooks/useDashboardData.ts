@@ -85,9 +85,9 @@ export function useDashboardData() {
         }
       }
       
-      // Get next check-in deadline
+      // Get next check-in deadline - fixed function call
       try {
-        const deadlineResult = await getNextCheckInDeadline(userId);
+        const deadlineResult = await getNextCheckInDeadline();
         setNextDeadline(deadlineResult ? deadlineResult : null);
       } catch (deadlineError) {
         console.error("Error fetching next deadline:", deadlineError);
@@ -132,8 +132,8 @@ export function useDashboardData() {
       setMessages(messagesData);
       setConditions(updatedConditions);
       
-      // Also refresh the next deadline
-      const deadlineResult = await getNextCheckInDeadline(userId);
+      // Also refresh the next deadline - fixed function call
+      const deadlineResult = await getNextCheckInDeadline();
       setNextDeadline(deadlineResult ? deadlineResult : null);
       
       return updatedConditions;
