@@ -74,19 +74,19 @@ export async function updateMessageCondition(
   const condition = mapDbConditionToMessageCondition(data);
   
   // SIMPLIFIED: Update reminder schedule when condition changes
-  if (condition.messageId && updates.reminderHours) {
-    await markRemindersObsolete(condition.messageId);
+  if (condition.message_id && updates.reminder_hours) {
+    await markRemindersObsolete(condition.message_id);
     
     if (condition.active) {
       await createReminderSchedule({
-        messageId: condition.messageId,
+        messageId: condition.message_id,
         conditionId: conditionId,
-        conditionType: condition.conditionType,
-        triggerDate: condition.triggerDate,
-        lastChecked: condition.lastChecked,
-        hoursThreshold: condition.hoursThreshold,
-        minutesThreshold: condition.minutesThreshold,
-        reminderHours: updates.reminderHours
+        conditionType: condition.condition_type,
+        triggerDate: condition.trigger_date,
+        lastChecked: condition.last_checked,
+        hoursThreshold: condition.hours_threshold,
+        minutesThreshold: condition.minutes_threshold,
+        reminderHours: updates.reminder_hours
       });
     }
   }

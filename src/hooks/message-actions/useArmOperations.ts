@@ -2,8 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { useActionToasts } from "./useActionToasts";
 import { useConditionUpdates } from "./useConditionUpdates";
-import { ensureReminderSchedule } from "@/utils/reminder/ensureReminderSchedule";
-import { invalidateReminderCache } from "@/utils/reminder/reminderFetcher";
+import { createReminderSchedule } from "@/services/reminders/simpleReminderService";
 
 /**
  * Hook for handling arming message operations
@@ -46,8 +45,6 @@ export function useArmOperations() {
       // Immediately invalidate cache to force a refresh on next query
       if (messageId) {
         invalidateCache(messageId);
-        // Also invalidate reminder cache
-        invalidateReminderCache([messageId]);
       }
       
       // Emit an optimistic update event immediately
@@ -71,17 +68,17 @@ export function useArmOperations() {
       // Get message ID for UI feedback and reminders
       const actualMessageId = data.message_id;
       
-      // Perform reminder schedule creation and invalidation in parallel
-      await Promise.all([
-        // CRITICAL: Ensure reminder schedule is created with proper parameters
-        ensureReminderSchedule(conditionId, true), // Changed to true to prevent immediate emails
-        
-        // Additionally, make sure all caches that might affect display are invalidated
-        Promise.resolve().then(() => {
-          invalidateReminderCache([actualMessageId]);
-          invalidateCache(actualMessageId);
-        })
-      ]);
+      // Create reminder schedule using the simplified service
+      await createReminderSchedule({
+        messageId: actualMessageId,
+        conditionId: conditionId,
+        conditionType: conditionType,
+        triggerDate: undefined,
+        lastChecked: new Date().toISOString(),
+        hoursThreshold: undefined,
+        minutesThreshold: undefined,
+        reminderHours: [24, 12, 6, 1] // Default reminder schedule
+      });
       
       // Get deadline for immediate UI feedback
       const { data: condition } = await supabase

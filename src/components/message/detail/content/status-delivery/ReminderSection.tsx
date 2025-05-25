@@ -76,7 +76,12 @@ export function ReminderSection({
         isLoading={isLoading}
         permissionError={error}
         hasReminders={hasReminders}
-        enhancedReminders={upcomingReminders.map(text => ({ text }))}
+        enhancedReminders={upcomingReminders.map(text => ({ 
+          formattedShortDate: "",
+          formattedText: text,
+          isImportant: text.includes("Final Delivery"),
+          original: text
+        }))}
         refreshCount={0}
         errorState={error}
       />

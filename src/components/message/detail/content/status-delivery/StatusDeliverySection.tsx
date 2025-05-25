@@ -1,7 +1,6 @@
 
 import { useEffect, useState } from 'react';
 import { parseReminderMinutes } from '@/utils/reminderUtils';
-import { getEffectiveDeadline } from '@/utils/reminder/reminderUtils'; // Fixed import path
 import { MessageInfoSection } from './MessageInfoSection';
 import { DeliverySettingsSection } from './DeliverySettingsSection';
 import { ReminderSection } from './ReminderSection';
@@ -21,7 +20,6 @@ interface StatusDeliverySectionProps {
   isDelivered?: boolean;
   viewCount?: number | null;
   isLoadingDelivery?: boolean;
-  // We're removing these props as Recipients are now in their own section
   recipients?: any[];
   isActionLoading?: boolean;
   onSendTestMessage?: () => void;
@@ -51,7 +49,21 @@ export function StatusDeliverySection({
     if (externalDeadline) {
       setEffectiveDeadline(externalDeadline);
     } else if (condition) {
-      setEffectiveDeadline(getEffectiveDeadline(condition));
+      // Simple deadline calculation
+      if (condition.trigger_date) {
+        setEffectiveDeadline(new Date(condition.trigger_date));
+      } else if (condition.last_checked && (condition.hours_threshold || condition.minutes_threshold)) {
+        const deadline = new Date(condition.last_checked);
+        if (condition.hours_threshold) {
+          deadline.setHours(deadline.getHours() + condition.hours_threshold);
+        }
+        if (condition.minutes_threshold) {
+          deadline.setMinutes(deadline.getMinutes() + condition.minutes_threshold);
+        }
+        setEffectiveDeadline(deadline);
+      } else {
+        setEffectiveDeadline(null);
+      }
     } else {
       setEffectiveDeadline(null);
     }
@@ -63,7 +75,7 @@ export function StatusDeliverySection({
   const reminderMinutes = parseReminderMinutes(condition?.reminder_hours);
 
   return (
-    <div className="space-y-4"> {/* Reduced from space-y-6 to space-y-4 */}
+    <div className="space-y-4">
       <MessageInfoSection
         message={message}
         formatDate={formatDate}
@@ -84,7 +96,6 @@ export function StatusDeliverySection({
         onFormattedRemindersChange={setFormattedReminders}
       />
       
-      {/* Security Settings Section now appears outside the Delivery Settings */}
       <SecuritySettingsSection
         condition={condition}
       />
@@ -94,7 +105,6 @@ export function StatusDeliverySection({
         deadline={effectiveDeadline}
         isArmed={isArmed}
         refreshTrigger={refreshTrigger}
-        formattedAllReminders={formattedReminders}
       />
     </div>
   );
