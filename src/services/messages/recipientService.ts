@@ -26,7 +26,7 @@ export async function createRecipient(
   notifyOnAdd: boolean = true
 ): Promise<Recipient> {
   const newRecipient = {
-    user_id: userId,
+    user_id: userId, // This is now properly typed as UUID in the database
     name,
     email,
     phone,
