@@ -3,8 +3,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LogOut, User, Settings, Users, MessageSquare, Home } from "lucide-react";
+import { LogOut, User, Settings, Users, MessageSquare, Home, Share } from "lucide-react";
 import { ICON_HOVER_EFFECTS } from "@/utils/hoverEffects";
+import { useToast } from "@/hooks/use-toast";
 
 interface UserMenuProps {
   userImage: string | null;
@@ -13,11 +14,42 @@ interface UserMenuProps {
 
 export function UserMenu({ userImage, initials }: UserMenuProps) {
   const { signOut, user } = useAuth();
+  const { toast } = useToast();
 
   const handleSignOut = async (e: React.MouseEvent) => {
     e.preventDefault();
     console.log("Sign out clicked");
     await signOut();
+  };
+
+  const handleShare = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    
+    const shareData = {
+      title: 'EchoVault',
+      text: 'Check out EchoVault - Secure message delivery platform',
+      url: 'https://echo-vault.app'
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        // Fallback: copy to clipboard
+        await navigator.clipboard.writeText(shareData.url);
+        toast({
+          title: "Link copied to clipboard",
+          description: "Share the EchoVault link with others!",
+        });
+      }
+    } catch (error) {
+      console.error('Error sharing:', error);
+      // Fallback if clipboard also fails
+      toast({
+        title: "Share EchoVault",
+        description: "Visit: https://echo-vault.app",
+      });
+    }
   };
 
   // Check if user has admin access
@@ -78,6 +110,11 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
             </DropdownMenuItem>
           )}
         </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={handleShare} className="cursor-pointer hover:opacity-90 transition-opacity">
+          <Share className={`mr-2 h-4 w-4 ${ICON_HOVER_EFFECTS.muted}`} />
+          <span>Share EchoVault</span>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer hover:opacity-90 transition-opacity">
           <LogOut className={`mr-2 h-4 w-4 ${ICON_HOVER_EFFECTS.muted}`} />
