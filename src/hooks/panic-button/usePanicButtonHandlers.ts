@@ -32,7 +32,9 @@ export function usePanicButtonHandlers(
   panicMessages: MessageCondition[],
   getActiveMessageId: () => string | null,
   refreshLocationPermission: () => Promise<string>,
-  executePanicTrigger: (messageId: string) => Promise<void>
+  executePanicTrigger: (messageId: string) => Promise<void>,
+  startCancellationCountdown: (params: any) => void,
+  cancelPanicTrigger: () => void
 ) {
   const navigate = useNavigate();
 
@@ -40,19 +42,7 @@ export function usePanicButtonHandlers(
   const handlePanicButtonClick = useCallback(() => {
     // If in cancel window, cancel the panic trigger
     if (inCancelWindow) {
-      setPanicMode(false);
-      setIsConfirming(false);
-      setTriggerInProgress(false);
-      setCountDown(0);
-      
-      // Dispatch cancellation event
-      window.dispatchEvent(new CustomEvent('panic-trigger-cancelled'));
-      
-      toast({
-        title: "Emergency alert cancelled",
-        description: "Your emergency message has been cancelled."
-      });
-      
+      cancelPanicTrigger();
       return;
     }
     
@@ -75,19 +65,17 @@ export function usePanicButtonHandlers(
     }
     
     if (isConfirming) {
-      // If already confirming, check/request location permission
+      // If already confirming, start the cancellation countdown
       refreshLocationPermission().then(permission => {
-        if (permission === "granted" || permission === "prompt" || permission === "denied") {
-          // Even if denied, we proceed (just won't include location)
-          executePanicTrigger(messageId);
-        } else {
-          toast({
-            title: "Location Error",
-            description: "Cannot access location services. Your message will send without location.",
-            variant: "destructive"
-          });
-          executePanicTrigger(messageId);
-        }
+        startCancellationCountdown({
+          userId: null, // Will be passed from the component
+          panicMessage: null,
+          panicMessages,
+          selectedMessageId: messageId,
+          setInCancelWindow: () => {}, // Will be handled by countdown manager
+          setPanicMode,
+          setTriggerInProgress
+        });
       });
     } else {
       // First press, just show confirmation
@@ -95,29 +83,35 @@ export function usePanicButtonHandlers(
       
       // Auto-reset confirmation state if not clicked again
       setTimeout(() => {
-        if (isConfirming) {
-          setIsConfirming(false);
-        }
+        setIsConfirming(false);
       }, 3000);
     }
   }, [
     inCancelWindow, panicMessages.length, panicMode, isConfirming,
-    refreshLocationPermission, getActiveMessageId, executePanicTrigger,
-    setPanicMode, setIsConfirming, setTriggerInProgress, setCountDown,
+    refreshLocationPermission, getActiveMessageId, startCancellationCountdown,
+    cancelPanicTrigger, setPanicMode, setIsConfirming, setTriggerInProgress,
     setIsSelectorOpen
   ]);
   
-  // Handle panic message selection - executes the trigger directly
+  // Handle panic message selection - now starts countdown instead of immediate execution
   const handlePanicMessageSelect = useCallback((messageId: string) => {
-    console.log(`Selected panic message for immediate trigger: ${messageId}`);
+    console.log(`Selected panic message for countdown: ${messageId}`);
     setSelectedMessageId(messageId);
     setIsSelectorOpen(false);
     
-    // Important: Directly execute the panic trigger with the selected message
+    // Start cancellation countdown instead of immediate execution
     refreshLocationPermission().then(permission => {
-      executePanicTrigger(messageId);
+      startCancellationCountdown({
+        userId: null, // Will be passed from the component
+        panicMessage: null,
+        panicMessages,
+        selectedMessageId: messageId,
+        setInCancelWindow: () => {}, // Will be handled by countdown manager
+        setPanicMode,
+        setTriggerInProgress
+      });
     });
-  }, [refreshLocationPermission, executePanicTrigger, setSelectedMessageId, setIsSelectorOpen]);
+  }, [refreshLocationPermission, startCancellationCountdown, setSelectedMessageId, setIsSelectorOpen, panicMessages, setPanicMode, setTriggerInProgress]);
   
   // Create new panic message
   const handleCreatePanicMessage = useCallback(() => {

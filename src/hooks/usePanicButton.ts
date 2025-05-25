@@ -86,9 +86,6 @@ export function usePanicButton(
   useEffect(() => {
     const handlePanicTriggerCancelled = () => {
       // Reset UI state related to panic mode
-      setPanicMode(false);
-      setIsConfirming(false);
-      setTriggerInProgress(false);
       setErrorState({ hasError: false });
     };
     
@@ -116,13 +113,8 @@ export function usePanicButton(
     handlePanicMessageSelect,
     handleCreatePanicMessage,
     getKeepArmedValue,
-    executePanicTrigger  // Make sure we destructure the executePanicTrigger function
+    executePanicTrigger
   } = panicCore;
-  
-  // For compatibility with existing components, export these state setters
-  const setIsConfirming = useState(false)[1];
-  const setPanicMode = useState(false)[1];
-  const setTriggerInProgress = useState(false)[1];
   
   return {
     panicMode,
@@ -142,6 +134,6 @@ export function usePanicButton(
     selectedMessageId,
     setSelectedMessageId,
     inCancelWindow,
-    executePanicTrigger  // Add the executePanicTrigger function to the returned object
+    executePanicTrigger
   };
 }

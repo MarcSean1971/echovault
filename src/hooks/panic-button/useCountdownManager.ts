@@ -28,7 +28,7 @@ export function useCountdownManager() {
     panicMessage,
     panicMessages,
     selectedMessageId,
-    setInCancelWindow,
+    setInCancelWindow: externalSetInCancelWindow,
     setPanicMode,
     setTriggerInProgress
   }: {
@@ -45,10 +45,10 @@ export function useCountdownManager() {
       ? panicMessages.find(m => m.message_id === selectedMessageId)
       : (panicMessage || (panicMessages.length > 0 ? panicMessages[0] : null));
     
-    if (!messageToUse || !userId) {
+    if (!messageToUse) {
       toast({
         title: "Error",
-        description: "No panic message is configured or user is not logged in",
+        description: "No panic message is configured",
         variant: "destructive"
       });
       return;
@@ -56,6 +56,7 @@ export function useCountdownManager() {
 
     // Set UI state to show cancellation window
     setInCancelWindow(true);
+    externalSetInCancelWindow(true);
     setPanicMode(true);
     setTriggerInProgress(true);
     
@@ -78,7 +79,7 @@ export function useCountdownManager() {
       },
       async () => {
         // This executes when countdown reaches zero
-        if (!userId || !messageToUse) return;
+        if (!messageToUse) return;
         
         // Pass control to the core panic trigger function
         const event = new CustomEvent('panic-trigger-execute', { 

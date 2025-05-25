@@ -7,6 +7,7 @@ import { useLocationManager } from "./useLocationManager";
 import { useActiveMessage } from "./useActiveMessage";
 import { usePanicTrigger } from "./usePanicTrigger";
 import { usePanicButtonHandlers } from "./usePanicButtonHandlers";
+import { useCountdownManager } from "./useCountdownManager";
 
 interface UsePanicCoreOptions {
   onError?: (error: any) => void;
@@ -64,6 +65,15 @@ export function usePanicCore(
     options
   );
   
+  // Use the countdown manager hook
+  const {
+    countDown: countdownSeconds,
+    inCancelWindow: countdownInCancelWindow,
+    setInCancelWindow,
+    startCancellationCountdown,
+    cancelPanicTrigger
+  } = useCountdownManager();
+  
   // Use the panic button handlers hook
   const {
     handlePanicButtonClick,
@@ -73,7 +83,7 @@ export function usePanicCore(
     {
       panicMode,
       isConfirming,
-      inCancelWindow,
+      inCancelWindow: countdownInCancelWindow,
       setIsConfirming,
       setPanicMode,
       setTriggerInProgress,
@@ -84,16 +94,18 @@ export function usePanicCore(
     panicMessages,
     getActiveMessageId,
     refreshLocationPermission,
-    executePanicTrigger
+    executePanicTrigger,
+    startCancellationCountdown,
+    cancelPanicTrigger
   );
   
   return {
     panicMode,
     isConfirming,
     triggerInProgress,
-    countDown,
+    countDown: countdownSeconds,
     locationPermission,
-    inCancelWindow,
+    inCancelWindow: countdownInCancelWindow,
     isSelectorOpen,
     setIsSelectorOpen,
     selectedMessageId,
