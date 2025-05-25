@@ -7,7 +7,7 @@ import { Menu } from "lucide-react";
 export function GuestNav() {
   return (
     <div className="flex items-center space-x-3">
-      <Button variant="ghost" asChild className="hidden sm:flex hover:bg-accent/10">
+      <Button variant="outline" asChild className="hidden sm:flex">
         <Link to="/login">Sign in</Link>
       </Button>
       <Button 
