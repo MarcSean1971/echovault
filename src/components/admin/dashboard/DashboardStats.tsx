@@ -1,5 +1,4 @@
 
-import { useNavigate } from "react-router-dom";
 import { StatsCard } from "./StatsCard";
 import { Activity, Users, MessageSquare, Bell } from "lucide-react";
 
@@ -13,16 +12,6 @@ interface DashboardStatsProps {
 }
 
 export function DashboardStats({ stats }: DashboardStatsProps) {
-  const navigate = useNavigate();
-
-  const handleMessagesClick = () => {
-    navigate('/messages');
-  };
-
-  const handleRecipientsClick = () => {
-    navigate('/recipients');
-  };
-
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       <StatsCard 
@@ -35,9 +24,7 @@ export function DashboardStats({ stats }: DashboardStatsProps) {
         title="Total Messages" 
         value={stats.totalMessages} 
         description="Created messages" 
-        icon={<MessageSquare className="h-4 w-4" />}
-        clickable={true}
-        onClick={handleMessagesClick}
+        icon={<MessageSquare className="h-4 w-4" />} 
       />
       <StatsCard 
         title="Active Check-ins" 
