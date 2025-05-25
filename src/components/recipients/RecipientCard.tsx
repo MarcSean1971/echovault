@@ -1,5 +1,6 @@
 
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Recipient } from "@/types/message";
 import { Edit, Trash, User } from "lucide-react";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
@@ -23,6 +24,14 @@ export function RecipientCard({ recipient, onEdit, onDelete }: RecipientCardProp
           {recipient.phone && (
             <p className="text-sm text-muted-foreground">{recipient.phone}</p>
           )}
+          <div className="mt-1">
+            <Badge 
+              variant={recipient.notify_on_add ? "default" : "secondary"}
+              className="text-xs"
+            >
+              {recipient.notify_on_add ? "Notifications On" : "Notifications Off"}
+            </Badge>
+          </div>
         </div>
       </div>
       <div className="flex space-x-2">
