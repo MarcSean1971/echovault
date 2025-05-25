@@ -14,6 +14,7 @@ import { getMessageStatus } from "./conditions/messageStatusService";
 import { armMessage, disarmMessage, getMessageDeadline } from "./conditions/messageArmingService";
 import { mapDbConditionToMessageCondition, mapMessageConditionToDb } from "./conditions/helpers/map-helpers";
 import { supabase } from "@/integrations/supabase/client";
+import { createReminderSchedule, markRemindersObsolete } from "@/services/reminders/simpleReminderService";
 
 // Create a message condition
 export async function createMessageCondition(
@@ -32,14 +33,29 @@ export async function createMessageCondition(
     pin_code: options.pinCode,
     unlock_delay_hours: options.unlockDelayHours,
     expiry_hours: options.expiryHours,
-    // Map panicTriggerConfig to panic_config for DB storage
     panic_config: options.panicTriggerConfig,
     reminder_hours: options.reminderHours,
     check_in_code: options.checkInCode
   };
   
   const createdCondition = await createConditionInDb(data);
-  return mapDbConditionToMessageCondition(createdCondition);
+  const condition = mapDbConditionToMessageCondition(createdCondition);
+  
+  // SIMPLIFIED: Create reminder schedule immediately after condition creation
+  if (condition.active && options.reminderHours) {
+    await createReminderSchedule({
+      messageId: messageId,
+      conditionId: condition.id,
+      conditionType: conditionType,
+      triggerDate: options.triggerDate,
+      lastChecked: createdCondition.last_checked,
+      hoursThreshold: options.hoursThreshold,
+      minutesThreshold: options.minutesThreshold,
+      reminderHours: options.reminderHours
+    });
+  }
+  
+  return condition;
 }
 
 // Fetch message conditions for a user
@@ -52,11 +68,30 @@ export async function updateMessageCondition(
   conditionId: string,
   updates: Partial<MessageCondition>
 ): Promise<MessageCondition> {
-  // Use the centralized mapping function to ensure consistency
   const dbUpdates = mapMessageConditionToDb(updates);
   
   const data = await updateConditionInDb(conditionId, dbUpdates);
-  return mapDbConditionToMessageCondition(data);
+  const condition = mapDbConditionToMessageCondition(data);
+  
+  // SIMPLIFIED: Update reminder schedule when condition changes
+  if (condition.messageId && updates.reminderHours) {
+    await markRemindersObsolete(condition.messageId);
+    
+    if (condition.active) {
+      await createReminderSchedule({
+        messageId: condition.messageId,
+        conditionId: conditionId,
+        conditionType: condition.conditionType,
+        triggerDate: condition.triggerDate,
+        lastChecked: condition.lastChecked,
+        hoursThreshold: condition.hoursThreshold,
+        minutesThreshold: condition.minutesThreshold,
+        reminderHours: updates.reminderHours
+      });
+    }
+  }
+  
+  return condition;
 }
 
 // Delete a message condition
@@ -86,13 +121,12 @@ export { armMessage, disarmMessage, getMessageDeadline };
 export { invalidateConditionsCache };
 
 /**
- * Enhanced version of getNextCheckInDeadline with user-specific deadline calculation
+ * SIMPLIFIED: Enhanced version of getNextCheckInDeadline
  */
 export async function getNextCheckInDeadline(userId: string) {
   if (!userId) return null;
   
   try {
-    // Get active conditions for user
     const { data: conditions, error } = await supabase
       .from("message_conditions")
       .select("*")
@@ -105,11 +139,9 @@ export async function getNextCheckInDeadline(userId: string) {
       return null;
     }
     
-    // Calculate the earliest deadline from all active conditions
     let earliestDeadline: Date | null = null;
     
     for (const condition of conditions) {
-      // Use the imported function from checkInService
       const deadline = getCheckInDeadlineFromService(condition);
       
       if (deadline && (!earliestDeadline || deadline < earliestDeadline)) {
