@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { BUTTON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { getAvailableBucketName } from "@/services/messages/fileService";
@@ -16,6 +15,7 @@ export interface ProfileData {
   id: string;
   first_name: string | null;
   last_name: string | null;
+  email: string | null;
   avatar_url: string | null;
   backup_email: string | null;
   whatsapp_number: string | null;
@@ -41,6 +41,7 @@ export async function fetchProfile(userId: string): Promise<ProfileData | null> 
       id: data.id,
       first_name: data.first_name,
       last_name: data.last_name,
+      email: data.email,
       avatar_url: data.avatar_url,
       backup_email: data.backup_email || null,
       whatsapp_number: data.whatsapp_number || null,
@@ -77,6 +78,7 @@ export async function updateProfile(
       id: data.id,
       first_name: data.first_name,
       last_name: data.last_name,
+      email: data.email,
       avatar_url: data.avatar_url,
       backup_email: data.backup_email || null,
       whatsapp_number: data.whatsapp_number || null,
