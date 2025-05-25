@@ -1,10 +1,10 @@
-
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/components/ui/use-toast";
 import { fetchMessageCardsData, fetchMessages } from "@/services/messages/messageService";
 import { fetchMessageConditions, invalidateConditionsCache } from "@/services/messages/conditionService";
 import { Message, MessageCondition } from "@/types/message";
+import { supabase } from "@/integrations/supabase/client";
 
 export function useMessageList() {
   const { userId } = useAuth();
@@ -98,7 +98,57 @@ export function useMessageList() {
     loadData();
   }, [loadData]);
   
-  // FIXED: Listen for conditions updates with immediate WhatsApp check-in handling
+  // ENHANCED: Listen for database events from reminder_delivery_log
+  useEffect(() => {
+    if (!userId) return;
+    
+    console.log("[useMessageList] Setting up reminder delivery log listener");
+    
+    // Listen for events in reminder_delivery_log that indicate frontend should refresh
+    const channel = supabase
+      .channel('reminder-delivery-events')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'reminder_delivery_log'
+        },
+        (payload) => {
+          console.log("[useMessageList] Received reminder delivery log event:", payload);
+          
+          const responseData = payload.new?.response_data;
+          if (responseData && (
+            responseData.event_type === 'conditions-updated' || 
+            responseData.event_type === 'message-delivery-complete'
+          )) {
+            console.log("[useMessageList] Processing delivery completion event");
+            
+            // Force immediate refresh
+            forceRefresh();
+            
+            // Also emit a frontend event for immediate component updates
+            window.dispatchEvent(new CustomEvent('conditions-updated', { 
+              detail: { 
+                messageId: responseData.messageId,
+                conditionId: responseData.conditionId,
+                action: responseData.action || 'delivery-complete',
+                source: 'reminder-delivery-log',
+                timestamp: new Date().toISOString()
+              }
+            }));
+          }
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      console.log("[useMessageList] Removing reminder delivery log listener");
+      supabase.removeChannel(channel);
+    };
+  }, [userId, forceRefresh]);
+  
+  // Keep existing conditions-updated listener for immediate WhatsApp check-ins
   useEffect(() => {
     const handleConditionsUpdated = (event: Event) => {
       if (event instanceof CustomEvent) {
@@ -112,6 +162,9 @@ export function useMessageList() {
           
         } else if (action === 'arm' || action === 'disarm') {
           console.log("[useMessageList] Arm/disarm event, refreshing data");
+          forceRefresh();
+        } else if (action === 'delivery-complete' || action === 'reminder-sent') {
+          console.log("[useMessageList] Delivery/reminder event, refreshing data");
           forceRefresh();
         } else {
           // Regular refresh for other events

@@ -101,6 +101,31 @@ export function useMessageCard(messageId: string) {
     };
   }, [messageId, invalidateCache, setRefreshCounter]);
 
+  // ENHANCED: Listen for reminder delivery completion events
+  useEffect(() => {
+    const handleReminderDelivery = (event: Event) => {
+      if (!(event instanceof CustomEvent)) return;
+      
+      const detail = event.detail || {};
+      
+      // Check if this event targets the current message and is a delivery-related event
+      if (detail.messageId === messageId && (detail.action === 'delivery-complete' || detail.action === 'reminder-sent')) {
+        console.log(`[MessageCard] Reminder delivery event for message ${messageId}, refreshing`);
+        
+        // Immediate cache invalidation and refresh
+        invalidateCache();
+        setForceRefresh(true);
+        setRefreshCounter(prev => prev + 1);
+      }
+    };
+    
+    window.addEventListener('conditions-updated', handleReminderDelivery);
+    
+    return () => {
+      window.removeEventListener('conditions-updated', handleReminderDelivery);
+    };
+  }, [messageId, invalidateCache, setRefreshCounter]);
+
   // ENHANCED: Immediate WhatsApp check-in event handling with delivery completion support
   useEffect(() => {
     const handleWhatsAppCheckIn = (event: Event) => {

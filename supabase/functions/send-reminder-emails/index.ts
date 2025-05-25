@@ -1,12 +1,11 @@
 
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { supabaseClient } from "./supabase-client.ts";
 import { sendCreatorReminder } from "./services/reminder-sender.ts";
 import { corsHeaders } from "./cors-headers.ts";
 
 /**
- * SIMPLIFIED: Enhanced reminder processing with ONLY check-in reminders sent to creators
+ * ENHANCED: Reminder processing with final delivery handling and proper status updates
  */
 serve(async (req) => {
   console.log("===== SEND REMINDER EMAILS FUNCTION =====");
@@ -31,16 +30,15 @@ serve(async (req) => {
     console.log(`Request parameters: messageId=${messageId}, debug=${debug}, forceSend=${forceSend}, source=${source}, action=${action}`);
 
     if (action === "process") {
-      console.log("Processing ONLY check-in reminders sent to creators...");
-      console.log("Checking for check-in reminders due");
+      console.log("Processing check-in reminders and final deliveries...");
       
       const supabase = supabaseClient();
       
-      // SIMPLIFIED: Process ONLY check-in reminders (sent to creators ONLY)
-      console.log(`[${new Date().toISOString()}] [REMINDER-PROCESSOR] Processing check-in reminders for creators ONLY`);
+      // ENHANCED: Process both reminder and final_delivery types
+      console.log(`[${new Date().toISOString()}] [REMINDER-PROCESSOR] Processing reminders and final deliveries for creators ONLY`);
       
-      // Get due check-in reminders - STRICTLY for creators only
-      const { data: checkInReminders, error: checkInError } = await supabase
+      // Get due reminders (both reminder and final_delivery types)
+      const { data: dueReminders, error: reminderError } = await supabase
         .from('reminder_schedule')
         .select(`
           *,
@@ -59,22 +57,21 @@ serve(async (req) => {
           )
         `)
         .eq('status', 'pending')
-        .eq('reminder_type', 'reminder') // CRITICAL: Only reminder type, NOT final_delivery
+        .in('reminder_type', ['reminder', 'final_delivery']) // ENHANCED: Include both types
         .eq('message_conditions.condition_type', 'no_check_in')
         .lte('scheduled_at', new Date().toISOString())
         .order('scheduled_at', { ascending: true });
 
-      if (checkInError) {
-        console.error("Error fetching check-in reminders:", checkInError);
+      if (reminderError) {
+        console.error("Error fetching due reminders:", reminderError);
       } else {
-        console.log(`Found ${checkInReminders?.length || 0} due check-in reminders`);
+        console.log(`Found ${dueReminders?.length || 0} due reminders (including final deliveries)`);
         
-        if (checkInReminders && checkInReminders.length > 0) {
-          for (const reminder of checkInReminders) {
+        if (dueReminders && dueReminders.length > 0) {
+          for (const reminder of dueReminders) {
             try {
-              console.log(`[CHECK-IN-ONLY] Processing check-in reminder ${reminder.id} for message ${reminder.message_id}`);
-              console.log(`[CHECK-IN-ONLY] Creator user_id: ${reminder.messages.user_id}`);
-              console.log(`[CHECK-IN-ONLY] CRITICAL: This will ONLY send to creator, NO recipients`);
+              console.log(`[PROCESSING] Processing ${reminder.reminder_type} ${reminder.id} for message ${reminder.message_id}`);
+              console.log(`[PROCESSING] Creator user_id: ${reminder.messages.user_id}`);
               
               // Get creator email from profiles table
               const { data: creatorProfile, error: profileError } = await supabase
@@ -84,7 +81,7 @@ serve(async (req) => {
                 .single();
               
               if (!creatorProfile?.email) {
-                console.error(`[CHECK-IN-ONLY] No email found in profiles for creator ${reminder.messages.user_id}`, profileError);
+                console.error(`[PROCESSING] No email found in profiles for creator ${reminder.messages.user_id}`, profileError);
                 
                 // Mark as failed
                 await supabase
@@ -100,7 +97,7 @@ serve(async (req) => {
               }
               
               const creatorEmail = creatorProfile.email;
-              console.log(`[CHECK-IN-ONLY] Got creator email from profiles: ${creatorEmail}`);
+              console.log(`[PROCESSING] Got creator email from profiles: ${creatorEmail}`);
               
               // Mark as processing
               await supabase
@@ -111,37 +108,35 @@ serve(async (req) => {
                 })
                 .eq('id', reminder.id);
               
-              // Calculate hours until deadline
+              // Calculate hours until deadline (or 0 for final delivery)
               const lastChecked = new Date(reminder.message_conditions.last_checked);
               const deadline = new Date(lastChecked);
               deadline.setHours(deadline.getHours() + (reminder.message_conditions.hours_threshold || 0));
               deadline.setMinutes(deadline.getMinutes() + (reminder.message_conditions.minutes_threshold || 0));
               
-              const hoursUntilDeadline = (deadline.getTime() - Date.now()) / (1000 * 60 * 60);
+              const hoursUntilDeadline = reminder.reminder_type === 'final_delivery' ? 0 : 
+                Math.max(0, (deadline.getTime() - Date.now()) / (1000 * 60 * 60));
               
-              console.log(`[CHECK-IN-ONLY] Sending check-in reminder for message "${reminder.messages.title}" - ${hoursUntilDeadline.toFixed(1)} hours until deadline`);
-              console.log(`[CHECK-IN-ONLY] Using creator email from profiles: ${creatorEmail}`);
-              console.log(`[CHECK-IN-ONLY] CONFIRMED: Calling sendCreatorReminder() ONLY - NO recipient emails`);
+              console.log(`[PROCESSING] Sending ${reminder.reminder_type} for message "${reminder.messages.title}" - ${hoursUntilDeadline.toFixed(1)} hours until deadline`);
               
-              // CRITICAL FIX: ONLY call sendCreatorReminder, NEVER sendRecipientReminders
+              // Send reminder using existing service
               const reminderResults = await sendCreatorReminder(
                 reminder.message_id,
                 reminder.condition_id,
                 reminder.messages.title,
                 reminder.messages.user_id,
-                creatorEmail,
                 hoursUntilDeadline,
                 reminder.scheduled_at,
                 debug
               );
               
-              console.log(`[CHECK-IN-ONLY] sendCreatorReminder() completed, results:`, reminderResults);
+              console.log(`[PROCESSING] Email sending completed, results:`, reminderResults);
               
               // Check if any reminders were successful
               const hasSuccess = reminderResults.some(result => result.success);
               
               if (hasSuccess) {
-                // Mark as sent
+                // ENHANCED: Mark reminder as sent and update database
                 await supabase
                   .from('reminder_schedule')
                   .update({ 
@@ -150,7 +145,43 @@ serve(async (req) => {
                   })
                   .eq('id', reminder.id);
                 
-                console.log(`[CHECK-IN-ONLY] Successfully sent check-in reminder ${reminder.id} to creator email ${creatorEmail} ONLY`);
+                console.log(`[PROCESSING] Successfully sent ${reminder.reminder_type} ${reminder.id} to creator email ${creatorEmail}`);
+                
+                // ENHANCED: If this was a final delivery, update the condition's last_checked timestamp
+                if (reminder.reminder_type === 'final_delivery') {
+                  console.log(`[FINAL-DELIVERY] Updating last_checked timestamp for condition ${reminder.condition_id}`);
+                  
+                  await supabase
+                    .from('message_conditions')
+                    .update({ 
+                      last_checked: new Date().toISOString(),
+                      updated_at: new Date().toISOString()
+                    })
+                    .eq('id', reminder.condition_id);
+                  
+                  // ENHANCED: Emit delivery completion event for final deliveries
+                  console.log(`[FINAL-DELIVERY] Emitting message-delivery-complete event for message ${reminder.message_id}`);
+                  
+                  // We can't emit events directly from Edge Functions, but we can trigger database changes
+                  // that will be picked up by the frontend through realtime subscriptions
+                  
+                  // Log the completion event for potential pickup by other systems
+                  await supabase.from('reminder_delivery_log').insert({
+                    reminder_id: `final-delivery-${reminder.id}`,
+                    message_id: reminder.message_id,
+                    condition_id: reminder.condition_id,
+                    recipient: creatorEmail,
+                    delivery_channel: 'event',
+                    delivery_status: 'completed',
+                    response_data: { 
+                      event_type: 'message-delivery-complete',
+                      delivery_type: 'final_delivery',
+                      completed_at: new Date().toISOString(),
+                      source: 'send-reminder-emails'
+                    }
+                  });
+                }
+                
               } else {
                 // Mark as failed
                 await supabase
@@ -162,11 +193,11 @@ serve(async (req) => {
                   })
                   .eq('id', reminder.id);
                 
-                console.error(`[CHECK-IN-ONLY] Failed to send check-in reminder ${reminder.id}:`, reminderResults);
+                console.error(`[PROCESSING] Failed to send ${reminder.reminder_type} ${reminder.id}:`, reminderResults);
               }
               
             } catch (reminderError) {
-              console.error(`[CHECK-IN-ONLY] Error processing check-in reminder ${reminder.id}:`, reminderError);
+              console.error(`[PROCESSING] Error processing reminder ${reminder.id}:`, reminderError);
               
               // Mark as failed
               await supabase
@@ -180,19 +211,19 @@ serve(async (req) => {
             }
           }
         } else {
-          console.log(`[${new Date().toISOString()}] [CHECK-IN-ONLY] No due check-in reminders found`);
+          console.log(`[${new Date().toISOString()}] [PROCESSING] No due reminders found`);
         }
       }
       
-      console.log(`[${new Date().toISOString()}] [REMINDER-PROCESSOR] Processing complete - check-in reminders to creators ONLY`);
+      console.log(`[${new Date().toISOString()}] [REMINDER-PROCESSOR] Processing complete - reminders and final deliveries handled`);
       
-      console.log("Processing complete: Check-in reminders sent to creators only");
+      console.log("Processing complete: Check-in reminders and final deliveries sent to creators only");
     }
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: "Reminder processing completed - check-in reminders to creators ONLY",
+        message: "Reminder processing completed - check-in reminders and final deliveries to creators ONLY",
         timestamp: new Date().toISOString()
       }),
       {
@@ -216,4 +247,3 @@ serve(async (req) => {
     );
   }
 });
-

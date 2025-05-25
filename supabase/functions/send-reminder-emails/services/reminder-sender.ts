@@ -3,8 +3,7 @@ import { supabaseClient } from "../supabase-client.ts";
 import { generateCheckInUrl } from "../utils/url-generator.ts";
 
 /**
- * SIMPLIFIED: Send check-in reminder ONLY to message creator
- * This function now ONLY sends reminders to creators, not recipients
+ * ENHANCED: Send check-in reminder ONLY to message creator with event emission
  */
 export async function sendCreatorReminder(
   messageId: string,
@@ -143,6 +142,35 @@ export async function sendCreatorReminder(
       }
     } else {
       console.log(`[REMINDER-SENDER] No WhatsApp number for creator ${creatorUserId}`);
+    }
+    
+    // ENHANCED: Emit frontend refresh event after successful delivery
+    const hasSuccess = results.some(result => result.success);
+    if (hasSuccess) {
+      console.log(`[REMINDER-SENDER] Emitting conditions-updated event for message ${messageId}`);
+      
+      // Log an event that can be picked up by frontend monitoring
+      try {
+        await supabase.from('reminder_delivery_log').insert({
+          reminder_id: `conditions-update-${Date.now()}`,
+          message_id: messageId,
+          condition_id: conditionId,
+          recipient: 'frontend',
+          delivery_channel: 'event',
+          delivery_status: 'completed',
+          response_data: { 
+            event_type: 'conditions-updated',
+            action: 'reminder-sent',
+            source: 'reminder-sender',
+            timestamp: new Date().toISOString(),
+            messageId: messageId,
+            conditionId: conditionId
+          }
+        });
+      } catch (eventError) {
+        console.error("[REMINDER-SENDER] Error logging conditions-updated event:", eventError);
+        // Non-fatal error, continue execution
+      }
     }
     
     return results;
