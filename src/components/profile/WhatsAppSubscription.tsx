@@ -22,12 +22,12 @@ export function WhatsAppSubscription() {
             className={`bg-green-50 border-green-200 text-green-700 hover:bg-green-100 hover:border-green-300 hover:text-green-800 ${HOVER_TRANSITION}`}
           >
             <MessageCircle className="h-4 w-4 mr-1.5" />
-            Subscribe to App Notifications
+            {isLoading ? "Sending..." : "Share Contact for Notifications"}
           </Button>
         </TooltipTrigger>
         <TooltipContent>
           <p className="text-sm">
-            Subscribe to receive SOS alerts and check-in reminders via WhatsApp
+            Share your contact information to receive SOS alerts and check-in reminders via WhatsApp
           </p>
         </TooltipContent>
       </Tooltip>

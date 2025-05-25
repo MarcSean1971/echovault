@@ -29,6 +29,44 @@ export function useWhatsAppSubscription() {
     setIsLoading(true);
     
     try {
+      // Get current user profile
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast({
+          title: "Authentication required",
+          description: "Please log in to subscribe to WhatsApp notifications.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Fetch user profile data
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('first_name, last_name, whatsapp_number, backup_email, email')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError || !profile) {
+        toast({
+          title: "Profile required",
+          description: "Please complete your profile before subscribing to notifications.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!profile.first_name || !profile.whatsapp_number) {
+        toast({
+          title: "Missing information",
+          description: "Please fill in your name and WhatsApp number in your profile.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Check if app WhatsApp number is available
       const appWhatsAppNumber = await getAppWhatsAppNumber();
       
       if (!appWhatsAppNumber) {
@@ -40,30 +78,36 @@ export function useWhatsAppSubscription() {
         return;
       }
 
-      // Clean the phone number (remove whatsapp: prefix if present)
-      const cleanNumber = appWhatsAppNumber.replace('whatsapp:', '').trim();
+      // Send contact card via the new edge function
+      const { data, error } = await supabase.functions.invoke("send-whatsapp-contact", {
+        body: {
+          userProfile: {
+            ...profile,
+            email: user.email // Include the auth email as well
+          }
+        }
+      });
       
-      // Create the subscription message
-      const message = encodeURIComponent(
-        "Hi! I'd like to subscribe to emergency notifications and check-in reminders from your safety app. Please add me to your notification list."
-      );
-      
-      // Create WhatsApp URL
-      const whatsappUrl = `https://wa.me/${cleanNumber.replace(/[^\d]/g, '')}?text=${message}`;
-      
-      // Open WhatsApp
-      window.open(whatsappUrl, '_blank');
+      if (error) {
+        console.error('Error sending contact card:', error);
+        toast({
+          title: "Error",
+          description: "Failed to send your contact information. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      }
       
       toast({
-        title: "Opening WhatsApp",
-        description: "Complete your subscription by sending the pre-filled message.",
+        title: "Contact card sent!",
+        description: "Your contact information has been shared. You'll be added to the notification list shortly.",
       });
       
     } catch (error) {
-      console.error('Error opening WhatsApp subscription:', error);
+      console.error('Error in WhatsApp subscription:', error);
       toast({
         title: "Error",
-        description: "Failed to open WhatsApp. Please try again.",
+        description: "Failed to send contact information. Please try again.",
         variant: "destructive",
       });
     } finally {
