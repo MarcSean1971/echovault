@@ -1,3 +1,4 @@
+
 import { Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -41,6 +42,7 @@ const PublicMessageAccess = lazy(() => import("@/pages/PublicMessageAccess"));
 const DiagnosticAccess = lazy(() => import("@/pages/DiagnosticAccess"));
 const TermsPage = lazy(() => import("@/pages/Terms"));
 const PrivacyPage = lazy(() => import("@/pages/Privacy"));
+const CheckInPage = lazy(() => import("@/pages/CheckIn"));
 
 export default function App() {
   useErrorHandler();
@@ -97,6 +99,7 @@ export default function App() {
                 <Route path="register" element={<RegisterPage />} />
                 <Route path="terms" element={<TermsPage />} />
                 <Route path="privacy" element={<PrivacyPage />} />
+                <Route path="check-in" element={<CheckInPage />} />
               </Route>
               
               {/* Public message access route - using PublicAppLayout */}

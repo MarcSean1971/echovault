@@ -1,584 +1,161 @@
+
 import { supabaseClient } from "../supabase-client.ts";
-import { Resend } from "npm:resend@2.0.0";
-import { generateAccessUrl } from "../utils/url-generator.ts";
-import { sendWhatsApp } from "./whatsapp-service.ts";
-import { getAppUrl } from "./whatsapp-service.ts";
-import { formatTimeUntilDeadline } from "./whatsapp-service.ts";
-import { recordMessageDelivery } from "../db/delivery-tracking.ts";
-
-// Initialize email client with API key
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
-
-// Define types for better parameter handling
-interface ReminderResult {
-  success: boolean;
-  recipient: string;
-  channel: 'email' | 'whatsapp' | 'system';
-  messageId?: string;
-  error?: string | null;
-}
+import { generateCheckInUrl } from "../utils/url-generator.ts";
 
 /**
- * RADICAL FIX: Send reminder to creator using email passed from JWT context
+ * SIMPLIFIED: Send check-in reminder ONLY to message creator
+ * This function now ONLY sends reminders to creators, not recipients
  */
 export async function sendCreatorReminder(
   messageId: string,
   conditionId: string,
   messageTitle: string,
   creatorUserId: string,
-  creatorEmail: string,  // FIXED: Pass email directly from JWT context
   hoursUntilDeadline: number,
   scheduledAt: string,
   debug: boolean = false
-): Promise<ReminderResult[]> {
+): Promise<Array<{ success: boolean; recipient: string; channel: string; error?: string; messageId?: string }>> {
+  const supabase = supabaseClient();
+  const results: Array<{ success: boolean; recipient: string; channel: string; error?: string; messageId?: string }> = [];
+  
   try {
-    const results: ReminderResult[] = [];
+    console.log(`[REMINDER-SENDER] Sending check-in reminder to creator ${creatorUserId} for message ${messageId}`);
     
-    if (!creatorUserId || !creatorEmail) {
-      console.error("Creator user ID or email is missing in sendCreatorReminder!");
-      return [{ success: false, recipient: "unknown", channel: 'system', error: "Missing creator user ID or email" }];
-    }
-
-    // Get creator's profile information for supplementary data
-    const supabase = supabaseClient();
-    let creatorName = "User";
-    let creatorPhone = null;
-    
-    console.log(`[REMINDER-SENDER] RADICAL FIX: Using creator email from JWT context: ${creatorEmail}`);
-    
-    // Get the profile data for name and phone (supplementary data only)
-    const { data: profileData, error: profileError } = await supabase
+    // Get creator's profile information
+    const { data: creatorProfile, error: profileError } = await supabase
       .from('profiles')
-      .select('id, first_name, last_name, whatsapp_number')
+      .select('email, first_name, whatsapp_number')
       .eq('id', creatorUserId)
       .single();
     
-    if (debug) {
-      console.log(`[REMINDER-SENDER] Retrieved profile for user ${creatorUserId}:`, 
-        profileError ? `ERROR: ${profileError.message}` : 
-        profileData ? `SUCCESS: ${JSON.stringify(profileData)}` : "No profile data found");
-    }
-    
-    // Set the creator name from profile if available
-    if (profileData) {
-      creatorName = profileData.first_name 
-        ? `${profileData.first_name} ${profileData.last_name || ''}`
-        : "User";
-      
-      // Get phone number if available
-      if (profileData.whatsapp_number) {
-        creatorPhone = profileData.whatsapp_number;
-      }
-    }
-    
-    // CRITICAL FIX: Generate delivery ID and create delivery record like final delivery does
-    const deliveryId = crypto.randomUUID();
-    
-    // Create delivery record in database BEFORE sending email (same as final delivery)
-    try {
-      await recordMessageDelivery(messageId, conditionId, creatorUserId, deliveryId);
-      console.log(`[REMINDER-SENDER] Created delivery record for check-in reminder: ${deliveryId}`);
-    } catch (deliveryError) {
-      console.error(`[REMINDER-SENDER] Error creating delivery record:`, deliveryError);
-      // Continue anyway - don't fail the reminder for logging issues
-    }
-    
-    // Format the time remaining in a user-friendly way
-    const timeRemaining = formatTimeRemaining(hoursUntilDeadline);
-    
-    // CRITICAL FIX: Generate the access URL using the SAME system as final delivery
-    const accessUrl = generateAccessUrl(messageId, creatorEmail);
-    
-    // FIXED: Use proper HTML template specific for creator check-in reminders
-    const html = `
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Check-In Reminder</title>
-        <style>
-          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-          body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            line-height: 1.5;
-            color: #334155;
-            background-color: #f8fafc;
-            padding: 24px;
-            margin: 0;
-          }
-          .container {
-            max-width: 600px;
-            margin: 0 auto;
-            background-color: white;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-          }
-          .header {
-            background-color: #9b87f5;
-            padding: 24px;
-            text-align: center;
-          }
-          .header h1 {
-            color: white;
-            margin: 0;
-            font-size: 24px;
-            font-weight: 600;
-          }
-          .content {
-            padding: 32px;
-          }
-          .action-button {
-            display: inline-block;
-            background-color: #9b87f5;
-            color: white;
-            text-decoration: none;
-            padding: 12px 24px;
-            border-radius: 6px;
-            font-weight: 500;
-            margin-top: 24px;
-          }
-          .footer {
-            background-color: #f1f5f9;
-            padding: 16px;
-            text-align: center;
-            font-size: 14px;
-            color: #64748b;
-          }
-          .warning-box {
-            background-color: #fef2f2;
-            border-left: 4px solid #ef4444;
-            padding: 16px;
-            margin: 24px 0;
-            border-radius: 4px;
-          }
-          .time-remaining {
-            font-weight: bold;
-            font-size: 18px;
-            color: #ef4444;
-          }
-          .deadline-info {
-            margin-bottom: 24px;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>Check-In Reminder</h1>
-          </div>
-          <div class="content">
-            <p><strong>Hello ${creatorName},</strong></p>
-            
-            <p>This is a reminder to check in for your message:</p>
-            <h2 style="color: #1e293b; margin-bottom: 16px;">${messageTitle}</h2>
-            
-            <div class="warning-box">
-              <div class="deadline-info">
-                <p>You need to check in <span class="time-remaining">within ${timeRemaining}</span> or your message will be automatically delivered to recipients.</p>
-              </div>
-            </div>
-            
-            <p>To check in and reset the timer, please click the button below:</p>
-            
-            <div style="text-align: center;">
-              <a href="${accessUrl}" class="action-button">Check In Now</a>
-            </div>
-            
-            <p style="margin-top: 24px; font-size: 14px;">If the button doesn't work, copy and paste this link into your browser:</p>
-            <p style="background-color: #f1f5f9; padding: 12px; border-radius: 4px; font-size: 14px; word-break: break-all;">
-              <a href="${accessUrl}" style="color: #9b87f5; text-decoration: none;">${accessUrl}</a>
-            </p>
-          </div>
-          <div class="footer">
-            <p>This is an automated reminder from EchoVault. Please do not reply to this email.</p>
-            <p>© ${new Date().getFullYear()} EchoVault - Secure Message Delivery</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-    
-    try {
-      // Send email using Resend API - SAME AS FINAL DELIVERY
-      console.log(`[REMINDER-SENDER] RADICAL FIX: Sending check-in reminder email to ${creatorEmail} from JWT context`);
-      
-      const emailResponse = await resend.emails.send({
-        from: `EchoVault <notifications@echo-vault.app>`,
-        to: [creatorEmail],
-        subject: `🔔 Check-In Reminder for "${messageTitle}" - ${timeRemaining} Remaining`,
-        html: html,
-      });
-
-      if (debug) {
-        console.log(`[REMINDER-SENDER] RADICAL FIX: Email sent successfully to creator ${creatorEmail}:`, emailResponse);
-      }
-
-      results.push({
-        success: true,
-        recipient: creatorEmail,
-        channel: 'email',
-        messageId: typeof emailResponse.id === 'string' ? emailResponse.id : deliveryId
-      });
-      
-    } catch (emailError: any) {
-      console.error(`[REMINDER-SENDER] Error sending creator reminder email:`, emailError);
-      
+    if (profileError || !creatorProfile) {
+      console.error("[REMINDER-SENDER] Error fetching creator profile:", profileError);
       results.push({
         success: false,
-        recipient: creatorEmail,
+        recipient: creatorUserId,
         channel: 'email',
-        error: emailError.message || "Unknown email sending error"
+        error: `Creator profile not found: ${profileError?.message || 'Unknown error'}`
+      });
+      return results;
+    }
+    
+    // Generate check-in URL
+    const checkInUrl = generateCheckInUrl(messageId);
+    
+    // Prepare reminder data
+    const reminderData = {
+      recipientName: creatorProfile.first_name || 'User',
+      recipientEmail: creatorProfile.email,
+      messageTitle: messageTitle,
+      hoursUntilDeadline: Math.max(0, hoursUntilDeadline),
+      scheduledAt: scheduledAt,
+      checkInUrl: checkInUrl,
+      messageId: messageId,
+      debug: debug
+    };
+    
+    console.log(`[REMINDER-SENDER] Reminder data prepared:`, {
+      recipient: creatorProfile.email,
+      messageTitle: messageTitle,
+      hoursUntilDeadline: reminderData.hoursUntilDeadline,
+      checkInUrl: checkInUrl
+    });
+    
+    // Send email reminder
+    try {
+      const { error: emailError } = await supabase.functions.invoke('send-reminder-emails', {
+        body: {
+          action: 'send-creator-reminder',
+          reminderData: reminderData
+        }
+      });
+      
+      if (emailError) {
+        console.error("[REMINDER-SENDER] Email sending error:", emailError);
+        results.push({
+          success: false,
+          recipient: creatorProfile.email,
+          channel: 'email',
+          error: `Email sending failed: ${emailError.message}`,
+          messageId: messageId
+        });
+      } else {
+        console.log(`[REMINDER-SENDER] Email reminder sent successfully to ${creatorProfile.email}`);
+        results.push({
+          success: true,
+          recipient: creatorProfile.email,
+          channel: 'email',
+          messageId: messageId
+        });
+      }
+    } catch (emailError: any) {
+      console.error("[REMINDER-SENDER] Email sending exception:", emailError);
+      results.push({
+        success: false,
+        recipient: creatorProfile.email,
+        channel: 'email',
+        error: `Email sending exception: ${emailError.message}`,
+        messageId: messageId
       });
     }
     
-    // WhatsApp integration for creator check-in reminders
-    if (creatorPhone) {
+    // Send WhatsApp reminder if WhatsApp number is available
+    if (creatorProfile.whatsapp_number) {
       try {
-        const whatsAppDeliveryId = crypto.randomUUID();
+        const whatsappMessage = `🔔 *EchoVault Reminder*\n\nYour message "${messageTitle}" needs a check-in.\n\n⏰ Time until deadline: ${Math.max(0, hoursUntilDeadline).toFixed(1)} hours\n\n✅ Check in now: ${checkInUrl}`;
         
-        // Create delivery record for WhatsApp
-        try {
-          await recordMessageDelivery(messageId, conditionId, creatorUserId, whatsAppDeliveryId);
-        } catch (whatsAppDeliveryError) {
-          console.error(`[REMINDER-SENDER] Error creating WhatsApp delivery record:`, whatsAppDeliveryError);
-        }
-        
-        const appUrl = await getAppUrl();
-        const formattedTime = formatTimeUntilDeadline(new Date(scheduledAt));
-        
-        const whatsAppResult = await sendWhatsApp(
-          {
-            phone: creatorPhone,
-            name: creatorName,
-            firstName: profileData?.first_name || creatorName.split(' ')[0] || "User"
-          },
-          {
-            id: messageId,
-            title: messageTitle,
-            user_id: creatorUserId
-          },
-          {
-            timeUntilDeadline: formattedTime,
-            appUrl: generateAccessUrl(messageId, creatorEmail) || appUrl,
-            debug: debug
+        const { error: whatsappError } = await supabase.functions.invoke('send-whatsapp-notification', {
+          body: {
+            to: creatorProfile.whatsapp_number,
+            message: whatsappMessage,
+            messageId: messageId,
+            source: 'check-in-reminder'
           }
-        );
+        });
         
-        if (whatsAppResult.success) {
-          if (debug) {
-            console.log(`[REMINDER-SENDER] WhatsApp message sent to creator ${creatorPhone}`);
-          }
-          
-          results.push({
-            success: true,
-            recipient: creatorPhone,
-            channel: 'whatsapp',
-            messageId: whatsAppResult.messageId || whatsAppDeliveryId
-          });
-        } else {
-          console.error(`[REMINDER-SENDER] Failed to send WhatsApp message:`, whatsAppResult.error);
-          
+        if (whatsappError) {
+          console.error("[REMINDER-SENDER] WhatsApp sending error:", whatsappError);
           results.push({
             success: false,
-            recipient: creatorPhone,
+            recipient: creatorProfile.whatsapp_number,
             channel: 'whatsapp',
-            error: whatsAppResult.error
+            error: `WhatsApp sending failed: ${whatsappError.message}`,
+            messageId: messageId
+          });
+        } else {
+          console.log(`[REMINDER-SENDER] WhatsApp reminder sent successfully to ${creatorProfile.whatsapp_number}`);
+          results.push({
+            success: true,
+            recipient: creatorProfile.whatsapp_number,
+            channel: 'whatsapp',
+            messageId: messageId
           });
         }
-      } catch (whatsAppError: any) {
-        console.error(`[REMINDER-SENDER] WhatsApp error:`, whatsAppError);
-        
+      } catch (whatsappError: any) {
+        console.error("[REMINDER-SENDER] WhatsApp sending exception:", whatsappError);
         results.push({
           success: false,
-          recipient: creatorPhone,
+          recipient: creatorProfile.whatsapp_number,
           channel: 'whatsapp',
-          error: whatsAppError.message || "Unknown WhatsApp error"
+          error: `WhatsApp sending exception: ${whatsappError.message}`,
+          messageId: messageId
         });
       }
-    } else if (debug) {
-      console.log(`[REMINDER-SENDER] No phone number available for WhatsApp notification to creator ${creatorUserId}`);
+    } else {
+      console.log(`[REMINDER-SENDER] No WhatsApp number for creator ${creatorUserId}`);
     }
     
     return results;
-  } catch (error: any) {
-    console.error(`[REMINDER-SENDER] Error in sendCreatorReminder:`, error);
     
-    return [{
+  } catch (error: any) {
+    console.error("[REMINDER-SENDER] Critical error in sendCreatorReminder:", error);
+    results.push({
       success: false,
-      recipient: "unknown",
+      recipient: creatorUserId,
       channel: 'system',
-      error: error.message || "Unknown system error"
-    }];
+      error: `Critical error: ${error.message}`,
+      messageId: messageId
+    });
+    return results;
   }
-}
-
-/**
- * Send reminder emails to recipients about upcoming message
- */
-export async function sendRecipientReminders(
-  messageId: string,
-  messageTitle: string,
-  senderName: string,
-  recipients: any[],
-  hoursUntilDeadline: number,
-  scheduledAt: string,
-  debug: boolean = false,
-  isFinalDelivery: boolean = false
-): Promise<ReminderResult[]> {
-  const results: ReminderResult[] = [];
-  
-  // Process each recipient
-  for (const recipient of recipients) {
-    try {
-      if (!recipient.email) {
-        console.warn(`Recipient has no email address: ${recipient.name || 'Unknown'}`);
-        continue;
-      }
-      
-      // CRITICAL FIX: Generate delivery ID and create delivery record like final delivery does
-      const deliveryId = crypto.randomUUID();
-      const recipientId = recipient.id || recipient.user_id || crypto.randomUUID();
-      
-      // Create delivery record in database BEFORE sending email (same as final delivery)
-      try {
-        await recordMessageDelivery(messageId, recipientId, recipientId, deliveryId);
-        console.log(`[REMINDER-SENDER] Created delivery record for recipient reminder: ${deliveryId}`);
-      } catch (deliveryError) {
-        console.error(`[REMINDER-SENDER] Error creating recipient delivery record:`, deliveryError);
-        // Continue anyway - don't fail the reminder for logging issues
-      }
-      
-      // Generate access URL for this recipient
-      const accessUrl = generateAccessUrl(messageId, recipient.email);
-      
-      // Format the time remaining in a user-friendly way
-      const timeRemaining = formatTimeRemaining(hoursUntilDeadline);
-      
-      // Use a different email template based on whether this is final delivery or a reminder
-      let subject, html;
-      
-      if (isFinalDelivery) {
-        subject = `Important Message from ${senderName}: "${messageTitle}"`;
-        html = `
-          <!DOCTYPE html>
-          <html lang="en">
-          <!-- Final delivery email template -->
-          <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Message Delivery</title>
-            <style>
-              @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-              body {
-                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-                line-height: 1.5;
-                color: #334155;
-                background-color: #f8fafc;
-                padding: 24px;
-                margin: 0;
-              }
-              .container {
-                max-width: 600px;
-                margin: 0 auto;
-                background-color: white;
-                border-radius: 8px;
-                overflow: hidden;
-                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-              }
-              .header {
-                background-color: #9b87f5;
-                padding: 24px;
-                text-align: center;
-              }
-              .header h1 {
-                color: white;
-                margin: 0;
-                font-size: 24px;
-                font-weight: 600;
-              }
-              .content {
-                padding: 32px;
-              }
-              .action-button {
-                display: inline-block;
-                background-color: #9b87f5;
-                color: white;
-                text-decoration: none;
-                padding: 12px 24px;
-                border-radius: 6px;
-                font-weight: 500;
-                margin-top: 24px;
-              }
-              .footer {
-                background-color: #f1f5f9;
-                padding: 16px;
-                text-align: center;
-                font-size: 14px;
-                color: #64748b;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <div class="header">
-                <h1>Message Delivery</h1>
-              </div>
-              <div class="content">
-                <p><strong>Hello ${recipient.name || 'there'},</strong></p>
-                
-                <p>${senderName} has sent you an important message that is now available:</p>
-                <h2 style="color: #1e293b; margin-bottom: 16px;">${messageTitle}</h2>
-                
-                <p>To view this message, please click the button below:</p>
-                
-                <div style="text-align: center;">
-                  <a href="${accessUrl}" class="action-button">View Message</a>
-                </div>
-                
-                <p style="margin-top: 24px; font-size: 14px;">If the button doesn't work, copy and paste this link into your browser:</p>
-                <p style="background-color: #f1f5f9; padding: 12px; border-radius: 4px; font-size: 14px; word-break: break-all;">
-                  <a href="${accessUrl}" style="color: #9b87f5; text-decoration: none;">${accessUrl}</a>
-                </p>
-              </div>
-              <div class="footer">
-                <p>This message was delivered through EchoVault. Please do not reply to this email.</p>
-              </div>
-            </div>
-          </body>
-          </html>
-        `;
-      } else {
-        subject = `Upcoming Message from ${senderName} - Available in ${timeRemaining}`;
-        html = `
-          <!DOCTYPE html>
-          <html lang="en">
-          <!-- Reminder email template -->
-          <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Message Reminder</title>
-            <style>
-              @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-              body {
-                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-                line-height: 1.5;
-                color: #334155;
-                background-color: #f8fafc;
-                padding: 24px;
-                margin: 0;
-              }
-              .container {
-                max-width: 600px;
-                margin: 0 auto;
-                background-color: white;
-                border-radius: 8px;
-                overflow: hidden;
-                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-              }
-              .header {
-                background-color: #9b87f5;
-                padding: 24px;
-                text-align: center;
-              }
-              .header h1 {
-                color: white;
-                margin: 0;
-                font-size: 24px;
-                font-weight: 600;
-              }
-              .content {
-                padding: 32px;
-              }
-              .footer {
-                background-color: #f1f5f9;
-                padding: 16px;
-                text-align: center;
-                font-size: 14px;
-                color: #64748b;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <div class="header">
-                <h1>Upcoming Message</h1>
-              </div>
-              <div class="content">
-                <p><strong>Hello ${recipient.name || 'there'},</strong></p>
-                
-                <p>This is a reminder that ${senderName} has sent you a message that will be available in ${timeRemaining}:</p>
-                <h2 style="color: #1e293b; margin-bottom: 16px;">${messageTitle}</h2>
-                
-                <p>You'll receive another notification when the message is available for viewing.</p>
-              </div>
-              <div class="footer">
-                <p>This is an automated reminder from EchoVault. Please do not reply to this email.</p>
-              </div>
-            </div>
-          </body>
-          </html>
-        `;
-      }
-
-      // Send email using Resend API
-      const emailResponse = await resend.emails.send({
-        from: `EchoVault <notifications@echo-vault.app>`,
-        to: [recipient.email],
-        subject: subject,
-        html: html,
-      });
-
-      if (debug) {
-        console.log(`[REMINDER-SENDER] Email sent to recipient ${recipient.email}:`, emailResponse);
-      }
-
-      results.push({
-        success: true,
-        recipient: recipient.email,
-        channel: 'email',
-        messageId: typeof emailResponse.id === 'string' ? emailResponse.id : deliveryId
-      });
-    } catch (error: any) {
-      console.error(`[REMINDER-SENDER] Error sending email to ${recipient.email}:`, error);
-      
-      results.push({
-        success: false,
-        recipient: recipient.email || "unknown",
-        channel: 'email',
-        error: error.message || "Unknown email sending error"
-      });
-    }
-  }
-  
-  return results;
-}
-
-/**
- * Format hours until deadline in a user-friendly way
- */
-function formatTimeRemaining(hours: number): string {
-  if (isNaN(hours) || hours < 0) {
-    return "now";
-  }
-
-  if (hours < 1) {
-    const minutes = Math.round(hours * 60);
-    return `${minutes} minute${minutes !== 1 ? 's' : ''}`;
-  }
-  
-  if (hours < 24) {
-    const roundedHours = Math.round(hours);
-    return `${roundedHours} hour${roundedHours !== 1 ? 's' : ''}`;
-  }
-  
-  const days = Math.floor(hours / 24);
-  const remainingHours = Math.round(hours % 24);
-  
-  if (remainingHours === 0) {
-    return `${days} day${days !== 1 ? 's' : ''}`;
-  }
-  
-  return `${days} day${days !== 1 ? 's' : ''} and ${remainingHours} hour${remainingHours !== 1 ? 's' : ''}`;
 }
