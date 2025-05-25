@@ -29,6 +29,8 @@ const queryClient = new QueryClient({
 const HomePage = lazy(() => import("@/pages/Home"));
 const LoginPage = lazy(() => import("@/pages/Login"));
 const RegisterPage = lazy(() => import("@/pages/Register"));
+const ForgotPasswordPage = lazy(() => import("@/pages/ForgotPassword"));
+const ResetPasswordPage = lazy(() => import("@/pages/ResetPassword"));
 const NotFoundPage = lazy(() => import("@/pages/NotFound"));
 const MessagesPage = lazy(() => import("@/pages/Messages"));
 const DashboardPage = lazy(() => import("@/pages/Dashboard"));
@@ -97,6 +99,8 @@ export default function App() {
                 <Route index element={<HomePage />} />
                 <Route path="login" element={<LoginPage />} />
                 <Route path="register" element={<RegisterPage />} />
+                <Route path="forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="reset-password" element={<ResetPasswordPage />} />
                 <Route path="terms" element={<TermsPage />} />
                 <Route path="privacy" element={<PrivacyPage />} />
                 <Route path="check-in" element={<CheckInPage />} />
