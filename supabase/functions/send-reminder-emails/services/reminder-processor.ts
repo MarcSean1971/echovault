@@ -1,4 +1,3 @@
-
 import { supabaseClient } from "../supabase-client.ts";
 import { sendCreatorReminder, sendRecipientReminders } from "./reminder-sender.ts";
 
@@ -14,7 +13,7 @@ function logWithTimestamp(message: string, data?: any) {
 
 /**
  * CRITICAL FIX: Enhanced reminder processing with proper separation of reminder types
- * This function now ensures check-in reminders and final delivery are processed separately
+ * FIXED: Only processes check-in reminders normally, creates final delivery dynamically when needed
  */
 export async function processDueReminders(
   messageId?: string,
@@ -75,97 +74,10 @@ export async function processDueReminders(
       logWithTimestamp(`[REMINDER-PROCESSOR] No due check-in reminders found`);
     }
     
-    // CRITICAL FIX: Process final delivery messages ONLY if no check-in reminders are pending for the same message
-    logWithTimestamp(`[REMINDER-PROCESSOR] PHASE 2: Processing final delivery messages (with safeguards)`);
+    // CRITICAL FIX: Check for missed deadlines and create final delivery dynamically
+    logWithTimestamp(`[REMINDER-PROCESSOR] PHASE 2: Checking for missed deadlines to create final delivery`);
     
-    let finalDeliveryQuery = supabase
-      .from('reminder_schedule')
-      .select('*')
-      .eq('reminder_type', 'final_delivery') // ONLY final delivery
-      .eq('status', 'pending')
-      .lte('scheduled_at', new Date().toISOString());
-    
-    if (messageId) {
-      finalDeliveryQuery = finalDeliveryQuery.eq('message_id', messageId);
-    }
-    
-    const { data: finalDeliveryReminders, error: finalDeliveryError } = await finalDeliveryQuery.limit(25);
-    
-    if (finalDeliveryError) {
-      logWithTimestamp(`[REMINDER-PROCESSOR] Error fetching final delivery reminders:`, finalDeliveryError);
-      results.errors.push(`Final delivery query error: ${finalDeliveryError.message}`);
-    } else if (finalDeliveryReminders && finalDeliveryReminders.length > 0) {
-      logWithTimestamp(`[REMINDER-PROCESSOR] Found ${finalDeliveryReminders.length} due final delivery reminders`);
-      
-      for (const reminder of finalDeliveryReminders) {
-        // CRITICAL SAFEGUARD: Check if there are still pending check-in reminders for this message
-        const { data: pendingCheckIns, error: pendingError } = await supabase
-          .from('reminder_schedule')
-          .select('id')
-          .eq('message_id', reminder.message_id)
-          .eq('reminder_type', 'reminder')
-          .eq('status', 'pending')
-          .limit(1);
-        
-        if (pendingError) {
-          logWithTimestamp(`[REMINDER-PROCESSOR] Error checking pending check-ins:`, pendingError);
-          continue;
-        }
-        
-        if (pendingCheckIns && pendingCheckIns.length > 0) {
-          logWithTimestamp(`[REMINDER-PROCESSOR] SAFEGUARD: Skipping final delivery for message ${reminder.message_id} - pending check-in reminders exist`);
-          continue;
-        }
-        
-        // ADDITIONAL SAFEGUARD: Verify the message condition is still active and at deadline
-        const { data: condition, error: conditionError } = await supabase
-          .from('message_conditions')
-          .select('id, active, last_checked, hours_threshold, minutes_threshold')
-          .eq('id', reminder.condition_id)
-          .single();
-        
-        if (conditionError || !condition) {
-          logWithTimestamp(`[REMINDER-PROCESSOR] Condition not found for final delivery ${reminder.id}`);
-          continue;
-        }
-        
-        if (!condition.active) {
-          logWithTimestamp(`[REMINDER-PROCESSOR] SAFEGUARD: Condition ${reminder.condition_id} is not active, skipping final delivery`);
-          continue;
-        }
-        
-        // CRITICAL: Verify we're actually at the deadline
-        const now = new Date();
-        const lastChecked = new Date(condition.last_checked);
-        const deadline = new Date(lastChecked);
-        deadline.setHours(deadline.getHours() + (condition.hours_threshold || 0));
-        deadline.setMinutes(deadline.getMinutes() + (condition.minutes_threshold || 0));
-        
-        const timeUntilDeadline = deadline.getTime() - now.getTime();
-        const minutesUntilDeadline = timeUntilDeadline / (1000 * 60);
-        
-        if (minutesUntilDeadline > 5 && !forceSend) { // 5-minute grace period
-          logWithTimestamp(`[REMINDER-PROCESSOR] SAFEGUARD: Final delivery for ${reminder.id} is premature - ${minutesUntilDeadline.toFixed(2)} minutes until deadline`);
-          continue;
-        }
-        
-        logWithTimestamp(`[REMINDER-PROCESSOR] Processing final delivery ${reminder.id} - deadline reached`);
-        
-        const finalResult = await processIndividualReminderWithRecovery(reminder, debug);
-        results.processedCount++;
-        
-        if (finalResult.success) {
-          results.successCount++;
-          logWithTimestamp(`[REMINDER-PROCESSOR] Final delivery ${reminder.id} processed successfully`);
-        } else {
-          results.failedCount++;
-          results.errors.push(`Final delivery ${reminder.id}: ${finalResult.error}`);
-          logWithTimestamp(`[REMINDER-PROCESSOR] Final delivery ${reminder.id} failed:`, finalResult.error);
-        }
-      }
-    } else {
-      logWithTimestamp(`[REMINDER-PROCESSOR] No due final delivery reminders found`);
-    }
+    await checkAndCreateFinalDeliveryForMissedDeadlines(supabase, messageId, results);
     
     logWithTimestamp(`[REMINDER-PROCESSOR] Enhanced processing complete`, results);
     return results;
@@ -174,6 +86,126 @@ export async function processDueReminders(
     logWithTimestamp(`[REMINDER-PROCESSOR] Critical error in enhanced processing:`, error);
     results.errors.push(`Critical processing error: ${error.message}`);
     return results;
+  }
+}
+
+/**
+ * CRITICAL FIX: Check for missed deadlines and create final delivery reminders dynamically
+ */
+async function checkAndCreateFinalDeliveryForMissedDeadlines(
+  supabase: any, 
+  messageId?: string, 
+  results?: any
+): Promise<void> {
+  try {
+    logWithTimestamp(`[REMINDER-PROCESSOR] Checking for missed check-in deadlines`);
+    
+    // Find active check-in conditions where deadline has passed
+    let conditionsQuery = supabase
+      .from('message_conditions')
+      .select(`
+        id, message_id, condition_type, hours_threshold, minutes_threshold, 
+        last_checked, active, recipients
+      `)
+      .eq('active', true)
+      .in('condition_type', ['no_check_in', 'recurring_check_in', 'inactivity_to_date']);
+    
+    if (messageId) {
+      conditionsQuery = conditionsQuery.eq('message_id', messageId);
+    }
+    
+    const { data: conditions, error: conditionsError } = await conditionsQuery;
+    
+    if (conditionsError) {
+      logWithTimestamp(`[REMINDER-PROCESSOR] Error fetching conditions:`, conditionsError);
+      return;
+    }
+    
+    if (!conditions || conditions.length === 0) {
+      logWithTimestamp(`[REMINDER-PROCESSOR] No active check-in conditions found`);
+      return;
+    }
+    
+    const now = new Date();
+    
+    for (const condition of conditions) {
+      try {
+        // Calculate deadline
+        const lastChecked = new Date(condition.last_checked);
+        const deadline = new Date(lastChecked);
+        deadline.setHours(deadline.getHours() + (condition.hours_threshold || 0));
+        deadline.setMinutes(deadline.getMinutes() + (condition.minutes_threshold || 0));
+        
+        // Check if deadline has passed
+        if (deadline <= now) {
+          logWithTimestamp(`[REMINDER-PROCESSOR] Deadline missed for condition ${condition.id}, checking for final delivery`);
+          
+          // Check if final delivery already exists
+          const { data: existingFinalDelivery } = await supabase
+            .from('reminder_schedule')
+            .select('id')
+            .eq('message_id', condition.message_id)
+            .eq('condition_id', condition.id)
+            .eq('reminder_type', 'final_delivery')
+            .limit(1);
+          
+          if (existingFinalDelivery && existingFinalDelivery.length > 0) {
+            logWithTimestamp(`[REMINDER-PROCESSOR] Final delivery already exists for condition ${condition.id}`);
+            continue;
+          }
+          
+          // Create final delivery reminder dynamically
+          logWithTimestamp(`[REMINDER-PROCESSOR] Creating dynamic final delivery for missed deadline`);
+          
+          const finalDeliveryEntry = {
+            message_id: condition.message_id,
+            condition_id: condition.id,
+            scheduled_at: deadline.toISOString(),
+            reminder_type: 'final_delivery',
+            status: 'pending',
+            delivery_priority: 'critical',
+            retry_strategy: 'aggressive'
+          };
+          
+          const { error: insertError } = await supabase
+            .from('reminder_schedule')
+            .insert([finalDeliveryEntry]);
+          
+          if (insertError) {
+            logWithTimestamp(`[REMINDER-PROCESSOR] Error creating final delivery:`, insertError);
+            if (results) {
+              results.errors.push(`Failed to create final delivery for condition ${condition.id}: ${insertError.message}`);
+            }
+          } else {
+            logWithTimestamp(`[REMINDER-PROCESSOR] Successfully created final delivery for condition ${condition.id}`);
+            
+            // Process the final delivery immediately since deadline is already passed
+            const finalResult = await processIndividualReminderWithRecovery(finalDeliveryEntry, true);
+            
+            if (results) {
+              results.processedCount++;
+              if (finalResult.success) {
+                results.successCount++;
+                logWithTimestamp(`[REMINDER-PROCESSOR] Final delivery processed successfully`);
+              } else {
+                results.failedCount++;
+                results.errors.push(`Final delivery processing failed: ${finalResult.error}`);
+              }
+            }
+          }
+        } else {
+          const minutesUntilDeadline = Math.round((deadline.getTime() - now.getTime()) / (1000 * 60));
+          logWithTimestamp(`[REMINDER-PROCESSOR] Condition ${condition.id} deadline not yet reached (${minutesUntilDeadline} minutes remaining)`);
+        }
+      } catch (conditionError: any) {
+        logWithTimestamp(`[REMINDER-PROCESSOR] Error processing condition ${condition.id}:`, conditionError);
+        if (results) {
+          results.errors.push(`Error processing condition ${condition.id}: ${conditionError.message}`);
+        }
+      }
+    }
+  } catch (error: any) {
+    logWithTimestamp(`[REMINDER-PROCESSOR] Error in checkAndCreateFinalDeliveryForMissedDeadlines:`, error);
   }
 }
 

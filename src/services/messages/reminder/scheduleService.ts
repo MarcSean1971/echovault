@@ -1,6 +1,7 @@
+
 /**
  * Service functions for creating and managing reminder schedules
- * FIXED: Ensure final delivery is always scheduled at the exact deadline
+ * FIXED: Only create check-in reminders initially, final delivery created dynamically when needed
  */
 
 import { supabase } from "@/integrations/supabase/client";
@@ -10,7 +11,7 @@ import { ReminderScheduleParams, ReminderResult } from "./types";
 
 /**
  * Create or update reminder schedule - uses upsert with the unique constraint
- * FIXED: Final delivery always scheduled at exact deadline
+ * FIXED: Only creates check-in reminders, no automatic final delivery scheduling
  */
 export async function createOrUpdateReminderSchedule(params: ReminderScheduleParams, isEdit: boolean = false): Promise<boolean> {
   try {
@@ -20,15 +21,15 @@ export async function createOrUpdateReminderSchedule(params: ReminderSchedulePar
     // Mark existing reminders as obsolete first (safety measure)
     await markRemindersAsObsolete(params.messageId, params.conditionId, isEdit);
     
-    // Calculate scheduled times with FIXED deadline logic
-    const scheduleTimes = calculateFixedScheduleTimes(params);
+    // Calculate scheduled times with FIXED logic - ONLY check-in reminders
+    const scheduleTimes = calculateCheckInReminderTimes(params);
     
     if (scheduleTimes.length === 0) {
       console.warn("[REMINDER-SERVICE] No schedule times generated");
       return false;
     }
     
-    console.log(`[REMINDER-SERVICE] Generated ${scheduleTimes.length} schedule entries with fixed deadline logic`);
+    console.log(`[REMINDER-SERVICE] Generated ${scheduleTimes.length} CHECK-IN REMINDER entries only`);
     console.log(`[REMINDER-SERVICE] Entry breakdown:`, {
       checkInReminders: scheduleTimes.filter(s => s.reminder_type === 'reminder').length,
       finalDelivery: scheduleTimes.filter(s => s.reminder_type === 'final_delivery').length
@@ -72,7 +73,7 @@ export async function createOrUpdateReminderSchedule(params: ReminderSchedulePar
       console.log(`[REMINDER-SERVICE] Verified ${count} pending reminders exist for message ${params.messageId}`);
     }
     
-    console.log(`[REMINDER-SERVICE] Successfully created ${scheduleTimes.length} reminder schedule entries with fixed deadline logic`);
+    console.log(`[REMINDER-SERVICE] Successfully created ${scheduleTimes.length} CHECK-IN reminder schedule entries only`);
     
     // Broadcast an update event
     window.dispatchEvent(new CustomEvent('conditions-updated', { 
@@ -95,9 +96,9 @@ export async function createOrUpdateReminderSchedule(params: ReminderSchedulePar
 }
 
 /**
- * FIXED: Calculate reminder schedule times with final delivery ALWAYS at exact deadline
+ * FIXED: Calculate ONLY check-in reminder schedule times - NO automatic final delivery
  */
-function calculateFixedScheduleTimes(params: ReminderScheduleParams): any[] {
+function calculateCheckInReminderTimes(params: ReminderScheduleParams): any[] {
   const { messageId, conditionId, conditionType, triggerDate, reminderMinutes, lastChecked, hoursThreshold, minutesThreshold } = params;
   
   // For check-in conditions, we need to create a virtual deadline
@@ -151,8 +152,8 @@ function calculateFixedScheduleTimes(params: ReminderScheduleParams): any[] {
   
   console.log(`[REMINDER-SERVICE] Using adaptive minimum separation: ${minSeparationMinutes} minutes`);
   
-  // Generate schedule entries with FIXED deadline logic
-  console.log(`[REMINDER-SERVICE] Generating reminders for ${reminderMinutes.length} times:`, reminderMinutes);
+  // Generate ONLY check-in reminder entries - NO automatic final delivery
+  console.log(`[REMINDER-SERVICE] Generating CHECK-IN reminders ONLY for ${reminderMinutes.length} times:`, reminderMinutes);
   console.log(`[REMINDER-SERVICE] Using deadline: ${effectiveDeadline.toISOString()}`);
   
   const scheduleEntries = [];
@@ -188,39 +189,24 @@ function calculateFixedScheduleTimes(params: ReminderScheduleParams): any[] {
     
     console.log(`[REMINDER-SERVICE] Creating check-in reminder ${minutes} mins before deadline at ${adjustedScheduledAt.toISOString()}`);
     
-    // Set reminder_type = 'reminder' for check-in reminders (sent to creator)
+    // CRITICAL FIX: ONLY create check-in reminders (reminder_type = 'reminder')
     scheduleEntries.push({
       message_id: messageId,
       condition_id: conditionId,
       scheduled_at: adjustedScheduledAt.toISOString(),
-      reminder_type: 'reminder',
+      reminder_type: 'reminder', // ONLY check-in reminders
       status: 'pending',
       delivery_priority: minutes < 60 ? 'high' : 'normal',
       retry_strategy: 'standard'
     });
   }
   
-  console.log(`[REMINDER-SERVICE] Created ${scheduleEntries.length} interim check-in reminders`);
+  console.log(`[REMINDER-SERVICE] Created ${scheduleEntries.length} CHECK-IN reminders ONLY`);
   
-  // FIXED: Final delivery ALWAYS scheduled at the exact deadline, never adjusted
-  if (effectiveDeadline > now) {
-    console.log(`[REMINDER-SERVICE] FIXED: Adding final delivery at EXACT deadline: ${effectiveDeadline.toISOString()}`);
-    
-    // Set reminder_type = 'final_delivery' for final messages (sent to recipients)
-    scheduleEntries.push({
-      message_id: messageId,
-      condition_id: conditionId,
-      scheduled_at: effectiveDeadline.toISOString(), // FIXED: Always use the exact deadline
-      reminder_type: 'final_delivery',
-      status: 'pending',
-      delivery_priority: 'critical',
-      retry_strategy: 'aggressive'
-    });
-  } else {
-    console.warn(`[REMINDER-SERVICE] Final delivery deadline ${effectiveDeadline.toISOString()} is in the past, skipping`);
-  }
+  // CRITICAL FIX: DO NOT create automatic final delivery reminders
+  // Final delivery will be created dynamically by the reminder processor when deadline is missed
+  console.log(`[REMINDER-SERVICE] FIXED: No automatic final delivery created - will be handled dynamically by processor`);
   
-  console.log(`[REMINDER-SERVICE] Created ${scheduleEntries.length} total reminder entries with fixed deadline logic`);
   console.log(`[REMINDER-SERVICE] Entry types and times:`, scheduleEntries.map(e => ({ 
     type: e.reminder_type, 
     scheduledAt: e.scheduled_at,
