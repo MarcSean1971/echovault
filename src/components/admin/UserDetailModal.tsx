@@ -7,7 +7,7 @@ import { format } from "date-fns";
 import { useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { CheckCircle, XCircle, User, Mail, Calendar, Clock } from "lucide-react";
+import { CheckCircle, XCircle, User, Mail, Calendar, Clock, AlertTriangle } from "lucide-react";
 
 interface AuthUser {
   id: string;
@@ -17,6 +17,7 @@ interface AuthUser {
   updated_at: string;
   last_sign_in_at: string | null;
   has_profile: boolean;
+  profile_complete: boolean;
   first_name: string | null;
   last_name: string | null;
 }
@@ -31,6 +32,7 @@ interface UserProfile {
   backup_email?: string | null;
   backup_contact?: string | null;
   whatsapp_number?: string | null;
+  email?: string | null;
 }
 
 interface UserDetailModalProps {
@@ -130,6 +132,29 @@ export default function UserDetailModal({ isOpen, onClose, user }: UserDetailMod
     }
   };
 
+  const getProfileStatusBadge = () => {
+    if (!user?.has_profile) {
+      return <Badge variant="secondary">Profile Not Started</Badge>;
+    } else if (user.profile_complete) {
+      return <Badge variant="default">Profile Complete</Badge>;
+    } else {
+      return <Badge variant="destructive">Profile Incomplete</Badge>;
+    }
+  };
+
+  const getMissingFields = () => {
+    if (!user?.has_profile) {
+      return ['Profile setup required'];
+    }
+    
+    const missing = [];
+    if (!user.first_name) missing.push('First name');
+    if (!user.last_name) missing.push('Last name');
+    if (!profileData?.email) missing.push('Email in profile');
+    
+    return missing;
+  };
+
   if (!user) return null;
 
   return (
@@ -163,12 +188,25 @@ export default function UserDetailModal({ isOpen, onClose, user }: UserDetailMod
                     <><XCircle className="h-3 w-3 mr-1" />Email Unverified</>
                   )}
                 </Badge>
-                <Badge variant={user.has_profile ? "default" : "secondary"}>
-                  {user.has_profile ? "Profile Complete" : "Profile Incomplete"}
-                </Badge>
+                {getProfileStatusBadge()}
               </div>
             </div>
           </div>
+
+          {/* Profile Completion Status */}
+          {!user.profile_complete && (
+            <div className="bg-orange-50 border border-orange-200 rounded-md p-4">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-orange-600 mt-0.5" />
+                <div>
+                  <h4 className="font-medium text-orange-800">Profile Incomplete</h4>
+                  <p className="text-sm text-orange-700 mt-1">
+                    Missing: {getMissingFields().join(', ')}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Auth Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -11,6 +11,8 @@ import { UserStatsData } from "./types/admin";
 type ExtendedUserStatsData = UserStatsData & {
   unconfirmedEmails: number;
   usersWithoutProfiles: number;
+  incompleteProfiles: number;
+  completeProfiles: number;
 };
 
 export default function UserManagement() {
@@ -21,7 +23,9 @@ export default function UserManagement() {
     activeUsers: 0,
     newUsers: 0,
     unconfirmedEmails: 0,
-    usersWithoutProfiles: 0
+    usersWithoutProfiles: 0,
+    incompleteProfiles: 0,
+    completeProfiles: 0
   });
 
   useEffect(() => {
@@ -52,13 +56,17 @@ export default function UserManagement() {
 
         const unconfirmedEmails = authUsers.filter(user => !user.email_confirmed_at);
         const usersWithoutProfiles = authUsers.filter(user => !user.has_profile);
+        const incompleteProfiles = authUsers.filter(user => user.has_profile && !user.profile_complete);
+        const completeProfiles = authUsers.filter(user => user.profile_complete);
 
         setUserStats({
           totalUsers: authUsers.length,
           activeUsers: activeUsers.length,
           newUsers: newUsers.length,
           unconfirmedEmails: unconfirmedEmails.length,
-          usersWithoutProfiles: usersWithoutProfiles.length
+          usersWithoutProfiles: usersWithoutProfiles.length,
+          incompleteProfiles: incompleteProfiles.length,
+          completeProfiles: completeProfiles.length
         });
       }
     } catch (err: any) {
@@ -99,7 +107,13 @@ function UserTabsCard({ userStats }: { userStats: ExtendedUserStatsData }) {
             {userStats.unconfirmedEmails} Unconfirmed Emails
           </Badge>
           <Badge variant="outline">
-            {userStats.usersWithoutProfiles} Incomplete Profiles
+            {userStats.usersWithoutProfiles} No Profiles
+          </Badge>
+          <Badge variant="outline">
+            {userStats.incompleteProfiles} Incomplete Profiles
+          </Badge>
+          <Badge variant="default">
+            {userStats.completeProfiles} Complete Profiles
           </Badge>
         </div>
       </CardHeader>

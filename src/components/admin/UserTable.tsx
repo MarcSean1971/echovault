@@ -16,6 +16,7 @@ type AuthUser = {
   updated_at: string;
   last_sign_in_at: string | null;
   has_profile: boolean;
+  profile_complete: boolean;
   first_name: string | null;
   last_name: string | null;
 };
@@ -90,6 +91,28 @@ export default function UserTable({ filter }: UserTableProps) {
     return format(new Date(lastSignIn), 'PP');
   };
 
+  const getProfileBadge = (user: AuthUser) => {
+    if (!user.has_profile) {
+      return (
+        <Badge variant="secondary">
+          <User className="h-3 w-3 mr-1" />Not Started
+        </Badge>
+      );
+    } else if (user.profile_complete) {
+      return (
+        <Badge variant="default">
+          <User className="h-3 w-3 mr-1" />Complete
+        </Badge>
+      );
+    } else {
+      return (
+        <Badge variant="destructive">
+          <User className="h-3 w-3 mr-1" />Incomplete
+        </Badge>
+      );
+    }
+  };
+
   if (error) {
     return <div className="text-red-500 p-4">Error: {error}</div>;
   }
@@ -142,13 +165,7 @@ export default function UserTable({ filter }: UserTableProps) {
                       </div>
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">
-                      <Badge variant={user.has_profile ? "default" : "secondary"}>
-                        {user.has_profile ? (
-                          <><User className="h-3 w-3 mr-1" />Complete</>
-                        ) : (
-                          <><User className="h-3 w-3 mr-1" />Incomplete</>
-                        )}
-                      </Badge>
+                      {getProfileBadge(user)}
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
                       {formatLastSignIn(user.last_sign_in_at)}

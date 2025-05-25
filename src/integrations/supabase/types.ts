@@ -530,6 +530,7 @@ export type Database = {
           updated_at: string
           last_sign_in_at: string
           has_profile: boolean
+          profile_complete: boolean
           first_name: string
           last_name: string
         }[]
