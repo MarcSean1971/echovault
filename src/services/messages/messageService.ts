@@ -8,9 +8,15 @@ export async function fetchMessageCardsData() {
   try {
     const client = await getAuthClient();
     
-    console.log("Fetching message cards data, all types");
+    // Get current user to ensure we only fetch their messages
+    const { data: { user } } = await client.auth.getUser();
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
     
-    let query = client
+    console.log("Fetching message cards data for user:", user.id);
+    
+    const { data, error } = await client
       .from('messages')
       .select(`
         id, 
@@ -26,16 +32,15 @@ export async function fetchMessageCardsData() {
         location_name,
         share_location
       `) // Exclude video_content field!
+      .eq('user_id', user.id) // CRITICAL: Filter by authenticated user's ID
       .order('created_at', { ascending: false });
       
-    const { data, error } = await query;
-    
     if (error) {
       console.error("Error in fetchMessageCardsData:", error);
       throw error;
     }
     
-    console.log(`Successfully retrieved ${data?.length || 0} message cards`);
+    console.log(`Successfully retrieved ${data?.length || 0} message cards for user ${user.id}`);
     
     // Transform to Message type but with minimal data
     return (data || []).map(msg => {
@@ -59,11 +64,18 @@ export async function fetchMessages(messageType: string | null = null) {
   try {
     const client = await getAuthClient();
     
-    console.log("Fetching messages", messageType ? `with type: ${messageType}` : "all types");
+    // Get current user to ensure we only fetch their messages
+    const { data: { user } } = await client.auth.getUser();
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+    
+    console.log("Fetching messages for user:", user.id, messageType ? `with type: ${messageType}` : "all types");
     
     let query = client
       .from('messages')
       .select('*')
+      .eq('user_id', user.id) // CRITICAL: Filter by authenticated user's ID
       .order('created_at', { ascending: false });
       
     if (messageType) {
@@ -77,7 +89,7 @@ export async function fetchMessages(messageType: string | null = null) {
       throw error;
     }
     
-    console.log(`Successfully retrieved ${data?.length || 0} messages`);
+    console.log(`Successfully retrieved ${data?.length || 0} messages for user ${user.id}`);
     
     // Transform the database response to match our Message type
     return (data || []).map(msg => {
@@ -113,10 +125,17 @@ export async function deleteMessage(id: string) {
   try {
     const client = await getAuthClient();
     
+    // Get current user to ensure they can only delete their own messages
+    const { data: { user } } = await client.auth.getUser();
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+    
     const { error } = await client
       .from('messages')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .eq('user_id', user.id); // CRITICAL: Ensure user can only delete their own messages
       
     if (error) throw error;
     
