@@ -1,6 +1,7 @@
 
+
 import { supabase } from "@/integrations/supabase/client";
-import { MessageCondition, TriggerType } from "@/types/message";
+import { MessageCondition, TriggerType, RecurringPattern, PanicTriggerConfig } from "@/types/message";
 import { Recipient } from "@/types/recipient";
 
 // Cache for conditions to reduce database calls
@@ -38,11 +39,13 @@ export async function fetchMessageConditions(userId: string): Promise<MessageCon
     
     console.log(`[conditionService] Retrieved ${data?.length || 0} conditions for user ${userId}`);
     
-    // Transform and type-cast the data properly
+    // Transform and type-cast the data properly with all Json types
     const conditions = (data || []).map(item => ({
       ...item,
       condition_type: item.condition_type as TriggerType,
-      recipients: (item.recipients as any) as Recipient[] // Type cast Json to Recipient[]
+      recipients: (item.recipients as any) as Recipient[],
+      recurring_pattern: (item.recurring_pattern as any) as RecurringPattern | undefined,
+      panic_config: (item.panic_config as any) as PanicTriggerConfig | undefined
     })) as MessageCondition[];
     
     // Update cache
@@ -88,11 +91,13 @@ export async function getConditionByMessageId(messageId: string): Promise<Messag
       throw error;
     }
     
-    // Type-cast the condition_type and recipients properly
+    // Type-cast all Json fields properly
     return {
       ...data,
       condition_type: data.condition_type as TriggerType,
-      recipients: (data.recipients as any) as Recipient[]
+      recipients: (data.recipients as any) as Recipient[],
+      recurring_pattern: (data.recurring_pattern as any) as RecurringPattern | undefined,
+      panic_config: (data.panic_config as any) as PanicTriggerConfig | undefined
     } as MessageCondition;
   } catch (error) {
     console.error("Error in getConditionByMessageId:", error);
@@ -203,11 +208,13 @@ export async function createMessageCondition(
     // Invalidate cache for this user
     invalidateConditionsCache(user.id);
 
-    // Type-cast the condition_type and recipients properly
+    // Type-cast all Json fields properly
     return {
       ...data,
       condition_type: data.condition_type as TriggerType,
-      recipients: (data.recipients as any) as Recipient[]
+      recipients: (data.recipients as any) as Recipient[],
+      recurring_pattern: (data.recurring_pattern as any) as RecurringPattern | undefined,
+      panic_config: (data.panic_config as any) as PanicTriggerConfig | undefined
     } as MessageCondition;
   } catch (error) {
     console.error("Error in createMessageCondition:", error);
@@ -253,11 +260,13 @@ export async function updateMessageCondition(
     // Invalidate cache for this user
     invalidateConditionsCache(user.id);
 
-    // Type-cast the condition_type and recipients properly
+    // Type-cast all Json fields properly
     return {
       ...data,
       condition_type: data.condition_type as TriggerType,
-      recipients: (data.recipients as any) as Recipient[]
+      recipients: (data.recipients as any) as Recipient[],
+      recurring_pattern: (data.recurring_pattern as any) as RecurringPattern | undefined,
+      panic_config: (data.panic_config as any) as PanicTriggerConfig | undefined
     } as MessageCondition;
   } catch (error) {
     console.error("Error in updateMessageCondition:", error);
@@ -421,3 +430,4 @@ export async function getNextCheckInDeadline(): Promise<Date | null> {
     return null;
   }
 }
+
