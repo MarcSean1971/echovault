@@ -9,13 +9,13 @@ interface UserTableBadgesProps {
 
 export function EmailVerificationBadge({ user }: UserTableBadgesProps) {
   return (
-    <Badge variant={user.email_confirmed_at ? "default" : "destructive"} className="w-fit">
+    <span className="text-sm">
       {user.email_confirmed_at ? (
-        <><CheckCircle className="h-3 w-3 mr-1" />Verified</>
+        <><CheckCircle className="h-3 w-3 mr-1 inline" />Verified</>
       ) : (
-        <><XCircle className="h-3 w-3 mr-1" />Unverified</>
+        <><XCircle className="h-3 w-3 mr-1 inline" />Unverified</>
       )}
-    </Badge>
+    </span>
   );
 }
 
