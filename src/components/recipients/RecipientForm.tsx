@@ -68,14 +68,17 @@ export function RecipientForm({ initialData, onSubmit, isLoading, onCancel }: Re
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="phone" className="text-sm font-medium">Phone Number (Optional)</Label>
+          <Label htmlFor="phone" className="text-sm font-medium">WhatsApp Details (Highly Recommended)</Label>
           <Input
             id="phone"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            placeholder="555-1234"
+            placeholder="+1 234 567 8900"
             className="h-11"
           />
+          <p className="text-xs text-muted-foreground">
+            WhatsApp number with country code (e.g., +1 for USA, +44 for UK)
+          </p>
         </div>
         <div className="flex items-start space-x-3 pt-2">
           <Switch 

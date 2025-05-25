@@ -224,13 +224,16 @@ export function RecipientSelector({ selectedRecipients, onSelectRecipient }: Rec
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="phone">Phone Number (Optional)</Label>
+                <Label htmlFor="phone">WhatsApp Details (Highly Recommended)</Label>
                 <Input
                   id="phone"
                   value={newPhone}
                   onChange={(e) => setNewPhone(e.target.value)}
-                  placeholder="555-1234"
+                  placeholder="+1 234 567 8900"
                 />
+                <p className="text-xs text-muted-foreground">
+                  WhatsApp number with country code (e.g., +1 for USA, +44 for UK)
+                </p>
               </div>
             </div>
             <DialogFooter>
