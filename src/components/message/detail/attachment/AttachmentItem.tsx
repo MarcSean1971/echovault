@@ -1,4 +1,3 @@
-
 import React from "react";
 import { FileIcon, AlertCircle, FileCheck, Shield, ExternalLink } from "lucide-react";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
@@ -103,8 +102,8 @@ export function AttachmentItem({ attachment, deliveryId, recipientEmail }: Attac
           </div>
         </div>
         
-        {/* Action buttons section - mobile: full width with proper spacing, desktop: compact */}
-        <div className="flex space-x-2 md:space-x-2 justify-start md:justify-end flex-shrink-0 mt-1 md:mt-0">
+        {/* Action buttons section - mobile: centered, desktop: right-aligned */}
+        <div className="flex space-x-2 md:space-x-2 justify-center md:justify-end flex-shrink-0 mt-1 md:mt-0">
           {/* Download Method Toggle */}
           <MethodToggleButton
             downloadMethod={downloadMethod}
