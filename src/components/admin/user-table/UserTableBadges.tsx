@@ -32,3 +32,12 @@ export function ProfileCompletionBadge({ user }: UserTableBadgesProps) {
     );
   }
 }
+
+export function UserTableBadges({ user }: UserTableBadgesProps) {
+  return (
+    <div className="flex gap-1">
+      <ProfileCompletionBadge user={user} />
+      <EmailVerificationBadge user={user} />
+    </div>
+  );
+}
