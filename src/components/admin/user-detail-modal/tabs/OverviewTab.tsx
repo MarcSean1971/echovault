@@ -2,10 +2,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, XCircle, Mail, Calendar, Activity, Users, AlertTriangle } from "lucide-react";
+import { CheckCircle, XCircle, Mail, Calendar, Activity, Users } from "lucide-react";
 import { format } from "date-fns";
 import { AuthUser, UserProfile, ActivityData } from "../types";
-import { getUserInitials, getUserFullName, getMissingFields, getProfileCompletionPercentage } from "../utils";
+import { getUserInitials, getUserFullName } from "../utils";
 
 interface OverviewTabProps {
   user: AuthUser;
@@ -15,9 +15,6 @@ interface OverviewTabProps {
 }
 
 export function OverviewTab({ user, profileData, activityData, loading }: OverviewTabProps) {
-  const missingFields = getMissingFields(user, profileData);
-  const completionPercentage = getProfileCompletionPercentage(user, profileData);
-
   const getProfileStatusBadge = () => {
     if (!user?.has_profile) {
       return <Badge variant="secondary" className="gap-1"><XCircle className="h-3 w-3" />No Profile</Badge>;
@@ -69,24 +66,6 @@ export function OverviewTab({ user, profileData, activityData, loading }: Overvi
           </div>
         </div>
       </div>
-
-      {/* Profile Completion Alert */}
-      {user.has_profile && !user.profile_complete && (
-        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-          <div className="flex items-start gap-3">
-            <AlertTriangle className="h-5 w-5 text-orange-600 mt-0.5 flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between mb-2">
-                <h4 className="font-medium text-orange-800">Profile Incomplete</h4>
-                <span className="text-sm font-medium text-orange-800">{completionPercentage}%</span>
-              </div>
-              <p className="text-sm text-orange-700">
-                Missing: {missingFields.join(', ')}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Activity Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
