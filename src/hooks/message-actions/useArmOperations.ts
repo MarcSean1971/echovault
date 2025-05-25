@@ -46,6 +46,15 @@ export function useArmOperations() {
         throw new Error("Condition not found");
       }
       
+      console.log("[useArmOperations] Current condition data:", {
+        id: currentCondition.id,
+        condition_type: currentCondition.condition_type,
+        hours_threshold: currentCondition.hours_threshold,
+        minutes_threshold: currentCondition.minutes_threshold,
+        trigger_date: currentCondition.trigger_date,
+        reminder_hours: currentCondition.reminder_hours
+      });
+      
       const messageId = currentCondition.message_id;
       const conditionType = currentCondition.condition_type;
       
@@ -76,29 +85,34 @@ export function useArmOperations() {
       
       console.log(`[useArmOperations] Successfully armed condition, creating reminder schedule...`);
       
-      // Create reminder schedule using the COMPLETE condition data
+      // Create reminder schedule using the COMPLETE condition data - FIXED PARAMETERS
       const reminderSuccess = await createReminderSchedule({
         messageId: messageId,
         conditionId: conditionId,
         conditionType: conditionType,
         triggerDate: currentCondition.trigger_date,
         lastChecked: now, // Use the timestamp we just set
-        hoursThreshold: currentCondition.hours_threshold,
-        minutesThreshold: currentCondition.minutes_threshold,
+        hoursThreshold: currentCondition.hours_threshold, // This can be 0, null, or undefined
+        minutesThreshold: currentCondition.minutes_threshold, // This can be 0, null, or undefined
         reminderHours: currentCondition.reminder_hours || [24, 12, 6, 1] // Default reminder schedule
       });
       
       if (!reminderSuccess) {
-        console.warn(`[useArmOperations] Failed to create reminder schedule for condition ${conditionId}`);
+        console.error(`[useArmOperations] Failed to create reminder schedule for condition ${conditionId}`);
+        // Don't throw error here - the message is still armed, just no reminders
+        console.warn(`[useArmOperations] Message armed but reminder schedule creation failed`);
       } else {
         console.log(`[useArmOperations] Successfully created reminder schedule for condition ${conditionId}`);
       }
       
-      // Calculate deadline for immediate UI feedback
+      // Calculate deadline for immediate UI feedback - IMPROVED CALCULATION
       let deadlineDate: Date | null = null;
       if (currentCondition.condition_type === "scheduled" && currentCondition.trigger_date) {
         deadlineDate = new Date(currentCondition.trigger_date);
-      } else if (currentCondition.hours_threshold || currentCondition.minutes_threshold) {
+      } else if (
+        (currentCondition.hours_threshold !== undefined && currentCondition.hours_threshold !== null) ||
+        (currentCondition.minutes_threshold !== undefined && currentCondition.minutes_threshold !== null)
+      ) {
         deadlineDate = new Date(now);
         if (currentCondition.hours_threshold) {
           deadlineDate.setHours(deadlineDate.getHours() + currentCondition.hours_threshold);
@@ -121,7 +135,7 @@ export function useArmOperations() {
         deadlineDate?.toISOString()
       );
       
-      // NEW: Fire a specific event for message cards to handle
+      // Fire a specific event for message cards to handle
       window.dispatchEvent(new CustomEvent('message-reminder-updated', { 
         detail: { 
           messageId: messageId,

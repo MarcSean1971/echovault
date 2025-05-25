@@ -35,7 +35,7 @@ function parseReminderHours(reminderHours?: number[]): number[] {
 }
 
 /**
- * Calculate the deadline for a message condition
+ * Calculate the deadline for a message condition - FIXED VERSION
  */
 function calculateDeadline(params: ReminderParams): Date | null {
   const now = new Date();
@@ -57,17 +57,24 @@ function calculateDeadline(params: ReminderParams): Date | null {
     console.log("[SIMPLE-REMINDER] Trigger date is in the past, skipping");
   }
   
-  // Method 2: Calculate from last check-in + threshold
-  if (params.lastChecked && (params.hoursThreshold || params.minutesThreshold)) {
+  // Method 2: Calculate from last check-in + threshold - FIXED LOGIC
+  if (params.lastChecked && (
+    (params.hoursThreshold !== undefined && params.hoursThreshold !== null) || 
+    (params.minutesThreshold !== undefined && params.minutesThreshold !== null)
+  )) {
     const lastChecked = new Date(params.lastChecked);
     const deadline = new Date(lastChecked);
     
-    if (params.hoursThreshold) {
+    // Apply hours threshold (even if it's 0)
+    if (params.hoursThreshold !== undefined && params.hoursThreshold !== null) {
       deadline.setHours(deadline.getHours() + params.hoursThreshold);
+      console.log("[SIMPLE-REMINDER] Added hours threshold:", params.hoursThreshold);
     }
     
-    if (params.minutesThreshold) {
+    // Apply minutes threshold (even if it's 0)
+    if (params.minutesThreshold !== undefined && params.minutesThreshold !== null) {
       deadline.setMinutes(deadline.getMinutes() + params.minutesThreshold);
+      console.log("[SIMPLE-REMINDER] Added minutes threshold:", params.minutesThreshold);
     }
     
     if (deadline > now) {
@@ -101,38 +108,71 @@ function calculateReminderTimes(deadline: Date, reminderMinutes: number[]): Date
 }
 
 /**
- * Main function to create reminder schedule
+ * Verify reminder entries were created in database
+ */
+async function verifyReminderCreation(messageId: string): Promise<number> {
+  try {
+    const { data, error } = await supabase
+      .from('reminder_schedule')
+      .select('id, scheduled_at, reminder_type')
+      .eq('message_id', messageId)
+      .eq('status', 'pending');
+    
+    if (error) {
+      console.error("[SIMPLE-REMINDER] Error verifying reminders:", error);
+      return 0;
+    }
+    
+    console.log("[SIMPLE-REMINDER] Verified reminder entries:", data?.length || 0);
+    data?.forEach(reminder => {
+      console.log(`[SIMPLE-REMINDER] - ${reminder.reminder_type} at ${reminder.scheduled_at}`);
+    });
+    
+    return data?.length || 0;
+  } catch (error) {
+    console.error("[SIMPLE-REMINDER] Error in verification:", error);
+    return 0;
+  }
+}
+
+/**
+ * Main function to create reminder schedule - IMPROVED VERSION
  */
 export async function createReminderSchedule(params: ReminderParams): Promise<boolean> {
   try {
     console.log("[SIMPLE-REMINDER] Creating schedule for:", params);
     
-    // Validate required parameters
+    // Enhanced parameter validation
     if (!params.messageId || !params.conditionId) {
       console.error("[SIMPLE-REMINDER] Missing required parameters:", params);
       return false;
     }
     
-    // Step 1: Calculate deadline
+    // Step 1: Calculate deadline with improved logic
     const deadline = calculateDeadline(params);
     if (!deadline) {
       console.warn("[SIMPLE-REMINDER] No valid deadline could be calculated");
+      console.warn("[SIMPLE-REMINDER] Parameters were:", {
+        triggerDate: params.triggerDate,
+        lastChecked: params.lastChecked,
+        hoursThreshold: params.hoursThreshold,
+        minutesThreshold: params.minutesThreshold
+      });
       return false;
     }
     
-    console.log("[SIMPLE-REMINDER] Calculated deadline:", deadline.toISOString());
+    console.log("[SIMPLE-REMINDER] Successfully calculated deadline:", deadline.toISOString());
     
-    // Step 2: Parse reminder minutes
+    // Step 2: Parse reminder minutes with better handling
     const reminderMinutes = parseReminderHours(params.reminderHours);
-    console.log("[SIMPLE-REMINDER] Reminder minutes:", reminderMinutes);
+    console.log("[SIMPLE-REMINDER] Parsed reminder minutes:", reminderMinutes);
     
     // Step 3: Calculate reminder times
     const reminderTimes = calculateReminderTimes(deadline, reminderMinutes);
     console.log("[SIMPLE-REMINDER] Calculated reminder times:", reminderTimes.map(t => t.toISOString()));
     
     if (reminderTimes.length === 0) {
-      console.warn("[SIMPLE-REMINDER] No future reminder times calculated");
-      return false;
+      console.warn("[SIMPLE-REMINDER] No future reminder times calculated, but proceeding with final delivery");
     }
     
     // Step 4: Clear existing reminders
@@ -143,6 +183,8 @@ export async function createReminderSchedule(params: ReminderParams): Promise<bo
     
     if (deleteError) {
       console.error("[SIMPLE-REMINDER] Error clearing existing reminders:", deleteError);
+    } else {
+      console.log("[SIMPLE-REMINDER] Cleared existing reminders");
     }
     
     // Step 5: Create new reminder entries
@@ -156,7 +198,7 @@ export async function createReminderSchedule(params: ReminderParams): Promise<bo
       retry_strategy: 'standard'
     }));
     
-    // Add final delivery at deadline
+    // Always add final delivery at deadline
     reminderEntries.push({
       message_id: params.messageId,
       condition_id: params.conditionId,
@@ -167,18 +209,31 @@ export async function createReminderSchedule(params: ReminderParams): Promise<bo
       retry_strategy: 'aggressive'
     });
     
+    console.log("[SIMPLE-REMINDER] Attempting to insert", reminderEntries.length, "reminder entries");
+    
     const { data, error } = await supabase
       .from('reminder_schedule')
-      .insert(reminderEntries);
+      .insert(reminderEntries)
+      .select();
     
     if (error) {
       console.error("[SIMPLE-REMINDER] Error creating reminder schedule:", error);
       return false;
     }
     
-    console.log("[SIMPLE-REMINDER] Successfully created", reminderEntries.length, "reminder entries");
+    console.log("[SIMPLE-REMINDER] Successfully inserted reminder entries:", data?.length || 0);
     
-    // Step 6: Trigger immediate processing
+    // Step 6: Verify the creation
+    const verifiedCount = await verifyReminderCreation(params.messageId);
+    
+    if (verifiedCount === 0) {
+      console.error("[SIMPLE-REMINDER] No reminders were found after creation - database issue!");
+      return false;
+    }
+    
+    console.log("[SIMPLE-REMINDER] Verification successful:", verifiedCount, "reminders created");
+    
+    // Step 7: Trigger immediate processing
     try {
       await supabase.functions.invoke("send-reminder-emails", {
         body: {
@@ -189,6 +244,7 @@ export async function createReminderSchedule(params: ReminderParams): Promise<bo
           action: "process"
         }
       });
+      console.log("[SIMPLE-REMINDER] Triggered reminder processing");
     } catch (triggerError) {
       console.warn("[SIMPLE-REMINDER] Could not trigger processing:", triggerError);
     }
