@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { cn } from "@/lib/utils";
 
 interface PinEntryProps {
   onSubmit: (pin: string) => Promise<void>;
@@ -47,7 +48,12 @@ export const PinEntry = ({ onSubmit }: PinEntryProps) => {
             />
             <Button 
               type="submit" 
-              className={`w-full bg-gradient-to-r from-primary to-accent text-white hover:from-primary/90 hover:to-accent/90 ${HOVER_TRANSITION}`} 
+              variant="ghost"
+              className={cn(
+                "w-full bg-gradient-to-r from-primary to-accent text-white hover:from-primary/90 hover:to-accent/90",
+                "border-0 shadow-sm hover:shadow-md",
+                HOVER_TRANSITION
+              )}
               disabled={!pinCode || isSubmitting}
             >
               {isSubmitting ? "Verifying..." : "Access Message"}
