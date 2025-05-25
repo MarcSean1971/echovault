@@ -2,10 +2,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, XCircle, Mail, Calendar, Activity, Users } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { CheckCircle, XCircle, Mail, Calendar, Activity, Users, AlertTriangle } from "lucide-react";
 import { format } from "date-fns";
 import { AuthUser, UserProfile, ActivityData } from "../types";
-import { getUserInitials, getUserFullName } from "../utils";
+import { getUserInitials, getUserFullName, getMissingFields, getProfileCompletionPercentage } from "../utils";
 
 interface OverviewTabProps {
   user: AuthUser;
@@ -15,13 +16,16 @@ interface OverviewTabProps {
 }
 
 export function OverviewTab({ user, profileData, activityData, loading }: OverviewTabProps) {
+  const missingFields = getMissingFields(user, profileData);
+  const completionPercentage = getProfileCompletionPercentage(user, profileData);
+
   const getProfileStatusBadge = () => {
     if (!user?.has_profile) {
       return <Badge variant="secondary" className="gap-1"><XCircle className="h-3 w-3" />No Profile</Badge>;
     } else if (user.profile_complete) {
       return <Badge variant="default" className="gap-1 bg-green-600"><CheckCircle className="h-3 w-3" />Complete</Badge>;
     } else {
-      return <Badge variant="destructive" className="gap-1">Incomplete</Badge>;
+      return <Badge variant="destructive" className="gap-1"><XCircle className="h-3 w-3" />Incomplete</Badge>;
     }
   };
 
@@ -68,6 +72,29 @@ export function OverviewTab({ user, profileData, activityData, loading }: Overvi
           </div>
         </CardContent>
       </Card>
+
+      {/* Profile Completion Card */}
+      {user.has_profile && !user.profile_complete && (
+        <Card className="border-orange-200 bg-orange-50">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-orange-600 mt-0.5" />
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-medium text-orange-800">Profile Incomplete</h4>
+                  <div className="flex items-center gap-2">
+                    <Progress value={completionPercentage} className="w-20" />
+                    <span className="text-sm font-medium text-orange-800">{completionPercentage}%</span>
+                  </div>
+                </div>
+                <p className="text-sm text-orange-700">
+                  Missing required fields: {missingFields.join(', ')}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Quick Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -121,23 +148,6 @@ export function OverviewTab({ user, profileData, activityData, loading }: Overvi
           </CardContent>
         </Card>
       </div>
-
-      {/* Profile Completion Alert */}
-      {!user.profile_complete && (
-        <Card className="border-orange-200 bg-orange-50">
-          <CardContent className="p-4">
-            <div className="flex items-start gap-3">
-              <XCircle className="h-5 w-5 text-orange-600 mt-0.5" />
-              <div>
-                <h4 className="font-medium text-orange-800">Profile Incomplete</h4>
-                <p className="text-sm text-orange-700 mt-1">
-                  This user hasn't completed their profile setup. Some features may be limited.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
