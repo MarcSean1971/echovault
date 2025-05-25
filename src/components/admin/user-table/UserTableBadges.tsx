@@ -8,15 +8,7 @@ interface UserTableBadgesProps {
 }
 
 export function EmailVerificationBadge({ user }: UserTableBadgesProps) {
-  return (
-    <span className="text-sm">
-      {user.email_confirmed_at ? (
-        <><CheckCircle className="h-3 w-3 mr-1 inline" />Verified</>
-      ) : (
-        <><XCircle className="h-3 w-3 mr-1 inline" />Unverified</>
-      )}
-    </span>
-  );
+  return null;
 }
 
 export function ProfileCompletionBadge({ user }: UserTableBadgesProps) {
