@@ -142,7 +142,7 @@ export function useFormActions() {
             throw new Error("Please select at least one recipient.");
           }
           
-          // Values are already stored as minutes, no need to convert
+          // reminderMinutes is already an array of numbers, so we use it directly
           console.log("Using reminder minutes:", reminderMinutes);
           
           // Create message condition with recipients
@@ -163,7 +163,7 @@ export function useFormActions() {
               unlockDelayHours: unlockDelay,
               expiryHours,
               
-              // Reminders - now using minutes instead of decimal hours
+              // Reminders - using the array directly
               reminderHours: reminderMinutes,
               
               // Panic trigger settings

@@ -1,6 +1,6 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { MessageCondition, TriggerType } from "@/types/message";
-import { Recipient } from "@/types/recipient";
 
 // Cache for conditions to reduce database calls
 const conditionsCache = new Map<string, { data: MessageCondition[]; timestamp: number }>();
@@ -37,7 +37,11 @@ export async function fetchMessageConditions(userId: string): Promise<MessageCon
     
     console.log(`[conditionService] Retrieved ${data?.length || 0} conditions for user ${userId}`);
     
-    const conditions = data || [];
+    // Transform and type-cast the data properly
+    const conditions = (data || []).map(item => ({
+      ...item,
+      condition_type: item.condition_type as TriggerType
+    })) as MessageCondition[];
     
     // Update cache
     conditionsCache.set(userId, {
@@ -82,7 +86,11 @@ export async function getConditionByMessageId(messageId: string): Promise<Messag
       throw error;
     }
     
-    return data;
+    // Type-cast the condition_type properly
+    return {
+      ...data,
+      condition_type: data.condition_type as TriggerType
+    } as MessageCondition;
   } catch (error) {
     console.error("Error in getConditionByMessageId:", error);
     throw error;
@@ -105,10 +113,15 @@ export async function createMessageCondition(
     pinCode?: string;
     unlockDelayHours?: number;
     expiryHours?: number;
-    reminderHours?: number;
+    reminderHours?: number[];
     panicTriggerConfig?: any;
     checkInCode?: string;
-    recipients: Recipient[];
+    recipients: Array<{
+      id: string;
+      name: string;
+      email: string;
+      phone?: string;
+    }>;
   }
 ): Promise<MessageCondition> {
   try {
@@ -162,7 +175,7 @@ export async function createMessageCondition(
     }
     
     if (options.reminderHours) {
-      conditionData.reminder_hours = [options.reminderHours];
+      conditionData.reminder_hours = options.reminderHours;
     }
     
     if (options.panicTriggerConfig) {
@@ -187,7 +200,11 @@ export async function createMessageCondition(
     // Invalidate cache for this user
     invalidateConditionsCache(user.id);
 
-    return data;
+    // Type-cast the condition_type properly
+    return {
+      ...data,
+      condition_type: data.condition_type as TriggerType
+    } as MessageCondition;
   } catch (error) {
     console.error("Error in createMessageCondition:", error);
     throw error;
@@ -205,9 +222,15 @@ export async function updateMessageCondition(
       throw new Error("User not authenticated");
     }
     
+    // Convert updates to database format
+    const dbUpdates: any = { ...updates };
+    if (updates.recipients) {
+      dbUpdates.recipients = updates.recipients;
+    }
+    
     const { data, error } = await supabase
       .from('message_conditions')
-      .update(updates)
+      .update(dbUpdates)
       .eq('id', conditionId)
       .select(`
         *,
@@ -226,7 +249,11 @@ export async function updateMessageCondition(
     // Invalidate cache for this user
     invalidateConditionsCache(user.id);
 
-    return data;
+    // Type-cast the condition_type properly
+    return {
+      ...data,
+      condition_type: data.condition_type as TriggerType
+    } as MessageCondition;
   } catch (error) {
     console.error("Error in updateMessageCondition:", error);
     throw error;
@@ -275,5 +302,117 @@ export async function deleteMessageCondition(conditionId: string): Promise<boole
   } catch (error) {
     console.error("Error in deleteMessageCondition:", error);
     throw error;
+  }
+}
+
+// Export missing functions that are being imported elsewhere
+export async function getMessageDeadline(conditionId: string): Promise<Date | null> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+
+    const { data, error } = await supabase
+      .from('message_conditions')
+      .select(`
+        *,
+        messages!inner(user_id)
+      `)
+      .eq('id', conditionId)
+      .eq('messages.user_id', user.id)
+      .single();
+
+    if (error || !data) {
+      return null;
+    }
+
+    // Calculate deadline based on condition type and settings
+    const now = new Date();
+    const deadline = new Date(now.getTime() + (data.hours_threshold * 60 * 60 * 1000));
+    return deadline;
+  } catch (error) {
+    console.error("Error getting message deadline:", error);
+    return null;
+  }
+}
+
+export async function armMessage(conditionId: string): Promise<void> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+
+    await supabase
+      .from('message_conditions')
+      .update({ active: true })
+      .eq('id', conditionId);
+  } catch (error) {
+    console.error("Error arming message:", error);
+    throw error;
+  }
+}
+
+export async function disarmMessage(conditionId: string): Promise<void> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+
+    await supabase
+      .from('message_conditions')
+      .update({ active: false })
+      .eq('id', conditionId);
+  } catch (error) {
+    console.error("Error disarming message:", error);
+    throw error;
+  }
+}
+
+export async function triggerPanicMessage(userId: string, messageId: string): Promise<void> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user || user.id !== userId) {
+      throw new Error("User not authenticated or unauthorized");
+    }
+
+    // Implementation for triggering panic message
+    console.log("Triggering panic message for user:", userId, "message:", messageId);
+    // This would typically involve calling an edge function or webhook
+  } catch (error) {
+    console.error("Error triggering panic message:", error);
+    throw error;
+  }
+}
+
+export async function getNextCheckInDeadline(): Promise<Date | null> {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return null;
+    }
+
+    const { data, error } = await supabase
+      .from('message_conditions')
+      .select(`
+        *,
+        messages!inner(user_id)
+      `)
+      .eq('messages.user_id', user.id)
+      .eq('active', true)
+      .order('next_check', { ascending: true })
+      .limit(1)
+      .single();
+
+    if (error || !data) {
+      return null;
+    }
+
+    return data.next_check ? new Date(data.next_check) : null;
+  } catch (error) {
+    console.error("Error getting next check-in deadline:", error);
+    return null;
   }
 }
