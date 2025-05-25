@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { fetchProfile, updateProfile, ProfileData, ProfileUpdateData } from "@/services/profileService";
 import { toast } from "@/components/ui/use-toast";
@@ -8,6 +9,7 @@ import { checkProfileCompletion } from "@/utils/profileCompletion";
 
 export function useProfileData() {
   const { userId, getInitials } = useAuth();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -60,14 +62,14 @@ export function useProfileData() {
         toast({
           title: completionStatus.isComplete ? "Profile completed!" : "Profile updated",
           description: completionStatus.isComplete 
-            ? "Your profile is now complete. You can access all app features."
+            ? "Your profile is now complete. Redirecting to messages..."
             : "Your profile information has been updated successfully",
         });
 
-        // Reload the page if profile is now complete to trigger redirect logic
-        if (completionStatus.isComplete) {
-          window.location.reload();
-        }
+        // Navigate to messages page after successful profile completion or update
+        setTimeout(() => {
+          navigate('/messages');
+        }, 1500); // Short delay to show the success message
       }
     } catch (error) {
       console.error("Error updating profile:", error);
