@@ -1,6 +1,6 @@
 
 import { supabaseClient } from "../supabase-client.ts";
-import { sendCreatorReminder, sendRecipientReminders } from "./reminder-sender.ts";
+import { sendCreatorReminder } from "./reminder-sender.ts";
 
 // Enhanced logging with better formatting
 function logWithTimestamp(message: string, data?: any) {
@@ -13,8 +13,8 @@ function logWithTimestamp(message: string, data?: any) {
 }
 
 /**
- * CRITICAL FIX: Enhanced reminder processing with proper separation of reminder types
- * This function now ensures check-in reminders and final delivery are processed separately
+ * SIMPLIFIED: Process only check-in reminders (reminder_type = 'reminder') for creators
+ * This function now ONLY handles check-in reminders sent to message creators
  */
 export async function processDueReminders(
   messageId?: string,
@@ -29,15 +29,15 @@ export async function processDueReminders(
     errors: [] as string[]
   };
   
-  logWithTimestamp(`[REMINDER-PROCESSOR] Starting enhanced reminder processing`, {
+  logWithTimestamp(`[REMINDER-PROCESSOR] Starting SIMPLIFIED processing - check-in reminders ONLY`, {
     messageId,
     forceSend,
     debug
   });
   
   try {
-    // CRITICAL FIX: Process check-in reminders FIRST and separately
-    logWithTimestamp(`[REMINDER-PROCESSOR] PHASE 1: Processing check-in reminders only`);
+    // SIMPLIFIED: Process ONLY check-in reminders (reminder_type = 'reminder')
+    logWithTimestamp(`[REMINDER-PROCESSOR] Processing check-in reminders for creators ONLY`);
     
     let checkInQuery = supabase
       .from('reminder_schedule')
@@ -75,111 +75,19 @@ export async function processDueReminders(
       logWithTimestamp(`[REMINDER-PROCESSOR] No due check-in reminders found`);
     }
     
-    // CRITICAL FIX: Process final delivery messages ONLY if no check-in reminders are pending for the same message
-    logWithTimestamp(`[REMINDER-PROCESSOR] PHASE 2: Processing final delivery messages (with safeguards)`);
-    
-    let finalDeliveryQuery = supabase
-      .from('reminder_schedule')
-      .select('*')
-      .eq('reminder_type', 'final_delivery') // ONLY final delivery
-      .eq('status', 'pending')
-      .lte('scheduled_at', new Date().toISOString());
-    
-    if (messageId) {
-      finalDeliveryQuery = finalDeliveryQuery.eq('message_id', messageId);
-    }
-    
-    const { data: finalDeliveryReminders, error: finalDeliveryError } = await finalDeliveryQuery.limit(25);
-    
-    if (finalDeliveryError) {
-      logWithTimestamp(`[REMINDER-PROCESSOR] Error fetching final delivery reminders:`, finalDeliveryError);
-      results.errors.push(`Final delivery query error: ${finalDeliveryError.message}`);
-    } else if (finalDeliveryReminders && finalDeliveryReminders.length > 0) {
-      logWithTimestamp(`[REMINDER-PROCESSOR] Found ${finalDeliveryReminders.length} due final delivery reminders`);
-      
-      for (const reminder of finalDeliveryReminders) {
-        // CRITICAL SAFEGUARD: Check if there are still pending check-in reminders for this message
-        const { data: pendingCheckIns, error: pendingError } = await supabase
-          .from('reminder_schedule')
-          .select('id')
-          .eq('message_id', reminder.message_id)
-          .eq('reminder_type', 'reminder')
-          .eq('status', 'pending')
-          .limit(1);
-        
-        if (pendingError) {
-          logWithTimestamp(`[REMINDER-PROCESSOR] Error checking pending check-ins:`, pendingError);
-          continue;
-        }
-        
-        if (pendingCheckIns && pendingCheckIns.length > 0) {
-          logWithTimestamp(`[REMINDER-PROCESSOR] SAFEGUARD: Skipping final delivery for message ${reminder.message_id} - pending check-in reminders exist`);
-          continue;
-        }
-        
-        // ADDITIONAL SAFEGUARD: Verify the message condition is still active and at deadline
-        const { data: condition, error: conditionError } = await supabase
-          .from('message_conditions')
-          .select('id, active, last_checked, hours_threshold, minutes_threshold')
-          .eq('id', reminder.condition_id)
-          .single();
-        
-        if (conditionError || !condition) {
-          logWithTimestamp(`[REMINDER-PROCESSOR] Condition not found for final delivery ${reminder.id}`);
-          continue;
-        }
-        
-        if (!condition.active) {
-          logWithTimestamp(`[REMINDER-PROCESSOR] SAFEGUARD: Condition ${reminder.condition_id} is not active, skipping final delivery`);
-          continue;
-        }
-        
-        // CRITICAL: Verify we're actually at the deadline
-        const now = new Date();
-        const lastChecked = new Date(condition.last_checked);
-        const deadline = new Date(lastChecked);
-        deadline.setHours(deadline.getHours() + (condition.hours_threshold || 0));
-        deadline.setMinutes(deadline.getMinutes() + (condition.minutes_threshold || 0));
-        
-        const timeUntilDeadline = deadline.getTime() - now.getTime();
-        const minutesUntilDeadline = timeUntilDeadline / (1000 * 60);
-        
-        if (minutesUntilDeadline > 5 && !forceSend) { // 5-minute grace period
-          logWithTimestamp(`[REMINDER-PROCESSOR] SAFEGUARD: Final delivery for ${reminder.id} is premature - ${minutesUntilDeadline.toFixed(2)} minutes until deadline`);
-          continue;
-        }
-        
-        logWithTimestamp(`[REMINDER-PROCESSOR] Processing final delivery ${reminder.id} - deadline reached`);
-        
-        const finalResult = await processIndividualReminderWithRecovery(reminder, debug);
-        results.processedCount++;
-        
-        if (finalResult.success) {
-          results.successCount++;
-          logWithTimestamp(`[REMINDER-PROCESSOR] Final delivery ${reminder.id} processed successfully`);
-        } else {
-          results.failedCount++;
-          results.errors.push(`Final delivery ${reminder.id}: ${finalResult.error}`);
-          logWithTimestamp(`[REMINDER-PROCESSOR] Final delivery ${reminder.id} failed:`, finalResult.error);
-        }
-      }
-    } else {
-      logWithTimestamp(`[REMINDER-PROCESSOR] No due final delivery reminders found`);
-    }
-    
-    logWithTimestamp(`[REMINDER-PROCESSOR] Enhanced processing complete`, results);
+    logWithTimestamp(`[REMINDER-PROCESSOR] SIMPLIFIED processing complete - check-in reminders only`, results);
     return results;
     
   } catch (error: any) {
-    logWithTimestamp(`[REMINDER-PROCESSOR] Critical error in enhanced processing:`, error);
+    logWithTimestamp(`[REMINDER-PROCESSOR] Critical error in simplified processing:`, error);
     results.errors.push(`Critical processing error: ${error.message}`);
     return results;
   }
 }
 
 /**
- * Process a single reminder with proper type handling and recovery
- * ENHANCED: Uses reminder_type field as primary determinant for message routing
+ * Process a single check-in reminder for the message creator
+ * SIMPLIFIED: Only handles reminder_type = 'reminder' sent to creators
  */
 export async function processIndividualReminderWithRecovery(
   reminder: any,
@@ -188,19 +96,16 @@ export async function processIndividualReminderWithRecovery(
   const supabase = supabaseClient();
   
   try {
-    logWithTimestamp(`[REMINDER-PROCESSOR] Processing reminder ${reminder.id}`, {
+    logWithTimestamp(`[REMINDER-PROCESSOR] Processing check-in reminder ${reminder.id}`, {
       reminderType: reminder.reminder_type,
       messageId: reminder.message_id,
       conditionId: reminder.condition_id,
       scheduledAt: reminder.scheduled_at
     });
     
-    // CRITICAL FIX: Use reminder_type as the PRIMARY and ONLY determinant
-    const isCheckInReminder = reminder.reminder_type === 'reminder';
-    const isFinalDelivery = reminder.reminder_type === 'final_delivery';
-    
-    if (!isCheckInReminder && !isFinalDelivery) {
-      throw new Error(`Unknown reminder type: ${reminder.reminder_type}`);
+    // SIMPLIFIED: Only process reminder_type = 'reminder'
+    if (reminder.reminder_type !== 'reminder') {
+      throw new Error(`Wrong reminder type: ${reminder.reminder_type}. Only 'reminder' type allowed.`);
     }
     
     // Get message and condition details
@@ -229,70 +134,32 @@ export async function processIndividualReminderWithRecovery(
     const now = new Date();
     const hoursUntilScheduled = Math.max(0, (scheduledTime.getTime() - now.getTime()) / (1000 * 60 * 60));
     
-    logWithTimestamp(`[REMINDER-PROCESSOR] Reminder details`, {
+    logWithTimestamp(`[REMINDER-PROCESSOR] Check-in reminder details`, {
       reminderType: reminder.reminder_type,
-      isCheckInReminder,
-      isFinalDelivery,
       hoursUntilScheduled,
       messageTitle: message.title,
       creatorUserId: message.user_id
     });
     
-    let results = [];
+    // SIMPLIFIED: Send check-in reminder ONLY to the message creator
+    logWithTimestamp(`[REMINDER-PROCESSOR] Sending check-in reminder to creator ${message.user_id}`);
     
-    if (isCheckInReminder) {
-      // CHECK-IN REMINDER: Send ONLY to the message creator
-      logWithTimestamp(`[REMINDER-PROCESSOR] Sending check-in reminder to creator ${message.user_id}`);
-      
-      const creatorResults = await sendCreatorReminder(
-        message.id,
-        condition.id,
-        message.title,
-        message.user_id,
-        hoursUntilScheduled,
-        reminder.scheduled_at,
-        debug
-      );
-      
-      results = creatorResults;
-      logWithTimestamp(`[REMINDER-PROCESSOR] Check-in reminder sent to creator`, {
-        results: creatorResults.map(r => ({ success: r.success, recipient: r.recipient, channel: r.channel }))
-      });
-      
-    } else if (isFinalDelivery) {
-      // FINAL DELIVERY: Send ONLY to the configured recipients
-      logWithTimestamp(`[REMINDER-PROCESSOR] Sending final delivery to recipients`);
-      
-      // Get recipients from condition
-      const recipients = condition.recipients || [];
-      if (recipients.length === 0) {
-        throw new Error('No recipients configured for final delivery');
-      }
-      
-      logWithTimestamp(`[REMINDER-PROCESSOR] Recipients for final delivery`, {
-        recipientCount: recipients.length,
-        recipients: recipients.map(r => ({ name: r.name, email: r.email }))
-      });
-      
-      const recipientResults = await sendRecipientReminders(
-        message.id,
-        message.title,
-        message.sender_name || 'EchoVault User',
-        recipients,
-        hoursUntilScheduled,
-        reminder.scheduled_at,
-        debug,
-        true // isFinalDelivery = true
-      );
-      
-      results = recipientResults;
-      logWithTimestamp(`[REMINDER-PROCESSOR] Final delivery sent to recipients`, {
-        results: recipientResults.map(r => ({ success: r.success, recipient: r.recipient, channel: r.channel }))
-      });
-    }
+    const creatorResults = await sendCreatorReminder(
+      message.id,
+      condition.id,
+      message.title,
+      message.user_id,
+      hoursUntilScheduled,
+      reminder.scheduled_at,
+      debug
+    );
+    
+    logWithTimestamp(`[REMINDER-PROCESSOR] Check-in reminder sent to creator`, {
+      results: creatorResults.map(r => ({ success: r.success, recipient: r.recipient, channel: r.channel }))
+    });
     
     // Log delivery results to the database for tracking
-    for (const result of results) {
+    for (const result of creatorResults) {
       try {
         await supabase.from('reminder_delivery_log').insert({
           reminder_id: reminder.id,
@@ -317,7 +184,7 @@ export async function processIndividualReminderWithRecovery(
     }
     
     // Mark reminder as sent if at least one delivery was successful
-    const hasSuccessfulDelivery = results.some(r => r.success);
+    const hasSuccessfulDelivery = creatorResults.some(r => r.success);
     
     if (hasSuccessfulDelivery) {
       const { error: updateError } = await supabase
@@ -331,7 +198,7 @@ export async function processIndividualReminderWithRecovery(
       if (updateError) {
         console.error(`[REMINDER-PROCESSOR] Error updating reminder status:`, updateError);
       } else {
-        logWithTimestamp(`[REMINDER-PROCESSOR] Reminder ${reminder.id} marked as sent`);
+        logWithTimestamp(`[REMINDER-PROCESSOR] Check-in reminder ${reminder.id} marked as sent`);
       }
     } else {
       // All deliveries failed - mark as failed and increment retry count
@@ -348,13 +215,13 @@ export async function processIndividualReminderWithRecovery(
         console.error(`[REMINDER-PROCESSOR] Error updating failed reminder:`, updateError);
       }
       
-      throw new Error(`All deliveries failed for reminder ${reminder.id}`);
+      throw new Error(`All deliveries failed for check-in reminder ${reminder.id}`);
     }
     
     return { success: true };
     
   } catch (error: any) {
-    logWithTimestamp(`[REMINDER-PROCESSOR] Error processing reminder ${reminder.id}:`, {
+    logWithTimestamp(`[REMINDER-PROCESSOR] Error processing check-in reminder ${reminder.id}:`, {
       error: error.message,
       stack: error.stack
     });
