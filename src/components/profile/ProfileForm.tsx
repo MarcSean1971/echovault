@@ -1,3 +1,4 @@
+
 import React from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -11,7 +12,6 @@ import { toast } from "@/components/ui/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { BUTTON_HOVER_EFFECTS } from "@/utils/hoverEffects";
 import { checkProfileCompletion } from "@/utils/profileCompletion";
-import { WhatsAppSubscription } from "./WhatsAppSubscription";
 
 // Form validation schema - email is NOT included since it's read-only
 const profileSchema = z.object({
@@ -102,13 +102,8 @@ export function ProfileForm({ profile, onSubmit }: ProfileFormProps) {
                   <FormControl>
                     <Input placeholder="+1 234 567 8900" {...field} />
                   </FormControl>
-                  <FormDescription className="space-y-3">
-                    <span className="block">
-                      Your WhatsApp number with country code (e.g., +1 for USA)
-                    </span>
-                    <div className="pt-2">
-                      <WhatsAppSubscription />
-                    </div>
+                  <FormDescription>
+                    Your WhatsApp number with country code (e.g., +1 for USA)
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
