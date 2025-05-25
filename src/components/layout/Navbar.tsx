@@ -1,4 +1,3 @@
-
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
 import { Logo } from "./navbar/Logo";
@@ -56,9 +55,17 @@ export default function Navbar({ isLoggedIn = false }: NavbarProps) {
           {authenticated ? (
             <MobileNav userImage={userImage} initials={initials} />
           ) : (
-            <GuestNav />
+            // Only show GuestNav on desktop when not authenticated
+            !isMobile && <GuestNav />
           )}
         </div>
+        
+        {/* Desktop guest navigation - show GuestNav when on desktop and not authenticated */}
+        {!authenticated && !isMobile && (
+          <div className="hidden md:flex">
+            <GuestNav />
+          </div>
+        )}
       </div>
       
       {/* Second line for mobile buttons */}
