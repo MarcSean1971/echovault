@@ -26,11 +26,30 @@ serve(async (req) => {
       );
     }
 
-    // Get app's WhatsApp number
-    const appWhatsAppNumber = Deno.env.get('TWILIO_WHATSAPP_NUMBER');
-    if (!appWhatsAppNumber) {
+    // Create Supabase client for storage
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Create vCard content
+    const vCardContent = createVCard(userProfile);
+    
+    // Create filename with timestamp to avoid conflicts
+    const timestamp = Date.now();
+    const fileName = `contact-${userProfile.first_name}-${timestamp}.vcf`;
+    
+    // Upload vCard to Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('contact-cards')
+      .upload(fileName, vCardContent, {
+        contentType: 'text/vcard',
+        upsert: false
+      });
+
+    if (uploadError) {
+      console.error('Failed to upload vCard:', uploadError);
       return new Response(
-        JSON.stringify({ error: 'App WhatsApp number not configured' }),
+        JSON.stringify({ error: 'Failed to create contact card' }),
         { 
           status: 500, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -38,14 +57,27 @@ serve(async (req) => {
       );
     }
 
-    // Create vCard content
-    const vCardContent = createVCard(userProfile);
-    
+    // Get public URL for the vCard
+    const { data: urlData } = supabase.storage
+      .from('contact-cards')
+      .getPublicUrl(fileName);
+
+    if (!urlData?.publicUrl) {
+      return new Response(
+        JSON.stringify({ error: 'Failed to generate contact card URL' }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
     // Get Twilio credentials
     const accountSid = Deno.env.get("TWILIO_ACCOUNT_SID");
     const authToken = Deno.env.get("TWILIO_AUTH_TOKEN");
+    const appWhatsAppNumber = Deno.env.get('TWILIO_WHATSAPP_NUMBER');
     
-    if (!accountSid || !authToken) {
+    if (!accountSid || !authToken || !appWhatsAppNumber) {
       return new Response(
         JSON.stringify({ error: 'Twilio credentials not configured' }),
         { 
@@ -55,20 +87,19 @@ serve(async (req) => {
       );
     }
 
-    // Clean phone numbers
-    const cleanAppNumber = appWhatsAppNumber.replace('whatsapp:', '').trim();
-    const fromNumber = appWhatsAppNumber; // Keep original format for sending
-
     // Send vCard via Twilio WhatsApp API
     const twilioEndpoint = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
     const authHeader = `Basic ${btoa(`${accountSid}:${authToken}`)}`;
 
-    // Create the message with vCard as media
+    // Format destination number (this should be the admin/operator number)
+    // For now, sending to the app's own number as a test
+    const adminNumber = appWhatsAppNumber.replace('whatsapp:', '');
+
     const messageData = {
-      To: cleanAppNumber.startsWith('+') ? cleanAppNumber : `+${cleanAppNumber}`,
-      From: fromNumber,
+      To: adminNumber,
+      From: appWhatsAppNumber,
       Body: `New subscription request from ${userProfile.first_name} ${userProfile.last_name || ''}`,
-      MediaUrl: `data:text/vcard;base64,${btoa(vCardContent)}`
+      MediaUrl: urlData.publicUrl
     };
 
     const formBody = Object.entries(messageData)
@@ -87,6 +118,10 @@ serve(async (req) => {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Twilio API error:', errorText);
+      
+      // Cleanup the uploaded file if message failed
+      await supabase.storage.from('contact-cards').remove([fileName]);
+      
       return new Response(
         JSON.stringify({ error: 'Failed to send contact card' }),
         { 
@@ -98,6 +133,11 @@ serve(async (req) => {
 
     const result = await response.json();
     console.log('Contact card sent successfully:', result.sid);
+
+    // Cleanup the uploaded file after successful send (optional)
+    setTimeout(async () => {
+      await supabase.storage.from('contact-cards').remove([fileName]);
+    }, 300000); // Remove after 5 minutes
 
     return new Response(
       JSON.stringify({ 
@@ -127,14 +167,12 @@ function createVCard(userProfile: any): string {
   const { first_name, last_name, whatsapp_number, backup_email, email } = userProfile;
   
   const fullName = `${first_name} ${last_name || ''}`.trim();
-  const cleanPhone = whatsapp_number.replace(/\D/g, '');
-  const formattedPhone = cleanPhone.startsWith('1') ? `+${cleanPhone}` : `+1${cleanPhone}`;
   
   let vCard = `BEGIN:VCARD\r\n`;
   vCard += `VERSION:3.0\r\n`;
   vCard += `FN:${fullName}\r\n`;
   vCard += `N:${last_name || ''};${first_name};;;\r\n`;
-  vCard += `TEL;TYPE=CELL:${formattedPhone}\r\n`;
+  vCard += `TEL;TYPE=CELL:${whatsapp_number}\r\n`;
   
   if (email) {
     vCard += `EMAIL:${email}\r\n`;

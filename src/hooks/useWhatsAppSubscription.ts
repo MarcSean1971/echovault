@@ -6,25 +6,6 @@ import { toast } from "@/components/ui/use-toast";
 export function useWhatsAppSubscription() {
   const [isLoading, setIsLoading] = useState(false);
 
-  const getAppWhatsAppNumber = async (): Promise<string | null> => {
-    try {
-      // Try to get the app's WhatsApp number from edge function or environment
-      const { data, error } = await supabase.functions.invoke('get-app-config', {
-        body: { key: 'TWILIO_WHATSAPP_NUMBER' }
-      });
-      
-      if (error) {
-        console.warn('Could not fetch app WhatsApp number:', error);
-        return null;
-      }
-      
-      return data?.value || null;
-    } catch (error) {
-      console.warn('Error fetching app WhatsApp number:', error);
-      return null;
-    }
-  };
-
   const subscribeToWhatsApp = async () => {
     setIsLoading(true);
     
@@ -61,18 +42,6 @@ export function useWhatsAppSubscription() {
         toast({
           title: "Missing information",
           description: "Please fill in your name and WhatsApp number in your profile.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Check if app WhatsApp number is available
-      const appWhatsAppNumber = await getAppWhatsAppNumber();
-      
-      if (!appWhatsAppNumber) {
-        toast({
-          title: "Service unavailable",
-          description: "WhatsApp subscription is currently unavailable. Please try again later.",
           variant: "destructive",
         });
         return;
