@@ -7,7 +7,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { toast } from "@/components/ui/use-toast";
 import { MailIcon, LockIcon } from "lucide-react";
-import { Logo } from "@/components/layout/navbar/Logo";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { supabase } from "@/integrations/supabase/client";
 import { AuthError } from "@supabase/supabase-js";
@@ -71,11 +70,6 @@ export default function Login() {
   return (
     <div className="container flex items-center justify-center min-h-screen py-12 px-4 sm:px-6 lg:px-8">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <Logo />
-          <p className="mt-2 text-muted-foreground">Your secure digital failsafe</p>
-        </div>
-        
         <Card className="border-0 shadow-lg glass-card">
           <CardHeader className="pb-4">
             <CardTitle className="text-2xl font-bold text-center">Welcome Back</CardTitle>
