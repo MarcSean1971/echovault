@@ -31,7 +31,7 @@ export const PinEntry = ({ onSubmit }: PinEntryProps) => {
       <Card className="p-6 bg-white border-gray-300 shadow-lg">
         <div className="flex flex-col items-center justify-center text-center space-y-4 py-8">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-purple-50 border-2 border-purple-200 mb-2">
-            <Key className={`h-8 w-8 text-primary ${HOVER_TRANSITION}`} />
+            <Key className={`h-8 w-8 text-purple-600 ${HOVER_TRANSITION}`} />
           </div>
           <h2 className="text-xl font-semibold text-gray-900">Secure Message</h2>
           <p className="text-gray-600 max-w-md">This message is protected with a PIN code. Please enter the code to access the content.</p>
@@ -47,7 +47,7 @@ export const PinEntry = ({ onSubmit }: PinEntryProps) => {
             />
             <Button 
               type="submit" 
-              className={`w-full ${HOVER_TRANSITION}`}
+              className={`w-full bg-purple-500 hover:bg-purple-600 text-white border-0 ${HOVER_TRANSITION}`}
               disabled={!pinCode || isSubmitting}
             >
               {isSubmitting ? "Verifying..." : "Access Message"}
