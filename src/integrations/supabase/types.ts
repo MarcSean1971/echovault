@@ -251,36 +251,36 @@ export type Database = {
           backup_contact: string | null
           backup_email: string | null
           created_at: string
-          email: string | null
-          first_name: string | null
+          email: string
+          first_name: string
           id: string
-          last_name: string | null
+          last_name: string
           updated_at: string
-          whatsapp_number: string | null
+          whatsapp_number: string
         }
         Insert: {
           avatar_url?: string | null
           backup_contact?: string | null
           backup_email?: string | null
           created_at?: string
-          email?: string | null
-          first_name?: string | null
+          email: string
+          first_name: string
           id: string
-          last_name?: string | null
+          last_name: string
           updated_at?: string
-          whatsapp_number?: string | null
+          whatsapp_number: string
         }
         Update: {
           avatar_url?: string | null
           backup_contact?: string | null
           backup_email?: string | null
           created_at?: string
-          email?: string | null
-          first_name?: string | null
+          email?: string
+          first_name?: string
           id?: string
-          last_name?: string | null
+          last_name?: string
           updated_at?: string
-          whatsapp_number?: string | null
+          whatsapp_number?: string
         }
         Relationships: []
       }

@@ -1,13 +1,14 @@
 
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import Navbar from "./Navbar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
 
 export default function ProtectedLayout() {
-  const { isLoaded, isSignedIn } = useAuth();
+  const { isLoaded, isSignedIn, isProfileComplete } = useAuth();
   const [isChecking, setIsChecking] = useState(true);
+  const location = useLocation();
 
   useEffect(() => {
     if (isLoaded) {
@@ -31,6 +32,11 @@ export default function ProtectedLayout() {
   // Redirect to login if not authenticated
   if (!isSignedIn) {
     return <Navigate to="/login" />;
+  }
+
+  // Redirect to profile if profile is incomplete and not already on profile page
+  if (!isProfileComplete && location.pathname !== '/profile') {
+    return <Navigate to="/profile" replace />;
   }
 
   return (

@@ -4,12 +4,17 @@ import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
+import { checkProfileCompletion } from '@/utils/profileCompletion';
 
 interface UserProfile {
   id: string;
   first_name: string | null;
   last_name: string | null;
   avatar_url: string | null;
+  email: string | null;
+  whatsapp_number: string | null;
+  backup_email: string | null;
+  backup_contact: string | null;
 }
 
 interface AuthContextType {
@@ -19,6 +24,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   profile: UserProfile | null;
+  isProfileComplete: boolean;
   signOut: () => Promise<void>;
   getInitials: () => string;
 }
@@ -141,6 +147,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return (firstInitial + lastInitial).toUpperCase() || "U";
   };
 
+  // Check if profile is complete
+  const completionStatus = checkProfileCompletion(profile);
+  const isProfileComplete = completionStatus.isComplete;
+
   const value = {
     isLoaded,
     isSignedIn: !!user,
@@ -148,6 +158,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user,
     session,
     profile,
+    isProfileComplete,
     signOut,
     getInitials,
   };

@@ -11,13 +11,15 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { toast } from "@/components/ui/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { BUTTON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
+import { checkProfileCompletion } from "@/utils/profileCompletion";
 
-// Form validation schema
+// Form validation schema - all fields mandatory except backup_email and backup_contact
 const profileSchema = z.object({
   first_name: z.string().min(1, "First name is required"),
   last_name: z.string().min(1, "Last name is required"),
+  email: z.string().min(1, "Email is required").email("Invalid email format"),
+  whatsapp_number: z.string().min(1, "WhatsApp number is required").regex(/^\+?[0-9\s\-()]+$/, "Invalid phone number format"),
   backup_email: z.string().email("Invalid email format").or(z.literal("")).optional(),
-  whatsapp_number: z.string().regex(/^\+?[0-9\s\-()]+$/, "Invalid phone number format").or(z.literal("")).optional(),
   backup_contact: z.string().regex(/^\+?[0-9\s\-()]+$/, "Invalid phone number format").or(z.literal("")).optional(),
 });
 
@@ -30,6 +32,7 @@ interface ProfileFormProps {
 
 export function ProfileForm({ profile, onSubmit }: ProfileFormProps) {
   const isMobile = useIsMobile();
+  const completionStatus = checkProfileCompletion(profile);
   
   // Set up the form
   const form = useForm<ProfileFormValues>({
@@ -37,11 +40,14 @@ export function ProfileForm({ profile, onSubmit }: ProfileFormProps) {
     defaultValues: {
       first_name: profile?.first_name || "",
       last_name: profile?.last_name || "",
-      backup_email: profile?.backup_email || "",
+      email: profile?.email || "",
       whatsapp_number: profile?.whatsapp_number || "",
+      backup_email: profile?.backup_email || "",
       backup_contact: profile?.backup_contact || "",
     },
   });
+
+  const isFormValid = form.formState.isValid;
 
   return (
     <Form {...form}>
@@ -53,7 +59,7 @@ export function ProfileForm({ profile, onSubmit }: ProfileFormProps) {
               name="first_name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>First name</FormLabel>
+                  <FormLabel>First name <span className="text-red-500">*</span></FormLabel>
                   <FormControl>
                     <Input placeholder="First name" {...field} className={HOVER_TRANSITION} />
                   </FormControl>
@@ -67,10 +73,50 @@ export function ProfileForm({ profile, onSubmit }: ProfileFormProps) {
               name="last_name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Last name</FormLabel>
+                  <FormLabel>Last name <span className="text-red-500">*</span></FormLabel>
                   <FormControl>
                     <Input placeholder="Last name" {...field} className={HOVER_TRANSITION} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Primary Email <span className="text-red-500">*</span></FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="email" 
+                      placeholder="your-email@example.com" 
+                      {...field} 
+                      className={`${HOVER_TRANSITION} bg-gray-50`}
+                      readOnly
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Your primary email address from your account (read-only)
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="whatsapp_number"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>WhatsApp Number <span className="text-red-500">*</span></FormLabel>
+                  <FormControl>
+                    <Input placeholder="+1 234 567 8900" {...field} className={HOVER_TRANSITION} />
+                  </FormControl>
+                  <FormDescription>
+                    Your WhatsApp number with country code (e.g., +1 for USA)
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -86,24 +132,7 @@ export function ProfileForm({ profile, onSubmit }: ProfileFormProps) {
                     <Input type="email" placeholder="backup@example.com" {...field} className={HOVER_TRANSITION} />
                   </FormControl>
                   <FormDescription>
-                    A secondary email that can be used if your primary email is unavailable.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="whatsapp_number"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>WhatsApp Number</FormLabel>
-                  <FormControl>
-                    <Input placeholder="+1 234 567 8900" {...field} className={HOVER_TRANSITION} />
-                  </FormControl>
-                  <FormDescription>
-                    Your WhatsApp number with country code (e.g., +1 for USA)
+                    A secondary email that can be used if your primary email is unavailable (optional)
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -120,7 +149,7 @@ export function ProfileForm({ profile, onSubmit }: ProfileFormProps) {
                     <Input placeholder="+1 234 567 8900" {...field} className={HOVER_TRANSITION} />
                   </FormControl>
                   <FormDescription>
-                    An alternative phone number where you can be reached
+                    An alternative phone number where you can be reached (optional)
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -132,8 +161,9 @@ export function ProfileForm({ profile, onSubmit }: ProfileFormProps) {
               type="submit" 
               className={`${HOVER_TRANSITION} ${BUTTON_HOVER_EFFECTS.default} gap-2 shadow-sm hover:shadow-md ${isMobile ? 'w-full' : ''}`}
               size={isMobile ? "default" : "lg"}
+              disabled={!isFormValid}
             >
-              Save Changes
+              {completionStatus.isComplete ? 'Save Changes' : 'Complete Profile'}
             </Button>
           </CardFooter>
         </Card>
