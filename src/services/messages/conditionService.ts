@@ -233,23 +233,35 @@ export async function updateMessageCondition(
       throw new Error("User not authenticated");
     }
     
+    // First verify the user owns the message this condition belongs to
+    const { data: conditionData, error: verifyError } = await supabase
+      .from('message_conditions')
+      .select(`
+        id,
+        messages!inner(
+          user_id
+        )
+      `)
+      .eq('id', conditionId)
+      .eq('messages.user_id', user.id) // CRITICAL: Ensure user owns the message
+      .single();
+      
+    if (verifyError || !conditionData) {
+      throw new Error("Condition not found or access denied");
+    }
+    
     // Convert updates to database format
     const dbUpdates: any = { ...updates };
     if (updates.recipients) {
       dbUpdates.recipients = updates.recipients;
     }
     
+    // Now perform the update operation
     const { data, error } = await supabase
       .from('message_conditions')
       .update(dbUpdates)
       .eq('id', conditionId)
-      .select(`
-        *,
-        messages!inner(
-          user_id
-        )
-      `)
-      .eq('messages.user_id', user.id) // CRITICAL: Ensure user owns the message
+      .select()
       .single();
 
     if (error) {
