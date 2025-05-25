@@ -137,7 +137,7 @@ export function ProfileForm({ profile, onSubmit }: ProfileFormProps) {
                     <Input placeholder="+1 234 567 8900" {...field} />
                   </FormControl>
                   <FormDescription>
-                    An alternative phone number where you can be reached (optional)
+                    An alternative phone number with country code (e.g., +1 for USA) where you can be reached (optional)
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
