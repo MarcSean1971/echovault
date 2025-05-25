@@ -1,12 +1,13 @@
 
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Menu, Home, MessageSquare, Users, Settings, LogOut, User } from "lucide-react";
+import { Menu, Home, MessageSquare, Users, Settings, LogOut, User, Share } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useHoverEffects } from "@/hooks/useHoverEffects";
+import { shareEchoVault } from "@/utils/shareUtils";
 
 interface MobileNavProps {
   userImage: string | null;
@@ -26,6 +27,12 @@ export function MobileNav({ userImage, initials }: MobileNavProps) {
     e.preventDefault();
     console.log("Sign out clicked");
     await signOut();
+  };
+
+  // Handle share
+  const handleShare = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    await shareEchoVault();
   };
   
   // Check if user has admin access
@@ -75,6 +82,14 @@ export function MobileNav({ userImage, initials }: MobileNavProps) {
                 <Users className={`h-5 w-5 ${getIconHoverClasses('muted')}`} />
                 <span>Recipients</span>
               </Link>
+              
+              <button
+                onClick={handleShare}
+                className="flex items-center gap-3 w-full p-3 rounded-lg font-medium transition-all duration-200 hover:bg-accent/10 text-left"
+              >
+                <Share className={`h-5 w-5 ${getIconHoverClasses('muted')}`} />
+                <span>Share EchoVault</span>
+              </button>
               
               <Link to="/profile" className={cn(
                 "flex items-center gap-3 w-full p-3 rounded-lg font-medium transition-all duration-200 hover:bg-accent/10",

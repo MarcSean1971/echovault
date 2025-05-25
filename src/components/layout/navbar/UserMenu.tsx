@@ -3,8 +3,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LogOut, User, Settings, Users, MessageSquare, Home } from "lucide-react";
+import { LogOut, User, Settings, Users, MessageSquare, Home, Share } from "lucide-react";
 import { ICON_HOVER_EFFECTS } from "@/utils/hoverEffects";
+import { shareEchoVault } from "@/utils/shareUtils";
 
 interface UserMenuProps {
   userImage: string | null;
@@ -18,6 +19,11 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
     e.preventDefault();
     console.log("Sign out clicked");
     await signOut();
+  };
+
+  const handleShare = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    await shareEchoVault();
   };
 
   // Check if user has admin access
@@ -62,6 +68,10 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
               <Users className={`mr-2 h-4 w-4 ${ICON_HOVER_EFFECTS.muted}`} />
               <span>Recipients</span>
             </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleShare} className="cursor-pointer hover:opacity-90 transition-opacity">
+            <Share className={`mr-2 h-4 w-4 ${ICON_HOVER_EFFECTS.muted}`} />
+            <span>Share EchoVault</span>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <Link to="/profile" className="w-full cursor-pointer hover:opacity-90 transition-opacity">
