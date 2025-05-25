@@ -43,19 +43,20 @@ export function RecipientForm({ initialData, onSubmit, isLoading, onCancel }: Re
 
   return (
     <form onSubmit={handleSubmit}>
-      <div className="space-y-4 my-6">
+      <div className="space-y-5 my-6">
         <div className="space-y-2">
-          <Label htmlFor="name">Full Name</Label>
+          <Label htmlFor="name" className="text-sm font-medium">Full Name</Label>
           <Input
             id="name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="John Doe"
             required
+            className="h-11"
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email" className="text-sm font-medium">Email</Label>
           <Input
             id="email"
             type="email"
@@ -63,34 +64,38 @@ export function RecipientForm({ initialData, onSubmit, isLoading, onCancel }: Re
             onChange={(e) => setEmail(e.target.value)}
             placeholder="john@example.com"
             required
+            className="h-11"
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="phone">Phone Number (Optional)</Label>
+          <Label htmlFor="phone" className="text-sm font-medium">Phone Number (Optional)</Label>
           <Input
             id="phone"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             placeholder="555-1234"
+            className="h-11"
           />
         </div>
-        <div className="flex items-center space-x-2 pt-2">
+        <div className="flex items-start space-x-3 pt-2">
           <Switch 
             id="notify-toggle" 
             checked={notifyOnAdd} 
             onCheckedChange={setNotifyOnAdd}
             className={HOVER_TRANSITION}
           />
-          <Label htmlFor="notify-toggle" className="text-sm text-muted-foreground cursor-pointer">
-            Send welcome email when added to messages
-          </Label>
+          <div className="flex-1">
+            <Label htmlFor="notify-toggle" className="text-sm text-muted-foreground cursor-pointer leading-relaxed">
+              Send welcome email when added to messages
+            </Label>
+          </div>
         </div>
       </div>
-      <DialogFooter>
-        <Button variant="outline" type="button" onClick={onCancel}>
+      <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+        <Button variant="outline" type="button" onClick={onCancel} className="w-full sm:w-auto h-11">
           Cancel
         </Button>
-        <Button type="submit" disabled={isLoading}>
+        <Button type="submit" disabled={isLoading} className="w-full sm:w-auto h-11">
           {submitText}
         </Button>
       </DialogFooter>

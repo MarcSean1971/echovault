@@ -23,25 +23,27 @@ export function RecipientsHeader({
   isLoading
 }: RecipientsHeaderProps) {
   return (
-    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Recipients</h1>
-        <p className="text-muted-foreground">
-          Manage the people who will receive your messages.
-        </p>
+    <div className="flex flex-col space-y-4 mb-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-3 sm:space-y-0">
+        <div className="flex-1">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Recipients</h1>
+          <p className="text-muted-foreground text-sm sm:text-base mt-1">
+            Manage the people who will receive your messages.
+          </p>
+        </div>
+        
+        <Button 
+          onClick={() => setIsDialogOpen(true)} 
+          className="w-full sm:w-auto h-11 sm:h-10"
+        >
+          <UserPlus className="h-4 w-4 mr-2" /> Add Recipient
+        </Button>
       </div>
-      
-      <Button 
-        onClick={() => setIsDialogOpen(true)} 
-        className="mt-4 sm:mt-0"
-      >
-        <UserPlus className="h-4 w-4 mr-2" /> Add Recipient
-      </Button>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg w-[95vw] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Add Recipient</DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">Add Recipient</DialogTitle>
           </DialogHeader>
           <RecipientForm
             onSubmit={onAddRecipient}

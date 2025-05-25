@@ -27,9 +27,11 @@ export function EditRecipientDialog({
 }: EditRecipientDialogProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg w-[95vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{recipient ? "Edit" : "Add"} Recipient</DialogTitle>
+          <DialogTitle className="text-lg sm:text-xl">
+            {recipient ? "Edit" : "Add"} Recipient
+          </DialogTitle>
         </DialogHeader>
         <RecipientForm
           initialData={recipient}

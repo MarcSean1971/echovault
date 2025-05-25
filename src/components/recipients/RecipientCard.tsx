@@ -13,18 +13,18 @@ interface RecipientCardProps {
 
 export function RecipientCard({ recipient, onEdit, onDelete }: RecipientCardProps) {
   return (
-    <div className="flex items-center justify-between p-4 border rounded-md hover:shadow-md transition-shadow">
-      <div className="flex items-center space-x-4">
-        <div className="bg-primary/10 p-2 rounded-full">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 border rounded-md hover:shadow-md transition-shadow space-y-3 sm:space-y-0">
+      <div className="flex items-start sm:items-center space-x-3 sm:space-x-4 min-w-0 flex-1">
+        <div className="bg-primary/10 p-2 rounded-full flex-shrink-0">
           <User className="h-5 w-5 text-primary" />
         </div>
-        <div>
-          <p className="font-medium">{recipient.name}</p>
-          <p className="text-sm text-muted-foreground">{recipient.email}</p>
+        <div className="min-w-0 flex-1">
+          <p className="font-medium text-sm sm:text-base break-words">{recipient.name}</p>
+          <p className="text-xs sm:text-sm text-muted-foreground break-all">{recipient.email}</p>
           {recipient.phone && (
-            <p className="text-sm text-muted-foreground">{recipient.phone}</p>
+            <p className="text-xs sm:text-sm text-muted-foreground">{recipient.phone}</p>
           )}
-          <div className="mt-1">
+          <div className="mt-1.5 sm:mt-1">
             <Badge 
               variant={recipient.notify_on_add ? "default" : "secondary"}
               className="text-xs"
@@ -34,12 +34,12 @@ export function RecipientCard({ recipient, onEdit, onDelete }: RecipientCardProp
           </div>
         </div>
       </div>
-      <div className="flex space-x-2">
+      <div className="flex space-x-2 sm:ml-4 justify-end">
         <Button
           variant="ghost"
           size="icon"
           onClick={() => onEdit(recipient)}
-          className={HOVER_TRANSITION}
+          className={`${HOVER_TRANSITION} h-10 w-10 sm:h-9 sm:w-9`}
         >
           <Edit className="h-4 w-4" />
         </Button>
@@ -47,7 +47,7 @@ export function RecipientCard({ recipient, onEdit, onDelete }: RecipientCardProp
           variant="ghost"
           size="icon"
           onClick={() => onDelete(recipient.id)}
-          className={HOVER_TRANSITION}
+          className={`${HOVER_TRANSITION} h-10 w-10 sm:h-9 sm:w-9`}
         >
           <Trash className="h-4 w-4" />
         </Button>

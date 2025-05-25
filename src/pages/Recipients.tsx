@@ -23,8 +23,8 @@ export default function Recipients() {
   } = useRecipientOperations(setRecipients);
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-2xl mx-auto">
+    <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8">
+      <div className="max-w-4xl mx-auto">
         <RecipientsHeader
           isDialogOpen={isDialogOpen}
           setIsDialogOpen={setIsDialogOpen}
