@@ -1,26 +1,6 @@
 
 import { formatDistanceToNow } from "date-fns";
-
-/**
- * Simple reminder formatter for display
- */
-function formatReminderSchedule(upcomingReminders: { scheduledAt: Date, reminderType: string, priority?: string }[] = []): string[] {
-  const now = new Date();
-  
-  return upcomingReminders
-    .filter(reminder => reminder.scheduledAt > now)
-    .map(reminder => {
-      const time = reminder.scheduledAt;
-      const timeUntil = time.getTime() - now.getTime();
-      const hoursUntil = Math.round(timeUntil / (1000 * 60 * 60));
-      
-      if (reminder.reminderType === 'final_delivery') {
-        return `Final Delivery: ${time.toLocaleString()}`;
-      } else {
-        return `Check-in Reminder: ${hoursUntil}h (${time.toLocaleString()})`;
-      }
-    });
-}
+import { formatReminderSchedule } from "@/utils/reminder/reminderFormatter";
 
 /**
  * Hook to format reminder data for display

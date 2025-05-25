@@ -1,9 +1,12 @@
 
 import { useState, useEffect } from 'react';
 import { useReminderDataFetcher } from './reminder/useReminderDataFetcher';
+import { formatReminderSchedule } from '@/utils/reminder/reminderFormatter';
 
 /**
- * Simple hook to get upcoming reminders for a specific message
+ * Hook to get upcoming reminders for a specific message
+ * It returns string representations of the reminders for display
+ * And supports force refreshing via a refreshTrigger parameter
  */
 export function useNextReminders(messageId: string | undefined, refreshTrigger: number = 0) {
   const [lastRefreshed, setLastRefreshed] = useState<number>(0);
@@ -22,20 +25,7 @@ export function useNextReminders(messageId: string | undefined, refreshTrigger: 
       const result = await fetchReminderData();
       
       if (result) {
-        const now = new Date();
-        const formattedReminders = result.upcomingReminders
-          .filter(r => r.scheduledAt > now)
-          .map(reminder => {
-            const timeUntil = reminder.scheduledAt.getTime() - now.getTime();
-            const hoursUntil = Math.round(timeUntil / (1000 * 60 * 60));
-            
-            if (reminder.reminderType === 'final_delivery') {
-              return `Final Delivery: ${reminder.scheduledAt.toLocaleString()}`;
-            } else {
-              return `Check-in Reminder: ${hoursUntil}h (${reminder.scheduledAt.toLocaleString()})`;
-            }
-          });
-        
+        const formattedReminders = formatReminderSchedule(result.upcomingReminders);
         console.log(`[useNextReminders] Fetched ${formattedReminders.length} formatted reminders`);
         
         setUpcomingReminders(formattedReminders);

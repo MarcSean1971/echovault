@@ -1,8 +1,11 @@
 
 import React, { useState } from "react";
+import { parseReminderMinutes } from "@/utils/reminderUtils";
+import { useNextReminders } from "@/hooks/useNextReminders";
 import { ReminderHistoryDialog } from "@/components/message/detail/ReminderHistoryDialog";
 import { ReminderStatus } from "./reminder/ReminderStatus";
-import { useSimpleReminders } from "@/hooks/useSimpleReminders";
+import { useReminderManager } from "./reminder/hooks/useReminderManager";
+import { enhanceReminders } from "./reminder/utils/reminderEnhancer";
 import { Bell } from "lucide-react";
 import { AccordionSection } from "@/components/message/detail/AccordionSection";
 import { ICON_HOVER_EFFECTS } from "@/utils/hoverEffects";
@@ -12,31 +15,61 @@ interface ReminderSectionProps {
   deadline: Date | null;
   isArmed: boolean;
   refreshTrigger?: number;
+  formattedAllReminders?: string[];
 }
 
 export function ReminderSection({ 
   condition, 
   deadline, 
   isArmed,
-  refreshTrigger
+  refreshTrigger,
+  formattedAllReminders = []
 }: ReminderSectionProps) {
+  // Parse reminder minutes from the condition
+  const reminderMinutes = parseReminderMinutes(condition?.reminder_hours);
+  
   // State for history dialog
   const [historyOpen, setHistoryOpen] = useState<boolean>(false);
   
-  // SIMPLIFIED: Use the simple reminders hook
+  // Use the reminder manager hook to handle refresh logic and testing
+  const {
+    lastForceRefresh,
+    refreshCount,
+    isTestingReminder,
+    errorState,
+    refreshInProgressRef,
+    setErrorState,
+    handleForceRefresh,
+    handleTestReminder
+  } = useReminderManager({
+    messageId: condition?.message_id,
+    refreshTrigger
+  });
+  
+  // Get upcoming reminder information with ability to force refresh
   const { 
     upcomingReminders, 
     hasReminders, 
     isLoading, 
-    error 
-  } = useSimpleReminders(condition?.message_id, refreshTrigger);
+    forceRefresh, 
+    lastRefreshed, 
+    permissionError 
+  } = useNextReminders(
+    condition?.message_id,
+    refreshTrigger || lastForceRefresh
+  );
   
-  console.log("[ReminderSection] SIMPLIFIED rendering with:", {
+  // Transform string reminders to enhanced objects with required properties
+  const enhancedReminders = enhanceReminders(upcomingReminders);
+  
+  // For debugging
+  console.log("[ReminderSection] Rendering with:", {
     upcomingReminders,
     hasReminders,
     isLoading,
-    messageId: condition?.message_id,
-    isArmed
+    formattedAllReminders,
+    enhancedCount: enhancedReminders.length,
+    refreshCount
   });
   
   // Don't show anything if not armed
@@ -49,17 +82,17 @@ export function ReminderSection({
       title={
         <div className="flex items-center">
           <Bell className={`h-4 w-4 mr-1.5 ${ICON_HOVER_EFFECTS.muted}`} />
-          Reminder Information {hasReminders && `(${upcomingReminders.length})`}
+          Reminder Information {hasReminders && `(${enhancedReminders.length})`}
         </div>
       }
-      defaultOpen={true}
+      defaultOpen={true} // Open by default so user sees the reminder information
       value="reminders"
     >
-      {/* SIMPLIFIED: Display reminders list */}
-      {upcomingReminders.length > 0 && (
+      {/* Display formatted reminders list with consistent text-sm styling */}
+      {formattedAllReminders.length > 0 && (
         <div className="mb-2">
           <div className="grid gap-1 text-sm">
-            {upcomingReminders.map((reminder, index) => (
+            {formattedAllReminders.map((reminder, index) => (
               <div key={index} className={`flex items-start ${reminder.includes("Final Delivery") ? "text-destructive font-medium" : "text-muted-foreground"}`}>
                 <span className="mr-2 mt-0.5 flex-shrink-0">•</span>
                 <div className="flex items-center">
@@ -71,22 +104,16 @@ export function ReminderSection({
         </div>
       )}
       
-      {/* SIMPLIFIED: Status display */}
       <ReminderStatus
         isLoading={isLoading}
-        permissionError={!!error}
+        permissionError={permissionError}
         hasReminders={hasReminders}
-        enhancedReminders={upcomingReminders.map(text => ({ 
-          formattedShortDate: "",
-          formattedText: text,
-          isImportant: text.includes("Final Delivery"),
-          original: text
-        }))}
-        refreshCount={0}
-        errorState={error}
+        enhancedReminders={enhancedReminders}
+        refreshCount={refreshCount}
+        errorState={errorState}
       />
       
-      {/* Reminder History Dialog */}
+      {/* Reminder History Dialog - hidden but kept for functionality */}
       {condition?.message_id && (
         <ReminderHistoryDialog
           open={historyOpen}

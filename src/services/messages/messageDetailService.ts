@@ -2,8 +2,9 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/components/ui/use-toast";
 import { armMessage, disarmMessage, getMessageDeadline as fetchDeadline } from "./conditionService";
-import { createReminderSchedule } from "@/services/reminders/simpleReminderService";
+import { generateReminderSchedule } from "@/utils/reminder"; // Import the generator
 import { parseReminderMinutes } from "@/utils/reminderUtils";
+import { getEffectiveDeadline } from "@/utils/reminder/reminderUtils";
 
 /**
  * Deletes a message with the given ID
@@ -33,31 +34,6 @@ export const deleteMessage = async (messageId: string): Promise<boolean> => {
     return false;
   }
 };
-
-/**
- * Simple deadline calculation
- */
-function getEffectiveDeadline(condition: any): Date | null {
-  if (condition.trigger_date) {
-    return new Date(condition.trigger_date);
-  }
-  
-  if (condition.last_checked && (condition.hours_threshold || condition.minutes_threshold)) {
-    const deadline = new Date(condition.last_checked);
-    
-    if (condition.hours_threshold) {
-      deadline.setHours(deadline.getHours() + condition.hours_threshold);
-    }
-    
-    if (condition.minutes_threshold) {
-      deadline.setMinutes(deadline.getMinutes() + condition.minutes_threshold);
-    }
-    
-    return deadline;
-  }
-  
-  return null;
-}
 
 /**
  * Arms a message with the given condition ID
@@ -97,16 +73,12 @@ export const handleArmMessage = async (conditionId: string, setIsArmed: (isArmed
         
         // Generate and store reminder schedule
         try {
-          const result = await createReminderSchedule({
-            messageId: messageId,
-            conditionId: conditionId,
-            conditionType: condition.condition_type,
-            triggerDate: condition.trigger_date,
-            lastChecked: condition.last_checked,
-            hoursThreshold: condition.hours_threshold,
-            minutesThreshold: condition.minutes_threshold,
-            reminderHours: condition.reminder_hours
-          });
+          const result = await generateReminderSchedule(
+            messageId,
+            conditionId,
+            effectiveDeadline,
+            reminderMinutes
+          );
           
           if (result) {
             console.log("[ARM-MESSAGE] Successfully generated reminder schedule");

@@ -2,7 +2,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { useActionToasts } from "./useActionToasts";
 import { useConditionUpdates } from "./useConditionUpdates";
-import { markRemindersObsolete } from "@/services/reminders/simpleReminderService";
+import { markRemindersAsObsolete } from "@/utils/reminder/reminderUtils";
 
 /**
  * Hook for handling disarming message operations
@@ -36,16 +36,9 @@ export function useDisarmOperations() {
         .eq("id", conditionId)
         .single();
         
-      if (fetchError) {
-        console.error("[useDisarmOperations] Error fetching condition:", fetchError);
-        throw fetchError;
-      }
+      if (fetchError) throw fetchError;
       
-      if (!currentCondition) {
-        throw new Error("Condition not found");
-      }
-      
-      const messageId = currentCondition.message_id;
+      const messageId = currentCondition?.message_id;
       
       // Immediately invalidate cache to force a refresh on next query
       if (messageId) {
@@ -56,8 +49,10 @@ export function useDisarmOperations() {
       emitOptimisticUpdate(conditionId, messageId, 'disarm');
       
       // CRITICAL FIX: Mark all reminders as obsolete when disarming
-      console.log(`[useDisarmOperations] Marking reminders obsolete for message ${messageId}, condition ${conditionId}`);
-      await markRemindersObsolete(messageId);
+      if (messageId) {
+        console.log(`[useDisarmOperations] Marking reminders obsolete for message ${messageId}, condition ${conditionId}`);
+        await markRemindersAsObsolete(messageId, conditionId);
+      }
       
       // Direct database operation for faster disarming
       const { error } = await supabase
@@ -66,7 +61,6 @@ export function useDisarmOperations() {
         .eq("id", conditionId);
       
       if (error) {
-        console.error("[useDisarmOperations] Error updating condition:", error);
         throw error;
       }
       

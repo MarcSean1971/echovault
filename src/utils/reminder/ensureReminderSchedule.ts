@@ -1,36 +1,20 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { parseReminderMinutes } from "../reminderUtils";
-import { createReminderSchedule, markRemindersObsolete } from "@/services/reminders/simpleReminderService";
-
-/**
- * Simple deadline calculation
- */
-function getEffectiveDeadline(condition: any): Date | null {
-  if (condition.trigger_date) {
-    return new Date(condition.trigger_date);
-  }
-  
-  if (condition.last_checked && (condition.hours_threshold || condition.minutes_threshold)) {
-    const deadline = new Date(condition.last_checked);
-    
-    if (condition.hours_threshold) {
-      deadline.setHours(deadline.getHours() + condition.hours_threshold);
-    }
-    
-    if (condition.minutes_threshold) {
-      deadline.setMinutes(deadline.getMinutes() + condition.minutes_threshold);
-    }
-    
-    return deadline;
-  }
-  
-  return null;
-}
+import { getEffectiveDeadline } from "./reminderUtils";
+import { markRemindersAsObsolete } from "./reminderUtils";
+import { generateReminderSchedule, generateCheckInReminderSchedule } from "./reminderGenerator";
 
 /**
  * Ensures a reminder schedule exists for a message condition
- * SIMPLIFIED: Uses the simple reminder service
+ * This function should be called whenever conditions change that might affect reminders:
+ * - When a message is armed
+ * - When a message condition is updated/edited
+ * - After check-ins that update the condition's last_checked time
+ * 
+ * FIXED: Enhanced error handling, logging, and proper handling of reminder minutes values
+ * FIXED: Added isEdit parameter to avoid sending notifications during edits
+ * FIXED: Now properly handles check-in conditions vs standard conditions
  */
 export async function ensureReminderSchedule(
   conditionIdOrMessageId: string,
@@ -94,10 +78,15 @@ export async function ensureReminderSchedule(
     // Log the condition type for debugging
     console.log(`[ENSURE-REMINDERS] Processing condition type: ${condition.condition_type}`);
     
+    // FIXED: Enhanced logging of database values
+    console.log("[ENSURE-REMINDERS] Raw reminder_hours from database:", condition.reminder_hours);
+    console.log("[ENSURE-REMINDERS] Type of reminder_hours:", typeof condition.reminder_hours);
+    console.log("[ENSURE-REMINDERS] Is Array:", Array.isArray(condition.reminder_hours));
+    
     // First mark existing reminders as obsolete
     try {
       console.log(`[ENSURE-REMINDERS] Marking existing reminders as obsolete for message ${messageId}`);
-      await markRemindersObsolete(messageId);
+      await markRemindersAsObsolete(messageId, conditionId, isEdit);
     } catch (obsoleteError) {
       console.error("[ENSURE-REMINDERS] Error marking reminders as obsolete:", obsoleteError);
       // Continue execution to attempt creating new reminders even if marking obsolete fails
@@ -147,24 +136,101 @@ export async function ensureReminderSchedule(
       
     console.log("[ENSURE-REMINDERS] Final reminder minutes to use:", reminderMinutes);
     
-    // Use the simplified reminder service
-    const success = await createReminderSchedule({
-      messageId: messageId,
-      conditionId: conditionId,
-      conditionType: condition.condition_type,
-      triggerDate: condition.trigger_date,
-      lastChecked: condition.last_checked,
-      hoursThreshold: condition.hours_threshold,
-      minutesThreshold: condition.minutes_threshold,
-      reminderHours: reminderMinutes.map(m => m / 60) // Convert back to hours for the service
-    });
+    // CRITICAL FIX: Different handling for check-in vs. standard conditions
+    const isCheckInCondition = ['no_check_in', 'recurring_check_in', 'inactivity_to_date'].includes(condition.condition_type);
     
-    if (success) {
-      console.log("[ENSURE-REMINDERS] Successfully created reminder schedule");
-      return true;
+    if (isCheckInCondition) {
+      // For check-in conditions, use the specialized generator
+      console.log("[ENSURE-REMINDERS] Using check-in reminder generator for condition type:", condition.condition_type);
+      
+      if (!condition.last_checked) {
+        console.error("[ENSURE-REMINDERS] Cannot create check-in reminders - no last_checked timestamp");
+        return false;
+      }
+      
+      const lastCheckedDate = new Date(condition.last_checked);
+      const hoursThreshold = condition.hours_threshold || 0;
+      const minutesThreshold = condition.minutes_threshold || 0;
+      
+      try {
+        const result = await generateCheckInReminderSchedule(
+          messageId,
+          conditionId,
+          lastCheckedDate,
+          hoursThreshold,
+          minutesThreshold,
+          reminderMinutes,
+          isEdit // Pass isEdit flag to prevent notifications during edits/arming
+        );
+        
+        if (result) {
+          console.log("[ENSURE-REMINDERS] Successfully generated check-in reminder schedule");
+          return true;
+        } else {
+          console.error("[ENSURE-REMINDERS] Failed to generate check-in reminder schedule");
+          return false;
+        }
+      } catch (checkInError) {
+        console.error("[ENSURE-REMINDERS] Error generating check-in reminder schedule:", checkInError);
+        return false;
+      }
     } else {
-      console.error("[ENSURE-REMINDERS] Failed to create reminder schedule");
-      return false;
+      // For standard conditions, use the regular generator
+      // Calculate effective deadline based on condition type
+      const effectiveDeadline = getEffectiveDeadline(condition);
+      
+      if (!effectiveDeadline) {
+        console.warn("[ENSURE-REMINDERS] Could not determine deadline for condition");
+        return false;
+      }
+      
+      console.log(`[ENSURE-REMINDERS] Determined deadline: ${effectiveDeadline.toISOString()}`);
+      
+      // Generate standard reminder schedule
+      try {
+        const result = await generateReminderSchedule(
+          messageId,
+          conditionId,
+          effectiveDeadline,
+          reminderMinutes,
+          isEdit // Pass the isEdit flag to prevent immediate notifications
+        );
+        
+        if (result) {
+          console.log("[ENSURE-REMINDERS] Successfully generated standard reminder schedule");
+          return true;
+        } else {
+          console.error("[ENSURE-REMINDERS] Failed to generate standard reminder schedule");
+          return false;
+        }
+      } catch (scheduleError) {
+        console.error("[ENSURE-REMINDERS] Error generating standard reminder schedule:", scheduleError);
+        
+        // Enhanced error logging with more details
+        if (scheduleError.message?.includes("policy")) {
+          console.error("[ENSURE-REMINDERS] This appears to be a permissions error with RLS policies");
+          
+          // Try the edge function approach as a fallback
+          try {
+            console.log("[ENSURE-REMINDERS] Attempting to use edge function to regenerate reminders");
+            await supabase.functions.invoke("send-reminder-emails", {
+              body: { 
+                messageId, 
+                debug: true, 
+                forceSend: false, // Never force send from backup method
+                action: "regenerate-schedule",
+                isEdit: isEdit // Pass isEdit flag to prevent immediate notifications
+              }
+            });
+            console.log("[ENSURE-REMINDERS] Successfully triggered edge function to regenerate reminders");
+            return true;
+          } catch (edgeFunctionError) {
+            console.error("[ENSURE-REMINDERS] Edge function fallback failed:", edgeFunctionError);
+          }
+        }
+        
+        return false;
+      }
     }
   } catch (error) {
     console.error("[ENSURE-REMINDERS] Error ensuring reminder schedule:", error);

@@ -2,7 +2,8 @@
 import { supabase } from "@/integrations/supabase/client";
 import { useActionToasts } from "./useActionToasts";
 import { useConditionUpdates } from "./useConditionUpdates";
-import { createReminderSchedule } from "@/services/reminders/simpleReminderService";
+import { ensureReminderSchedule } from "@/utils/reminder/ensureReminderSchedule";
+import { invalidateReminderCache } from "@/utils/reminder/reminderFetcher";
 
 /**
  * Hook for handling arming message operations
@@ -30,95 +31,74 @@ export function useArmOperations() {
     console.log(`[useArmOperations] Arming message with condition ${conditionId}`);
     
     try {
-      // First, get the current condition to extract all necessary data
+      // First, get the current condition to extract messageId for later use
       const { data: currentCondition, error: fetchError } = await supabase
         .from("message_conditions")
-        .select("*")
+        .select("message_id, condition_type")
         .eq("id", conditionId)
         .single();
         
-      if (fetchError) {
-        console.error("[useArmOperations] Error fetching condition:", fetchError);
-        throw fetchError;
-      }
+      if (fetchError) throw fetchError;
       
-      if (!currentCondition) {
-        throw new Error("Condition not found");
-      }
-      
-      console.log("[useArmOperations] Current condition data:", {
-        id: currentCondition.id,
-        condition_type: currentCondition.condition_type,
-        hours_threshold: currentCondition.hours_threshold,
-        minutes_threshold: currentCondition.minutes_threshold,
-        trigger_date: currentCondition.trigger_date,
-        reminder_hours: currentCondition.reminder_hours
-      });
-      
-      const messageId = currentCondition.message_id;
-      const conditionType = currentCondition.condition_type;
+      const messageId = currentCondition?.message_id;
+      const conditionType = currentCondition?.condition_type;
       
       // Immediately invalidate cache to force a refresh on next query
       if (messageId) {
         invalidateCache(messageId);
+        // Also invalidate reminder cache
+        invalidateReminderCache([messageId]);
       }
       
       // Emit an optimistic update event immediately
       emitOptimisticUpdate(conditionId, messageId, 'arm');
       
-      // Update the condition to be active with current timestamp
-      const now = new Date().toISOString();
+      // Direct database operation for faster arming - avoids processing content
       const { data, error } = await supabase
         .from("message_conditions")
         .update({ 
           active: true,
-          last_checked: now
+          last_checked: new Date().toISOString() 
         })
         .eq("id", conditionId)
-        .select("*")
+        .select("id, message_id")
         .single();
       
       if (error) {
-        console.error("[useArmOperations] Error updating condition:", error);
         throw error;
       }
       
-      console.log(`[useArmOperations] Successfully armed condition, creating reminder schedule...`);
+      // Get message ID for UI feedback and reminders
+      const actualMessageId = data.message_id;
       
-      // Create reminder schedule using the COMPLETE condition data - FIXED PARAMETERS
-      const reminderSuccess = await createReminderSchedule({
-        messageId: messageId,
-        conditionId: conditionId,
-        conditionType: conditionType,
-        triggerDate: currentCondition.trigger_date,
-        lastChecked: now, // Use the timestamp we just set
-        hoursThreshold: currentCondition.hours_threshold, // This can be 0, null, or undefined
-        minutesThreshold: currentCondition.minutes_threshold, // This can be 0, null, or undefined
-        reminderHours: currentCondition.reminder_hours || [24, 12, 6, 1] // Default reminder schedule
-      });
+      // Perform reminder schedule creation and invalidation in parallel
+      await Promise.all([
+        // CRITICAL: Ensure reminder schedule is created with proper parameters
+        ensureReminderSchedule(conditionId, true), // Changed to true to prevent immediate emails
+        
+        // Additionally, make sure all caches that might affect display are invalidated
+        Promise.resolve().then(() => {
+          invalidateReminderCache([actualMessageId]);
+          invalidateCache(actualMessageId);
+        })
+      ]);
       
-      if (!reminderSuccess) {
-        console.error(`[useArmOperations] Failed to create reminder schedule for condition ${conditionId}`);
-        // Don't throw error here - the message is still armed, just no reminders
-        console.warn(`[useArmOperations] Message armed but reminder schedule creation failed`);
-      } else {
-        console.log(`[useArmOperations] Successfully created reminder schedule for condition ${conditionId}`);
-      }
-      
-      // Calculate deadline for immediate UI feedback - IMPROVED CALCULATION
+      // Get deadline for immediate UI feedback
+      const { data: condition } = await supabase
+        .from("message_conditions")
+        .select("*")
+        .eq("id", conditionId)
+        .single();
+        
+      // Calculate deadline
       let deadlineDate: Date | null = null;
-      if (currentCondition.condition_type === "scheduled" && currentCondition.trigger_date) {
-        deadlineDate = new Date(currentCondition.trigger_date);
-      } else if (
-        (currentCondition.hours_threshold !== undefined && currentCondition.hours_threshold !== null) ||
-        (currentCondition.minutes_threshold !== undefined && currentCondition.minutes_threshold !== null)
-      ) {
-        deadlineDate = new Date(now);
-        if (currentCondition.hours_threshold) {
-          deadlineDate.setHours(deadlineDate.getHours() + currentCondition.hours_threshold);
-        }
-        if (currentCondition.minutes_threshold) {
-          deadlineDate.setMinutes(deadlineDate.getMinutes() + currentCondition.minutes_threshold);
+      if (condition) {
+        if (condition.condition_type === "scheduled" && condition.trigger_date) {
+          deadlineDate = new Date(condition.trigger_date);
+        } else if (condition.hours_threshold) {
+          const hoursInMs = condition.hours_threshold * 60 * 60 * 1000;
+          const minutesInMs = (condition.minutes_threshold || 0) * 60 * 1000;
+          deadlineDate = new Date(Date.now() + hoursInMs + minutesInMs);
         }
       }
       
@@ -130,15 +110,15 @@ export function useArmOperations() {
       // Fire a confirmed update event now that we have real data
       emitConfirmedUpdate(
         conditionId, 
-        messageId, 
+        actualMessageId, 
         'arm',
         deadlineDate?.toISOString()
       );
       
-      // Fire a specific event for message cards to handle
+      // NEW: Fire a specific event for message cards to handle
       window.dispatchEvent(new CustomEvent('message-reminder-updated', { 
         detail: { 
-          messageId: messageId,
+          messageId: actualMessageId,
           conditionId,
           action: 'arm',
           timestamp: new Date().toISOString()
@@ -147,7 +127,7 @@ export function useArmOperations() {
       
       // Fire a background event to handle reminder generation without blocking UI
       setTimeout(() => {
-        requestReminderGeneration(messageId, conditionId);
+        requestReminderGeneration(actualMessageId, conditionId);
       }, 100);
       
       // Refresh conditions data to update UI components with the latest state

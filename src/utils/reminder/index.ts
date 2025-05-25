@@ -1,11 +1,20 @@
 
 /**
- * SIMPLIFIED: Main reminder utility module
- * Exports only the essential reminder functionality
+ * Main reminder utility module that exports all reminder functionality
+ * This file provides a unified interface to the reminder system
  */
 
-// Export the core utilities
-export { parseReminderMinutes, formatReminderDate, formatScheduledReminderTime, getTimeUntil } from '../reminderUtils';
+// Export the reminder creation utilities
+export { generateReminderSchedule } from './generators/coreGenerator';
+export { calculateNextReminderTime } from './reminderCalculator';
+export { markRemindersAsObsolete } from './reminderUtils';
+export { formatReminderDate, formatScheduledReminderTime, parseReminderMinutes } from '../reminderUtils';
 
-// Export the simple reminder service
-export { createReminderSchedule, getUpcomingReminders, markRemindersObsolete } from '@/services/reminders/simpleReminderService';
+// Export formatters
+export { formatReminderSchedule } from './reminderFormatter';
+
+// Export batch reminder fetcher
+export { getUpcomingRemindersForMultipleMessages } from './reminderFetcher';
+
+// Do not export from hooks - this causes circular dependencies
+// export * from '../hooks/reminder';
