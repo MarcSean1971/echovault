@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import UserDetailModal from "./UserDetailModal";
+import { UserDetailModal } from "./user-detail-modal";
 import { UserTableProps, AuthUser } from "./user-table/types";
 import { useUserData } from "./user-table/useUserData";
 import { UserTableContent } from "./user-table/UserTableContent";
