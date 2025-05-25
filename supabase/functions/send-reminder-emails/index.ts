@@ -1,11 +1,12 @@
 
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { supabaseClient } from "./supabase-client.ts";
 import { sendCreatorReminder } from "./services/reminder-sender.ts";
 import { corsHeaders } from "./cors-headers.ts";
 
 /**
- * FIXED: Enhanced reminder processing with STRICT separation between check-in reminders and final delivery
+ * SIMPLIFIED: Enhanced reminder processing with ONLY check-in reminders sent to creators
  */
 serve(async (req) => {
   console.log("===== SEND REMINDER EMAILS FUNCTION =====");
@@ -30,13 +31,13 @@ serve(async (req) => {
     console.log(`Request parameters: messageId=${messageId}, debug=${debug}, forceSend=${forceSend}, source=${source}, action=${action}`);
 
     if (action === "process") {
-      console.log("Processing due reminders with FIXED separation of check-in vs final delivery...");
-      console.log("Checking for all due reminders");
+      console.log("Processing ONLY check-in reminders sent to creators...");
+      console.log("Checking for check-in reminders due");
       
       const supabase = supabaseClient();
       
-      // CRITICAL FIX: PHASE 1 - Process ONLY check-in reminders (sent to creators ONLY)
-      console.log(`[${new Date().toISOString()}] [REMINDER-PROCESSOR] PHASE 1: Processing check-in reminders for creators ONLY`);
+      // SIMPLIFIED: Process ONLY check-in reminders (sent to creators ONLY)
+      console.log(`[${new Date().toISOString()}] [REMINDER-PROCESSOR] Processing check-in reminders for creators ONLY`);
       
       // Get due check-in reminders - STRICTLY for creators only
       const { data: checkInReminders, error: checkInError } = await supabase
@@ -122,7 +123,7 @@ serve(async (req) => {
               console.log(`[CHECK-IN-ONLY] Using creator email from profiles: ${creatorEmail}`);
               console.log(`[CHECK-IN-ONLY] CONFIRMED: Calling sendCreatorReminder() ONLY - NO recipient emails`);
               
-              // CRITICAL FIX: ONLY call sendCreatorReminder, NEVER sendRecipientReminders during check-in phase
+              // CRITICAL FIX: ONLY call sendCreatorReminder, NEVER sendRecipientReminders
               const reminderResults = await sendCreatorReminder(
                 reminder.message_id,
                 reminder.condition_id,
@@ -183,175 +184,15 @@ serve(async (req) => {
         }
       }
       
-      // CRITICAL FIX: PHASE 2 - Process ONLY final delivery messages (with STRICT deadline validation)
-      console.log(`[${new Date().toISOString()}] [FINAL-DELIVERY-ONLY] PHASE 2: Processing final delivery messages (STRICT deadline validation)`);
+      console.log(`[${new Date().toISOString()}] [REMINDER-PROCESSOR] Processing complete - check-in reminders to creators ONLY`);
       
-      // Get due final delivery reminders - STRICTLY for final delivery only
-      const { data: finalDeliveryReminders, error: finalError } = await supabase
-        .from('reminder_schedule')
-        .select(`
-          *,
-          message_conditions!inner(
-            id,
-            message_id,
-            condition_type,
-            hours_threshold,
-            minutes_threshold,
-            last_checked,
-            recipients
-          ),
-          messages!inner(
-            id,
-            title,
-            user_id
-          )
-        `)
-        .eq('status', 'pending')
-        .eq('reminder_type', 'final_delivery') // CRITICAL: Only final_delivery type, NOT reminder
-        .lte('scheduled_at', new Date().toISOString())
-        .order('scheduled_at', { ascending: true });
-
-      if (finalError) {
-        console.error("Error fetching final delivery reminders:", finalError);
-      } else {
-        console.log(`Found ${finalDeliveryReminders?.length || 0} due final delivery reminders`);
-        
-        if (finalDeliveryReminders && finalDeliveryReminders.length > 0) {
-          for (const reminder of finalDeliveryReminders) {
-            try {
-              console.log(`[FINAL-DELIVERY-ONLY] Validating deadline for message ${reminder.message_id}`);
-              
-              const condition = reminder.message_conditions;
-              const isCheckInCondition = ['no_check_in', 'recurring_check_in', 'inactivity_to_date'].includes(condition.condition_type);
-              
-              if (isCheckInCondition) {
-                // CRITICAL FIX: Validate actual deadline has been reached
-                const now = new Date();
-                const lastChecked = new Date(condition.last_checked);
-                const actualDeadline = new Date(lastChecked);
-                actualDeadline.setHours(actualDeadline.getHours() + (condition.hours_threshold || 0));
-                actualDeadline.setMinutes(actualDeadline.getMinutes() + (condition.minutes_threshold || 0));
-                
-                console.log(`[FINAL-DELIVERY-ONLY] Deadline validation - Last checked: ${lastChecked.toISOString()}, Actual deadline: ${actualDeadline.toISOString()}, Current time: ${now.toISOString()}`);
-                
-                // STRICT VALIDATION: Only proceed if actual deadline has passed
-                if (now < actualDeadline) {
-                  const minutesRemaining = (actualDeadline.getTime() - now.getTime()) / (1000 * 60);
-                  console.log(`[FINAL-DELIVERY-ONLY] BLOCKING final delivery - deadline not reached yet (${minutesRemaining.toFixed(1)} minutes remaining)`);
-                  
-                  // Reschedule for the actual deadline
-                  await supabase
-                    .from('reminder_schedule')
-                    .update({ 
-                      scheduled_at: actualDeadline.toISOString(),
-                      last_attempt_at: new Date().toISOString()
-                    })
-                    .eq('id', reminder.id);
-                  
-                  continue; // Skip this final delivery
-                }
-                
-                // ADDITIONAL SAFEGUARD: Check if user checked in recently (within last 5 minutes)
-                const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
-                if (lastChecked > fiveMinutesAgo) {
-                  console.log(`[FINAL-DELIVERY-ONLY] BLOCKING final delivery - recent check-in detected at ${lastChecked.toISOString()}`);
-                  
-                  // Mark as obsolete since user checked in
-                  await supabase
-                    .from('reminder_schedule')
-                    .update({ 
-                      status: 'obsolete',
-                      last_attempt_at: new Date().toISOString()
-                    })
-                    .eq('id', reminder.id);
-                  
-                  continue; // Skip this final delivery
-                }
-                
-                console.log(`[FINAL-DELIVERY-ONLY] APPROVED final delivery - deadline passed and no recent check-in`);
-              }
-              
-              // If we reach here, final delivery is approved
-              console.log(`[FINAL-DELIVERY-ONLY] Processing final delivery ${reminder.id} for message ${reminder.message_id}`);
-              console.log(`[FINAL-DELIVERY-ONLY] CRITICAL: This will send to recipients ONLY, NOT creator`);
-              
-              // Mark as processing
-              await supabase
-                .from('reminder_schedule')
-                .update({ 
-                  status: 'processing',
-                  last_attempt_at: new Date().toISOString()
-                })
-                .eq('id', reminder.id);
-              
-              // CRITICAL FIX: For final delivery, we would call the send-message-notifications function
-              // This is the proper way to send final delivery to recipients
-              console.log(`[FINAL-DELIVERY-ONLY] Invoking send-message-notifications for final delivery to recipients`);
-              
-              const { error: notificationError } = await supabase.functions.invoke("send-message-notifications", {
-                body: {
-                  messageId: reminder.message_id,
-                  isEmergency: false,
-                  debug: debug,
-                  forceSend: true, // Force send for final delivery
-                  source: "final-delivery-trigger",
-                  bypassDeduplication: true
-                }
-              });
-              
-              if (notificationError) {
-                console.error(`[FINAL-DELIVERY-ONLY] Error invoking send-message-notifications:`, notificationError);
-                
-                // Mark as failed
-                await supabase
-                  .from('reminder_schedule')
-                  .update({ 
-                    status: 'failed',
-                    last_attempt_at: new Date().toISOString(),
-                    retry_count: (reminder.retry_count || 0) + 1
-                  })
-                  .eq('id', reminder.id);
-              } else {
-                console.log(`[FINAL-DELIVERY-ONLY] Successfully invoked send-message-notifications for final delivery ${reminder.id}`);
-                
-                // Mark as sent
-                await supabase
-                  .from('reminder_schedule')
-                  .update({ 
-                    status: 'sent',
-                    last_attempt_at: new Date().toISOString()
-                  })
-                  .eq('id', reminder.id);
-              }
-              
-            } catch (finalDeliveryError) {
-              console.error(`[FINAL-DELIVERY-ONLY] Error processing final delivery ${reminder.id}:`, finalDeliveryError);
-              
-              // Mark as failed
-              await supabase
-                .from('reminder_schedule')
-                .update({ 
-                  status: 'failed',
-                  last_attempt_at: new Date().toISOString(),
-                  retry_count: (reminder.retry_count || 0) + 1
-                })
-                .eq('id', reminder.id);
-            }
-          }
-        } else {
-          console.log(`[${new Date().toISOString()}] [FINAL-DELIVERY-ONLY] No due final delivery reminders found`);
-        }
-      }
-      
-      console.log(`[${new Date().toISOString()}] [REMINDER-PROCESSOR] Processing complete with STRICT separation: check-in reminders → creator only, final delivery → recipients only`);
-      
-      console.log("Processing complete: Check-in reminders sent to creators only, final delivery sent to recipients only when deadline reached");
+      console.log("Processing complete: Check-in reminders sent to creators only");
     }
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: "Reminder processing completed with STRICT separation between check-in and final delivery",
+        message: "Reminder processing completed - check-in reminders to creators ONLY",
         timestamp: new Date().toISOString()
       }),
       {
@@ -375,3 +216,4 @@ serve(async (req) => {
     );
   }
 });
+
