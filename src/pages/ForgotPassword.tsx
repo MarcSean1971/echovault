@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,7 +6,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { toast } from "@/components/ui/use-toast";
 import { MailIcon, ArrowLeft } from "lucide-react";
-import { Logo } from "@/components/layout/navbar/Logo";
 import { supabase } from "@/integrations/supabase/client";
 
 export default function ForgotPassword() {
@@ -48,11 +46,6 @@ export default function ForgotPassword() {
     return (
       <div className="container flex items-center justify-center min-h-screen py-12 px-4 sm:px-6 lg:px-8">
         <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <Logo />
-            <p className="mt-2 text-muted-foreground">Your secure digital failsafe</p>
-          </div>
-          
           <Card className="border-0 shadow-lg glass-card">
             <CardHeader className="pb-4">
               <CardTitle className="text-2xl font-bold text-center">Check Your Email</CardTitle>
@@ -98,11 +91,6 @@ export default function ForgotPassword() {
   return (
     <div className="container flex items-center justify-center min-h-screen py-12 px-4 sm:px-6 lg:px-8">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <Logo />
-          <p className="mt-2 text-muted-foreground">Your secure digital failsafe</p>
-        </div>
-        
         <Card className="border-0 shadow-lg glass-card">
           <CardHeader className="pb-4">
             <CardTitle className="text-2xl font-bold text-center">Forgot Password</CardTitle>
