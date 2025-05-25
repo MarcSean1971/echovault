@@ -1,8 +1,8 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { AlertTriangle, Users, CheckCircle, XCircle } from "lucide-react";
 import UserTable from "./UserTable";
 import UserStatsSection from "./UserStatsSection";
 import { supabase } from "@/integrations/supabase/client";
@@ -103,16 +103,20 @@ function UserTabsCard({ userStats }: { userStats: ExtendedUserStatsData }) {
       <CardHeader className="pb-2">
         <CardTitle className="text-lg">Users</CardTitle>
         <div className="flex flex-wrap gap-2 mt-2">
-          <Badge variant="outline">
+          <Badge variant="destructive" className="gap-1 hover:bg-destructive/80 transition-colors">
+            <XCircle className="h-3 w-3" />
             {userStats.unconfirmedEmails} Unconfirmed Emails
           </Badge>
-          <Badge variant="outline">
+          <Badge variant="secondary" className="gap-1 hover:bg-secondary/80 transition-colors">
+            <Users className="h-3 w-3" />
             {userStats.usersWithoutProfiles} No Profiles
           </Badge>
-          <Badge variant="outline">
+          <Badge variant="outline" className="gap-1 border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100 transition-colors">
+            <AlertTriangle className="h-3 w-3" />
             {userStats.incompleteProfiles} Incomplete Profiles
           </Badge>
-          <Badge variant="default">
+          <Badge variant="default" className="gap-1 bg-green-600 hover:bg-green-700 transition-colors">
+            <CheckCircle className="h-3 w-3" />
             {userStats.completeProfiles} Complete Profiles
           </Badge>
         </div>
