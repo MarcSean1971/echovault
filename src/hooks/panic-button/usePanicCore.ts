@@ -31,8 +31,8 @@ export function usePanicCore(
     setIsConfirming,
     triggerInProgress,
     setTriggerInProgress,
-    countDown,
-    setCountDown,
+    countDown: panicStateCountDown,
+    setCountDown: setPanicStateCountDown,
     locationPermission,
     setLocationPermission,
     retryAttempts,
@@ -41,7 +41,7 @@ export function usePanicCore(
     setSelectedMessageId,
     isSelectorOpen,
     setIsSelectorOpen,
-    inCancelWindow
+    inCancelWindow: panicStateInCancelWindow
   } = usePanicState();
   
   // Use the location management hook
@@ -58,7 +58,7 @@ export function usePanicCore(
       setPanicMode,
       setTriggerInProgress,
       setIsConfirming,
-      setCountDown,
+      setCountDown: setPanicStateCountDown,
       setRetryAttempts,
       retryAttempts
     },
@@ -67,12 +67,16 @@ export function usePanicCore(
   
   // Use the countdown manager hook
   const {
-    countDown: countdownSeconds,
-    inCancelWindow: countdownInCancelWindow,
+    countDown: countdownManagerSeconds,
+    inCancelWindow: countdownManagerInCancelWindow,
     setInCancelWindow,
     startCancellationCountdown,
     cancelPanicTrigger
   } = useCountdownManager();
+  
+  // Use countdown from countdown manager when available, fallback to panic state
+  const activeCountDown = countdownManagerSeconds > 0 ? countdownManagerSeconds : panicStateCountDown;
+  const activeInCancelWindow = countdownManagerInCancelWindow || panicStateInCancelWindow;
   
   // Use the panic button handlers hook
   const {
@@ -83,11 +87,11 @@ export function usePanicCore(
     {
       panicMode,
       isConfirming,
-      inCancelWindow: countdownInCancelWindow,
+      inCancelWindow: activeInCancelWindow,
       setIsConfirming,
       setPanicMode,
       setTriggerInProgress,
-      setCountDown,
+      setCountDown: setPanicStateCountDown,
       setIsSelectorOpen,
       setSelectedMessageId,
     },
@@ -103,9 +107,9 @@ export function usePanicCore(
     panicMode,
     isConfirming,
     triggerInProgress,
-    countDown: countdownSeconds,
+    countDown: activeCountDown,
     locationPermission,
-    inCancelWindow: countdownInCancelWindow,
+    inCancelWindow: activeInCancelWindow,
     isSelectorOpen,
     setIsSelectorOpen,
     selectedMessageId,

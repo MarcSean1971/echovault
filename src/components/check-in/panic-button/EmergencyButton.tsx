@@ -24,7 +24,7 @@ export function EmergencyButton({
     <Button 
       variant={inCancelWindow ? "destructive" : "outline"}
       onClick={onClick}
-      disabled={disabled}
+      disabled={disabled && !inCancelWindow}
       className={`w-full ${HOVER_TRANSITION} ${
         inCancelWindow ? 'animate-pulse' : ''
       }`}
@@ -39,8 +39,8 @@ export function EmergencyButton({
         )
         : isPanicMode 
           ? countDown > 0 
-            ? `MESSAGES SENDING... (${countDown})` 
-            : "MESSAGES SENDING..." 
+            ? `SENDING... (${countDown}s)` 
+            : "SENDING..." 
           : (
             <span className="flex items-center">
               <span>Emergency Panic Button</span>
