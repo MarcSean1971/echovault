@@ -36,9 +36,16 @@ export function useDisarmOperations() {
         .eq("id", conditionId)
         .single();
         
-      if (fetchError) throw fetchError;
+      if (fetchError) {
+        console.error("[useDisarmOperations] Error fetching condition:", fetchError);
+        throw fetchError;
+      }
       
-      const messageId = currentCondition?.message_id;
+      if (!currentCondition) {
+        throw new Error("Condition not found");
+      }
+      
+      const messageId = currentCondition.message_id;
       
       // Immediately invalidate cache to force a refresh on next query
       if (messageId) {
@@ -49,10 +56,8 @@ export function useDisarmOperations() {
       emitOptimisticUpdate(conditionId, messageId, 'disarm');
       
       // CRITICAL FIX: Mark all reminders as obsolete when disarming
-      if (messageId) {
-        console.log(`[useDisarmOperations] Marking reminders obsolete for message ${messageId}, condition ${conditionId}`);
-        await markRemindersObsolete(messageId);
-      }
+      console.log(`[useDisarmOperations] Marking reminders obsolete for message ${messageId}, condition ${conditionId}`);
+      await markRemindersObsolete(messageId);
       
       // Direct database operation for faster disarming
       const { error } = await supabase
@@ -61,6 +66,7 @@ export function useDisarmOperations() {
         .eq("id", conditionId);
       
       if (error) {
+        console.error("[useDisarmOperations] Error updating condition:", error);
         throw error;
       }
       

@@ -40,12 +40,21 @@ function parseReminderHours(reminderHours?: number[]): number[] {
 function calculateDeadline(params: ReminderParams): Date | null {
   const now = new Date();
   
+  console.log("[SIMPLE-REMINDER] Calculating deadline with params:", {
+    triggerDate: params.triggerDate,
+    lastChecked: params.lastChecked,
+    hoursThreshold: params.hoursThreshold,
+    minutesThreshold: params.minutesThreshold
+  });
+  
   // Method 1: Use explicit trigger date
   if (params.triggerDate) {
     const deadline = new Date(params.triggerDate);
     if (deadline > now) {
+      console.log("[SIMPLE-REMINDER] Using trigger date deadline:", deadline.toISOString());
       return deadline;
     }
+    console.log("[SIMPLE-REMINDER] Trigger date is in the past, skipping");
   }
   
   // Method 2: Calculate from last check-in + threshold
@@ -62,10 +71,13 @@ function calculateDeadline(params: ReminderParams): Date | null {
     }
     
     if (deadline > now) {
+      console.log("[SIMPLE-REMINDER] Using calculated deadline:", deadline.toISOString());
       return deadline;
     }
+    console.log("[SIMPLE-REMINDER] Calculated deadline is in the past");
   }
   
+  console.log("[SIMPLE-REMINDER] No valid deadline could be calculated");
   return null;
 }
 
@@ -94,6 +106,12 @@ function calculateReminderTimes(deadline: Date, reminderMinutes: number[]): Date
 export async function createReminderSchedule(params: ReminderParams): Promise<boolean> {
   try {
     console.log("[SIMPLE-REMINDER] Creating schedule for:", params);
+    
+    // Validate required parameters
+    if (!params.messageId || !params.conditionId) {
+      console.error("[SIMPLE-REMINDER] Missing required parameters:", params);
+      return false;
+    }
     
     // Step 1: Calculate deadline
     const deadline = calculateDeadline(params);

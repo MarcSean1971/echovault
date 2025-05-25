@@ -30,17 +30,24 @@ export function useArmOperations() {
     console.log(`[useArmOperations] Arming message with condition ${conditionId}`);
     
     try {
-      // First, get the current condition to extract messageId for later use
+      // First, get the current condition to extract all necessary data
       const { data: currentCondition, error: fetchError } = await supabase
         .from("message_conditions")
-        .select("message_id, condition_type")
+        .select("*")
         .eq("id", conditionId)
         .single();
         
-      if (fetchError) throw fetchError;
+      if (fetchError) {
+        console.error("[useArmOperations] Error fetching condition:", fetchError);
+        throw fetchError;
+      }
       
-      const messageId = currentCondition?.message_id;
-      const conditionType = currentCondition?.condition_type;
+      if (!currentCondition) {
+        throw new Error("Condition not found");
+      }
+      
+      const messageId = currentCondition.message_id;
+      const conditionType = currentCondition.condition_type;
       
       // Immediately invalidate cache to force a refresh on next query
       if (messageId) {
@@ -50,52 +57,54 @@ export function useArmOperations() {
       // Emit an optimistic update event immediately
       emitOptimisticUpdate(conditionId, messageId, 'arm');
       
-      // Direct database operation for faster arming - avoids processing content
+      // Update the condition to be active with current timestamp
+      const now = new Date().toISOString();
       const { data, error } = await supabase
         .from("message_conditions")
         .update({ 
           active: true,
-          last_checked: new Date().toISOString() 
+          last_checked: now
         })
         .eq("id", conditionId)
-        .select("id, message_id")
+        .select("*")
         .single();
       
       if (error) {
+        console.error("[useArmOperations] Error updating condition:", error);
         throw error;
       }
       
-      // Get message ID for UI feedback and reminders
-      const actualMessageId = data.message_id;
+      console.log(`[useArmOperations] Successfully armed condition, creating reminder schedule...`);
       
-      // Create reminder schedule using the simplified service
-      await createReminderSchedule({
-        messageId: actualMessageId,
+      // Create reminder schedule using the COMPLETE condition data
+      const reminderSuccess = await createReminderSchedule({
+        messageId: messageId,
         conditionId: conditionId,
         conditionType: conditionType,
-        triggerDate: undefined,
-        lastChecked: new Date().toISOString(),
-        hoursThreshold: undefined,
-        minutesThreshold: undefined,
-        reminderHours: [24, 12, 6, 1] // Default reminder schedule
+        triggerDate: currentCondition.trigger_date,
+        lastChecked: now, // Use the timestamp we just set
+        hoursThreshold: currentCondition.hours_threshold,
+        minutesThreshold: currentCondition.minutes_threshold,
+        reminderHours: currentCondition.reminder_hours || [24, 12, 6, 1] // Default reminder schedule
       });
       
-      // Get deadline for immediate UI feedback
-      const { data: condition } = await supabase
-        .from("message_conditions")
-        .select("*")
-        .eq("id", conditionId)
-        .single();
-        
-      // Calculate deadline
+      if (!reminderSuccess) {
+        console.warn(`[useArmOperations] Failed to create reminder schedule for condition ${conditionId}`);
+      } else {
+        console.log(`[useArmOperations] Successfully created reminder schedule for condition ${conditionId}`);
+      }
+      
+      // Calculate deadline for immediate UI feedback
       let deadlineDate: Date | null = null;
-      if (condition) {
-        if (condition.condition_type === "scheduled" && condition.trigger_date) {
-          deadlineDate = new Date(condition.trigger_date);
-        } else if (condition.hours_threshold) {
-          const hoursInMs = condition.hours_threshold * 60 * 60 * 1000;
-          const minutesInMs = (condition.minutes_threshold || 0) * 60 * 1000;
-          deadlineDate = new Date(Date.now() + hoursInMs + minutesInMs);
+      if (currentCondition.condition_type === "scheduled" && currentCondition.trigger_date) {
+        deadlineDate = new Date(currentCondition.trigger_date);
+      } else if (currentCondition.hours_threshold || currentCondition.minutes_threshold) {
+        deadlineDate = new Date(now);
+        if (currentCondition.hours_threshold) {
+          deadlineDate.setHours(deadlineDate.getHours() + currentCondition.hours_threshold);
+        }
+        if (currentCondition.minutes_threshold) {
+          deadlineDate.setMinutes(deadlineDate.getMinutes() + currentCondition.minutes_threshold);
         }
       }
       
@@ -107,7 +116,7 @@ export function useArmOperations() {
       // Fire a confirmed update event now that we have real data
       emitConfirmedUpdate(
         conditionId, 
-        actualMessageId, 
+        messageId, 
         'arm',
         deadlineDate?.toISOString()
       );
@@ -115,7 +124,7 @@ export function useArmOperations() {
       // NEW: Fire a specific event for message cards to handle
       window.dispatchEvent(new CustomEvent('message-reminder-updated', { 
         detail: { 
-          messageId: actualMessageId,
+          messageId: messageId,
           conditionId,
           action: 'arm',
           timestamp: new Date().toISOString()
@@ -124,7 +133,7 @@ export function useArmOperations() {
       
       // Fire a background event to handle reminder generation without blocking UI
       setTimeout(() => {
-        requestReminderGeneration(actualMessageId, conditionId);
+        requestReminderGeneration(messageId, conditionId);
       }, 100);
       
       // Refresh conditions data to update UI components with the latest state
