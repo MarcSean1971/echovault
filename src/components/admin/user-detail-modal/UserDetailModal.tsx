@@ -1,7 +1,7 @@
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { X, Mail, Phone, MessageCircle, Calendar, Activity } from "lucide-react";
+import { X, Mail, Phone, MessageCircle, Calendar, Activity, User } from "lucide-react";
 import { UserDetailModalProps } from "./types";
 import { useUserDetailData } from "./useUserDetailData";
 import { format } from "date-fns";
@@ -55,35 +55,54 @@ export function UserDetailModal({ isOpen, onClose, user }: UserDetailModalProps)
           </div>
 
           <div className="border-t pt-4 space-y-4">
-            {/* Contact Information */}
-            {profileData && (
-              <div>
-                <h4 className="text-sm font-medium text-gray-900 mb-3">Contact Information</h4>
-                <div className="space-y-2 text-sm">
-                  {profileData.whatsapp_number && (
-                    <div className="flex items-center gap-2">
-                      <MessageCircle className="h-4 w-4 text-gray-400" />
-                      <span className="text-gray-600">WhatsApp:</span>
-                      <span className="text-gray-900">{profileData.whatsapp_number}</span>
-                    </div>
-                  )}
-                  {profileData.backup_email && (
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-gray-400" />
-                      <span className="text-gray-600">Backup Email:</span>
-                      <span className="text-gray-900">{profileData.backup_email}</span>
-                    </div>
-                  )}
-                  {profileData.backup_contact && (
-                    <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-gray-400" />
-                      <span className="text-gray-600">Backup Phone:</span>
-                      <span className="text-gray-900">{profileData.backup_contact}</span>
-                    </div>
-                  )}
+            {/* Profile Information */}
+            <div>
+              <h4 className="text-sm font-medium text-gray-900 mb-3 flex items-center gap-2">
+                <User className="h-4 w-4" />
+                Profile Information
+              </h4>
+              <div className="space-y-3 text-sm">
+                <div className="grid grid-cols-1 gap-3">
+                  <div>
+                    <span className="text-gray-600 font-medium">First Name:</span>
+                    <span className="ml-2 text-gray-900">
+                      {profileData?.first_name || user.first_name || "Not provided"}
+                    </span>
+                    <span className="text-red-500 ml-1">*</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600 font-medium">Last Name:</span>
+                    <span className="ml-2 text-gray-900">
+                      {profileData?.last_name || user.last_name || "Not provided"}
+                    </span>
+                    <span className="text-red-500 ml-1">*</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600 font-medium">Primary Email:</span>
+                    <span className="ml-2 text-gray-900">{user.email}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600 font-medium">WhatsApp Number:</span>
+                    <span className="ml-2 text-gray-900">
+                      {profileData?.whatsapp_number || "Not provided"}
+                    </span>
+                    <span className="text-red-500 ml-1">*</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600 font-medium">Backup Email:</span>
+                    <span className="ml-2 text-gray-900">
+                      {profileData?.backup_email || "Not provided"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600 font-medium">Backup Contact Number:</span>
+                    <span className="ml-2 text-gray-900">
+                      {profileData?.backup_contact || "Not provided"}
+                    </span>
+                  </div>
                 </div>
               </div>
-            )}
+            </div>
 
             {/* Activity Summary */}
             <div>
