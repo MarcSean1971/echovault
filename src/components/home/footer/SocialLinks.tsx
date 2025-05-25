@@ -31,21 +31,5 @@ const socialLinks = [
 ];
 
 export function SocialLinks() {
-  return (
-    <div className="flex flex-col items-center space-y-4">
-      <h3 className="text-sm font-medium text-foreground">
-        Connect with EchoVault
-      </h3>
-      <div className="flex items-center space-x-4">
-        {socialLinks.map((social) => (
-          <SocialIcon
-            key={social.label}
-            href={social.href}
-            icon={social.icon}
-            label={social.label}
-          />
-        ))}
-      </div>
-    </div>
-  );
+  return null;
 }
