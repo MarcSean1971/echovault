@@ -16,38 +16,38 @@ export function UserDetailModal({ isOpen, onClose, user }: UserDetailModalProps)
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-hidden p-0">
-        <DialogHeader className="px-6 pt-6 pb-4 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
-          <DialogTitle className="flex items-center gap-3 text-xl">
+      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-hidden p-0 w-[95vw]">
+        <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-4 border-b bg-gradient-to-r from-blue-50 to-indigo-50">
+          <DialogTitle className="flex items-center gap-3 text-lg sm:text-xl">
             <div className="p-2 rounded-lg bg-primary/10">
-              <User className="h-5 w-5 text-primary" />
+              <User className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
             </div>
-            User Profile Details
+            <span className="truncate">User Profile Details</span>
           </DialogTitle>
         </DialogHeader>
 
         <div className="flex-1 overflow-hidden">
           <Tabs defaultValue="overview" className="h-full flex flex-col">
-            <TabsList className="grid w-full grid-cols-4 mx-6 mt-4 bg-muted/50">
-              <TabsTrigger value="overview" className="flex items-center gap-2">
-                <User className="h-4 w-4" />
-                <span className="hidden sm:inline">Overview</span>
+            <TabsList className="grid w-full grid-cols-4 mx-4 sm:mx-6 mt-4 bg-muted/50">
+              <TabsTrigger value="overview" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+                <User className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden xs:inline">Overview</span>
               </TabsTrigger>
-              <TabsTrigger value="profile" className="flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                <span className="hidden sm:inline">Profile</span>
+              <TabsTrigger value="profile" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+                <FileText className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden xs:inline">Profile</span>
               </TabsTrigger>
-              <TabsTrigger value="auth" className="flex items-center gap-2">
-                <Shield className="h-4 w-4" />
-                <span className="hidden sm:inline">Auth</span>
+              <TabsTrigger value="auth" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+                <Shield className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden xs:inline">Auth</span>
               </TabsTrigger>
-              <TabsTrigger value="activity" className="flex items-center gap-2">
-                <Activity className="h-4 w-4" />
-                <span className="hidden sm:inline">Activity</span>
+              <TabsTrigger value="activity" className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+                <Activity className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden xs:inline">Activity</span>
               </TabsTrigger>
             </TabsList>
 
-            <div className="flex-1 overflow-y-auto px-6 pb-6">
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 pb-4 sm:pb-6">
               <TabsContent value="overview" className="mt-4 space-y-0">
                 <OverviewTab 
                   user={user} 
