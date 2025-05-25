@@ -46,10 +46,6 @@
     --sidebar-accent-foreground: 240 6% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 262 83% 58%;
-
-    /* Public logo specific colors */
-    --public-logo-mobile: #7c3aed;
-    --public-logo-desktop: #8b5cf6;
   }
 
   .dark {
@@ -89,10 +85,6 @@
     --sidebar-accent-foreground: 210 20% 98%;
     --sidebar-border: 215 27% 17%;
     --sidebar-ring: 262 83% 58%;
-
-    /* Public logo specific colors for dark mode */
-    --public-logo-mobile: #8b5cf6;
-    --public-logo-desktop: #a855f7;
   }
 }
 
@@ -137,25 +129,25 @@
     @apply shadow-sm hover:shadow-md transition-all duration-200 hover:-translate-y-0.5;
   }
 
-  /* Public logo specific styling with high specificity */
-  .public-logo-text {
-    color: var(--public-logo-mobile) !important;
+  /* Public logo styling with highest specificity */
+  span.public-logo-text {
+    color: #7c3aed !important;
     font-weight: 700 !important;
   }
 
   @media (min-width: 640px) {
-    .public-logo-text {
-      color: var(--public-logo-desktop) !important;
+    span.public-logo-text {
+      color: #8b5cf6 !important;
     }
   }
 
-  .public-logo-underline {
-    background-color: var(--public-logo-mobile) !important;
+  span.public-logo-underline {
+    background-color: #7c3aed !important;
   }
 
   @media (min-width: 640px) {
-    .public-logo-underline {
-      background-color: var(--public-logo-desktop) !important;
+    span.public-logo-underline {
+      background-color: #8b5cf6 !important;
     }
   }
 }
