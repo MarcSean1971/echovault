@@ -3,9 +3,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LogOut, User, Settings, Users, MessageSquare, Home, Share } from "lucide-react";
+import { LogOut, User, Settings, Users, MessageSquare, Home } from "lucide-react";
 import { ICON_HOVER_EFFECTS } from "@/utils/hoverEffects";
-import { useToast } from "@/hooks/use-toast";
 
 interface UserMenuProps {
   userImage: string | null;
@@ -14,60 +13,11 @@ interface UserMenuProps {
 
 export function UserMenu({ userImage, initials }: UserMenuProps) {
   const { signOut, user } = useAuth();
-  const { toast } = useToast();
 
   const handleSignOut = async (e: React.MouseEvent) => {
     e.preventDefault();
     console.log("Sign out clicked");
     await signOut();
-  };
-
-  const handleShare = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    console.log("Share clicked");
-    
-    const shareData = {
-      title: 'EchoVault',
-      text: 'Check out EchoVault - Secure message delivery platform',
-      url: 'https://echo-vault.app'
-    };
-
-    // Check if Web Share API is available and likely to work
-    const canUseWebShare = navigator.share && navigator.canShare && navigator.canShare(shareData);
-    
-    console.log("Web Share API available:", !!navigator.share);
-    console.log("Can share data:", canUseWebShare);
-
-    if (canUseWebShare) {
-      try {
-        console.log("Attempting Web Share API");
-        await navigator.share(shareData);
-        console.log("Web Share API succeeded");
-        return;
-      } catch (shareError) {
-        console.log("Web Share API failed:", shareError);
-        // Fall through to clipboard fallback
-      }
-    }
-
-    // Fallback to clipboard
-    try {
-      console.log("Using clipboard fallback");
-      await navigator.clipboard.writeText(shareData.url);
-      toast({
-        title: "Link copied to clipboard",
-        description: "Share the EchoVault link with others!",
-      });
-      console.log("Clipboard copy succeeded");
-    } catch (clipboardError) {
-      console.error('Clipboard failed:', clipboardError);
-      // Final fallback - just show the URL in a toast
-      toast({
-        title: "Share EchoVault",
-        description: "Copy this link: https://echo-vault.app",
-        duration: 10000,
-      });
-    }
   };
 
   // Check if user has admin access
@@ -128,11 +78,6 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
             </DropdownMenuItem>
           )}
         </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleShare} className="cursor-pointer hover:opacity-90 transition-opacity">
-          <Share className={`mr-2 h-4 w-4 ${ICON_HOVER_EFFECTS.muted}`} />
-          <span>Share EchoVault</span>
-        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer hover:opacity-90 transition-opacity">
           <LogOut className={`mr-2 h-4 w-4 ${ICON_HOVER_EFFECTS.muted}`} />
