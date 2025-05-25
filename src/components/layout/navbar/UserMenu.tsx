@@ -24,6 +24,7 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
 
   const handleShare = async (e: React.MouseEvent) => {
     e.preventDefault();
+    console.log("Share clicked");
     
     const shareData = {
       title: 'EchoVault',
@@ -31,23 +32,40 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
       url: 'https://echo-vault.app'
     };
 
-    try {
-      if (navigator.share) {
+    // Check if Web Share API is available and likely to work
+    const canUseWebShare = navigator.share && navigator.canShare && navigator.canShare(shareData);
+    
+    console.log("Web Share API available:", !!navigator.share);
+    console.log("Can share data:", canUseWebShare);
+
+    if (canUseWebShare) {
+      try {
+        console.log("Attempting Web Share API");
         await navigator.share(shareData);
-      } else {
-        // Fallback: copy to clipboard
-        await navigator.clipboard.writeText(shareData.url);
-        toast({
-          title: "Link copied to clipboard",
-          description: "Share the EchoVault link with others!",
-        });
+        console.log("Web Share API succeeded");
+        return;
+      } catch (shareError) {
+        console.log("Web Share API failed:", shareError);
+        // Fall through to clipboard fallback
       }
-    } catch (error) {
-      console.error('Error sharing:', error);
-      // Fallback if clipboard also fails
+    }
+
+    // Fallback to clipboard
+    try {
+      console.log("Using clipboard fallback");
+      await navigator.clipboard.writeText(shareData.url);
+      toast({
+        title: "Link copied to clipboard",
+        description: "Share the EchoVault link with others!",
+      });
+      console.log("Clipboard copy succeeded");
+    } catch (clipboardError) {
+      console.error('Clipboard failed:', clipboardError);
+      // Final fallback - just show the URL in a toast
       toast({
         title: "Share EchoVault",
-        description: "Visit: https://echo-vault.app",
+        description: "Copy this link: https://echo-vault.app",
+        duration: 10000,
       });
     }
   };
