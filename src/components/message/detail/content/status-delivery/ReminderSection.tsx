@@ -74,7 +74,7 @@ export function ReminderSection({
       {/* SIMPLIFIED: Status display */}
       <ReminderStatus
         isLoading={isLoading}
-        permissionError={error}
+        permissionError={!!error}
         hasReminders={hasReminders}
         enhancedReminders={upcomingReminders.map(text => ({ 
           formattedShortDate: "",
