@@ -45,13 +45,13 @@ export const PinEntry = ({ onSubmit }: PinEntryProps) => {
               className="text-center text-lg bg-white border-gray-400 focus:border-purple-500 text-gray-900"
               autoFocus
             />
-            <Button 
+            <button
               type="submit" 
-              className={`w-full bg-purple-500 hover:bg-purple-600 text-white border-0 ${HOVER_TRANSITION}`}
+              className={`w-full px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white font-medium rounded-md disabled:opacity-50 disabled:cursor-not-allowed ${HOVER_TRANSITION}`}
               disabled={!pinCode || isSubmitting}
             >
               {isSubmitting ? "Verifying..." : "Access Message"}
-            </Button>
+            </button>
           </form>
           
           <p className="text-sm text-gray-600 mt-4 max-w-md">
