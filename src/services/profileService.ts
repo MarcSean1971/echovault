@@ -1,5 +1,5 @@
+
 import { supabase } from "@/integrations/supabase/client";
-import { BUTTON_HOVER_EFFECTS, HOVER_TRANSITION } from "@/utils/hoverEffects";
 import { getAvailableBucketName } from "@/services/messages/fileService";
 
 export interface ProfileUpdateData {

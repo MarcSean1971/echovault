@@ -1,6 +1,6 @@
 
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, XCircle, User } from "lucide-react";
+import { User } from "lucide-react";
 import { AuthUser } from "./types";
 
 interface UserTableBadgesProps {
