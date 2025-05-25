@@ -3,7 +3,6 @@ import { useState } from "react";
 import { Key } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { HOVER_TRANSITION } from "@/utils/hoverEffects";
 
 interface PinEntryProps {
@@ -47,7 +46,7 @@ export const PinEntry = ({ onSubmit }: PinEntryProps) => {
             />
             <button
               type="submit" 
-              className={`w-full px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white font-medium rounded-md disabled:opacity-50 disabled:cursor-not-allowed ${HOVER_TRANSITION}`}
+              className={`w-full px-4 py-2 !bg-purple-500 hover:!bg-purple-600 !text-white font-medium rounded-md disabled:opacity-50 disabled:cursor-not-allowed ${HOVER_TRANSITION}`}
               disabled={!pinCode || isSubmitting}
             >
               {isSubmitting ? "Verifying..." : "Access Message"}
