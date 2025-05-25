@@ -1,7 +1,13 @@
 
 import { Button } from "@/components/ui/button";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Eye, Lock, UserX } from "lucide-react";
+import { Eye, Lock, UserX, MoreVertical } from "lucide-react";
 import { useHoverEffects } from "@/hooks/useHoverEffects";
 import { AuthUser } from "./types";
 
@@ -15,53 +21,41 @@ export function UserTableActions({ user, onViewUser }: UserTableActionsProps) {
 
   return (
     <TooltipProvider>
-      <div className="flex gap-2">
+      <DropdownMenu>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button 
-              size="sm" 
-              variant="ghost"
-              onClick={() => onViewUser(user)}
-              className={getButtonHoverClasses('ghost')}
-            >
-              <Eye className={`h-4 w-4 ${getIconHoverClasses('muted')}`} />
-            </Button>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                size="sm" 
+                variant="ghost"
+                className={getButtonHoverClasses('ghost')}
+              >
+                <MoreVertical className={`h-4 w-4 ${getIconHoverClasses('muted')}`} />
+              </Button>
+            </DropdownMenuTrigger>
           </TooltipTrigger>
           <TooltipContent>
-            <p>View user details</p>
+            <p>Actions</p>
           </TooltipContent>
         </Tooltip>
         
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button 
-              size="sm" 
-              variant="ghost"
-              className={getButtonHoverClasses('ghost')}
-            >
-              <Lock className={`h-4 w-4 ${getIconHoverClasses('muted')}`} />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Lock user account</p>
-          </TooltipContent>
-        </Tooltip>
-        
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button 
-              size="sm" 
-              variant="ghost"
-              className={getButtonHoverClasses('ghost')}
-            >
-              <UserX className={`h-4 w-4 ${getIconHoverClasses('muted')}`} />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Delete user</p>
-          </TooltipContent>
-        </Tooltip>
-      </div>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => onViewUser(user)}>
+            <Eye className="h-4 w-4 mr-2" />
+            View user details
+          </DropdownMenuItem>
+          
+          <DropdownMenuItem>
+            <Lock className="h-4 w-4 mr-2" />
+            Lock user account
+          </DropdownMenuItem>
+          
+          <DropdownMenuItem>
+            <UserX className="h-4 w-4 mr-2" />
+            Delete user
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </TooltipProvider>
   );
 }
