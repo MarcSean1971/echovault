@@ -37,7 +37,7 @@ export const DiagnosticButtons: React.FC<DiagnosticButtonsProps> = ({
       duration: 3000,
     });
     
-    await reminderMonitor.manualResetStuckReminders();
+    await reminderMonitor.manualResetAndCreateReminders();
   };
   
   const handleTestEmailService = async () => {
