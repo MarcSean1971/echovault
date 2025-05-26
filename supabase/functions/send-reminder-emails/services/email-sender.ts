@@ -2,7 +2,7 @@
 import { generateCheckInUrl } from "../utils/url-generator.ts";
 
 /**
- * Email sending service for check-in reminders
+ * Email sending service for check-in reminders with improved error handling
  */
 export async function sendCheckInEmailToCreator(
   creatorEmail: string,
@@ -10,7 +10,7 @@ export async function sendCheckInEmailToCreator(
   messageTitle: string,
   messageId: string,
   hoursUntilDeadline: number
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; messageId?: string }> {
   try {
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
     if (!resendApiKey) {
@@ -34,6 +34,8 @@ export async function sendCheckInEmailToCreator(
       </div>
     `;
 
+    console.log(`[EMAIL-SENDER] Attempting to send email to ${creatorEmail} using Resend API`);
+
     const emailResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -41,20 +43,25 @@ export async function sendCheckInEmailToCreator(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "EchoVault <noreply@resend.dev>",
+        from: "EchoVault <noreply@echo-vault.app>",
         to: [creatorEmail],
         subject: `🔔 Check-in Required: ${messageTitle}`,
         html: emailContent,
       }),
     });
 
+    const responseText = await emailResponse.text();
+    console.log(`[EMAIL-SENDER] Resend API response status: ${emailResponse.status}, body: ${responseText}`);
+
     if (!emailResponse.ok) {
-      const errorText = await emailResponse.text();
-      throw new Error(`Email API error: ${errorText}`);
+      throw new Error(`Email API error (${emailResponse.status}): ${responseText}`);
     }
 
-    console.log(`[EMAIL-SENDER] Check-in email sent successfully to ${creatorEmail}`);
-    return { success: true };
+    const responseData = JSON.parse(responseText);
+    const emailMessageId = responseData.id;
+
+    console.log(`[EMAIL-SENDER] Check-in email sent successfully to ${creatorEmail}, messageId: ${emailMessageId}`);
+    return { success: true, messageId: emailMessageId };
     
   } catch (error: any) {
     console.error("[EMAIL-SENDER] Email sending error:", error);

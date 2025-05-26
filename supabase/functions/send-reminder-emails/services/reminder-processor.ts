@@ -4,7 +4,7 @@ import { sendCreatorReminder } from "./reminder-sender.ts";
 import { reminderLogger } from "./reminder-logger.ts";
 
 /**
- * Processes individual reminders with recovery logic
+ * Enhanced reminder processor with better retry logic and error handling
  */
 export async function processIndividualReminder(
   reminder: any,
@@ -17,7 +17,8 @@ export async function processIndividualReminder(
       reminderType: reminder.reminder_type,
       messageId: reminder.message_id,
       conditionId: reminder.condition_id,
-      scheduledAt: reminder.scheduled_at
+      scheduledAt: reminder.scheduled_at,
+      retryCount: reminder.retry_count || 0
     });
     
     // Only process reminder_type = 'reminder' (check-in reminders to creators)
@@ -51,6 +52,8 @@ export async function processIndividualReminder(
     const now = new Date();
     const hoursUntilScheduled = Math.max(0, (scheduledTime.getTime() - now.getTime()) / (1000 * 60 * 60));
     
+    console.log(`[REMINDER-PROCESSOR] Sending check-in reminder for message "${message.title}" to creator ${message.user_id}`);
+    
     // Send check-in reminder to the message creator
     const creatorResults = await sendCreatorReminder(
       message.id,
@@ -76,44 +79,58 @@ export async function processIndividualReminder(
         
       if (updateError) {
         console.error(`[REMINDER-PROCESSOR] Error updating reminder status:`, updateError);
+      } else {
+        console.log(`[REMINDER-PROCESSOR] Successfully marked reminder ${reminder.id} as sent`);
       }
     } else {
       // All deliveries failed - mark as failed and increment retry count
-      const { error: updateError } = await supabase
-        .from('reminder_schedule')
-        .update({
-          status: 'failed',
-          last_attempt_at: new Date().toISOString(),
-          retry_count: (reminder.retry_count || 0) + 1
-        })
-        .eq('id', reminder.id);
+      const newRetryCount = (reminder.retry_count || 0) + 1;
+      const maxRetries = 3;
+      
+      if (newRetryCount < maxRetries) {
+        // Schedule for retry in 5 minutes
+        const retryTime = new Date(Date.now() + 5 * 60 * 1000);
         
-      if (updateError) {
-        console.error(`[REMINDER-PROCESSOR] Error updating failed reminder:`, updateError);
+        const { error: updateError } = await supabase
+          .from('reminder_schedule')
+          .update({
+            status: 'pending',
+            scheduled_at: retryTime.toISOString(),
+            last_attempt_at: new Date().toISOString(),
+            retry_count: newRetryCount
+          })
+          .eq('id', reminder.id);
+          
+        if (updateError) {
+          console.error(`[REMINDER-PROCESSOR] Error scheduling retry:`, updateError);
+        } else {
+          console.log(`[REMINDER-PROCESSOR] Scheduled retry ${newRetryCount}/${maxRetries} for reminder ${reminder.id} at ${retryTime.toISOString()}`);
+        }
+      } else {
+        // Max retries reached, mark as failed
+        const { error: updateError } = await supabase
+          .from('reminder_schedule')
+          .update({
+            status: 'failed',
+            last_attempt_at: new Date().toISOString(),
+            retry_count: newRetryCount
+          })
+          .eq('id', reminder.id);
+          
+        if (updateError) {
+          console.error(`[REMINDER-PROCESSOR] Error marking reminder as failed:`, updateError);
+        } else {
+          console.log(`[REMINDER-PROCESSOR] Marked reminder ${reminder.id} as failed after ${newRetryCount} attempts`);
+        }
       }
       
-      throw new Error(`All deliveries failed for reminder ${reminder.id}`);
+      throw new Error(`All deliveries failed for reminder ${reminder.id} (attempt ${newRetryCount})`);
     }
     
     return { success: true };
     
   } catch (error: any) {
     console.error(`[REMINDER-PROCESSOR] Error processing reminder ${reminder.id}:`, error);
-    
-    // Update reminder status to failed
-    try {
-      await supabase
-        .from('reminder_schedule')
-        .update({
-          status: 'failed',
-          last_attempt_at: new Date().toISOString(),
-          retry_count: (reminder.retry_count || 0) + 1
-        })
-        .eq('id', reminder.id);
-    } catch (updateError) {
-      console.error(`[REMINDER-PROCESSOR] Error updating failed reminder status:`, updateError);
-    }
-    
     return { 
       success: false, 
       error: error.message || 'Unknown processing error' 
@@ -122,7 +139,131 @@ export async function processIndividualReminder(
 }
 
 /**
- * Processes multiple due reminders
+ * Reset stuck reminders and create new ones for active conditions
+ */
+export async function resetAndCreateReminders(): Promise<{ resetCount: number; createdCount: number }> {
+  const supabase = supabaseClient();
+  let resetCount = 0;
+  let createdCount = 0;
+  
+  try {
+    console.log("[REMINDER-PROCESSOR] Resetting failed reminders and creating new ones...");
+    
+    // Reset failed reminders to pending for retry
+    const { data: failedReminders, error: fetchError } = await supabase
+      .from('reminder_schedule')
+      .select('*')
+      .eq('status', 'failed')
+      .eq('reminder_type', 'reminder')
+      .lt('retry_count', 3);
+    
+    if (fetchError) {
+      console.error("[REMINDER-PROCESSOR] Error fetching failed reminders:", fetchError);
+    } else if (failedReminders && failedReminders.length > 0) {
+      console.log(`[REMINDER-PROCESSOR] Found ${failedReminders.length} failed reminders to reset`);
+      
+      // Reset them to pending with immediate scheduling
+      const { error: resetError } = await supabase
+        .from('reminder_schedule')
+        .update({
+          status: 'pending',
+          scheduled_at: new Date().toISOString(), // Make them due now
+          last_attempt_at: null
+        })
+        .in('id', failedReminders.map(r => r.id));
+      
+      if (resetError) {
+        console.error("[REMINDER-PROCESSOR] Error resetting failed reminders:", resetError);
+      } else {
+        resetCount = failedReminders.length;
+        console.log(`[REMINDER-PROCESSOR] Reset ${resetCount} failed reminders to pending`);
+      }
+    }
+    
+    // Find active conditions that need check-in reminders
+    const { data: activeConditions, error: conditionsError } = await supabase
+      .from('message_conditions')
+      .select(`
+        *,
+        messages!inner(id, title, user_id)
+      `)
+      .eq('active', true)
+      .in('condition_type', ['no_check_in', 'recurring_check_in', 'inactivity_to_date']);
+    
+    if (conditionsError) {
+      console.error("[REMINDER-PROCESSOR] Error fetching active conditions:", conditionsError);
+    } else if (activeConditions && activeConditions.length > 0) {
+      console.log(`[REMINDER-PROCESSOR] Found ${activeConditions.length} active conditions needing reminders`);
+      
+      for (const condition of activeConditions) {
+        // Check if there are already pending reminders for this condition
+        const { data: existingReminders } = await supabase
+          .from('reminder_schedule')
+          .select('id')
+          .eq('message_id', condition.message_id)
+          .eq('condition_id', condition.id)
+          .eq('reminder_type', 'reminder')
+          .eq('status', 'pending');
+        
+        if (!existingReminders || existingReminders.length === 0) {
+          // Calculate when the next reminder should be sent
+          const lastChecked = new Date(condition.last_checked);
+          const hoursThreshold = condition.hours_threshold || 24;
+          const minutesThreshold = condition.minutes_threshold || 0;
+          
+          // Calculate deadline
+          const deadline = new Date(lastChecked);
+          deadline.setHours(deadline.getHours() + hoursThreshold);
+          deadline.setMinutes(deadline.getMinutes() + minutesThreshold);
+          
+          const now = new Date();
+          const timeUntilDeadline = deadline.getTime() - now.getTime();
+          
+          if (timeUntilDeadline > 0) {
+            // Schedule a reminder 1 hour before deadline (or now if less than 1 hour remaining)
+            const reminderTime = new Date(deadline.getTime() - (60 * 60 * 1000)); // 1 hour before
+            const scheduledAt = reminderTime < now ? now : reminderTime;
+            
+            console.log(`[REMINDER-PROCESSOR] Creating new reminder for message ${condition.message_id}, scheduled at ${scheduledAt.toISOString()}`);
+            
+            const { error: insertError } = await supabase
+              .from('reminder_schedule')
+              .insert({
+                message_id: condition.message_id,
+                condition_id: condition.id,
+                scheduled_at: scheduledAt.toISOString(),
+                reminder_type: 'reminder',
+                status: 'pending',
+                delivery_priority: 'high',
+                retry_strategy: 'standard'
+              });
+            
+            if (insertError) {
+              console.error(`[REMINDER-PROCESSOR] Error creating reminder for condition ${condition.id}:`, insertError);
+            } else {
+              createdCount++;
+              console.log(`[REMINDER-PROCESSOR] Created new reminder for condition ${condition.id}`);
+            }
+          } else {
+            console.log(`[REMINDER-PROCESSOR] Deadline already passed for condition ${condition.id}, skipping reminder creation`);
+          }
+        } else {
+          console.log(`[REMINDER-PROCESSOR] Reminder already exists for condition ${condition.id}`);
+        }
+      }
+    }
+    
+    console.log(`[REMINDER-PROCESSOR] Reset operation complete: ${resetCount} reset, ${createdCount} created`);
+    return { resetCount, createdCount };
+    
+  } catch (error: any) {
+    console.error("[REMINDER-PROCESSOR] Error in resetAndCreateReminders:", error);
+    return { resetCount, createdCount };
+  }
+}
+
+/**
+ * Processes multiple due reminders with enhanced retry logic
  */
 export async function processDueReminders(
   messageId?: string,
@@ -143,6 +284,10 @@ export async function processDueReminders(
       forceSend,
       debug
     });
+    
+    // First, reset failed reminders and create new ones if needed
+    const { resetCount, createdCount } = await resetAndCreateReminders();
+    console.log(`[REMINDER-PROCESSOR] Reset ${resetCount} failed reminders, created ${createdCount} new reminders`);
     
     // Get due check-in reminders (reminder_type = 'reminder')
     let checkInQuery = supabase
