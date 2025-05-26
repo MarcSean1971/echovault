@@ -1,9 +1,9 @@
-
 import { supabaseClient } from "./supabase-client.ts";
 import { formatTimeUntilDeadline } from "./utils/format-utils.ts";
+import { sendCreatorReminder } from "./services/reminder-sender.ts";
 
 /**
- * FIXED: Process a single reminder with improved error handling and rate limiting
+ * FIXED: Process a single reminder with improved logic for check-in vs final delivery
  */
 export async function processReminder(reminder: any, debug: boolean = false): Promise<{ success: boolean; error?: string }> {
   const supabase = supabaseClient();
@@ -49,112 +49,94 @@ export async function processReminder(reminder: any, debug: boolean = false): Pr
     
     const now = new Date();
     const hoursUntilDeadline = (effectiveDeadline.getTime() - now.getTime()) / (1000 * 60 * 60);
-    const timeUntilText = formatTimeUntilDeadline(hoursUntilDeadline);
     
-    // Determine recipients based on condition type
-    let recipients: any[] = [];
+    // CRITICAL FIX: Determine if this is a check-in reminder or final delivery
+    const isCheckInCondition = ['no_check_in', 'recurring_check_in', 'inactivity_to_date'].includes(condition.condition_type);
+    const isFinalDelivery = reminder.reminder_type === 'final_delivery';
     
-    if (['no_check_in', 'recurring_check_in', 'inactivity_to_date'].includes(condition.condition_type)) {
-      // For check-in conditions, send to message creator
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', message.user_id)
-        .single();
-        
-      if (profile) {
-        // Get user email from auth
-        const { data: { user } } = await supabase.auth.admin.getUserById(message.user_id);
-        if (user?.email) {
-          recipients.push({
-            name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'User',
-            email: user.email,
-            phone: profile.whatsapp_number
-          });
-        }
+    if (isCheckInCondition && !isFinalDelivery) {
+      // FIXED: For check-in reminders, send ONLY to the creator
+      console.log(`[REMINDER-SERVICE] Processing check-in reminder for creator ${message.user_id}`);
+      
+      const reminderResults = await sendCreatorReminder(
+        message.id,
+        condition.id,
+        message.title,
+        message.user_id,
+        hoursUntilDeadline,
+        reminder.scheduled_at,
+        debug
+      );
+      
+      const successCount = reminderResults.filter(r => r.success).length;
+      const errors = reminderResults.filter(r => !r.success).map(r => r.error).filter(Boolean);
+      
+      if (debug) {
+        console.log(`Check-in reminder processed: ${successCount} successful deliveries, ${errors.length} errors`);
       }
+      
+      return { 
+        success: successCount > 0, 
+        error: errors.length > 0 ? errors.join('; ') : undefined 
+      };
     } else {
-      // For other conditions, use configured recipients
-      recipients = condition.recipients || [];
-    }
-    
-    if (recipients.length === 0) {
-      console.error(`No recipients found for reminder ${reminder.id}`);
-      return { success: false, error: 'No recipients configured' };
-    }
-    
-    // Send notifications with rate limiting
-    let successCount = 0;
-    let errors: string[] = [];
-    
-    for (const recipient of recipients) {
-      try {
-        // Add delay between recipients to avoid rate limiting
-        if (successCount > 0) {
-          await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay
-        }
-        
-        // Send email notification
-        if (recipient.email) {
-          const emailResult = await sendEmailNotification(recipient, message, condition, timeUntilText, reminder.reminder_type);
-          if (emailResult.success) {
-            successCount++;
-            
-            // Log successful delivery
-            await supabase.from('reminder_delivery_log').insert({
-              reminder_id: reminder.id,
-              message_id: reminder.message_id,
-              condition_id: reminder.condition_id,
-              recipient: recipient.email,
-              delivery_channel: 'email',
-              delivery_status: 'sent',
-              response_data: { sent_at: new Date().toISOString() }
-            });
-          } else {
-            errors.push(`Email to ${recipient.email}: ${emailResult.error}`);
+      // For final delivery or non-check-in conditions, send to recipients
+      console.log(`[REMINDER-SERVICE] Processing final delivery for recipients`);
+      
+      const recipients = condition.recipients || [];
+      if (recipients.length === 0) {
+        console.error(`No recipients found for final delivery ${reminder.id}`);
+        return { success: false, error: 'No recipients configured' };
+      }
+      
+      // Send to all configured recipients for final delivery
+      let successCount = 0;
+      let errors: string[] = [];
+      
+      for (const recipient of recipients) {
+        try {
+          // Add delay between recipients to avoid rate limiting
+          if (successCount > 0) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
           }
-        }
-        
-        // Send WhatsApp notification if phone number available
-        if (recipient.phone) {
-          await new Promise(resolve => setTimeout(resolve, 1000)); // Additional delay for WhatsApp
           
-          const whatsappResult = await sendWhatsAppNotification(recipient, message, condition, timeUntilText, reminder.reminder_type);
-          if (whatsappResult.success) {
-            successCount++;
-            
-            // Log successful delivery
-            await supabase.from('reminder_delivery_log').insert({
-              reminder_id: reminder.id,
-              message_id: reminder.message_id,
-              condition_id: reminder.condition_id,
-              recipient: recipient.phone,
-              delivery_channel: 'whatsapp',
-              delivery_status: 'sent',
-              response_data: { sent_at: new Date().toISOString() }
-            });
-          } else {
-            errors.push(`WhatsApp to ${recipient.phone}: ${whatsappResult.error}`);
+          // Send email notification
+          if (recipient.email) {
+            const emailResult = await sendEmailNotification(recipient, message, condition, formatTimeUntilDeadline(hoursUntilDeadline), 'final_delivery');
+            if (emailResult.success) {
+              successCount++;
+            } else {
+              errors.push(`Email to ${recipient.email}: ${emailResult.error}`);
+            }
           }
+          
+          // Send WhatsApp notification if phone number available
+          if (recipient.phone) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            const whatsappResult = await sendWhatsAppNotification(recipient, message, condition, formatTimeUntilDeadline(hoursUntilDeadline), 'final_delivery');
+            if (whatsappResult.success) {
+              successCount++;
+            } else {
+              errors.push(`WhatsApp to ${recipient.phone}: ${whatsappResult.error}`);
+            }
+          }
+          
+        } catch (recipientError: any) {
+          console.error(`Error processing recipient ${recipient.email || recipient.phone}:`, recipientError);
+          errors.push(`${recipient.email || recipient.phone}: ${recipientError.message}`);
         }
-        
-      } catch (recipientError: any) {
-        console.error(`Error processing recipient ${recipient.email || recipient.phone}:`, recipientError);
-        errors.push(`${recipient.email || recipient.phone}: ${recipientError.message}`);
       }
-    }
-    
-    if (debug) {
-      console.log(`Reminder ${reminder.id} processed: ${successCount} successful deliveries, ${errors.length} errors`);
-      if (errors.length > 0) {
-        console.log(`Errors:`, errors);
+      
+      if (debug) {
+        console.log(`Final delivery processed: ${successCount} successful deliveries, ${errors.length} errors`);
       }
+      
+      return { 
+        success: successCount > 0, 
+        error: errors.length > 0 ? errors.join('; ') : undefined 
+      };
     }
-    
-    return { 
-      success: successCount > 0, 
-      error: errors.length > 0 ? errors.join('; ') : undefined 
-    };
     
   } catch (error: any) {
     console.error(`Error processing reminder ${reminder.id}:`, error);
