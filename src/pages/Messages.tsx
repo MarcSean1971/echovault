@@ -66,25 +66,48 @@ export default function Messages() {
     initializeRealtime();
   }, []);
 
-  // ENHANCED: Listen for condition-updated events with immediate WhatsApp handling and new reminder events
+  // ENHANCED: Comprehensive event handling with delivery completion priority
   useEffect(() => {
     const handleConditionEvents = (event: Event) => {
       if (!(event instanceof CustomEvent)) return;
       
-      const { action, source, enhanced, messageId } = event.detail || {};
+      const { action, source, enhanced, messageId, reminderType, finalStatus } = event.detail || {};
       
-      console.log("[Messages] Received condition event:", { action, source, enhanced, messageId });
+      console.log("[Messages] Received condition event:", { action, source, enhanced, messageId, reminderType, finalStatus });
       
-      // IMMEDIATE handling for WhatsApp check-ins - no delays
-      if (action === 'check-in' && source === 'whatsapp') {
-        console.log("[Messages] WhatsApp check-in event, IMMEDIATE refresh");
+      // MAXIMUM PRIORITY: Final delivery completion
+      if (action === 'delivery-complete' || reminderType === 'final_delivery') {
+        console.log("[Messages] MAXIMUM PRIORITY: Final delivery completion detected - immediate comprehensive refresh");
         
+        // Immediate comprehensive refresh
+        forceRefresh();
+        forceReminderRefresh();
+        setLocalReminderRefreshTrigger(prev => prev + 1);
+        
+        // Additional refresh cycles for delivery completion
+        setTimeout(() => {
+          console.log("[Messages] Secondary final delivery refresh");
+          forceRefresh();
+          forceReminderRefresh();
+          setLocalReminderRefreshTrigger(prev => prev + 1);
+        }, 100);
+        
+        setTimeout(() => {
+          console.log("[Messages] Final delivery verification refresh");
+          forceRefresh();
+          setLocalReminderRefreshTrigger(prev => prev + 1);
+        }, 500);
+        
+      } else if (action === 'check-in' && source === 'whatsapp') {
+        console.log("[Messages] IMMEDIATE WhatsApp check-in event");
+        
+        // Immediate refresh for WhatsApp check-ins
         forceRefresh();
         forceReminderRefresh();
         setLocalReminderRefreshTrigger(prev => prev + 1);
         
       } else if (action === 'arm' || action === 'disarm') {
-        console.log(`[Messages] Received ${action} event, refreshing reminders`);
+        console.log(`[Messages] Message ${action} event, refreshing data`);
         
         forceRefresh();
         forceReminderRefresh();
@@ -103,28 +126,46 @@ export default function Messages() {
       }
     };
     
-    // Listen for reminder-specific events
+    // Listen for reminder-specific events with enhanced handling
     const handleReminderEvents = (event: Event) => {
       if (!(event instanceof CustomEvent)) return;
       
-      const { messageId, action } = event.detail || {};
+      const { messageId, action, reminderType, finalStatus } = event.detail || {};
       
-      console.log("[Messages] Received reminder event:", { messageId, action });
+      console.log("[Messages] Received reminder event:", { messageId, action, reminderType, finalStatus });
       
-      // Refresh when reminder status changes
-      forceRefresh();
-      forceReminderRefresh();
-      setLocalReminderRefreshTrigger(prev => prev + 1);
+      // Prioritize final delivery events
+      if (reminderType === 'final_delivery' || action === 'delivery-complete') {
+        console.log("[Messages] PRIORITY: Final delivery reminder event - comprehensive refresh");
+        
+        // Multiple refresh cycles for final deliveries
+        for (let i = 0; i < 2; i++) {
+          setTimeout(() => {
+            forceRefresh();
+            forceReminderRefresh();
+            setLocalReminderRefreshTrigger(prev => prev + 1);
+          }, i * 100);
+        }
+      } else {
+        // Standard refresh for other reminder events
+        forceRefresh();
+        forceReminderRefresh();
+        setLocalReminderRefreshTrigger(prev => prev + 1);
+      }
     };
     
-    console.log("[Messages] Setting up condition and reminder event listeners");
+    console.log("[Messages] Setting up ENHANCED condition and reminder event listeners");
     window.addEventListener('conditions-updated', handleConditionEvents);
     window.addEventListener('message-reminder-updated', handleReminderEvents);
+    window.addEventListener('message-delivery-complete', handleConditionEvents);
+    window.addEventListener('message-targeted-update', handleConditionEvents);
     
     return () => {
-      console.log("[Messages] Removing condition and reminder event listeners");
+      console.log("[Messages] Removing ENHANCED condition and reminder event listeners");
       window.removeEventListener('conditions-updated', handleConditionEvents);
       window.removeEventListener('message-reminder-updated', handleReminderEvents);
+      window.removeEventListener('message-delivery-complete', handleConditionEvents);
+      window.removeEventListener('message-targeted-update', handleConditionEvents);
     };
   }, [forceRefresh, forceReminderRefresh]);
 

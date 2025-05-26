@@ -5,7 +5,7 @@ import { useMessageCardActions } from "@/hooks/useMessageCardActions";
 import { ensureReminderSchedule } from "@/utils/reminder/ensureReminderSchedule";
 
 /**
- * Custom hook to handle message card state with enhanced delivery completion reset
+ * ENHANCED: Custom hook to handle message card state with comprehensive delivery completion reset
  */
 export function useMessageCard(messageId: string) {
   // Track local force refresh state
@@ -60,7 +60,7 @@ export function useMessageCard(messageId: string) {
     setRefreshCounter(prev => prev + 1);
   }, [condition, messageId, invalidateCache, handleDisarmMessage, setRefreshCounter]);
 
-  // ENHANCED: Listen for delivery completion events to reset card state
+  // ENHANCED: Comprehensive delivery completion event handling
   useEffect(() => {
     const handleDeliveryComplete = (event: Event) => {
       if (!(event instanceof CustomEvent)) return;
@@ -69,73 +69,94 @@ export function useMessageCard(messageId: string) {
       
       // Check if this event targets the current message
       if (detail.messageId === messageId) {
-        console.log(`[MessageCard] Delivery completed for message ${messageId}, performing comprehensive reset`);
+        console.log(`[MessageCard] DELIVERY COMPLETION detected for message ${messageId}:`, detail);
         
-        // Immediate and aggressive cache invalidation
+        // IMMEDIATE and comprehensive cache invalidation
         invalidateCache();
         
-        // Multiple refresh cycles to ensure complete state reset
+        // Multiple aggressive refresh cycles for delivery completion
         setForceRefresh(true);
         setRefreshCounter(prev => prev + 1);
         
-        // Additional refresh after a short delay to ensure all async operations complete
+        // Immediate secondary refresh
         setTimeout(() => {
-          console.log(`[MessageCard] Secondary refresh for delivery completion - message ${messageId}`);
+          console.log(`[MessageCard] Secondary delivery completion refresh for message ${messageId}`);
           invalidateCache();
           setForceRefresh(true);
           setRefreshCounter(prev => prev + 1);
-        }, 500);
+        }, 100);
         
-        // Final refresh to ensure UI consistency
+        // Final verification refresh
         setTimeout(() => {
-          console.log(`[MessageCard] Final refresh for delivery completion - message ${messageId}`);
+          console.log(`[MessageCard] Final delivery completion verification for message ${messageId}`);
           setRefreshCounter(prev => prev + 1);
-        }, 1500);
+        }, 1000);
       }
     };
     
+    // Listen for multiple delivery completion event types
     window.addEventListener('message-delivery-complete', handleDeliveryComplete);
+    window.addEventListener('conditions-updated', handleDeliveryComplete);
+    window.addEventListener('message-reminder-updated', handleDeliveryComplete);
     
     return () => {
       window.removeEventListener('message-delivery-complete', handleDeliveryComplete);
+      window.removeEventListener('conditions-updated', handleDeliveryComplete);
+      window.removeEventListener('message-reminder-updated', handleDeliveryComplete);
     };
   }, [messageId, invalidateCache, setRefreshCounter]);
 
-  // ENHANCED: Listen for reminder delivery completion events and new reminder-sent events
+  // ENHANCED: Comprehensive reminder delivery and status change handling
   useEffect(() => {
-    const handleReminderDelivery = (event: Event) => {
+    const handleReminderStatusChange = (event: Event) => {
       if (!(event instanceof CustomEvent)) return;
       
       const detail = event.detail || {};
       
-      // Check if this event targets the current message and is a delivery-related event
-      if (detail.messageId === messageId && (
-        detail.action === 'delivery-complete' || 
-        detail.action === 'reminder-sent' ||
-        detail.action === 'reminder-delivered'
-      )) {
-        console.log(`[MessageCard] Reminder delivery event for message ${messageId}, action: ${detail.action}`);
+      // Handle events that affect this message
+      if (detail.messageId === messageId) {
+        console.log(`[MessageCard] Reminder status change for message ${messageId}:`, detail);
         
-        // Immediate cache invalidation and refresh
-        invalidateCache();
-        setForceRefresh(true);
-        setRefreshCounter(prev => prev + 1);
+        // Handle different types of status changes
+        if (detail.action === 'delivery-complete' || detail.reminderType === 'final_delivery') {
+          console.log(`[MessageCard] FINAL DELIVERY completed for message ${messageId} - comprehensive reset`);
+          
+          // Immediate aggressive reset for final deliveries
+          invalidateCache();
+          setForceRefresh(true);
+          setRefreshCounter(prev => prev + 1);
+          
+          // Additional refresh after brief delay
+          setTimeout(() => {
+            invalidateCache();
+            setForceRefresh(true);
+            setRefreshCounter(prev => prev + 1);
+          }, 200);
+          
+        } else if (detail.action === 'reminder-sent' || detail.action === 'reminder-delivered') {
+          console.log(`[MessageCard] Reminder sent/delivered for message ${messageId} - standard refresh`);
+          
+          // Standard refresh for check-in reminders
+          invalidateCache();
+          setForceRefresh(true);
+          setRefreshCounter(prev => prev + 1);
+        }
       }
     };
     
-    // Listen for conditions-updated events
-    window.addEventListener('conditions-updated', handleReminderDelivery);
-    
-    // ENHANCED: Also listen for message-reminder-updated events
-    window.addEventListener('message-reminder-updated', handleReminderDelivery);
+    // Listen for various reminder status change events
+    window.addEventListener('conditions-updated', handleReminderStatusChange);
+    window.addEventListener('message-reminder-updated', handleReminderStatusChange);
+    window.addEventListener('message-targeted-update', handleReminderStatusChange);
     
     return () => {
-      window.removeEventListener('conditions-updated', handleReminderDelivery);
-      window.removeEventListener('message-reminder-updated', handleReminderDelivery);
+      window.removeEventListener('conditions-updated', handleReminderStatusChange);
+      window.removeEventListener('message-reminder-updated', handleReminderStatusChange);
+      window.removeEventListener('message-targeted-update', handleReminderStatusChange);
     };
   }, [messageId, invalidateCache, setRefreshCounter]);
 
-  // ENHANCED: Immediate WhatsApp check-in event handling with delivery completion support
+  // ENHANCED: WhatsApp check-in event handling with immediate priority
   useEffect(() => {
     const handleWhatsAppCheckIn = (event: Event) => {
       if (!(event instanceof CustomEvent)) return;
@@ -146,33 +167,36 @@ export function useMessageCard(messageId: string) {
       if (detail.messageId === messageId) {
         console.log(`[MessageCard] Received update for message ${messageId}:`, detail);
         
-        // ENHANCED: Handle delivery completion resets with special priority
-        if (detail.action === 'delivery-complete-reset') {
-          console.log(`[MessageCard] Delivery completion reset for message ${messageId} - aggressive refresh`);
+        // PRIORITY: Handle final delivery completion with maximum priority
+        if (detail.action === 'delivery-complete' || detail.reminderType === 'final_delivery') {
+          console.log(`[MessageCard] MAXIMUM PRIORITY: Final delivery for message ${messageId}`);
           
-          // Immediate aggressive reset
-          invalidateCache();
-          setForceRefresh(true);
-          setRefreshCounter(prev => prev + 1);
+          // Immediate triple refresh for final deliveries
+          for (let i = 0; i < 3; i++) {
+            setTimeout(() => {
+              invalidateCache();
+              setForceRefresh(true);
+              setRefreshCounter(prev => prev + 1);
+            }, i * 50);
+          }
           
           return; // Don't process as regular update
         }
         
-        // IMMEDIATE handling for WhatsApp check-ins - no delays
+        // IMMEDIATE handling for WhatsApp check-ins
         if (detail.action === 'check-in' && (detail.source === 'whatsapp' || detail.source === 'whatsapp-realtime')) {
-          console.log(`[MessageCard] WhatsApp check-in detected for message ${messageId} - IMMEDIATE refresh`);
+          console.log(`[MessageCard] IMMEDIATE WhatsApp check-in for message ${messageId}`);
           
           // Immediate cache invalidation and refresh
           invalidateCache();
           setForceRefresh(true);
           setRefreshCounter(prev => prev + 1);
           
-          // Single quick refresh for deadline recalculation after minimal delay
+          // Quick follow-up refresh
           setTimeout(() => {
-            console.log(`[MessageCard] Quick deadline refresh for message ${messageId}`);
             setForceRefresh(true);
             setRefreshCounter(prev => prev + 1);
-          }, 100); // Minimal 100ms delay only for deadline calculation
+          }, 100);
           
         } else {
           // Regular handling for other events
@@ -183,7 +207,7 @@ export function useMessageCard(messageId: string) {
       }
     };
     
-    // Listen for both targeted updates and general condition updates
+    // Listen for targeted updates and general condition updates
     window.addEventListener('message-targeted-update', handleWhatsAppCheckIn);
     window.addEventListener('conditions-updated', handleWhatsAppCheckIn);
     

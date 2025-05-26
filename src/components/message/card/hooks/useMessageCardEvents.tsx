@@ -25,7 +25,7 @@ export function useMessageCardEvents({
   isDeadmansSwitch,
   setLocalReminderRefreshCounter
 }: UseMessageCardEventsProps) {
-  // Listen for deadline-reached events and handle automatic delivery
+  // ENHANCED: Listen for deadline-reached events and handle automatic delivery
   useEffect(() => {
     const handleDeadlineReached = async (event: Event) => {
       if (!(event instanceof CustomEvent)) return;
@@ -40,7 +40,7 @@ export function useMessageCardEvents({
       // Check if the deadline matches this message (within 5 seconds tolerance)
       if (Math.abs(messageDeadlineTime - deadlineTime) > 5000) return;
       
-      console.log(`[MessageCard ${message.id}] Deadline reached, triggering automatic delivery`);
+      console.log(`[MessageCard ${message.id}] DEADLINE REACHED - triggering automatic delivery`);
       
       try {
         // Show immediate feedback to user
@@ -55,18 +55,36 @@ export function useMessageCardEvents({
           await triggerDeadmanSwitch(message.id);
         }
         
-        // ENHANCED: Emit delivery completion event to reset card state
-        window.dispatchEvent(new CustomEvent('message-delivery-complete', { 
+        // CRITICAL: Emit comprehensive delivery completion event
+        const deliveryEvent = new CustomEvent('message-delivery-complete', { 
           detail: { 
             messageId: message.id,
             conditionId: condition.id,
             messageTitle: message.title,
             deliveryType: 'automatic',
-            completedAt: new Date().toISOString()
+            reminderType: 'final_delivery',
+            action: 'delivery-complete',
+            completedAt: new Date().toISOString(),
+            source: 'deadline-reached'
+          }
+        });
+        
+        window.dispatchEvent(deliveryEvent);
+        
+        // Also emit as conditions-updated for broader listening
+        window.dispatchEvent(new CustomEvent('conditions-updated', { 
+          detail: { 
+            messageId: message.id,
+            conditionId: condition.id,
+            action: 'delivery-complete',
+            reminderType: 'final_delivery',
+            source: 'deadline-automatic',
+            deliveryType: 'automatic',
+            timestamp: new Date().toISOString()
           }
         }));
         
-        console.log(`[MessageCard ${message.id}] Delivery completion event emitted`);
+        console.log(`[MessageCard ${message.id}] Delivery completion events emitted for automatic delivery`);
         
       } catch (error) {
         console.error(`[MessageCard ${message.id}] Error during automatic delivery:`, error);
@@ -86,70 +104,111 @@ export function useMessageCardEvents({
     };
   }, [message.id, isArmed, deadline, condition, message.title, isDeadmansSwitch]);
   
-  // ENHANCED: Listen for delivery completion events to reset card state
+  // ENHANCED: Comprehensive delivery completion event handling
   useEffect(() => {
     const handleDeliveryComplete = (event: Event) => {
       if (!(event instanceof CustomEvent)) return;
       
-      const { messageId: eventMessageId, deliveryType } = event.detail || {};
+      const { messageId: eventMessageId, deliveryType, reminderType, action } = event.detail || {};
       
       // Only handle events for this specific message
       if (eventMessageId === messageId) {
-        console.log(`[MessageCard ${messageId}] Delivery completed, resetting card state`);
+        console.log(`[MessageCard ${messageId}] DELIVERY COMPLETION EVENT:`, event.detail);
         
-        // Force immediate refresh of the message card
+        // IMMEDIATE refresh for any delivery completion
         setLocalReminderRefreshCounter(prev => prev + 1);
         
-        // Emit a comprehensive reset event
-        window.dispatchEvent(new CustomEvent('conditions-updated', { 
-          detail: { 
-            messageId: messageId,
-            conditionId: condition?.id,
-            action: 'delivery-complete-reset',
-            source: 'message-card-reset',
-            deliveryType: deliveryType,
-            timestamp: new Date().toISOString(),
-            forceReset: true
+        // ENHANCED: Different handling based on delivery type
+        if (reminderType === 'final_delivery' || action === 'delivery-complete') {
+          console.log(`[MessageCard ${messageId}] FINAL DELIVERY COMPLETION - comprehensive reset`);
+          
+          // Multiple immediate refreshes for final deliveries
+          for (let i = 0; i < 3; i++) {
+            setTimeout(() => {
+              setLocalReminderRefreshCounter(prev => prev + 1);
+            }, i * 50);
           }
-        }));
-        
-        // Show completion feedback
-        toast({
-          title: "Message Delivered",
-          description: `Your message "${message.title}" has been delivered and the system has been reset.`,
-          duration: 6000,
-        });
+          
+          // Emit comprehensive reset event for final deliveries
+          window.dispatchEvent(new CustomEvent('conditions-updated', { 
+            detail: { 
+              messageId: messageId,
+              conditionId: condition?.id,
+              action: 'delivery-complete-reset',
+              source: 'final-delivery-completion',
+              reminderType: 'final_delivery',
+              deliveryType: deliveryType || 'automatic',
+              timestamp: new Date().toISOString(),
+              forceReset: true
+            }
+          }));
+          
+          // Show comprehensive completion feedback
+          toast({
+            title: "Message Delivered",
+            description: `Your message "${message.title}" has been delivered and the system has been reset.`,
+            duration: 8000,
+          });
+          
+        } else {
+          // Standard handling for check-in reminders
+          console.log(`[MessageCard ${messageId}] Standard delivery completion handling`);
+          
+          setTimeout(() => {
+            setLocalReminderRefreshCounter(prev => prev + 1);
+          }, 100);
+        }
       }
     };
     
+    // Listen for all delivery completion event types
     window.addEventListener('message-delivery-complete', handleDeliveryComplete);
+    window.addEventListener('conditions-updated', handleDeliveryComplete);
+    window.addEventListener('message-reminder-updated', handleDeliveryComplete);
     
     return () => {
       window.removeEventListener('message-delivery-complete', handleDeliveryComplete);
+      window.removeEventListener('conditions-updated', handleDeliveryComplete);
+      window.removeEventListener('message-reminder-updated', handleDeliveryComplete);
     };
   }, [messageId, condition?.id, message.title, setLocalReminderRefreshCounter]);
   
-  // Listen for specific reminder updates for this card
+  // ENHANCED: Specific reminder update handling
   useEffect(() => {
     const handleReminderUpdate = (event: Event) => {
       if (!(event instanceof CustomEvent)) return;
       
-      const { messageId: eventMessageId } = event.detail || {};
+      const { messageId: eventMessageId, reminderType, action } = event.detail || {};
       
       // Only update if this event is for this specific message
       if (eventMessageId === messageId) {
-        console.log(`[MessageCard ${messageId}] Received reminder update event, refreshing`);
-        setLocalReminderRefreshCounter(prev => prev + 1);
+        console.log(`[MessageCard ${messageId}] Reminder update event:`, event.detail);
+        
+        // Priority handling for final delivery reminders
+        if (reminderType === 'final_delivery' || action === 'delivery-complete') {
+          console.log(`[MessageCard ${messageId}] PRIORITY: Final delivery reminder update`);
+          
+          // Immediate multiple refreshes for final deliveries
+          setLocalReminderRefreshCounter(prev => prev + 1);
+          setTimeout(() => setLocalReminderRefreshCounter(prev => prev + 1), 50);
+          setTimeout(() => setLocalReminderRefreshCounter(prev => prev + 1), 150);
+          
+        } else {
+          // Standard refresh for regular reminders
+          setLocalReminderRefreshCounter(prev => prev + 1);
+        }
       }
     };
     
     // Listen for both general and specific events
     window.addEventListener('message-reminder-updated', handleReminderUpdate);
     window.addEventListener('conditions-updated', handleReminderUpdate);
+    window.addEventListener('message-targeted-update', handleReminderUpdate);
     
     return () => {
       window.removeEventListener('message-reminder-updated', handleReminderUpdate);
       window.removeEventListener('conditions-updated', handleReminderUpdate);
+      window.removeEventListener('message-targeted-update', handleReminderUpdate);
     };
   }, [messageId, setLocalReminderRefreshCounter]);
 }
