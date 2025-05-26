@@ -1,5 +1,3 @@
-
-
 import { supabase } from "@/integrations/supabase/client";
 import { MessageCondition, TriggerType, RecurringPattern, PanicTriggerConfig } from "@/types/message";
 import { Recipient } from "@/types/recipient";
@@ -350,12 +348,31 @@ export async function getMessageDeadline(conditionId: string): Promise<Date | nu
       .single();
 
     if (error || !data) {
+      console.error("Error fetching condition for deadline:", error);
       return null;
     }
 
     // Calculate deadline based on condition type and settings
-    const now = new Date();
-    const deadline = new Date(now.getTime() + (data.hours_threshold * 60 * 60 * 1000));
+    let deadline: Date | null = null;
+    
+    if (data.condition_type === 'scheduled' && data.trigger_date) {
+      // For scheduled messages, use the trigger_date
+      deadline = new Date(data.trigger_date);
+    } else if (data.condition_type === 'no_check_in' || data.condition_type === 'regular_check_in') {
+      // For check-in conditions, calculate from last_checked time
+      const lastChecked = data.last_checked ? new Date(data.last_checked) : new Date();
+      const hoursInMs = (data.hours_threshold || 24) * 60 * 60 * 1000;
+      const minutesInMs = (data.minutes_threshold || 0) * 60 * 1000;
+      deadline = new Date(lastChecked.getTime() + hoursInMs + minutesInMs);
+    } else if (data.hours_threshold) {
+      // Fallback for other condition types
+      const lastChecked = data.last_checked ? new Date(data.last_checked) : new Date();
+      const hoursInMs = data.hours_threshold * 60 * 60 * 1000;
+      const minutesInMs = (data.minutes_threshold || 0) * 60 * 1000;
+      deadline = new Date(lastChecked.getTime() + hoursInMs + minutesInMs);
+    }
+    
+    console.log(`[getMessageDeadline] Condition ${conditionId}: last_checked=${data.last_checked}, deadline=${deadline?.toISOString()}`);
     return deadline;
   } catch (error) {
     console.error("Error getting message deadline:", error);
@@ -442,4 +459,3 @@ export async function getNextCheckInDeadline(): Promise<Date | null> {
     return null;
   }
 }
-
