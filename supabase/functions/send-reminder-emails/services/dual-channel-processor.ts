@@ -1,12 +1,11 @@
-
 import { supabaseClient } from "../supabase-client.ts";
 import { sendCheckInEmailToCreator } from "./email-sender.ts";
 import { sendCheckInWhatsAppToCreator } from "./whatsapp-sender.ts";
 import { reminderLogger } from "./reminder-logger.ts";
 
 /**
- * ENHANCED: Dual-channel processor with FIXED final delivery handling
- * Now properly triggers recipient message delivery when final deadline is reached
+ * ENHANCED: Dual-channel processor with FIXED final delivery handling and race condition prevention
+ * Now properly waits for recipient delivery confirmation before updating status
  */
 export async function processDualChannelReminders(
   messageId?: string,
@@ -145,7 +144,7 @@ export async function processDualChannelReminders(
         
         console.log(`[DUAL-CHANNEL-PROCESSOR] Processing ${reminder.reminder_type} for message "${message.title}"`);
         
-        // CRITICAL FIX: Handle final delivery reminders differently
+        // CRITICAL FIX: Handle final delivery reminders with proper sequencing
         if (reminder.reminder_type === 'final_delivery') {
           console.log(`[DUAL-CHANNEL-PROCESSOR] FINAL DELIVERY PROCESSING for message ${message.id}`);
           
@@ -179,7 +178,7 @@ export async function processDualChannelReminders(
               );
             }
             
-            // STEP 2: CRITICAL FIX - Trigger actual message delivery to recipients
+            // STEP 2: CRITICAL FIX - Trigger actual message delivery to recipients AND WAIT for confirmation
             console.log(`[DUAL-CHANNEL-PROCESSOR] Triggering recipient message delivery for message ${message.id}`);
             
             const deliveryResult = await supabase.functions.invoke('send-message-notifications', {
@@ -190,18 +189,51 @@ export async function processDualChannelReminders(
                 isEmergency: false,
                 debug: debug,
                 source: 'final-delivery-processor',
-                bypassDeduplication: true
+                bypassDeduplication: true,
+                waitForCompletion: true // Add flag to wait for completion
               }
             });
             
             if (deliveryResult.error) {
               console.error(`[DUAL-CHANNEL-PROCESSOR] Error triggering message delivery:`, deliveryResult.error);
+              
+              // CRITICAL: Mark reminder as failed, don't complete it
+              await supabase
+                .from('reminder_schedule')
+                .update({ status: 'failed' })
+                .eq('id', reminder.id);
+              
               throw new Error(`Message delivery failed: ${deliveryResult.error.message}`);
             }
             
-            console.log(`[DUAL-CHANNEL-PROCESSOR] Message delivery triggered successfully for message ${message.id}`);
+            // STEP 3: Wait a moment and verify delivery actually happened
+            console.log(`[DUAL-CHANNEL-PROCESSOR] Waiting for delivery confirmation for message ${message.id}`);
+            await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
             
-            // STEP 3: Update condition status to inactive (message has been delivered)
+            // Check if recipients actually received messages
+            const { data: deliveredMessages } = await supabase
+              .from('delivered_messages')
+              .select('id')
+              .eq('message_id', message.id)
+              .gte('delivered_at', new Date(Date.now() - 5 * 60 * 1000).toISOString()); // Last 5 minutes
+            
+            if (!deliveredMessages || deliveredMessages.length === 0) {
+              console.error(`[DUAL-CHANNEL-PROCESSOR] No delivery confirmations found for message ${message.id}`);
+              
+              // Mark reminder as failed for retry
+              await supabase
+                .from('reminder_schedule')
+                .update({ status: 'failed' })
+                .eq('id', reminder.id);
+              
+              throw new Error(`No delivery confirmations found - recipients may not have received messages`);
+            }
+            
+            console.log(`[DUAL-CHANNEL-PROCESSOR] Verified ${deliveredMessages.length} delivery confirmations for message ${message.id}`);
+            
+            // STEP 4: Only NOW update condition status and mark reminder as completed
+            console.log(`[DUAL-CHANNEL-PROCESSOR] Updating statuses after confirmed delivery for message ${message.id}`);
+            
             await supabase
               .from('message_conditions')
               .update({ 
@@ -210,7 +242,6 @@ export async function processDualChannelReminders(
               })
               .eq('id', condition.id);
             
-            // STEP 4: Mark reminder as completed
             await supabase
               .from('reminder_schedule')
               .update({ 
@@ -233,6 +264,7 @@ export async function processDualChannelReminders(
                 creator_notified: true,
                 recipients_notified: true,
                 condition_deactivated: true,
+                delivery_confirmations: deliveredMessages.length,
                 processed_at: new Date().toISOString()
               }
             );
@@ -246,7 +278,8 @@ export async function processDualChannelReminders(
               reminderType: 'final_delivery',
               source: 'dual-channel-processor',
               timestamp: new Date().toISOString(),
-              finalDelivery: true
+              finalDelivery: true,
+              deliveryConfirmations: deliveredMessages.length
             };
             
             // Log the event to trigger frontend refresh
@@ -260,13 +293,13 @@ export async function processDualChannelReminders(
               response_data: deliveryEvent
             });
             
-            console.log(`[DUAL-CHANNEL-PROCESSOR] Final delivery completed successfully for message ${message.id}`);
+            console.log(`[DUAL-CHANNEL-PROCESSOR] Final delivery completed successfully for message ${message.id} with ${deliveredMessages.length} confirmed deliveries`);
             successCount++;
             
           } catch (finalDeliveryError) {
             console.error(`[DUAL-CHANNEL-PROCESSOR] Final delivery failed for message ${message.id}:`, finalDeliveryError);
             
-            // Mark reminder as failed
+            // Mark reminder as failed for potential retry
             await supabase
               .from('reminder_schedule')
               .update({ status: 'failed' })
@@ -277,7 +310,8 @@ export async function processDualChannelReminders(
           }
           
         } else {
-          // REGULAR CHECK-IN REMINDER PROCESSING
+          // REGULAR CHECK-IN REMINDER PROCESSING (unchanged)
+          // ... keep existing code (regular check-in reminder processing) the same ...
           console.log(`[DUAL-CHANNEL-PROCESSOR] Processing regular check-in reminder for message ${message.id}`);
           
           // Get creator's profile

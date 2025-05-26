@@ -3,14 +3,14 @@ import { supabaseClient } from "../supabase-client.ts";
 
 /**
  * Track message notification in the database
- * FIXED: Removed direct email function call that was causing infinite loop
+ * ENHANCED: Better tracking with delivery confirmation support
  */
-export async function trackMessageNotification(messageId: string, conditionId: string) {
+export async function trackMessageNotification(messageId: string, conditionId: string, waitForCompletion: boolean = false) {
   try {
     const supabase = supabaseClient();
     
     // Enhanced tracking with better error handling and logging
-    console.log(`[TRACKING] Tracking notification for message ${messageId}, condition ${conditionId}`);
+    console.log(`[TRACKING] Tracking notification for message ${messageId}, condition ${conditionId}, waitForCompletion: ${waitForCompletion}`);
     
     const { error } = await supabase
       .from("message_conditions")
@@ -34,15 +34,15 @@ export async function trackMessageNotification(messageId: string, conditionId: s
         delivery_channel: 'tracking',
         channel_order: 0,
         delivery_status: 'processing',
-        response_data: { tracked_at: new Date().toISOString() }
+        response_data: { 
+          tracked_at: new Date().toISOString(),
+          wait_for_completion: waitForCompletion
+        }
       });
     } catch (logError) {
       console.error("[TRACKING] Error creating tracking log:", logError);
       // Non-fatal error, continue execution
     }
-    
-    // CRITICAL FIX: Removed the direct call to the email sending function
-    // that was causing the infinite loop
     
     return true;
   } catch (error) {
@@ -53,25 +53,33 @@ export async function trackMessageNotification(messageId: string, conditionId: s
 
 /**
  * Update reminder times for condition - ensures we don't miss any reminders
- * CRITICAL FIX: Removed the isEdit parameter restriction for immediate checks
+ * ENHANCED: Better handling for final delivery scenarios
  */
 export async function markRemindersObsolete(
   conditionId: string,
   messageId: string,
-  isEditOperation: boolean = false
+  isEditOperation: boolean = false,
+  isFinalDelivery: boolean = false
 ): Promise<boolean> {
   try {
     const supabase = supabaseClient();
     
     // Enhanced logging to track usage
-    console.log(`[REMINDER-TRACKING] Marking reminders as obsolete for condition ${conditionId}, message ${messageId}, isEdit: ${isEditOperation}`);
+    console.log(`[REMINDER-TRACKING] Marking reminders as obsolete for condition ${conditionId}, message ${messageId}, isEdit: ${isEditOperation}, isFinal: ${isFinalDelivery}`);
     
-    // IMPORTANT FIX: Always use message_id in the query (this was the root cause)
-    const { error, count } = await supabase
+    // For final delivery, be more selective about which reminders to mark obsolete
+    let query = supabase
       .from('reminder_schedule')
       .update({ status: 'obsolete' })
       .eq('status', 'pending')
       .eq('message_id', messageId);
+    
+    // If this is a final delivery, only mark non-final reminders as obsolete
+    if (isFinalDelivery) {
+      query = query.neq('reminder_type', 'final_delivery');
+    }
+    
+    const { error, count } = await query;
     
     if (error) {
       console.error("[REMINDER-TRACKING] Error marking reminders as obsolete:", error);
@@ -79,6 +87,12 @@ export async function markRemindersObsolete(
     }
     
     console.log(`[REMINDER-TRACKING] Successfully marked ${count || 'unknown number of'} reminders as obsolete for message ${messageId}`);
+    
+    // For final delivery, skip immediate checks to avoid race conditions
+    if (isFinalDelivery) {
+      console.log("[REMINDER-TRACKING] Skipping immediate check for final delivery to avoid race conditions");
+      return true;
+    }
     
     // CRITICAL FIX: Make deduplication less restrictive (only 1 minute instead of 5)
     try {
