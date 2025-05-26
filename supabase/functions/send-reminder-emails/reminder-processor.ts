@@ -1,5 +1,6 @@
 import { supabaseClient } from "./supabase-client.ts";
 import { sendEmail } from "./email-service.ts";
+import { sendCheckInWhatsAppToCreator } from "./services/whatsapp-sender.ts";
 
 /**
  * FIXED: Enhanced reminder processor with CORRECT recipient logic for different reminder types
@@ -161,7 +162,7 @@ async function cleanupStuckReminders(supabase: any, debug: boolean): Promise<voi
 }
 
 /**
- * CRITICAL FIX: Process an individual reminder with CORRECT recipient logic
+ * ENHANCED: Process an individual reminder with DUAL-CHANNEL DELIVERY (Email + WhatsApp)
  */
 async function processIndividualReminderWithRecovery(reminder: any, debug: boolean, supabase: any): Promise<any> {
   try {
@@ -219,7 +220,7 @@ async function processIndividualReminderWithRecovery(reminder: any, debug: boole
         // CHECK-IN REMINDER: Send ONLY to the message creator
         console.log(`[REMINDER-PROCESSOR] Check-in reminder - sending to creator only for message ${reminder.message_id}`);
         
-        // Get user profile and email
+        // Get user profile with both email and phone
         const { data: profile } = await supabase
           .from('profiles')
           .select('*')
@@ -233,9 +234,9 @@ async function processIndividualReminderWithRecovery(reminder: any, debug: boole
             recipients.push({
               name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'User',
               email: user.email,
-              phone: profile.whatsapp_number
+              phone: profile.whatsapp_number // RESTORED: Include phone number for WhatsApp
             });
-            console.log(`[REMINDER-PROCESSOR] Added creator ${user.email} as recipient for check-in reminder`);
+            console.log(`[REMINDER-PROCESSOR] Added creator ${user.email} with phone ${profile.whatsapp_number || 'none'} as recipient for check-in reminder`);
           }
         }
       }
@@ -258,7 +259,9 @@ async function processIndividualReminderWithRecovery(reminder: any, debug: boole
     
     let emailsSent = 0;
     let emailsFailed = 0;
-    const emailResults = [];
+    let whatsappSent = 0;
+    let whatsappFailed = 0;
+    const deliveryResults = [];
     
     for (const recipient of recipients) {
       if (!recipient.email) {
@@ -267,10 +270,14 @@ async function processIndividualReminderWithRecovery(reminder: any, debug: boole
         continue;
       }
       
+      // DUAL CHANNEL DELIVERY: EMAIL + WHATSAPP
+      let emailSuccess = false;
+      let whatsappSuccess = false;
+      
+      // Send EMAIL
       try {
         console.log(`[REMINDER-PROCESSOR] Sending ${reminder.reminder_type} email to ${recipient.email} for condition ${condition.condition_type}`);
         
-        // FIXED: Generate proper subject and content based on reminder type and condition
         const emailSubject = generateEmailSubject(messageData, condition, reminder);
         const emailHtml = generateReminderEmailHtml(messageData, condition, reminder);
         
@@ -283,20 +290,22 @@ async function processIndividualReminderWithRecovery(reminder: any, debug: boole
         
         if (emailResult.success) {
           emailsSent++;
+          emailSuccess = true;
           console.log(`[REMINDER-PROCESSOR] Email sent successfully to ${recipient.email}, messageId: ${emailResult.messageId}`);
         } else {
           emailsFailed++;
           console.error(`[REMINDER-PROCESSOR] Email failed for ${recipient.email}:`, emailResult.error);
         }
         
-        emailResults.push({
+        deliveryResults.push({
           recipient: recipient.email,
+          channel: 'email',
           success: emailResult.success,
           error: emailResult.error,
           messageId: emailResult.messageId
         });
         
-        // Log delivery attempt with enhanced data
+        // Log email delivery attempt
         await supabase.from('reminder_delivery_log').insert({
           reminder_id: reminder.id,
           message_id: reminder.message_id,
@@ -309,25 +318,99 @@ async function processIndividualReminderWithRecovery(reminder: any, debug: boole
             messageId: emailResult.messageId,
             timestamp: new Date().toISOString(),
             reminderType: reminder.reminder_type,
-            conditionType: condition.condition_type,
-            emailLength: emailHtml.length
+            conditionType: condition.condition_type
           }
         });
         
-      } catch (recipientError: any) {
-        console.error(`[REMINDER-PROCESSOR] Error sending to ${recipient.email}:`, recipientError);
+      } catch (emailError: any) {
+        console.error(`[REMINDER-PROCESSOR] Error sending email to ${recipient.email}:`, emailError);
         emailsFailed++;
-        emailResults.push({
+        deliveryResults.push({
           recipient: recipient.email,
+          channel: 'email',
           success: false,
-          error: recipientError.message || 'Unknown error'
+          error: emailError.message || 'Unknown error'
         });
+      }
+      
+      // Send WHATSAPP (if phone number available)
+      if (recipient.phone) {
+        try {
+          console.log(`[REMINDER-PROCESSOR] Sending ${reminder.reminder_type} WhatsApp to ${recipient.phone} for condition ${condition.condition_type}`);
+          
+          // Calculate time until deadline for WhatsApp message
+          const now = new Date();
+          const lastChecked = new Date(condition.last_checked);
+          const deadline = new Date(lastChecked);
+          deadline.setHours(deadline.getHours() + (condition.hours_threshold || 0));
+          deadline.setMinutes(deadline.getMinutes() + (condition.minutes_threshold || 0));
+          
+          const diffMs = deadline.getTime() - now.getTime();
+          const diffHours = Math.max(0, diffMs / (1000 * 60 * 60));
+          
+          const whatsappResult = await sendCheckInWhatsAppToCreator(
+            recipient.phone,
+            messageData.title,
+            messageData.id,
+            diffHours
+          );
+          
+          if (whatsappResult.success) {
+            whatsappSent++;
+            whatsappSuccess = true;
+            console.log(`[REMINDER-PROCESSOR] WhatsApp sent successfully to ${recipient.phone}, messageId: ${whatsappResult.messageId}`);
+          } else {
+            whatsappFailed++;
+            console.error(`[REMINDER-PROCESSOR] WhatsApp failed for ${recipient.phone}:`, whatsappResult.error);
+          }
+          
+          deliveryResults.push({
+            recipient: recipient.phone,
+            channel: 'whatsapp',
+            success: whatsappResult.success,
+            error: whatsappResult.error,
+            messageId: whatsappResult.messageId
+          });
+          
+          // Log WhatsApp delivery attempt
+          await supabase.from('reminder_delivery_log').insert({
+            reminder_id: reminder.id,
+            message_id: reminder.message_id,
+            condition_id: reminder.condition_id,
+            recipient: recipient.phone,
+            delivery_channel: 'whatsapp',
+            delivery_status: whatsappResult.success ? 'delivered' : 'failed',
+            error_message: whatsappResult.error || null,
+            response_data: {
+              messageId: whatsappResult.messageId,
+              timestamp: new Date().toISOString(),
+              reminderType: reminder.reminder_type,
+              conditionType: condition.condition_type,
+              hoursUntilDeadline: diffHours
+            }
+          });
+          
+        } catch (whatsappError: any) {
+          console.error(`[REMINDER-PROCESSOR] Error sending WhatsApp to ${recipient.phone}:`, whatsappError);
+          whatsappFailed++;
+          deliveryResults.push({
+            recipient: recipient.phone,
+            channel: 'whatsapp',
+            success: false,
+            error: whatsappError.message || 'Unknown error'
+          });
+        }
+      } else {
+        console.log(`[REMINDER-PROCESSOR] No phone number for ${recipient.email}, skipping WhatsApp`);
       }
     }
     
-    // Determine final status based on results
-    const finalStatus = emailsSent > 0 ? 'sent' : 'failed';
-    const finalError = emailsSent === 0 ? 'All email deliveries failed' : null;
+    // ENHANCED SUCCESS LOGIC: Consider reminder successful if EITHER email OR WhatsApp was delivered
+    const totalSuccessfulDeliveries = emailsSent + whatsappSent;
+    const finalStatus = totalSuccessfulDeliveries > 0 ? 'sent' : 'failed';
+    const finalError = totalSuccessfulDeliveries === 0 ? 'All delivery channels failed' : null;
+    
+    console.log(`[REMINDER-PROCESSOR] Delivery summary for reminder ${reminder.id}: Email ${emailsSent}/${emailsSent + emailsFailed}, WhatsApp ${whatsappSent}/${whatsappSent + whatsappFailed}, Overall status: ${finalStatus}`);
     
     // Update reminder status
     const { error: updateError } = await supabase
@@ -364,7 +447,10 @@ async function processIndividualReminderWithRecovery(reminder: any, debug: boole
       success: finalStatus === 'sent',
       emailsSent,
       emailsFailed,
-      emailResults,
+      whatsappSent,
+      whatsappFailed,
+      totalDeliveries: totalSuccessfulDeliveries,
+      deliveryResults,
       error: finalError
     };
     
