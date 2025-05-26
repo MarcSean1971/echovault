@@ -1,9 +1,11 @@
 
 import { supabaseClient } from "../supabase-client.ts";
-import { generateCheckInUrl } from "../utils/url-generator.ts";
+import { sendCheckInEmailToCreator } from "./email-sender.ts";
+import { sendCheckInWhatsAppToCreator } from "./whatsapp-sender.ts";
+import { reminderLogger } from "./reminder-logger.ts";
 
 /**
- * FIXED: Send check-in reminder ONLY to message creator with both email and WhatsApp
+ * Orchestrates sending check-in reminders to message creators
  */
 export async function sendCreatorReminder(
   messageId: string,
@@ -51,52 +53,18 @@ export async function sendCreatorReminder(
       return results;
     }
     
-    // Generate check-in URL
-    const checkInUrl = generateCheckInUrl(messageId);
-    
     console.log(`[REMINDER-SENDER] Sending to creator email: ${user.email}, WhatsApp: ${creatorProfile.whatsapp_number || 'none'}`);
     
-    // FIXED: Send email reminder directly using Resend API
-    try {
-      const resendApiKey = Deno.env.get("RESEND_API_KEY");
-      if (!resendApiKey) {
-        throw new Error("RESEND_API_KEY not configured");
-      }
-
-      const emailContent = `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #333;">🔔 Check-in Reminder</h2>
-          <p>Hi ${creatorProfile.first_name || 'User'},</p>
-          <p>Your message "<strong>${messageTitle}</strong>" needs a check-in.</p>
-          <p><strong>Time until deadline:</strong> ${Math.max(0, hoursUntilDeadline).toFixed(1)} hours</p>
-          <div style="margin: 20px 0;">
-            <a href="${checkInUrl}" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">✅ Check In Now</a>
-          </div>
-          <p style="color: #666; font-size: 14px;">If you don't check in before the deadline, your message will be delivered to recipients.</p>
-          <hr style="margin: 20px 0; border: none; border-top: 1px solid #eee;">
-          <p style="color: #888; font-size: 12px;">This is an automated reminder from EchoVault.</p>
-        </div>
-      `;
-
-      const emailResponse = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${resendApiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: "EchoVault <noreply@resend.dev>",
-          to: [user.email],
-          subject: `🔔 Check-in Required: ${messageTitle}`,
-          html: emailContent,
-        }),
-      });
-
-      if (!emailResponse.ok) {
-        const errorText = await emailResponse.text();
-        throw new Error(`Email API error: ${errorText}`);
-      }
-
+    // Send email reminder
+    const emailResult = await sendCheckInEmailToCreator(
+      user.email,
+      creatorProfile.first_name,
+      messageTitle,
+      messageId,
+      hoursUntilDeadline
+    );
+    
+    if (emailResult.success) {
       console.log(`[REMINDER-SENDER] Email reminder sent successfully to ${user.email}`);
       results.push({
         success: true,
@@ -104,58 +72,85 @@ export async function sendCreatorReminder(
         channel: 'email',
         messageId: messageId
       });
-    } catch (emailError: any) {
-      console.error("[REMINDER-SENDER] Email sending error:", emailError);
+      
+      await reminderLogger.logReminderDelivery(
+        `creator-email-${Date.now()}`,
+        messageId,
+        conditionId,
+        user.email,
+        'email',
+        'sent',
+        { scheduled_at: scheduledAt }
+      );
+    } else {
+      console.error("[REMINDER-SENDER] Email sending failed:", emailResult.error);
       results.push({
         success: false,
         recipient: user.email,
         channel: 'email',
-        error: `Email sending failed: ${emailError.message}`,
+        error: emailResult.error,
         messageId: messageId
       });
+      
+      await reminderLogger.logReminderDelivery(
+        `creator-email-${Date.now()}`,
+        messageId,
+        conditionId,
+        user.email,
+        'email',
+        'failed',
+        { scheduled_at: scheduledAt },
+        emailResult.error
+      );
     }
     
     // Send WhatsApp reminder if WhatsApp number is available
     if (creatorProfile.whatsapp_number) {
-      try {
-        const whatsappMessage = `🔔 *EchoVault Check-in Reminder*\n\nYour message "${messageTitle}" needs a check-in.\n\n⏰ Time until deadline: ${Math.max(0, hoursUntilDeadline).toFixed(1)} hours\n\n✅ Check in now: ${checkInUrl}`;
-        
-        const { error: whatsappError } = await supabase.functions.invoke('send-whatsapp', {
-          body: {
-            to: creatorProfile.whatsapp_number,
-            message: whatsappMessage,
-            messageId: messageId,
-            source: 'check-in-reminder'
-          }
+      const whatsappResult = await sendCheckInWhatsAppToCreator(
+        creatorProfile.whatsapp_number,
+        messageTitle,
+        messageId,
+        hoursUntilDeadline
+      );
+      
+      if (whatsappResult.success) {
+        console.log(`[REMINDER-SENDER] WhatsApp reminder sent successfully to ${creatorProfile.whatsapp_number}`);
+        results.push({
+          success: true,
+          recipient: creatorProfile.whatsapp_number,
+          channel: 'whatsapp',
+          messageId: messageId
         });
         
-        if (whatsappError) {
-          console.error("[REMINDER-SENDER] WhatsApp sending error:", whatsappError);
-          results.push({
-            success: false,
-            recipient: creatorProfile.whatsapp_number,
-            channel: 'whatsapp',
-            error: `WhatsApp sending failed: ${whatsappError.message}`,
-            messageId: messageId
-          });
-        } else {
-          console.log(`[REMINDER-SENDER] WhatsApp reminder sent successfully to ${creatorProfile.whatsapp_number}`);
-          results.push({
-            success: true,
-            recipient: creatorProfile.whatsapp_number,
-            channel: 'whatsapp',
-            messageId: messageId
-          });
-        }
-      } catch (whatsappError: any) {
-        console.error("[REMINDER-SENDER] WhatsApp sending exception:", whatsappError);
+        await reminderLogger.logReminderDelivery(
+          `creator-whatsapp-${Date.now()}`,
+          messageId,
+          conditionId,
+          creatorProfile.whatsapp_number,
+          'whatsapp',
+          'sent',
+          { scheduled_at: scheduledAt }
+        );
+      } else {
+        console.error("[REMINDER-SENDER] WhatsApp sending failed:", whatsappResult.error);
         results.push({
           success: false,
           recipient: creatorProfile.whatsapp_number,
           channel: 'whatsapp',
-          error: `WhatsApp sending exception: ${whatsappError.message}`,
+          error: whatsappResult.error,
           messageId: messageId
         });
+        
+        await reminderLogger.logReminderDelivery(
+          `creator-whatsapp-${Date.now()}`,
+          messageId,
+          conditionId,
+          creatorProfile.whatsapp_number,
+          'whatsapp',
+          'failed',
+          { scheduled_at: scheduledAt },
+          whatsappResult.error
+        );
       }
     } else {
       console.log(`[REMINDER-SENDER] No WhatsApp number for creator ${creatorUserId}`);
@@ -164,30 +159,17 @@ export async function sendCreatorReminder(
     // Log event for frontend monitoring
     const hasSuccess = results.some(result => result.success);
     if (hasSuccess) {
-      console.log(`[REMINDER-SENDER] Emitting conditions-updated event for message ${messageId}`);
-      
-      try {
-        await supabase.from('reminder_delivery_log').insert({
-          reminder_id: `creator-reminder-${Date.now()}`,
-          message_id: messageId,
-          condition_id: conditionId,
-          recipient: 'creator',
-          delivery_channel: 'reminder',
-          delivery_status: 'completed',
-          response_data: { 
-            event_type: 'check-in-reminder-sent',
-            action: 'reminder-sent-to-creator',
-            source: 'reminder-sender',
-            timestamp: new Date().toISOString(),
-            messageId: messageId,
-            conditionId: conditionId,
-            email_sent: results.some(r => r.channel === 'email' && r.success),
-            whatsapp_sent: results.some(r => r.channel === 'whatsapp' && r.success)
-          }
-        });
-      } catch (eventError) {
-        console.error("[REMINDER-SENDER] Error logging event:", eventError);
-      }
+      await reminderLogger.logSystemEvent(
+        'check-in-reminder-sent',
+        messageId,
+        conditionId,
+        {
+          action: 'reminder-sent-to-creator',
+          source: 'reminder-sender',
+          email_sent: results.some(r => r.channel === 'email' && r.success),
+          whatsapp_sent: results.some(r => r.channel === 'whatsapp' && r.success)
+        }
+      );
     }
     
     return results;
