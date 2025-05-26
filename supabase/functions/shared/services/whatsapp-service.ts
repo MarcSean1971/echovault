@@ -28,18 +28,23 @@ export async function sendWhatsAppMessage(params: {
       return { success: false, error: "Missing message content or template configuration" };
     }
     
-    // FIXED: Clean phone number - remove whatsapp: prefix and ensure clean format
-    let cleanPhone = to;
-    if (cleanPhone.startsWith('whatsapp:')) {
-      cleanPhone = cleanPhone.replace('whatsapp:', '');
+    // FIXED: Format phone number with whatsapp: prefix as required by Twilio
+    let formattedToPhone = to;
+    
+    // Remove any existing whatsapp: prefix first, then clean the number
+    if (formattedToPhone.startsWith('whatsapp:')) {
+      formattedToPhone = formattedToPhone.replace('whatsapp:', '');
     }
     
     // Ensure proper format with + prefix
-    if (!cleanPhone.startsWith('+')) {
-      cleanPhone = `+${cleanPhone.replace(/[^\d]/g, '')}`;
+    if (!formattedToPhone.startsWith('+')) {
+      formattedToPhone = `+${formattedToPhone.replace(/[^\d]/g, '')}`;
     }
     
-    console.log(`[WHATSAPP-SERVICE] Original phone: ${to}, Clean phone: ${cleanPhone}`);
+    // Add whatsapp: prefix as required by Twilio
+    formattedToPhone = `whatsapp:${formattedToPhone}`;
+    
+    console.log(`[WHATSAPP-SERVICE] Original phone: ${to}, Formatted phone: ${formattedToPhone}`);
     
     // Get Twilio credentials from environment variables
     const accountSid = Deno.env.get("TWILIO_ACCOUNT_SID");
@@ -73,7 +78,7 @@ export async function sendWhatsAppMessage(params: {
         
         // Implement different strategies based on template vs regular message
         if (useTemplate && templateId) {
-          console.log(`Sending WhatsApp template message to ${cleanPhone} using template ${templateId}`);
+          console.log(`Sending WhatsApp template message to ${formattedToPhone} using template ${templateId}`);
           
           // Use the Content API for templates
           twilioEndpoint = `https://content.twilio.com/v1/Content`;
@@ -91,10 +96,10 @@ export async function sendWhatsAppMessage(params: {
             });
           }
           
-          // FIXED: Remove whatsapp: prefix from To field
+          // FIXED: Use whatsapp: prefixed phone number for To field
           requestBody = {
             contentSid: templateId,
-            to: cleanPhone, // Use clean phone number without whatsapp: prefix
+            to: formattedToPhone, // Now includes whatsapp: prefix
             messagingServiceSid: messagingServiceSid,
             contentVariables: JSON.stringify(attributes)
           };
@@ -104,16 +109,27 @@ export async function sendWhatsAppMessage(params: {
           // Log the template parameters for debugging
           console.log(`Template parameters:`, JSON.stringify(attributes));
         } else {
-          console.log(`Sending WhatsApp text message to ${cleanPhone}`);
+          console.log(`Sending WhatsApp text message to ${formattedToPhone}`);
           
           // Use the standard Messages API for text messages
           twilioEndpoint = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Messages.json`;
           
-          // FIXED: Remove whatsapp: prefix from both To and From fields
+          // Format From number with whatsapp: prefix
+          let formattedFromPhone = whatsappNumber || '+14155238886';
+          if (!formattedFromPhone.startsWith('whatsapp:')) {
+            // Clean and format the from number
+            if (formattedFromPhone.startsWith('+')) {
+              formattedFromPhone = `whatsapp:${formattedFromPhone}`;
+            } else {
+              formattedFromPhone = `whatsapp:+${formattedFromPhone.replace(/[^\d]/g, '')}`;
+            }
+          }
+          
+          // FIXED: Use whatsapp: prefixed phone numbers for both To and From fields
           requestBody = {
-            To: cleanPhone, // Use clean phone number without whatsapp: prefix
+            To: formattedToPhone, // Now includes whatsapp: prefix
             Body: message,
-            From: whatsappNumber || '+14155238886', // Use clean phone number without whatsapp: prefix
+            From: formattedFromPhone, // Now includes whatsapp: prefix
           };
           
           // Only add MessagingServiceSid if we have it and no From number
