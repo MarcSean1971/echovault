@@ -4,8 +4,7 @@ import { sendCheckInWhatsAppToCreator } from "./whatsapp-sender.ts";
 import { reminderLogger } from "./reminder-logger.ts";
 
 /**
- * ENHANCED: Dual-channel processor with FIXED final delivery handling and race condition prevention
- * Now properly waits for recipient delivery confirmation before updating status
+ * SIMPLIFIED: Dual-channel processor focused on ensuring final delivery works
  */
 export async function processDualChannelReminders(
   messageId?: string,
@@ -15,17 +14,16 @@ export async function processDualChannelReminders(
   try {
     const supabase = supabaseClient();
     
-    console.log(`[DUAL-CHANNEL-PROCESSOR] Starting FIXED reminder processing for message: ${messageId || 'all'}`);
+    console.log(`[DUAL-CHANNEL-PROCESSOR] SIMPLIFIED processing for message: ${messageId || 'all'}`);
     
     // Clean up stuck reminders first
-    console.log("[DUAL-CHANNEL-PROCESSOR] Cleaning up stuck reminders...");
     await supabase
       .from('reminder_schedule')
       .update({ status: 'failed' })
       .eq('status', 'processing')
-      .lt('scheduled_at', new Date(Date.now() - 10 * 60 * 1000).toISOString()); // 10 minutes ago
+      .lt('scheduled_at', new Date(Date.now() - 10 * 60 * 1000).toISOString());
     
-    // Build query for due reminders
+    // Build query for due reminders - SIMPLIFIED
     let query = supabase
       .from('reminder_schedule')
       .select(`
@@ -76,36 +74,7 @@ export async function processDualChannelReminders(
     console.log(`[DUAL-CHANNEL-PROCESSOR] Found ${dueReminders?.length || 0} due reminders`);
     
     if (!dueReminders || dueReminders.length === 0) {
-      // Check for missing reminders for armed conditions
-      console.log("[DUAL-CHANNEL-PROCESSOR] Checking for missing reminders...");
-      
-      let armedQuery = supabase
-        .from('message_conditions')
-        .select(`
-          id,
-          message_id,
-          condition_type,
-          last_checked,
-          hours_threshold,
-          minutes_threshold,
-          active,
-          messages (
-            id,
-            title,
-            user_id
-          )
-        `)
-        .eq('active', true)
-        .in('condition_type', ['no_check_in', 'recurring_check_in', 'inactivity_to_date']);
-      
-      if (messageId) {
-        armedQuery = armedQuery.eq('message_id', messageId);
-      }
-      
-      const { data: armedConditions } = await armedQuery;
-      
-      console.log(`[DUAL-CHANNEL-PROCESSOR] Found ${armedConditions?.length || 0} armed conditions`);
-      
+      console.log("[DUAL-CHANNEL-PROCESSOR] No due reminders found");
       return { processedCount: 0, successCount: 0, failedCount: 0, errors: [] };
     }
     
@@ -144,42 +113,12 @@ export async function processDualChannelReminders(
         
         console.log(`[DUAL-CHANNEL-PROCESSOR] Processing ${reminder.reminder_type} for message "${message.title}"`);
         
-        // CRITICAL FIX: Handle final delivery reminders with proper sequencing
         if (reminder.reminder_type === 'final_delivery') {
           console.log(`[DUAL-CHANNEL-PROCESSOR] FINAL DELIVERY PROCESSING for message ${message.id}`);
           
           try {
-            // STEP 1: Send check-in reminder to creator (for notification)
-            console.log(`[DUAL-CHANNEL-PROCESSOR] Sending final notification to creator for message ${message.id}`);
-            
-            // Get creator's profile for WhatsApp
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('whatsapp_number, email, first_name, last_name')
-              .eq('id', message.user_id)
-              .single();
-            
-            // Send creator notification email
-            const emailResult = await sendCheckInEmailToCreator(
-              profile?.email || 'unknown@example.com',
-              message.title,
-              message.id,
-              0, // 0 hours until deadline (already reached)
-              profile?.first_name || 'User'
-            );
-            
-            // Send creator notification WhatsApp if available
-            if (profile?.whatsapp_number) {
-              await sendCheckInWhatsAppToCreator(
-                profile.whatsapp_number,
-                message.title,
-                message.id,
-                0 // 0 hours until deadline
-              );
-            }
-            
-            // STEP 2: CRITICAL FIX - Trigger actual message delivery to recipients AND WAIT for confirmation
-            console.log(`[DUAL-CHANNEL-PROCESSOR] Triggering recipient message delivery for message ${message.id}`);
+            // STEP 1: Trigger message delivery to recipients
+            console.log(`[DUAL-CHANNEL-PROCESSOR] Triggering recipient message delivery`);
             
             const deliveryResult = await supabase.functions.invoke('send-message-notifications', {
               body: {
@@ -189,59 +128,18 @@ export async function processDualChannelReminders(
                 isEmergency: false,
                 debug: debug,
                 source: 'final-delivery-processor',
-                bypassDeduplication: true,
-                waitForCompletion: true // Add flag to wait for completion
+                bypassDeduplication: true
               }
             });
             
             if (deliveryResult.error) {
-              console.error(`[DUAL-CHANNEL-PROCESSOR] Error triggering message delivery:`, deliveryResult.error);
-              
-              // CRITICAL: Mark reminder as failed, don't complete it
-              await supabase
-                .from('reminder_schedule')
-                .update({ status: 'failed' })
-                .eq('id', reminder.id);
-              
+              console.error(`[DUAL-CHANNEL-PROCESSOR] Delivery failed:`, deliveryResult.error);
               throw new Error(`Message delivery failed: ${deliveryResult.error.message}`);
             }
             
-            // STEP 3: Wait a moment and verify delivery actually happened
-            console.log(`[DUAL-CHANNEL-PROCESSOR] Waiting for delivery confirmation for message ${message.id}`);
-            await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
+            console.log(`[DUAL-CHANNEL-PROCESSOR] Message delivery triggered successfully`);
             
-            // Check if recipients actually received messages
-            const { data: deliveredMessages } = await supabase
-              .from('delivered_messages')
-              .select('id')
-              .eq('message_id', message.id)
-              .gte('delivered_at', new Date(Date.now() - 5 * 60 * 1000).toISOString()); // Last 5 minutes
-            
-            if (!deliveredMessages || deliveredMessages.length === 0) {
-              console.error(`[DUAL-CHANNEL-PROCESSOR] No delivery confirmations found for message ${message.id}`);
-              
-              // Mark reminder as failed for retry
-              await supabase
-                .from('reminder_schedule')
-                .update({ status: 'failed' })
-                .eq('id', reminder.id);
-              
-              throw new Error(`No delivery confirmations found - recipients may not have received messages`);
-            }
-            
-            console.log(`[DUAL-CHANNEL-PROCESSOR] Verified ${deliveredMessages.length} delivery confirmations for message ${message.id}`);
-            
-            // STEP 4: Only NOW update condition status and mark reminder as completed
-            console.log(`[DUAL-CHANNEL-PROCESSOR] Updating statuses after confirmed delivery for message ${message.id}`);
-            
-            await supabase
-              .from('message_conditions')
-              .update({ 
-                active: false,
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', condition.id);
-            
+            // STEP 2: Update reminder status
             await supabase
               .from('reminder_schedule')
               .update({ 
@@ -250,7 +148,16 @@ export async function processDualChannelReminders(
               })
               .eq('id', reminder.id);
             
-            // STEP 5: Log the delivery
+            // STEP 3: Deactivate condition
+            await supabase
+              .from('message_conditions')
+              .update({ 
+                active: false,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', condition.id);
+            
+            // STEP 4: Log success
             await reminderLogger.logDelivery(
               reminder.id,
               message.id,
@@ -261,45 +168,18 @@ export async function processDualChannelReminders(
               'completed',
               {
                 reminder_type: 'final_delivery',
-                creator_notified: true,
                 recipients_notified: true,
                 condition_deactivated: true,
-                delivery_confirmations: deliveredMessages.length,
                 processed_at: new Date().toISOString()
               }
             );
             
-            // STEP 6: CRITICAL - Emit comprehensive frontend events for immediate UI refresh
-            const deliveryEvent = {
-              event_type: 'message-delivery-complete',
-              messageId: message.id,
-              conditionId: condition.id,
-              action: 'delivery-complete',
-              reminderType: 'final_delivery',
-              source: 'dual-channel-processor',
-              timestamp: new Date().toISOString(),
-              finalDelivery: true,
-              deliveryConfirmations: deliveredMessages.length
-            };
-            
-            // Log the event to trigger frontend refresh
-            await supabase.from('reminder_delivery_log').insert({
-              reminder_id: reminder.id,
-              message_id: message.id,
-              condition_id: condition.id,
-              recipient: 'frontend-event',
-              delivery_channel: 'event-emission',
-              delivery_status: 'completed',
-              response_data: deliveryEvent
-            });
-            
-            console.log(`[DUAL-CHANNEL-PROCESSOR] Final delivery completed successfully for message ${message.id} with ${deliveredMessages.length} confirmed deliveries`);
+            console.log(`[DUAL-CHANNEL-PROCESSOR] Final delivery completed for message ${message.id}`);
             successCount++;
             
           } catch (finalDeliveryError) {
-            console.error(`[DUAL-CHANNEL-PROCESSOR] Final delivery failed for message ${message.id}:`, finalDeliveryError);
+            console.error(`[DUAL-CHANNEL-PROCESSOR] Final delivery failed:`, finalDeliveryError);
             
-            // Mark reminder as failed for potential retry
             await supabase
               .from('reminder_schedule')
               .update({ status: 'failed' })
@@ -310,9 +190,8 @@ export async function processDualChannelReminders(
           }
           
         } else {
-          // REGULAR CHECK-IN REMINDER PROCESSING (unchanged)
-          // ... keep existing code (regular check-in reminder processing) the same ...
-          console.log(`[DUAL-CHANNEL-PROCESSOR] Processing regular check-in reminder for message ${message.id}`);
+          // Regular check-in reminder processing
+          console.log(`[DUAL-CHANNEL-PROCESSOR] Processing check-in reminder for message ${message.id}`);
           
           // Get creator's profile
           const { data: profile } = await supabase
@@ -365,7 +244,6 @@ export async function processDualChannelReminders(
           }
           
           if (emailResult.success || whatsappResult.success) {
-            // Mark reminder as completed
             await supabase
               .from('reminder_schedule')
               .update({ 
@@ -374,7 +252,6 @@ export async function processDualChannelReminders(
               })
               .eq('id', reminder.id);
             
-            // Log the delivery
             await reminderLogger.logDelivery(
               reminder.id,
               message.id,
@@ -391,7 +268,6 @@ export async function processDualChannelReminders(
             );
             
             successCount++;
-            console.log(`[DUAL-CHANNEL-PROCESSOR] Check-in reminder sent successfully for message ${message.id}`);
           } else {
             throw new Error(`Both email and WhatsApp delivery failed`);
           }
@@ -400,7 +276,6 @@ export async function processDualChannelReminders(
       } catch (error) {
         console.error(`[DUAL-CHANNEL-PROCESSOR] Error processing reminder ${reminder.id}:`, error);
         
-        // Mark reminder as failed
         await supabase
           .from('reminder_schedule')
           .update({ status: 'failed' })
@@ -411,7 +286,7 @@ export async function processDualChannelReminders(
       }
     }
     
-    console.log(`Processing complete: ${successCount} successful, ${failedCount} failed out of ${processedCount} total`);
+    console.log(`[DUAL-CHANNEL-PROCESSOR] Processing complete: ${successCount} successful, ${failedCount} failed out of ${processedCount} total`);
     
     return {
       processedCount,
