@@ -17,7 +17,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
-  const { isSignedIn, isLoaded } = useAuth();
+  const { isSignedIn, isLoaded, isProfileComplete } = useAuth();
   const navigate = useNavigate();
 
   // If already signed in, redirect to messages
@@ -53,7 +53,17 @@ export default function Login() {
         title: "Login successful",
         description: "Welcome back to EchoVault"
       });
-      navigate("/messages");
+
+      // Check profile completion status and redirect accordingly
+      // We need to wait a moment for the auth context to update with the latest profile data
+      setTimeout(() => {
+        if (isProfileComplete) {
+          navigate("/messages");
+        } else {
+          navigate("/profile");
+        }
+      }, 100);
+      
     } catch (error) {
       console.error("Login error:", error);
       const authError = error as AuthError;
