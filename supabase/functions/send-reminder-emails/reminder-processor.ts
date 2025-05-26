@@ -1,3 +1,4 @@
+
 import { supabaseClient } from "./supabase-client.ts";
 import { sendEmail } from "./email-service.ts";
 import { sendCheckInWhatsAppToCreator } from "./services/whatsapp-sender.ts";
@@ -20,55 +21,28 @@ export async function processDueReminders(
     console.log("[DUAL-CHANNEL-PROCESSOR] Cleaning up stuck reminders...");
     await cleanupStuckReminders(supabase, debug);
     
-    // Step 2: Acquire due reminders with proper filtering
-    let dueReminders;
+    // Step 2: Get due reminders
+    let query = supabase
+      .from('reminder_schedule')
+      .select('*')
+      .eq('reminder_type', 'reminder') // Only check-in reminders
+      .eq('status', 'pending')
+      .lte('scheduled_at', new Date().toISOString());
+    
     if (messageId) {
-      const { data, error } = await supabase.rpc('acquire_message_reminders', {
-        target_message_id: messageId,
-        max_reminders: 10
-      });
-      
-      if (error) {
-        console.error("[DUAL-CHANNEL-PROCESSOR] Error acquiring message reminders:", error);
-        throw error;
-      }
-      dueReminders = data || [];
-    } else {
-      const { data, error } = await supabase.rpc('acquire_due_reminders', {
-        max_reminders: forceSend ? 100 : 20,
-        message_filter: null
-      });
-      
-      if (error) {
-        console.error("[DUAL-CHANNEL-PROCESSOR] Error acquiring due reminders:", error);
-        throw error;
-      }
-      dueReminders = data || [];
+      query = query.eq('message_id', messageId);
     }
     
-    // CRITICAL: Filter to only process reminders that haven't been fully processed
-    const now = new Date();
-    const actuallyDueReminders = dueReminders.filter(reminder => {
-      const scheduledAt = new Date(reminder.scheduled_at);
-      const isDue = scheduledAt <= now;
-      
-      // IMPORTANT: Only process if status is still 'pending' or 'processing'
-      const shouldProcess = ['pending', 'processing'].includes(reminder.status);
-      
-      if (!isDue) {
-        console.log(`[DUAL-CHANNEL-PROCESSOR] Reminder ${reminder.id} not yet due: scheduled for ${scheduledAt.toISOString()}, current time ${now.toISOString()}`);
-      }
-      
-      if (!shouldProcess) {
-        console.log(`[DUAL-CHANNEL-PROCESSOR] Reminder ${reminder.id} already processed with status: ${reminder.status}`);
-      }
-      
-      return (isDue || forceSend) && shouldProcess;
-    });
+    const { data: dueReminders, error: fetchError } = await query.limit(forceSend ? 100 : 20);
     
-    console.log(`[DUAL-CHANNEL-PROCESSOR] Found ${dueReminders.length} acquired reminders, ${actuallyDueReminders.length} actually due and unprocessed`);
+    if (fetchError) {
+      console.error("[DUAL-CHANNEL-PROCESSOR] Error fetching reminders:", fetchError);
+      throw fetchError;
+    }
     
-    if (actuallyDueReminders.length === 0) {
+    console.log(`[DUAL-CHANNEL-PROCESSOR] Found ${dueReminders?.length || 0} due reminders`);
+    
+    if (!dueReminders || dueReminders.length === 0) {
       return {
         processedCount: 0,
         successCount: 0,
@@ -82,9 +56,9 @@ export async function processDueReminders(
     let successCount = 0;
     let failedCount = 0;
     
-    for (const reminder of actuallyDueReminders) {
+    for (const reminder of dueReminders) {
       try {
-        console.log(`[DUAL-CHANNEL-PROCESSOR] Processing reminder ${reminder.id} for message ${reminder.message_id}, type: ${reminder.reminder_type}`);
+        console.log(`[DUAL-CHANNEL-PROCESSOR] Processing reminder ${reminder.id} for message ${reminder.message_id}`);
         
         // Mark as processing to prevent duplicate processing
         await supabase
@@ -122,10 +96,10 @@ export async function processDueReminders(
       }
     }
     
-    console.log(`[DUAL-CHANNEL-PROCESSOR] Processing complete. Processed: ${actuallyDueReminders.length}, Success: ${successCount}, Failed: ${failedCount}`);
+    console.log(`[DUAL-CHANNEL-PROCESSOR] Processing complete. Processed: ${dueReminders.length}, Success: ${successCount}, Failed: ${failedCount}`);
     
     return {
-      processedCount: actuallyDueReminders.length,
+      processedCount: dueReminders.length,
       successCount,
       failedCount,
       results
@@ -138,7 +112,7 @@ export async function processDueReminders(
 }
 
 /**
- * NEW: Process an individual reminder with dual-channel delivery (Email + WhatsApp)
+ * Process an individual reminder with dual-channel delivery (Email + WhatsApp)
  */
 async function processIndividualReminderWithDualChannel(reminder: any, debug: boolean, supabase: any): Promise<any> {
   try {
@@ -147,10 +121,7 @@ async function processIndividualReminderWithDualChannel(reminder: any, debug: bo
       .from('messages')
       .select(`
         *,
-        message_conditions!inner(
-          *,
-          recipients
-        )
+        message_conditions!inner(*)
       `)
       .eq('id', reminder.message_id)
       .single();
@@ -189,7 +160,8 @@ async function processIndividualReminderWithDualChannel(reminder: any, debug: bo
       throw new Error(`Creator email not found: ${userError?.message || 'No email'}`);
     }
     
-    console.log(`[DUAL-CHANNEL-PROCESSOR] Processing dual-channel delivery for creator ${user.email}, phone: ${profile.whatsapp_number || 'none'}`);
+    console.log(`[DUAL-CHANNEL-PROCESSOR] Processing dual-channel delivery for creator ${user.email}`);
+    console.log(`[DUAL-CHANNEL-PROCESSOR] Profile WhatsApp number: ${profile.whatsapp_number || 'none'}`);
     
     let emailSuccess = false;
     let whatsappSuccess = false;
@@ -241,7 +213,7 @@ async function processIndividualReminderWithDualChannel(reminder: any, debug: bo
     }
     
     // CHANNEL 2: WHATSAPP (if phone number available)
-    if (profile.whatsapp_number) {
+    if (profile.whatsapp_number && profile.whatsapp_number.trim()) {
       try {
         console.log(`[DUAL-CHANNEL-PROCESSOR] Sending check-in WhatsApp to ${profile.whatsapp_number}`);
         
@@ -273,7 +245,7 @@ async function processIndividualReminderWithDualChannel(reminder: any, debug: bo
         });
       }
     } else {
-      console.log(`[DUAL-CHANNEL-PROCESSOR] No phone number for ${user.email}, skipping WhatsApp`);
+      console.log(`[DUAL-CHANNEL-PROCESSOR] No WhatsApp number for ${user.email}, skipping WhatsApp`);
     }
     
     // FINAL STATUS: Consider successful if EITHER email OR WhatsApp was delivered
@@ -283,7 +255,7 @@ async function processIndividualReminderWithDualChannel(reminder: any, debug: bo
     
     console.log(`[DUAL-CHANNEL-PROCESSOR] Delivery summary for reminder ${reminder.id}: Email ${emailSuccess ? 'SUCCESS' : 'FAILED'}, WhatsApp ${whatsappSuccess ? 'SUCCESS' : 'FAILED'}, Overall status: ${finalStatus}`);
     
-    // Update final reminder status
+    // CRITICAL: Update final reminder status to 'sent' to prevent reprocessing
     const { error: updateError } = await supabase
       .from('reminder_schedule')
       .update({
@@ -295,6 +267,8 @@ async function processIndividualReminderWithDualChannel(reminder: any, debug: bo
     
     if (updateError) {
       console.error(`[DUAL-CHANNEL-PROCESSOR] Error updating reminder status:`, updateError);
+    } else {
+      console.log(`[DUAL-CHANNEL-PROCESSOR] Successfully updated reminder ${reminder.id} status to ${finalStatus}`);
     }
     
     // Log all delivery attempts
@@ -533,340 +507,4 @@ function generateCheckInEmailHtml(message: any, condition: any, hoursUntilDeadli
     </body>
     </html>
   `;
-}
-
-/**
- * FIXED: Generate proper email subject based on reminder type and condition
- */
-function generateEmailSubject(message: any, condition: any, reminder: any): string {
-  const isCheckInCondition = ['no_check_in', 'recurring_check_in', 'inactivity_to_date'].includes(condition.condition_type);
-  
-  if (isCheckInCondition && reminder.reminder_type === 'reminder') {
-    return `Check-in Required: ${message.title}`;
-  } else if (reminder.reminder_type === 'final_delivery') {
-    return `Message Delivered: ${message.title}`;
-  } else {
-    return `Reminder: ${message.title}`;
-  }
-}
-
-/**
- * REDESIGNED: Generate beautiful HTML content for check-in reminder emails
- */
-function generateReminderEmailHtml(message: any, condition: any, reminder: any): string {
-  const isCheckInCondition = ['no_check_in', 'recurring_check_in', 'inactivity_to_date'].includes(condition.condition_type);
-  const isFinalDelivery = reminder.reminder_type === 'final_delivery';
-  
-  // Calculate time until deadline for check-in reminders
-  let timeUntilDeadline = '';
-  if (isCheckInCondition && !isFinalDelivery) {
-    const now = new Date();
-    const lastChecked = new Date(condition.last_checked);
-    const deadline = new Date(lastChecked);
-    deadline.setHours(deadline.getHours() + (condition.hours_threshold || 0));
-    deadline.setMinutes(deadline.getMinutes() + (condition.minutes_threshold || 0));
-    
-    const diffMs = deadline.getTime() - now.getTime();
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-    
-    if (diffHours > 0) {
-      timeUntilDeadline = `${diffHours} hour${diffHours !== 1 ? 's' : ''}${diffMinutes > 0 ? ` and ${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''}` : ''}`;
-    } else if (diffMinutes > 0) {
-      timeUntilDeadline = `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''}`;
-    } else {
-      timeUntilDeadline = 'less than 1 minute';
-    }
-  }
-  
-  if (isCheckInCondition && !isFinalDelivery) {
-    // REDESIGNED CHECK-IN REMINDER EMAIL
-    return `
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Check-in Required</title>
-        <style>
-          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-          body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            line-height: 1.6;
-            color: #1e293b;
-            background-color: #f8fafc;
-            margin: 0;
-            padding: 20px;
-          }
-          .container {
-            max-width: 600px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-          }
-          .header {
-            background: linear-gradient(135deg, #9b87f5 0%, #8b5cf6 100%);
-            padding: 32px 24px;
-            text-align: center;
-            color: white;
-          }
-          .header h1 {
-            margin: 0;
-            font-size: 24px;
-            font-weight: 600;
-          }
-          .content {
-            padding: 32px 24px;
-          }
-          .alert-box {
-            background: #fef3c7;
-            border: 2px solid #f59e0b;
-            border-radius: 8px;
-            padding: 20px;
-            margin: 24px 0;
-            text-align: center;
-          }
-          .alert-box .time {
-            font-size: 20px;
-            font-weight: 700;
-            color: #d97706;
-            margin-bottom: 8px;
-          }
-          .message-title {
-            background: #f1f5f9;
-            border-radius: 8px;
-            padding: 16px;
-            margin: 20px 0;
-            font-weight: 500;
-            border-left: 4px solid #9b87f5;
-          }
-          .cta-button {
-            display: inline-block;
-            background: linear-gradient(135deg, #9b87f5 0%, #8b5cf6 100%);
-            color: white;
-            text-decoration: none;
-            padding: 14px 28px;
-            border-radius: 8px;
-            font-weight: 600;
-            margin: 24px 0;
-            box-shadow: 0 4px 14px 0 rgba(139, 92, 246, 0.25);
-          }
-          .footer {
-            background: #f8fafc;
-            padding: 20px 24px;
-            text-align: center;
-            font-size: 14px;
-            color: #64748b;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>⏰ Check-in Required</h1>
-          </div>
-          <div class="content">
-            <p>Hello,</p>
-            
-            <p>This is a reminder that you need to check in to prevent your message from being delivered.</p>
-            
-            <div class="message-title">
-              <strong>Message:</strong> ${message.title}
-            </div>
-            
-            <div class="alert-box">
-              <div class="time">Time remaining: ${timeUntilDeadline}</div>
-              <p>Your message will be delivered automatically if you don't check in before the deadline.</p>
-            </div>
-            
-            <div style="text-align: center;">
-              <a href="https://echo-vault.app/messages" class="cta-button">Check In Now</a>
-            </div>
-            
-            <p style="font-size: 14px; color: #64748b; margin-top: 24px;">
-              If you're unable to click the button, please visit: <br>
-              <strong>https://echo-vault.app/messages</strong>
-            </p>
-          </div>
-          <div class="footer">
-            <p>This is an automated reminder from EchoVault.<br>
-            © ${new Date().getFullYear()} EchoVault - Secure Message Delivery</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-  } else if (isFinalDelivery) {
-    // FINAL DELIVERY EMAIL
-    return `
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Message Delivered</title>
-        <style>
-          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-          body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            line-height: 1.6;
-            color: #1e293b;
-            background-color: #f8fafc;
-            margin: 0;
-            padding: 20px;
-          }
-          .container {
-            max-width: 600px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-          }
-          .header {
-            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-            padding: 32px 24px;
-            text-align: center;
-            color: white;
-          }
-          .header h1 {
-            margin: 0;
-            font-size: 24px;
-            font-weight: 600;
-          }
-          .content {
-            padding: 32px 24px;
-          }
-          .message-content {
-            background: #f9fafb;
-            border-radius: 8px;
-            padding: 20px;
-            margin: 24px 0;
-            border-left: 4px solid #dc2626;
-          }
-          .footer {
-            background: #f8fafc;
-            padding: 20px 24px;
-            text-align: center;
-            font-size: 14px;
-            color: #64748b;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>📨 Message Delivered</h1>
-          </div>
-          <div class="content">
-            <p><strong>Hello,</strong></p>
-            
-            <p>You have received an important message:</p>
-            
-            <div class="message-content">
-              <h3 style="margin-top: 0; color: #dc2626;">${message.title}</h3>
-              ${message.text_content ? `<p>${message.text_content}</p>` : ''}
-              ${message.content ? `<p>${message.content}</p>` : ''}
-              
-              ${message.share_location && message.location_name ? 
-                `<p><strong>Location:</strong> ${message.location_name}</p>` : ''
-              }
-            </div>
-          </div>
-          <div class="footer">
-            <p>This message was delivered automatically by EchoVault.<br>
-            © ${new Date().getFullYear()} EchoVault - Secure Message Delivery</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-  } else {
-    // STANDARD REMINDER EMAIL
-    return `
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Reminder</title>
-        <style>
-          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-          body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            line-height: 1.6;
-            color: #1e293b;
-            background-color: #f8fafc;
-            margin: 0;
-            padding: 20px;
-          }
-          .container {
-            max-width: 600px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-          }
-          .header {
-            background: linear-gradient(135deg, #9b87f5 0%, #8b5cf6 100%);
-            padding: 32px 24px;
-            text-align: center;
-            color: white;
-          }
-          .header h1 {
-            margin: 0;
-            font-size: 24px;
-            font-weight: 600;
-          }
-          .content {
-            padding: 32px 24px;
-          }
-          .message-content {
-            background: #f9fafb;
-            border-radius: 8px;
-            padding: 20px;
-            margin: 24px 0;
-            border-left: 4px solid #9b87f5;
-          }
-          .footer {
-            background: #f8fafc;
-            padding: 20px 24px;
-            text-align: center;
-            font-size: 14px;
-            color: #64748b;
-          }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>🔔 Reminder</h1>
-          </div>
-          <div class="content">
-            <p><strong>Hello,</strong></p>
-            
-            <p>This is a reminder about:</p>
-            
-            <div class="message-content">
-              <h3 style="margin-top: 0; color: #9b87f5;">${message.title}</h3>
-              ${message.text_content ? `<p>${message.text_content}</p>` : ''}
-              ${message.content ? `<p>${message.content}</p>` : ''}
-              
-              ${message.share_location && message.location_name ? 
-                `<p><strong>Location:</strong> ${message.location_name}</p>` : ''
-              }
-            </div>
-          </div>
-          <div class="footer">
-            <p>This is an automated reminder from EchoVault.<br>
-            © ${new Date().getFullYear()} EchoVault - Secure Message Delivery</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-  }
 }

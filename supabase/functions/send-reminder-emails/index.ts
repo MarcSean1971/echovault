@@ -1,23 +1,21 @@
 
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { processDueReminders, resetAndCreateReminders } from "./services/reminder-processor.ts";
-import { corsHeaders } from "./cors-headers.ts";
+import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { corsHeaders } from "./utils/cors.ts";
+import { supabaseClient } from "./supabase-client.ts";
+import { processDueReminders } from "./reminder-processor.ts";
 
-/**
- * Enhanced reminder processing with improved retry logic and force reset
- */
+console.log("===== SEND REMINDER EMAILS FUNCTION =====");
+
 serve(async (req) => {
-  console.log("===== SEND REMINDER EMAILS FUNCTION =====");
-  
   // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const requestBody = await req.json();
-    console.log("Received request:", JSON.stringify(requestBody));
-
+    const body = await req.json();
+    console.log("Received request:", JSON.stringify(body));
+    
     const { 
       messageId, 
       debug = false, 
@@ -25,85 +23,69 @@ serve(async (req) => {
       source = "manual",
       action = "process",
       forceReset = false
-    } = requestBody;
-
+    } = body;
+    
     console.log(`Request parameters: messageId=${messageId}, debug=${debug}, forceSend=${forceSend}, source=${source}, action=${action}, forceReset=${forceReset}`);
-
+    
+    // Handle different actions
     if (action === "reset") {
       console.log("Resetting failed reminders and creating new ones...");
+      const supabase = supabaseClient();
       
-      const { resetCount, createdCount } = await resetAndCreateReminders();
+      // Reset stuck reminders
+      const { error: resetError } = await supabase
+        .from('reminder_schedule')
+        .update({
+          status: 'pending',
+          last_attempt_at: null,
+          updated_at: new Date().toISOString()
+        })
+        .in('status', ['processing', 'failed'])
+        .lt('retry_count', 3);
       
-      return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: `Reset ${resetCount} failed reminders and created ${createdCount} new reminders`,
-          resetCount,
-          createdCount,
-          timestamp: new Date().toISOString()
-        }),
-        {
-          status: 200,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
-        }
-      );
-    }
-
-    if (action === "process") {
-      // Force reset before processing if requested
-      if (forceReset) {
-        console.log("Force reset requested before processing...");
-        const { resetCount, createdCount } = await resetAndCreateReminders();
-        console.log(`Force reset complete: ${resetCount} reset, ${createdCount} created`);
-      }
-      
-      console.log("Processing check-in reminders for creators...");
-      
-      const results = await processDueReminders(messageId, forceSend, debug);
-      
-      console.log(`Processing complete: ${results.successCount} successful, ${results.failedCount} failed out of ${results.processedCount} total`);
-      
-      if (results.errors.length > 0) {
-        console.log("Errors encountered:", results.errors);
+      if (resetError) {
+        console.error("Error resetting reminders:", resetError);
       }
       
       return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: `Processed ${results.processedCount} reminders: ${results.successCount} successful, ${results.failedCount} failed`,
-          results: results,
-          timestamp: new Date().toISOString()
-        }),
-        {
-          status: 200,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
+        JSON.stringify({ success: true, message: "Reminders reset successfully" }),
+        { 
+          status: 200, 
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
         }
       );
     }
-
+    
+    // Process reminders using the enhanced dual-channel processor
+    console.log("Processing check-in reminders for creators...");
+    const results = await processDueReminders(messageId, forceSend, debug);
+    
+    console.log(`Processing complete: ${results.successCount} successful, ${results.failedCount} failed out of ${results.processedCount} total`);
+    
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: "No action specified - reminder processing skipped",
-        timestamp: new Date().toISOString()
+      JSON.stringify({
+        success: true,
+        processedCount: results.processedCount,
+        successCount: results.successCount,
+        failedCount: results.failedCount,
+        results: results.results
       }),
-      {
-        status: 200,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+      { 
+        status: 200, 
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
       }
     );
-
+    
   } catch (error: any) {
     console.error("Error in send-reminder-emails function:", error);
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message || "Unknown error occurred",
-        timestamp: new Date().toISOString()
+        error: error.message || "Unknown error occurred" 
       }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, "Content-Type": "application/json" }
       }
     );
   }
