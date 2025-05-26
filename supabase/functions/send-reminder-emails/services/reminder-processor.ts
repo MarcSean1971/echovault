@@ -3,7 +3,8 @@ import { sendCheckInEmailToCreator } from "./email-sender.ts";
 import { reminderLogger } from "./reminder-logger.ts";
 
 /**
- * Enhanced reminder processor with better retry logic and error handling
+ * FIXED: Email-only processor that does NOT change reminder status
+ * This allows the enhanced dual-channel processor to handle final status updates
  */
 export async function processIndividualReminder(
   reminder: any,
@@ -12,7 +13,7 @@ export async function processIndividualReminder(
   const supabase = supabaseClient();
   
   try {
-    console.log(`[REMINDER-PROCESSOR] Processing reminder ${reminder.id}`, {
+    console.log(`[EMAIL-PROCESSOR] Processing reminder ${reminder.id}`, {
       reminderType: reminder.reminder_type,
       messageId: reminder.message_id,
       conditionId: reminder.condition_id,
@@ -25,7 +26,7 @@ export async function processIndividualReminder(
       throw new Error(`Wrong reminder type: ${reminder.reminder_type}. Only 'reminder' type allowed.`);
     }
     
-    // Get message and condition details - FIXED: Removed non-existent sender_name column
+    // Get message and condition details
     const { data: message, error: messageError } = await supabase
       .from('messages')
       .select('id, title, user_id')
@@ -51,9 +52,9 @@ export async function processIndividualReminder(
     const now = new Date();
     const hoursUntilScheduled = Math.max(0, (scheduledTime.getTime() - now.getTime()) / (1000 * 60 * 60));
     
-    console.log(`[REMINDER-PROCESSOR] Sending check-in reminder for message "${message.title}" to creator ${message.user_id}`);
+    console.log(`[EMAIL-PROCESSOR] Sending check-in reminder for message "${message.title}" to creator ${message.user_id}`);
     
-    // Get creator's profile and email - SIMPLIFIED
+    // Get creator's profile and email
     const { data: creatorProfile, error: profileError } = await supabase
       .from('profiles')
       .select('email, first_name')
@@ -64,9 +65,9 @@ export async function processIndividualReminder(
       throw new Error(`Creator profile or email not found: ${profileError?.message || 'No email'}`);
     }
     
-    console.log(`[REMINDER-PROCESSOR] Sending email to creator: ${creatorProfile.email}`);
+    console.log(`[EMAIL-PROCESSOR] Sending email to creator: ${creatorProfile.email}`);
     
-    // SIMPLIFIED: Send only email reminder (removing WhatsApp complexity for now)
+    // Send email reminder
     const emailResult = await sendCheckInEmailToCreator(
       creatorProfile.email,
       creatorProfile.first_name || 'User',
@@ -75,25 +76,27 @@ export async function processIndividualReminder(
       hoursUntilScheduled
     );
     
-    // Mark reminder as sent if email was successful
+    // CRITICAL FIX: Do NOT mark reminder as sent here
+    // Let the enhanced dual-channel processor handle the final status update
     if (emailResult.success) {
+      console.log(`[EMAIL-PROCESSOR] Email sent successfully, but NOT updating reminder status (letting dual-channel processor handle it)`);
+      
+      // Only update last_attempt_at to track processing, but keep status as 'pending'
       const { error: updateError } = await supabase
         .from('reminder_schedule')
         .update({
-          status: 'sent',
           last_attempt_at: new Date().toISOString()
+          // Deliberately NOT changing status here
         })
         .eq('id', reminder.id);
         
       if (updateError) {
-        console.error(`[REMINDER-PROCESSOR] Error updating reminder status:`, updateError);
-      } else {
-        console.log(`[REMINDER-PROCESSOR] Successfully marked reminder ${reminder.id} as sent`);
+        console.error(`[EMAIL-PROCESSOR] Error updating last_attempt_at:`, updateError);
       }
       
       return { success: true };
     } else {
-      // Email failed - mark as failed and increment retry count
+      // Email failed - increment retry count but don't mark as failed yet
       const newRetryCount = (reminder.retry_count || 0) + 1;
       const maxRetries = 3;
       
@@ -104,17 +107,17 @@ export async function processIndividualReminder(
         const { error: updateError } = await supabase
           .from('reminder_schedule')
           .update({
-            status: 'pending',
             scheduled_at: retryTime.toISOString(),
             last_attempt_at: new Date().toISOString(),
             retry_count: newRetryCount
+            // Keep status as 'pending' for retry
           })
           .eq('id', reminder.id);
           
         if (updateError) {
-          console.error(`[REMINDER-PROCESSOR] Error scheduling retry:`, updateError);
+          console.error(`[EMAIL-PROCESSOR] Error scheduling retry:`, updateError);
         } else {
-          console.log(`[REMINDER-PROCESSOR] Scheduled retry ${newRetryCount}/${maxRetries} for reminder ${reminder.id} at ${retryTime.toISOString()}`);
+          console.log(`[EMAIL-PROCESSOR] Scheduled retry ${newRetryCount}/${maxRetries} for reminder ${reminder.id} at ${retryTime.toISOString()}`);
         }
       } else {
         // Max retries reached, mark as failed
@@ -128,9 +131,9 @@ export async function processIndividualReminder(
           .eq('id', reminder.id);
           
         if (updateError) {
-          console.error(`[REMINDER-PROCESSOR] Error marking reminder as failed:`, updateError);
+          console.error(`[EMAIL-PROCESSOR] Error marking reminder as failed:`, updateError);
         } else {
-          console.log(`[REMINDER-PROCESSOR] Marked reminder ${reminder.id} as failed after ${newRetryCount} attempts`);
+          console.log(`[EMAIL-PROCESSOR] Marked reminder ${reminder.id} as failed after ${newRetryCount} attempts`);
         }
       }
       
@@ -138,7 +141,7 @@ export async function processIndividualReminder(
     }
     
   } catch (error: any) {
-    console.error(`[REMINDER-PROCESSOR] Error processing reminder ${reminder.id}:`, error);
+    console.error(`[EMAIL-PROCESSOR] Error processing reminder ${reminder.id}:`, error);
     return { 
       success: false, 
       error: error.message || 'Unknown processing error' 
