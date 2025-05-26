@@ -17,36 +17,22 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
-  const [waitingForProfileData, setWaitingForProfileData] = useState(false);
   const { isSignedIn, isLoaded, isProfileComplete } = useAuth();
   const navigate = useNavigate();
 
-  // If already signed in and profile data is loaded, redirect appropriately
+  // If already signed in, redirect to messages
   useEffect(() => {
-    if (isLoaded && isSignedIn && !waitingForProfileData) {
+    if (isLoaded && isSignedIn) {
       setIsRedirecting(true);
-      if (isProfileComplete) {
-        navigate("/messages");
-      } else {
-        navigate("/profile");
-      }
+      navigate("/messages");
     }
-  }, [isLoaded, isSignedIn, isProfileComplete, navigate, waitingForProfileData]);
+  }, [isLoaded, isSignedIn, navigate]);
 
   // If we're still checking auth or redirecting, show a loading state
   if (!isLoaded || isRedirecting) {
     return (
       <div className="container flex items-center justify-center min-h-screen">
         <p className="text-muted-foreground">Loading...</p>
-      </div>
-    );
-  }
-
-  // If waiting for profile data after login, show loading state
-  if (waitingForProfileData) {
-    return (
-      <div className="container flex items-center justify-center min-h-screen">
-        <p className="text-muted-foreground">Setting up your account...</p>
       </div>
     );
   }
@@ -68,9 +54,15 @@ export default function Login() {
         description: "Welcome back to EchoVault"
       });
 
-      // Set waiting state and let the useEffect handle the redirect
-      // once the AuthContext has updated with the latest profile data
-      setWaitingForProfileData(true);
+      // Check profile completion status and redirect accordingly
+      // We need to wait a moment for the auth context to update with the latest profile data
+      setTimeout(() => {
+        if (isProfileComplete) {
+          navigate("/messages");
+        } else {
+          navigate("/profile");
+        }
+      }, 100);
       
     } catch (error) {
       console.error("Login error:", error);

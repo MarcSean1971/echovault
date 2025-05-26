@@ -36,7 +36,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [profileLoaded, setProfileLoaded] = useState(false);
 
   // Fetch user profile data from the profiles table
   const fetchProfile = async (userId: string) => {
@@ -60,67 +59,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    let mounted = true;
-
     // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
         console.log("Auth state changed:", event, currentSession?.user?.id);
-        
-        if (!mounted) return;
-        
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
         if (currentSession?.user) {
-          // Fetch profile immediately for signed-in users
-          setProfileLoaded(false);
+          // Use setTimeout to avoid potential deadlocks with Supabase client
           setTimeout(async () => {
-            if (!mounted) return;
             const userProfile = await fetchProfile(currentSession.user.id);
-            if (mounted) {
-              setProfile(userProfile);
-              setProfileLoaded(true);
-            }
+            setProfile(userProfile);
           }, 0);
         } else {
           setProfile(null);
-          setProfileLoaded(true);
         }
+        
+        setIsLoaded(true);
       }
     );
 
     // Then check for existing session
-    supabase.auth.getSession().then(async ({ data: { session: currentSession } }) => {
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
       console.log("Initial session check:", currentSession?.user?.id);
-      
-      if (!mounted) return;
-      
       setSession(currentSession);
       setUser(currentSession?.user ?? null);
       
       if (currentSession?.user) {
-        setProfileLoaded(false);
-        const userProfile = await fetchProfile(currentSession.user.id);
-        if (mounted) {
+        fetchProfile(currentSession.user.id).then(userProfile => {
           setProfile(userProfile);
-          setProfileLoaded(true);
-        }
-      } else {
-        setProfileLoaded(true);
+        });
       }
+      
+      setIsLoaded(true);
     });
 
     return () => {
-      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
-
-  // Only set isLoaded to true when we have determined both auth state and profile state
-  useEffect(() => {
-    setIsLoaded(profileLoaded);
-  }, [profileLoaded]);
 
   // Sign out function
   const signOut = async () => {
@@ -142,7 +120,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
       setSession(null);
       setProfile(null);
-      setProfileLoaded(true); // Reset to loaded state for signed-out users
       
       toast({
         title: "Signed out successfully",
