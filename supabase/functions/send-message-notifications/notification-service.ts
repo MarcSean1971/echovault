@@ -22,7 +22,7 @@ interface NotificationOptions {
   forceSend?: boolean;
   bypassDeduplication?: boolean;
   source?: string;
-  skipRecipientNotifications?: boolean; // NEW: Option to skip recipient notifications
+  skipRecipientNotifications?: boolean;
 }
 
 /**
@@ -91,22 +91,8 @@ export async function sendMessageNotification(
     forceSend = false,
     bypassDeduplication = false, 
     source = 'api',
-    skipRecipientNotifications = false // NEW: Default to false to maintain existing behavior
+    skipRecipientNotifications = false
   } = options;
-  
-  // CRITICAL FIX: If skipRecipientNotifications is true, skip all recipient logic
-  if (skipRecipientNotifications) {
-    if (debug) {
-      console.log(`[NOTIFICATION-SERVICE] SKIPPING recipient notifications for message ${message.id} - source: ${source}`);
-      console.log(`[NOTIFICATION-SERVICE] This prevents dual notifications when reminder system handles check-in reminders`);
-    }
-    
-    return { 
-      success: true, 
-      details: "Skipped recipient notifications to prevent dual notifications",
-      skipReason: "Reminder system handles notifications separately"
-    };
-  }
   
   // Skip if no recipients
   if (!condition.recipients || condition.recipients.length === 0) {
@@ -127,8 +113,55 @@ export async function sendMessageNotification(
       console.log(`Number of recipients: ${condition.recipients.length}`);
     }
     
+    // CRITICAL FIX: Determine if this should skip recipient notifications
+    const isFromWhatsApp = source && (
+      source === 'whatsapp_trigger_single' || 
+      source === 'whatsapp_selection_single' || 
+      source === 'whatsapp_selection_all' ||
+      source === 'whatsapp_selection_fallback' ||
+      source === 'whatsapp-checkin'
+    );
+    
+    // CRITICAL FIX: More specific detection of reminder-triggered calls that should skip recipients
+    const isReminderCheckOnly = source && (
+      source === 'reminder_schedule_trigger' ||
+      source === 'reminder-schedule-direct-trigger' ||
+      source === 'reminder-schedule-update' ||
+      source === 'obsolete-immediate-check'
+    ) && !forceSend; // Important: forceSend overrides the skip logic
+    
+    // CRITICAL FIX: Final delivery calls should ALWAYS send to recipients
+    const isFinalDeliveryCall = source && (
+      source === 'final-delivery-processor' ||
+      source === 'cron_job' ||
+      forceSend
+    );
+    
+    if (debug) {
+      console.log(`[NOTIFICATION-SERVICE] Source analysis:`);
+      console.log(`  - Is from WhatsApp: ${isFromWhatsApp}`);
+      console.log(`  - Is reminder check only: ${isReminderCheckOnly}`);
+      console.log(`  - Is final delivery call: ${isFinalDeliveryCall}`);
+      console.log(`  - Skip recipient notifications override: ${skipRecipientNotifications}`);
+    }
+    
+    // CRITICAL FIX: Only skip recipient notifications for reminder checks, NOT final deliveries
+    if ((isReminderCheckOnly && !isFinalDeliveryCall) || skipRecipientNotifications) {
+      if (debug) {
+        console.log(`[NOTIFICATION-SERVICE] SKIPPING recipient notifications for message ${message.id}`);
+        console.log(`[NOTIFICATION-SERVICE] Reason: ${isReminderCheckOnly ? 'Reminder check only' : 'Skip override set'}`);
+        console.log(`[NOTIFICATION-SERVICE] This prevents dual notifications when reminder system handles check-in reminders`);
+      }
+      
+      return { 
+        success: true, 
+        details: "Skipped recipient notifications - reminder check only",
+        skipReason: isReminderCheckOnly ? "Reminder check only" : "Skip override"
+      };
+    }
+    
     // CRITICAL NEW VALIDATION: Check deadline before proceeding with recipient notifications
-    if (!forceSend && !isEmergency) {
+    if (!forceSend && !isEmergency && !isFinalDeliveryCall) {
       const deadlineValid = validateDeadlineForRecipientNotification(condition, debug);
       if (!deadlineValid) {
         if (debug) {
@@ -142,28 +175,17 @@ export async function sendMessageNotification(
       }
     }
     
-    // Check if this is from WhatsApp or a reminder trigger
-    const isFromWhatsApp = source && (
-      source === 'whatsapp_trigger_single' || 
-      source === 'whatsapp_selection_single' || 
-      source === 'whatsapp_selection_all' ||
-      source === 'whatsapp_selection_fallback' ||
-      source === 'whatsapp-checkin'
-    );
-    
-    const isReminderTriggered = source && (
-      source === 'reminder_schedule_trigger' ||
-      source === 'reminder-schedule-direct-trigger' ||
-      source === 'reminder-schedule-update' ||
-      source === 'obsolete-immediate-check'
-    );
+    if (debug) {
+      console.log(`[NOTIFICATION-SERVICE] PROCEEDING with recipient notifications for message ${message.id}`);
+      console.log(`[NOTIFICATION-SERVICE] Will send to ${condition.recipients.length} recipients`);
+    }
     
     if (isFromWhatsApp && debug) {
       console.log(`CRITICAL: This is a WhatsApp-triggered notification from ${source}. Bypassing deduplication.`);
     }
     
-    if (isReminderTriggered && debug) {
-      console.log(`CRITICAL: This is a reminder-triggered notification from ${source}. Bypassing deduplication.`);
+    if (isFinalDeliveryCall && debug) {
+      console.log(`CRITICAL: This is a final delivery call from ${source}. Sending to recipients.`);
     }
     
     // CRITICAL FIX: More intelligent deduplication with source tracking
@@ -179,9 +201,9 @@ export async function sendMessageNotification(
     sourceMap.set(message.id, now);
     
     // If this message was notified within the last 15 seconds, don't send another notification
-    // UNLESS it's a WhatsApp selection, reminder trigger, or bypassDeduplication is set to true
+    // UNLESS it's a WhatsApp selection, final delivery call, or bypassDeduplication is set to true
     if (lastNotificationTime && now - lastNotificationTime < 15000 && 
-        !bypassDeduplication && !isFromWhatsApp && !isReminderTriggered) {
+        !bypassDeduplication && !isFromWhatsApp && !isFinalDeliveryCall) {
       
       // For the same source, require a longer delay (30 seconds) to prevent rapid firing
       if (now - lastSourceAttempt < 30000) {
