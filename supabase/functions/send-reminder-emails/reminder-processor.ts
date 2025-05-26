@@ -1,10 +1,9 @@
-
 import { supabaseClient } from "./supabase-client.ts";
 import { sendEmail } from "./email-service.ts";
 import { sendCheckInWhatsAppToCreator } from "./services/whatsapp-sender.ts";
 
 /**
- * ENHANCED: Dual-channel reminder processor with proper status management
+ * ENHANCED: Dual-channel reminder processor with proper status management and frontend event emission
  * This processor handles both email and WhatsApp delivery and manages final reminder status
  */
 export async function processDueReminders(
@@ -74,6 +73,10 @@ export async function processDueReminders(
         if (result.success) {
           successCount++;
           console.log(`[DUAL-CHANNEL-PROCESSOR] Successfully processed reminder ${reminder.id}`);
+          
+          // ENHANCED: Emit frontend events after successful delivery
+          await emitFrontendEvents(supabase, reminder.message_id, reminder.condition_id, result);
+          
         } else {
           failedCount++;
           console.error(`[DUAL-CHANNEL-PROCESSOR] Failed to process reminder ${reminder.id}:`, result.error);
@@ -108,6 +111,68 @@ export async function processDueReminders(
   } catch (error: any) {
     console.error("[DUAL-CHANNEL-PROCESSOR] Error in processDueReminders:", error);
     throw error;
+  }
+}
+
+/**
+ * ENHANCED: Emit frontend events to trigger UI refresh after reminder delivery
+ */
+async function emitFrontendEvents(supabase: any, messageId: string, conditionId: string, deliveryResult: any): Promise<void> {
+  try {
+    console.log(`[DUAL-CHANNEL-PROCESSOR] Emitting frontend events for message ${messageId}`);
+    
+    // Log specific frontend event triggers
+    const eventData = {
+      messageId: messageId,
+      conditionId: conditionId,
+      action: 'reminder-sent',
+      source: 'dual-channel-processor',
+      deliveryChannels: deliveryResult.deliveryResults?.map((r: any) => r.channel) || [],
+      successfulDeliveries: deliveryResult.totalDeliveries || 0,
+      timestamp: new Date().toISOString(),
+      enhanced: true
+    };
+    
+    // Insert frontend event trigger into delivery log
+    await supabase.from('reminder_delivery_log').insert({
+      reminder_id: `frontend-event-${Date.now()}`,
+      message_id: messageId,
+      condition_id: conditionId,
+      recipient: 'frontend',
+      delivery_channel: 'event-trigger',
+      delivery_status: 'completed',
+      response_data: {
+        event_type: 'conditions-updated',
+        event_payload: eventData,
+        purpose: 'trigger_ui_refresh'
+      }
+    });
+    
+    // Also log message-specific update event
+    await supabase.from('reminder_delivery_log').insert({
+      reminder_id: `message-update-${Date.now()}`,
+      message_id: messageId,
+      condition_id: conditionId,
+      recipient: 'frontend',
+      delivery_channel: 'message-refresh',
+      delivery_status: 'completed',
+      response_data: {
+        event_type: 'message-reminder-updated',
+        event_payload: {
+          messageId: messageId,
+          action: 'reminder-delivered',
+          source: 'dual-channel-processor',
+          timestamp: new Date().toISOString()
+        },
+        purpose: 'trigger_message_card_refresh'
+      }
+    });
+    
+    console.log(`[DUAL-CHANNEL-PROCESSOR] Frontend events emitted for message ${messageId}`);
+    
+  } catch (error: any) {
+    console.error(`[DUAL-CHANNEL-PROCESSOR] Error emitting frontend events:`, error);
+    // Don't fail the entire process for logging errors
   }
 }
 

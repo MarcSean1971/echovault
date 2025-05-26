@@ -101,7 +101,7 @@ export function useMessageCard(messageId: string) {
     };
   }, [messageId, invalidateCache, setRefreshCounter]);
 
-  // ENHANCED: Listen for reminder delivery completion events
+  // ENHANCED: Listen for reminder delivery completion events and new reminder-sent events
   useEffect(() => {
     const handleReminderDelivery = (event: Event) => {
       if (!(event instanceof CustomEvent)) return;
@@ -109,8 +109,12 @@ export function useMessageCard(messageId: string) {
       const detail = event.detail || {};
       
       // Check if this event targets the current message and is a delivery-related event
-      if (detail.messageId === messageId && (detail.action === 'delivery-complete' || detail.action === 'reminder-sent')) {
-        console.log(`[MessageCard] Reminder delivery event for message ${messageId}, refreshing`);
+      if (detail.messageId === messageId && (
+        detail.action === 'delivery-complete' || 
+        detail.action === 'reminder-sent' ||
+        detail.action === 'reminder-delivered'
+      )) {
+        console.log(`[MessageCard] Reminder delivery event for message ${messageId}, action: ${detail.action}`);
         
         // Immediate cache invalidation and refresh
         invalidateCache();
@@ -119,10 +123,15 @@ export function useMessageCard(messageId: string) {
       }
     };
     
+    // Listen for conditions-updated events
     window.addEventListener('conditions-updated', handleReminderDelivery);
+    
+    // ENHANCED: Also listen for message-reminder-updated events
+    window.addEventListener('message-reminder-updated', handleReminderDelivery);
     
     return () => {
       window.removeEventListener('conditions-updated', handleReminderDelivery);
+      window.removeEventListener('message-reminder-updated', handleReminderDelivery);
     };
   }, [messageId, invalidateCache, setRefreshCounter]);
 

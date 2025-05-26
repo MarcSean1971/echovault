@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useMessageList } from "@/hooks/useMessageList";
 import { useBatchedReminders } from "@/hooks/useBatchedReminders";
@@ -65,7 +66,7 @@ export default function Messages() {
     initializeRealtime();
   }, []);
 
-  // FIXED: Listen for condition-updated events with immediate WhatsApp handling
+  // ENHANCED: Listen for condition-updated events with immediate WhatsApp handling and new reminder events
   useEffect(() => {
     const handleConditionEvents = (event: Event) => {
       if (!(event instanceof CustomEvent)) return;
@@ -88,18 +89,42 @@ export default function Messages() {
         forceRefresh();
         forceReminderRefresh();
         setLocalReminderRefreshTrigger(prev => prev + 1);
+        
+      } else if (action === 'reminder-sent' || action === 'reminder-delivered') {
+        console.log(`[Messages] Reminder delivery event (${action}), refreshing UI`);
+        
+        forceRefresh();
+        forceReminderRefresh();
+        setLocalReminderRefreshTrigger(prev => prev + 1);
+        
       } else if (action === 'update') {
         console.log("[Messages] General update event, refreshing data");
         forceRefresh();
       }
     };
     
-    console.log("[Messages] Setting up condition event listener");
+    // Listen for reminder-specific events
+    const handleReminderEvents = (event: Event) => {
+      if (!(event instanceof CustomEvent)) return;
+      
+      const { messageId, action } = event.detail || {};
+      
+      console.log("[Messages] Received reminder event:", { messageId, action });
+      
+      // Refresh when reminder status changes
+      forceRefresh();
+      forceReminderRefresh();
+      setLocalReminderRefreshTrigger(prev => prev + 1);
+    };
+    
+    console.log("[Messages] Setting up condition and reminder event listeners");
     window.addEventListener('conditions-updated', handleConditionEvents);
+    window.addEventListener('message-reminder-updated', handleReminderEvents);
     
     return () => {
-      console.log("[Messages] Removing condition event listener");
+      console.log("[Messages] Removing condition and reminder event listeners");
       window.removeEventListener('conditions-updated', handleConditionEvents);
+      window.removeEventListener('message-reminder-updated', handleReminderEvents);
     };
   }, [forceRefresh, forceReminderRefresh]);
 
