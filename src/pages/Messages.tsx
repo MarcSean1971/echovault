@@ -66,37 +66,44 @@ export default function Messages() {
     initializeRealtime();
   }, []);
 
-  // ENHANCED: Comprehensive event handling with delivery completion priority
+  // ENHANCED: FIXED event handling with immediate final delivery priority
   useEffect(() => {
     const handleConditionEvents = (event: Event) => {
       if (!(event instanceof CustomEvent)) return;
       
-      const { action, source, enhanced, messageId, reminderType, finalStatus } = event.detail || {};
+      const { action, source, enhanced, messageId, reminderType, finalStatus, finalDelivery } = event.detail || {};
       
-      console.log("[Messages] Received condition event:", { action, source, enhanced, messageId, reminderType, finalStatus });
+      console.log("[Messages] Received condition event:", { action, source, enhanced, messageId, reminderType, finalStatus, finalDelivery });
       
-      // MAXIMUM PRIORITY: Final delivery completion
-      if (action === 'delivery-complete' || reminderType === 'final_delivery') {
-        console.log("[Messages] MAXIMUM PRIORITY: Final delivery completion detected - immediate comprehensive refresh");
+      // MAXIMUM PRIORITY: Final delivery completion - IMMEDIATE comprehensive refresh
+      if (action === 'delivery-complete' || reminderType === 'final_delivery' || finalDelivery === true) {
+        console.log("[Messages] MAXIMUM PRIORITY: Final delivery completion detected - IMMEDIATE comprehensive refresh");
         
-        // Immediate comprehensive refresh
+        // IMMEDIATE multiple comprehensive refreshes for final delivery
         forceRefresh();
         forceReminderRefresh();
         setLocalReminderRefreshTrigger(prev => prev + 1);
         
-        // Additional refresh cycles for delivery completion
+        // Multiple immediate refresh cycles for final delivery completion
         setTimeout(() => {
           console.log("[Messages] Secondary final delivery refresh");
           forceRefresh();
           forceReminderRefresh();
           setLocalReminderRefreshTrigger(prev => prev + 1);
-        }, 100);
+        }, 50);
+        
+        setTimeout(() => {
+          console.log("[Messages] Third final delivery refresh");
+          forceRefresh();
+          forceReminderRefresh();
+          setLocalReminderRefreshTrigger(prev => prev + 1);
+        }, 200);
         
         setTimeout(() => {
           console.log("[Messages] Final delivery verification refresh");
           forceRefresh();
           setLocalReminderRefreshTrigger(prev => prev + 1);
-        }, 500);
+        }, 1000);
         
       } else if (action === 'check-in' && source === 'whatsapp') {
         console.log("[Messages] IMMEDIATE WhatsApp check-in event");
@@ -126,25 +133,48 @@ export default function Messages() {
       }
     };
     
-    // Listen for reminder-specific events with enhanced handling
-    const handleReminderEvents = (event: Event) => {
+    // ENHANCED: Listen for final delivery completion events with priority handling
+    const handleDeliveryComplete = (event: Event) => {
       if (!(event instanceof CustomEvent)) return;
       
-      const { messageId, action, reminderType, finalStatus } = event.detail || {};
+      const { messageId, action, reminderType, finalDelivery, source } = event.detail || {};
       
-      console.log("[Messages] Received reminder event:", { messageId, action, reminderType, finalStatus });
+      console.log("[Messages] Received delivery completion event:", { messageId, action, reminderType, finalDelivery, source });
       
-      // Prioritize final delivery events
-      if (reminderType === 'final_delivery' || action === 'delivery-complete') {
-        console.log("[Messages] PRIORITY: Final delivery reminder event - comprehensive refresh");
+      // IMMEDIATE handling for any delivery completion
+      if (action === 'delivery-complete' || reminderType === 'final_delivery' || finalDelivery === true) {
+        console.log("[Messages] IMMEDIATE: Delivery completion event - comprehensive refresh");
         
-        // Multiple refresh cycles for final deliveries
-        for (let i = 0; i < 2; i++) {
+        // Multiple immediate refresh cycles for delivery completion
+        for (let i = 0; i < 3; i++) {
           setTimeout(() => {
             forceRefresh();
             forceReminderRefresh();
             setLocalReminderRefreshTrigger(prev => prev + 1);
           }, i * 100);
+        }
+      }
+    };
+    
+    // Listen for reminder-specific events with enhanced handling
+    const handleReminderEvents = (event: Event) => {
+      if (!(event instanceof CustomEvent)) return;
+      
+      const { messageId, action, reminderType, finalStatus, finalDelivery } = event.detail || {};
+      
+      console.log("[Messages] Received reminder event:", { messageId, action, reminderType, finalStatus, finalDelivery });
+      
+      // Prioritize final delivery events
+      if (reminderType === 'final_delivery' || action === 'delivery-complete' || finalDelivery === true) {
+        console.log("[Messages] PRIORITY: Final delivery reminder event - comprehensive refresh");
+        
+        // Multiple immediate refresh cycles for final deliveries
+        for (let i = 0; i < 3; i++) {
+          setTimeout(() => {
+            forceRefresh();
+            forceReminderRefresh();
+            setLocalReminderRefreshTrigger(prev => prev + 1);
+          }, i * 50);
         }
       } else {
         // Standard refresh for other reminder events
@@ -158,6 +188,7 @@ export default function Messages() {
     window.addEventListener('conditions-updated', handleConditionEvents);
     window.addEventListener('message-reminder-updated', handleReminderEvents);
     window.addEventListener('message-delivery-complete', handleConditionEvents);
+    window.addEventListener('message-delivery-complete', handleDeliveryComplete);
     window.addEventListener('message-targeted-update', handleConditionEvents);
     
     return () => {
@@ -165,6 +196,7 @@ export default function Messages() {
       window.removeEventListener('conditions-updated', handleConditionEvents);
       window.removeEventListener('message-reminder-updated', handleReminderEvents);
       window.removeEventListener('message-delivery-complete', handleConditionEvents);
+      window.removeEventListener('message-delivery-complete', handleDeliveryComplete);
       window.removeEventListener('message-targeted-update', handleConditionEvents);
     };
   }, [forceRefresh, forceReminderRefresh]);

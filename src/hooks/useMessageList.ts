@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "@/components/ui/use-toast";
@@ -98,7 +99,7 @@ export function useMessageList() {
     loadData();
   }, [loadData]);
   
-  // ENHANCED: Listen for database events from reminder_delivery_log
+  // ENHANCED: Listen for database events from reminder_delivery_log with final delivery priority
   useEffect(() => {
     if (!userId) return;
     
@@ -120,12 +121,24 @@ export function useMessageList() {
           const responseData = payload.new?.response_data;
           if (responseData && (
             responseData.event_type === 'conditions-updated' || 
-            responseData.event_type === 'message-delivery-complete'
+            responseData.event_type === 'message-delivery-complete' ||
+            responseData.finalDelivery === true ||
+            responseData.reminderType === 'final_delivery'
           )) {
-            console.log("[useMessageList] Processing delivery completion event");
+            console.log("[useMessageList] Processing delivery completion event with priority");
             
-            // Force immediate refresh
-            forceRefresh();
+            // IMMEDIATE force refresh for final delivery events
+            if (responseData.finalDelivery === true || responseData.reminderType === 'final_delivery') {
+              console.log("[useMessageList] IMMEDIATE: Final delivery event - multiple refreshes");
+              
+              // Multiple immediate refreshes for final delivery
+              forceRefresh();
+              setTimeout(() => forceRefresh(), 100);
+              setTimeout(() => forceRefresh(), 500);
+            } else {
+              // Standard refresh for other events
+              forceRefresh();
+            }
             
             // Also emit a frontend event for immediate component updates
             window.dispatchEvent(new CustomEvent('conditions-updated', { 
@@ -134,9 +147,26 @@ export function useMessageList() {
                 conditionId: responseData.conditionId,
                 action: responseData.action || 'delivery-complete',
                 source: 'reminder-delivery-log',
+                reminderType: responseData.reminderType,
+                finalDelivery: responseData.finalDelivery,
                 timestamp: new Date().toISOString()
               }
             }));
+            
+            // ENHANCED: Also emit specific delivery completion event
+            if (responseData.finalDelivery === true || responseData.reminderType === 'final_delivery') {
+              window.dispatchEvent(new CustomEvent('message-delivery-complete', { 
+                detail: { 
+                  messageId: responseData.messageId,
+                  conditionId: responseData.conditionId,
+                  action: 'delivery-complete',
+                  reminderType: 'final_delivery',
+                  finalDelivery: true,
+                  source: 'reminder-delivery-log-final',
+                  timestamp: new Date().toISOString()
+                }
+              }));
+            }
           }
         }
       )
@@ -152,11 +182,19 @@ export function useMessageList() {
   useEffect(() => {
     const handleConditionsUpdated = (event: Event) => {
       if (event instanceof CustomEvent) {
-        const { action, source, messageId, enhanced } = event.detail || {};
-        console.log("[useMessageList] Received conditions-updated event:", { action, source, messageId, enhanced });
+        const { action, source, messageId, enhanced, reminderType, finalDelivery } = event.detail || {};
+        console.log("[useMessageList] Received conditions-updated event:", { action, source, messageId, enhanced, reminderType, finalDelivery });
         
-        // IMMEDIATE handling for WhatsApp check-ins - no delays
-        if (action === 'check-in' && source === 'whatsapp') {
+        // MAXIMUM PRIORITY: Final delivery completion
+        if (action === 'delivery-complete' || reminderType === 'final_delivery' || finalDelivery === true) {
+          console.log("[useMessageList] MAXIMUM PRIORITY: Final delivery detected - immediate multiple refreshes");
+          
+          // Multiple immediate refreshes for final delivery
+          forceRefresh();
+          setTimeout(() => forceRefresh(), 50);
+          setTimeout(() => forceRefresh(), 200);
+          
+        } else if (action === 'check-in' && source === 'whatsapp') {
           console.log("[useMessageList] WhatsApp check-in detected, IMMEDIATE force refresh");
           forceRefresh();
           
@@ -174,12 +212,27 @@ export function useMessageList() {
       }
     };
     
-    console.log("[useMessageList] Setting up conditions-updated listener");
+    // ENHANCED: Listen for specific final delivery events
+    const handleDeliveryComplete = (event: Event) => {
+      if (event instanceof CustomEvent) {
+        const { messageId, action, reminderType, finalDelivery } = event.detail || {};
+        console.log("[useMessageList] Received delivery complete event:", { messageId, action, reminderType, finalDelivery });
+        
+        // IMMEDIATE multiple refreshes for delivery completion
+        forceRefresh();
+        setTimeout(() => forceRefresh(), 100);
+        setTimeout(() => forceRefresh(), 300);
+      }
+    };
+    
+    console.log("[useMessageList] Setting up ENHANCED conditions-updated and delivery-complete listeners");
     window.addEventListener('conditions-updated', handleConditionsUpdated);
+    window.addEventListener('message-delivery-complete', handleDeliveryComplete);
     
     return () => {
-      console.log("[useMessageList] Removing conditions-updated listener");
+      console.log("[useMessageList] Removing ENHANCED conditions-updated and delivery-complete listeners");
       window.removeEventListener('conditions-updated', handleConditionsUpdated);
+      window.removeEventListener('message-delivery-complete', handleDeliveryComplete);
     };
   }, [forceRefresh]);
 
