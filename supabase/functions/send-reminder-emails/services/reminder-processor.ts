@@ -1,6 +1,5 @@
-
 import { supabaseClient } from "../supabase-client.ts";
-import { sendCreatorReminder } from "./reminder-sender.ts";
+import { sendCheckInEmailToCreator } from "./email-sender.ts";
 import { reminderLogger } from "./reminder-logger.ts";
 
 /**
@@ -26,10 +25,10 @@ export async function processIndividualReminder(
       throw new Error(`Wrong reminder type: ${reminder.reminder_type}. Only 'reminder' type allowed.`);
     }
     
-    // Get message and condition details
+    // Get message and condition details - FIXED: Removed non-existent sender_name column
     const { data: message, error: messageError } = await supabase
       .from('messages')
-      .select('id, title, user_id, sender_name')
+      .select('id, title, user_id')
       .eq('id', reminder.message_id)
       .single();
       
@@ -54,21 +53,30 @@ export async function processIndividualReminder(
     
     console.log(`[REMINDER-PROCESSOR] Sending check-in reminder for message "${message.title}" to creator ${message.user_id}`);
     
-    // Send check-in reminder to the message creator
-    const creatorResults = await sendCreatorReminder(
-      message.id,
-      condition.id,
+    // Get creator's profile and email - SIMPLIFIED
+    const { data: creatorProfile, error: profileError } = await supabase
+      .from('profiles')
+      .select('email, first_name')
+      .eq('id', message.user_id)
+      .single();
+    
+    if (profileError || !creatorProfile?.email) {
+      throw new Error(`Creator profile or email not found: ${profileError?.message || 'No email'}`);
+    }
+    
+    console.log(`[REMINDER-PROCESSOR] Sending email to creator: ${creatorProfile.email}`);
+    
+    // SIMPLIFIED: Send only email reminder (removing WhatsApp complexity for now)
+    const emailResult = await sendCheckInEmailToCreator(
+      creatorProfile.email,
+      creatorProfile.first_name || 'User',
       message.title,
-      message.user_id,
-      hoursUntilScheduled,
-      reminder.scheduled_at,
-      debug
+      message.id,
+      hoursUntilScheduled
     );
     
-    // Mark reminder as sent if at least one delivery was successful
-    const hasSuccessfulDelivery = creatorResults.some(r => r.success);
-    
-    if (hasSuccessfulDelivery) {
+    // Mark reminder as sent if email was successful
+    if (emailResult.success) {
       const { error: updateError } = await supabase
         .from('reminder_schedule')
         .update({
@@ -82,8 +90,10 @@ export async function processIndividualReminder(
       } else {
         console.log(`[REMINDER-PROCESSOR] Successfully marked reminder ${reminder.id} as sent`);
       }
+      
+      return { success: true };
     } else {
-      // All deliveries failed - mark as failed and increment retry count
+      // Email failed - mark as failed and increment retry count
       const newRetryCount = (reminder.retry_count || 0) + 1;
       const maxRetries = 3;
       
@@ -124,10 +134,8 @@ export async function processIndividualReminder(
         }
       }
       
-      throw new Error(`All deliveries failed for reminder ${reminder.id} (attempt ${newRetryCount})`);
+      throw new Error(`Email delivery failed for reminder ${reminder.id}: ${emailResult.error}`);
     }
-    
-    return { success: true };
     
   } catch (error: any) {
     console.error(`[REMINDER-PROCESSOR] Error processing reminder ${reminder.id}:`, error);

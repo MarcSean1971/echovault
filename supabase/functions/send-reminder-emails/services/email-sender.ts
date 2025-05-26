@@ -2,7 +2,7 @@
 import { generateCheckInUrl } from "../utils/url-generator.ts";
 
 /**
- * Email sending service for check-in reminders with improved error handling
+ * SIMPLIFIED: Email sending service for check-in reminders focused on reliability
  */
 export async function sendCheckInEmailToCreator(
   creatorEmail: string,
@@ -19,10 +19,11 @@ export async function sendCheckInEmailToCreator(
 
     const checkInUrl = generateCheckInUrl(messageId);
     
+    // SIMPLIFIED: Basic but reliable email content
     const emailContent = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h2 style="color: #333;">🔔 Check-in Reminder</h2>
-        <p>Hi ${creatorFirstName || 'User'},</p>
+        <p>Hi ${creatorFirstName},</p>
         <p>Your message "<strong>${messageTitle}</strong>" needs a check-in.</p>
         <p><strong>Time until deadline:</strong> ${Math.max(0, hoursUntilDeadline).toFixed(1)} hours</p>
         <div style="margin: 20px 0;">
@@ -43,7 +44,7 @@ export async function sendCheckInEmailToCreator(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "EchoVault <noreply@echo-vault.app>",
+        from: "EchoVault <notifications@echo-vault.app>",
         to: [creatorEmail],
         subject: `🔔 Check-in Required: ${messageTitle}`,
         html: emailContent,
