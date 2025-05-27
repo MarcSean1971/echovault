@@ -2,11 +2,9 @@
 import { supabase } from "@/integrations/supabase/client";
 import { useActionToasts } from "./useActionToasts";
 import { useConditionUpdates } from "./useConditionUpdates";
-import { ensureReminderSchedule } from "@/utils/reminder/ensureReminderSchedule";
-import { invalidateReminderCache } from "@/utils/reminder/reminderFetcher";
 
 /**
- * Hook for handling arming message operations - SIMPLIFIED with immediate reminder generation
+ * Hook for handling arming message operations - SIMPLIFIED for final delivery
  */
 export function useArmOperations() {
   const { 
@@ -18,7 +16,6 @@ export function useArmOperations() {
     invalidateCache,
     emitOptimisticUpdate,
     emitConfirmedUpdate,
-    requestReminderGeneration,
     refreshConditions
   } = useConditionUpdates();
   
@@ -45,7 +42,6 @@ export function useArmOperations() {
       // Invalidate cache immediately
       if (messageId) {
         invalidateCache(messageId);
-        invalidateReminderCache([messageId]);
       }
       
       // Emit optimistic update
@@ -89,15 +85,28 @@ export function useArmOperations() {
       
       console.log(`[useArmOperations] Deadline calculated: ${deadlineDate?.toISOString() || 'unknown'}`);
       
-      // CRITICAL: Immediately create reminder schedule to ensure final delivery works
-      console.log(`[useArmOperations] Creating reminder schedule immediately for condition ${conditionId}`);
-      
-      try {
-        await ensureReminderSchedule(conditionId, false); // Don't skip emails for past-due conditions
-        console.log(`[useArmOperations] Successfully created reminder schedule`);
-      } catch (scheduleError) {
-        console.error(`[useArmOperations] Error creating reminder schedule:`, scheduleError);
-        // Don't fail the arm operation, but log the error
+      // Check if deadline has already passed and trigger immediate final delivery
+      if (deadlineDate && deadlineDate <= new Date()) {
+        console.log(`[useArmOperations] Deadline has passed - triggering immediate final delivery`);
+        
+        try {
+          const { error: triggerError } = await supabase.functions.invoke('send-message-notifications', {
+            body: {
+              messageId: actualMessageId,
+              forceSend: true,
+              debug: true,
+              source: 'immediate_arm_delivery'
+            }
+          });
+          
+          if (triggerError) {
+            console.error(`[useArmOperations] Error triggering immediate delivery:`, triggerError);
+          } else {
+            console.log(`[useArmOperations] Successfully triggered immediate delivery`);
+          }
+        } catch (deliveryError) {
+          console.error(`[useArmOperations] Exception triggering immediate delivery:`, deliveryError);
+        }
       }
       
       // Show success
@@ -111,8 +120,8 @@ export function useArmOperations() {
         deadlineDate?.toISOString()
       );
       
-      // Fire reminder update event
-      window.dispatchEvent(new CustomEvent('message-reminder-updated', { 
+      // Fire update event
+      window.dispatchEvent(new CustomEvent('message-condition-updated', { 
         detail: { 
           messageId: actualMessageId,
           conditionId,
