@@ -1,5 +1,5 @@
 
-import { User, LogOut, Settings, CreditCard, Shield } from "lucide-react";
+import { User, LogOut, Settings, CreditCard, Shield, Home, MessageSquare, Users } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -55,25 +55,45 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
         </Avatar>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer">
+        {/* Main Navigation Items */}
+        <DropdownMenuItem onClick={() => navigate('/dashboard')} className="cursor-pointer hover:bg-primary/10 transition-colors">
+          <Home className="mr-2 h-4 w-4" />
+          Dashboard
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate('/messages')} className="cursor-pointer hover:bg-primary/10 transition-colors">
+          <MessageSquare className="mr-2 h-4 w-4" />
+          Messages
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate('/recipients')} className="cursor-pointer hover:bg-primary/10 transition-colors">
+          <Users className="mr-2 h-4 w-4" />
+          Recipients
+        </DropdownMenuItem>
+        
+        <DropdownMenuSeparator />
+        
+        {/* Account Settings */}
+        <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer hover:bg-primary/10 transition-colors">
           <User className="mr-2 h-4 w-4" />
           Profile
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => navigate('/subscription')} className="cursor-pointer">
+        <DropdownMenuItem onClick={() => navigate('/subscription')} className="cursor-pointer hover:bg-primary/10 transition-colors">
           <CreditCard className="mr-2 h-4 w-4" />
           Subscription
         </DropdownMenuItem>
+        
         {isAdmin && (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => navigate('/admin')} className="cursor-pointer">
+            <DropdownMenuItem onClick={() => navigate('/admin')} className="cursor-pointer hover:bg-primary/10 transition-colors">
               <Shield className="mr-2 h-4 w-4" />
               Admin Dashboard
             </DropdownMenuItem>
           </>
         )}
+        
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-red-600">
+        
+        <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-red-600 hover:bg-red-50 transition-colors">
           <LogOut className="mr-2 h-4 w-4" />
           Sign out
         </DropdownMenuItem>
