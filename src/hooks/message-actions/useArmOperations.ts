@@ -5,7 +5,7 @@ import { useConditionUpdates } from "./useConditionUpdates";
 import { createOrUpdateReminderSchedule } from "@/services/messages/reminder/scheduleService";
 
 /**
- * SIMPLIFIED: Hook for handling arming message operations
+ * FIXED: Hook for handling arming message operations with proper reminder schedule creation
  */
 export function useArmOperations() {
   const { 
@@ -26,76 +26,130 @@ export function useArmOperations() {
       return null;
     }
     
-    console.log(`[useArmOperations] SIMPLE arming message with condition ${conditionId}`);
+    console.log(`[useArmOperations] FIXED arming message with condition ${conditionId}`);
     
     try {
-      // Get the current condition
+      // Get the current condition with all required data
       const { data: currentCondition, error: fetchError } = await supabase
         .from("message_conditions")
-        .select("message_id, condition_type, hours_threshold, minutes_threshold, last_checked, reminder_hours, trigger_date")
+        .select("*")
         .eq("id", conditionId)
         .single();
         
-      if (fetchError) throw fetchError;
+      if (fetchError) {
+        console.error("[useArmOperations] Error fetching condition:", fetchError);
+        throw fetchError;
+      }
       
-      const messageId = currentCondition?.message_id;
+      if (!currentCondition) {
+        throw new Error("Condition not found");
+      }
+      
+      const messageId = currentCondition.message_id;
+      
+      console.log(`[useArmOperations] Found condition:`, currentCondition);
       
       // Invalidate cache immediately
-      if (messageId) {
-        invalidateCache(messageId);
-      }
+      invalidateCache(messageId);
       
       // Emit optimistic update
       emitOptimisticUpdate(conditionId, messageId, 'arm');
       
-      // Arm the condition
-      const { data, error } = await supabase
+      // Arm the condition with last_checked update
+      const { data: updatedCondition, error: armError } = await supabase
         .from("message_conditions")
         .update({ 
           active: true,
           last_checked: new Date().toISOString() 
         })
         .eq("id", conditionId)
-        .select("id, message_id, condition_type, hours_threshold, minutes_threshold, last_checked, reminder_hours, trigger_date")
+        .select("*")
         .single();
       
-      if (error) {
-        throw error;
+      if (armError) {
+        console.error("[useArmOperations] Error arming condition:", armError);
+        throw armError;
       }
       
-      const actualMessageId = data.message_id;
+      console.log(`[useArmOperations] Successfully armed condition:`, updatedCondition);
       
       // Calculate deadline for UI feedback
       let deadlineDate: Date | null = null;
-      if (data.condition_type === "scheduled" && data.trigger_date) {
-        deadlineDate = new Date(data.trigger_date);
-      } else if (data.hours_threshold) {
-        const hoursInMs = data.hours_threshold * 60 * 60 * 1000;
-        const minutesInMs = (data.minutes_threshold || 0) * 60 * 1000;
+      
+      if (updatedCondition.condition_type === "scheduled" && updatedCondition.trigger_date) {
+        deadlineDate = new Date(updatedCondition.trigger_date);
+      } else if (updatedCondition.condition_type === "panic_trigger") {
+        // For panic triggers, set a future deadline for display purposes
+        deadlineDate = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
+      } else if (updatedCondition.hours_threshold) {
+        const hoursInMs = updatedCondition.hours_threshold * 60 * 60 * 1000;
+        const minutesInMs = (updatedCondition.minutes_threshold || 0) * 60 * 1000;
         deadlineDate = new Date(Date.now() + hoursInMs + minutesInMs);
       }
       
-      console.log(`[useArmOperations] Deadline calculated: ${deadlineDate?.toISOString() || 'unknown'}`);
+      console.log(`[useArmOperations] Calculated deadline: ${deadlineDate?.toISOString() || 'none'}`);
       
-      // SIMPLIFIED: Create reminder schedule entries
-      if (deadlineDate) {
+      // CRITICAL FIX: Always create reminder schedule for armed messages
+      try {
         console.log(`[useArmOperations] Creating reminder schedule for armed message`);
         
         // Parse reminder minutes from reminder_hours
-        const reminderMinutes = (data.reminder_hours || [24]).map((hours: number) => hours * 60);
+        let reminderMinutes: number[] = [];
         
-        await createOrUpdateReminderSchedule({
-          messageId: actualMessageId,
+        if (updatedCondition.reminder_hours && Array.isArray(updatedCondition.reminder_hours)) {
+          reminderMinutes = updatedCondition.reminder_hours.map(h => h * 60);
+        } else if (updatedCondition.reminder_hours) {
+          // Handle non-array values
+          const hours = Array.isArray(updatedCondition.reminder_hours) 
+            ? updatedCondition.reminder_hours 
+            : [updatedCondition.reminder_hours];
+          reminderMinutes = hours.map(h => Number(h) * 60).filter(m => !isNaN(m));
+        }
+        
+        // Default to 24 hours (1440 minutes) for panic triggers if no reminders specified
+        if (reminderMinutes.length === 0 && updatedCondition.condition_type === "panic_trigger") {
+          reminderMinutes = [1440]; // 24 hours in minutes
+        }
+        
+        console.log(`[useArmOperations] Using reminder minutes:`, reminderMinutes);
+        
+        const reminderResult = await createOrUpdateReminderSchedule({
+          messageId: messageId,
           conditionId: conditionId,
-          conditionType: data.condition_type,
+          conditionType: updatedCondition.condition_type,
           reminderMinutes: reminderMinutes,
-          lastChecked: data.last_checked,
-          hoursThreshold: data.hours_threshold,
-          minutesThreshold: data.minutes_threshold,
-          triggerDate: data.trigger_date
+          lastChecked: updatedCondition.last_checked,
+          hoursThreshold: updatedCondition.hours_threshold,
+          minutesThreshold: updatedCondition.minutes_threshold,
+          triggerDate: updatedCondition.trigger_date
         }, false);
         
-        console.log(`[useArmOperations] Reminder schedule created for message ${actualMessageId}`);
+        if (!reminderResult) {
+          console.error(`[useArmOperations] CRITICAL: Failed to create reminder schedule for message ${messageId}`);
+          
+          // Show error but don't fail the entire operation
+          showArmError("Message armed but reminder schedule creation failed. Reminders may not work properly.");
+          
+          // Still emit confirmed update so UI shows armed state
+          emitConfirmedUpdate(
+            conditionId, 
+            messageId, 
+            'arm',
+            deadlineDate?.toISOString()
+          );
+          
+          return deadlineDate;
+        }
+        
+        console.log(`[useArmOperations] Successfully created reminder schedule for message ${messageId}`);
+        
+      } catch (reminderError) {
+        console.error(`[useArmOperations] Error creating reminder schedule:`, reminderError);
+        
+        // Show specific error for reminder creation failure
+        showArmError("Message armed but reminder setup failed. Please try disarming and arming again.");
+        
+        // Still continue with success flow since the message is armed
       }
       
       // Show success
@@ -104,7 +158,7 @@ export function useArmOperations() {
       // Emit confirmed update
       emitConfirmedUpdate(
         conditionId, 
-        actualMessageId, 
+        messageId, 
         'arm',
         deadlineDate?.toISOString()
       );
@@ -112,7 +166,7 @@ export function useArmOperations() {
       // Fire update event
       window.dispatchEvent(new CustomEvent('message-condition-updated', { 
         detail: { 
-          messageId: actualMessageId,
+          messageId: messageId,
           conditionId,
           action: 'arm',
           timestamp: new Date().toISOString()
@@ -123,9 +177,10 @@ export function useArmOperations() {
       await refreshConditions();
       
       return deadlineDate;
+      
     } catch (error) {
       console.error("[useArmOperations] Error arming message:", error);
-      showArmError();
+      showArmError(`Failed to arm message: ${error.message}`);
       return null;
     }
   };

@@ -1,46 +1,58 @@
 
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 
 /**
- * Hook for handling action-related toast notifications
+ * ENHANCED: Hook for showing action-related toast messages with detailed error info
  */
 export function useActionToasts() {
   const showArmSuccess = () => {
     toast({
-      title: "Message armed",
-      description: "Your message has been armed and will trigger according to your settings",
-      variant: "purple"
+      title: "Message Armed",
+      description: "Your message has been successfully armed and reminder schedule created.",
+      duration: 3000,
     });
   };
-  
-  const showArmError = () => {
+
+  const showArmError = (errorMessage?: string) => {
     toast({
-      title: "Failed to arm message",
-      description: "There was a problem arming your message",
-      variant: "destructive"
+      title: "Failed to Arm Message",
+      description: errorMessage || "There was an error arming your message. Please try again.",
+      variant: "destructive",
+      duration: 8000,
     });
   };
-  
+
   const showDisarmSuccess = () => {
     toast({
-      title: "Message disarmed",
-      description: "Your message has been disarmed and will not trigger",
-      variant: "purple"
+      title: "Message Disarmed",
+      description: "Your message has been successfully disarmed and reminders cleared.",
+      duration: 3000,
     });
   };
-  
-  const showDisarmError = () => {
+
+  const showDisarmError = (errorMessage?: string) => {
     toast({
-      title: "Failed to disarm message",
-      description: "There was a problem disarming your message",
-      variant: "destructive"
+      title: "Failed to Disarm Message",
+      description: errorMessage || "There was an error disarming your message. Please try again.",
+      variant: "destructive",
+      duration: 8000,
     });
   };
-  
+
+  const showReminderError = (errorMessage?: string) => {
+    toast({
+      title: "Reminder Setup Failed",
+      description: errorMessage || "Failed to set up reminder schedule. Your message may not send reminders properly.",
+      variant: "destructive",
+      duration: 10000,
+    });
+  };
+
   return {
     showArmSuccess,
     showArmError,
     showDisarmSuccess,
-    showDisarmError
+    showDisarmError,
+    showReminderError
   };
 }
