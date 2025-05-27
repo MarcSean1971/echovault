@@ -1,14 +1,10 @@
-
 import { supabaseClient } from "../supabase-client.ts";
 import { sendCheckInEmailToCreator } from "./email-sender.ts";
 import { sendCheckInWhatsAppToCreator } from "./whatsapp-sender.ts";
 import { reminderLogger } from "./reminder-logger.ts";
 
 /**
- * FIXED: 3-Type dual-channel processor with clear separation:
- * - reminder: Check-in reminder to creator
- * - final_notice: Final warning to creator
- * - final_delivery: Message delivery to recipients
+ * FIXED: 3-Type dual-channel processor with separate function calls for each type
  */
 export async function processDualChannelReminders(
   messageId?: string,
@@ -87,7 +83,7 @@ export async function processDualChannelReminders(
     let failedCount = 0;
     const errors: string[] = [];
     
-    // Process each due reminder
+    // Process each due reminder with the correct handler
     for (const reminder of dueReminders) {
       try {
         processedCount++;
@@ -117,42 +113,33 @@ export async function processDualChannelReminders(
         
         console.log(`[DUAL-CHANNEL-PROCESSOR] Processing ${reminder.reminder_type} for message "${message.title}"`);
         
+        let success = false;
+        
+        // CRITICAL: Route to the correct handler based on reminder type
         if (reminder.reminder_type === 'reminder') {
-          console.log(`[DUAL-CHANNEL-PROCESSOR] CHECK-IN REMINDER - sending to CREATOR`);
-          
-          const success = await processCreatorReminder(reminder, message, condition, debug);
-          if (success) {
-            successCount++;
-          } else {
-            failedCount++;
-            errors.push(`Check-in reminder failed for ${message.title}`);
-          }
+          console.log(`[DUAL-CHANNEL-PROCESSOR] CHECK-IN REMINDER - sending to CREATOR via email/WhatsApp`);
+          success = await processCreatorReminder(reminder, message, condition, debug);
           
         } else if (reminder.reminder_type === 'final_notice') {
-          console.log(`[DUAL-CHANNEL-PROCESSOR] FINAL NOTICE - sending to CREATOR`);
-          
-          const success = await processFinalNotice(reminder, message, condition, debug);
-          if (success) {
-            successCount++;
-          } else {
-            failedCount++;
-            errors.push(`Final notice failed for ${message.title}`);
-          }
+          console.log(`[DUAL-CHANNEL-PROCESSOR] FINAL NOTICE - sending to CREATOR via email/WhatsApp`);
+          success = await processFinalNotice(reminder, message, condition, debug);
           
         } else if (reminder.reminder_type === 'final_delivery') {
-          console.log(`[DUAL-CHANNEL-PROCESSOR] FINAL DELIVERY - sending to RECIPIENTS`);
-          
-          const success = await processFinalDelivery(reminder, message, condition, debug);
-          if (success) {
-            successCount++;
-          } else {
-            failedCount++;
-            errors.push(`Final delivery failed for ${message.title}`);
-          }
+          console.log(`[DUAL-CHANNEL-PROCESSOR] FINAL DELIVERY - sending to RECIPIENTS via send-message-notifications`);
+          success = await processFinalDelivery(reminder, message, condition, debug);
         }
         
-      } catch (error) {
-        console.error(`[DUAL-CHANNEL-PROCESSOR] Error processing reminder ${reminder.id}:`, error);
+        if (success) {
+          successCount++;
+          console.log(`[DUAL-CHANNEL-PROCESSOR] Successfully processed reminder ${reminder.id}`);
+        } else {
+          failedCount++;
+          console.error(`[DUAL-CHANNEL-PROCESSOR] Failed to process reminder ${reminder.id}`);
+        }
+        
+      } catch (error: any) {
+        console.error(`[DUAL-CHANNEL-PROCESSOR] Exception processing reminder ${reminder.id}:`, error);
+        failedCount++;
         
         await supabase
           .from('reminder_schedule')
@@ -160,7 +147,6 @@ export async function processDualChannelReminders(
           .eq('id', reminder.id);
         
         errors.push(`Reminder ${reminder.id}: ${error.message}`);
-        failedCount++;
       }
     }
     
@@ -173,7 +159,7 @@ export async function processDualChannelReminders(
       errors
     };
     
-  } catch (error) {
+  } catch (error: any) {
     console.error("[DUAL-CHANNEL-PROCESSOR] Critical error:", error);
     return {
       processedCount: 0,
@@ -185,7 +171,7 @@ export async function processDualChannelReminders(
 }
 
 /**
- * Process check-in reminder - send to creator
+ * Process check-in reminder - send to creator via email/WhatsApp
  */
 async function processCreatorReminder(reminder: any, message: any, condition: any, debug: boolean): Promise<boolean> {
   const supabase = supabaseClient();
@@ -273,7 +259,7 @@ async function processCreatorReminder(reminder: any, message: any, condition: an
 }
 
 /**
- * Process final notice - send to creator
+ * Process final notice - send to creator via email/WhatsApp
  */
 async function processFinalNotice(reminder: any, message: any, condition: any, debug: boolean): Promise<boolean> {
   const supabase = supabaseClient();
@@ -346,7 +332,7 @@ async function processFinalNotice(reminder: any, message: any, condition: any, d
 }
 
 /**
- * Process final delivery - send to recipients
+ * CRITICAL: Process final delivery - send to recipients via send-message-notifications
  */
 async function processFinalDelivery(reminder: any, message: any, condition: any, debug: boolean): Promise<boolean> {
   const supabase = supabaseClient();
@@ -354,7 +340,7 @@ async function processFinalDelivery(reminder: any, message: any, condition: any,
   try {
     console.log(`[DUAL-CHANNEL-PROCESSOR] FINAL DELIVERY - sending to RECIPIENTS`);
     
-    // Send message to recipients via send-message-notifications
+    // CRITICAL: Call send-message-notifications with specific parameters for final delivery
     const deliveryResult = await supabase.functions.invoke('send-message-notifications', {
       body: {
         messageId: message.id,
@@ -363,7 +349,8 @@ async function processFinalDelivery(reminder: any, message: any, condition: any,
         isEmergency: false,
         debug: debug,
         source: 'final-delivery-processor',
-        bypassDeduplication: true
+        bypassDeduplication: true,
+        reminderType: 'final_delivery'
       }
     });
     
@@ -426,7 +413,6 @@ async function sendFinalNoticeToCreator(
   messageId: string,
   firstName: string
 ): Promise<{ success: boolean; error?: string }> {
-  // Use existing email sender but with different subject/content for final notice
   try {
     const result = await sendCheckInEmailToCreator(
       email,
@@ -450,7 +436,6 @@ async function sendFinalNoticeWhatsApp(
   messageTitle: string,
   messageId: string
 ): Promise<{ success: boolean; error?: string }> {
-  // Use existing WhatsApp sender but with different content for final notice
   try {
     const result = await sendCheckInWhatsAppToCreator(
       whatsappNumber,
