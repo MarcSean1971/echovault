@@ -1,6 +1,6 @@
 
 /**
- * FIXED: Service functions for creating reminder schedules with proper error handling
+ * FIXED: Service functions for creating reminder schedules - REJECTS panic triggers
  */
 
 import { supabase } from "@/integrations/supabase/client";
@@ -8,36 +8,23 @@ import { markRemindersAsObsolete } from "./utils";
 import { ReminderScheduleParams, ReminderResult } from "./types";
 
 /**
- * FIXED: Create reminder schedule with comprehensive error handling and panic trigger support
+ * FIXED: Create reminder schedule - REJECTS panic triggers immediately
  */
 export async function createOrUpdateReminderSchedule(params: ReminderScheduleParams, isEdit: boolean = false): Promise<boolean> {
   try {
     console.log("[REMINDER-SERVICE] FIXED: Creating reminder schedule for:", params);
     
-    // CRITICAL FIX: Don't mark existing reminders as obsolete UNTIL we successfully create new ones
+    // CRITICAL FIX: Reject panic triggers immediately
+    if (params.conditionType === 'panic_trigger') {
+      console.log("[REMINDER-SERVICE] REJECTING panic trigger - panic triggers do not have reminder schedules!");
+      return false;
+    }
     
-    // Calculate schedule times first
+    // Calculate schedule times for time-based conditions only
     const scheduleTimes = calculateScheduleTimes(params);
     
     if (scheduleTimes.length === 0) {
-      console.warn("[REMINDER-SERVICE] No schedule times generated - this might be normal for some condition types");
-      
-      // For panic triggers, we still want to create a basic schedule entry
-      if (params.conditionType === 'panic_trigger') {
-        const panicSchedule = [{
-          message_id: params.messageId,
-          condition_id: params.conditionId,
-          scheduled_at: new Date(Date.now() + 30000).toISOString(), // 30 seconds from now
-          reminder_type: 'final_delivery',
-          status: 'pending',
-          delivery_priority: 'critical',
-          retry_strategy: 'aggressive'
-        }];
-        
-        console.log("[REMINDER-SERVICE] Creating panic trigger schedule entry");
-        return await createScheduleEntries(panicSchedule, params, isEdit);
-      }
-      
+      console.warn("[REMINDER-SERVICE] No schedule times generated for condition type:", params.conditionType);
       return false;
     }
     
@@ -102,6 +89,12 @@ async function createScheduleEntries(scheduleEntries: any[], params: ReminderSch
  */
 async function createRemindersServerSide(params: ReminderScheduleParams): Promise<boolean> {
   try {
+    // REJECT panic triggers at server-side level too
+    if (params.conditionType === 'panic_trigger') {
+      console.log("[REMINDER-SERVICE] Server-side also rejecting panic trigger");
+      return false;
+    }
+    
     console.log("[REMINDER-SERVICE] Using server-side reminder creation fallback");
     
     const { data, error } = await supabase.functions.invoke('process-simple-reminders', {
@@ -134,7 +127,7 @@ async function createRemindersServerSide(params: ReminderScheduleParams): Promis
 }
 
 /**
- * FIXED: Calculate reminder schedule times with support for all condition types
+ * FIXED: Calculate reminder schedule times - ONLY for time-based conditions
  */
 function calculateScheduleTimes(params: ReminderScheduleParams): any[] {
   const { messageId, conditionId, conditionType, triggerDate, reminderMinutes, lastChecked, hoursThreshold, minutesThreshold } = params;
@@ -148,15 +141,17 @@ function calculateScheduleTimes(params: ReminderScheduleParams): any[] {
     minutesThreshold
   });
   
+  // CRITICAL: Reject panic triggers
+  if (conditionType === 'panic_trigger') {
+    console.error("[REMINDER-SERVICE] ERROR: Panic triggers should not have reminder schedules!");
+    return [];
+  }
+  
   // Calculate deadline based on condition type
   let deadline: Date | null = null;
   const now = new Date();
   
-  if (conditionType === 'panic_trigger') {
-    // For panic triggers, create a schedule that can be activated immediately when triggered
-    deadline = new Date(now.getTime() + 24 * 60 * 60 * 1000); // 24 hours from now as placeholder
-    console.log(`[REMINDER-SERVICE] Panic trigger deadline: ${deadline.toISOString()}`);
-  } else if (['no_check_in', 'regular_check_in', 'inactivity_to_date'].includes(conditionType) && lastChecked && (hoursThreshold !== undefined || minutesThreshold !== undefined)) {
+  if (['no_check_in', 'regular_check_in', 'inactivity_to_date'].includes(conditionType) && lastChecked && (hoursThreshold !== undefined || minutesThreshold !== undefined)) {
     const lastCheckedDate = new Date(lastChecked);
     deadline = new Date(lastCheckedDate);
     
@@ -185,7 +180,7 @@ function calculateScheduleTimes(params: ReminderScheduleParams): any[] {
   const scheduleEntries = [];
   
   // SPECIAL HANDLING: If deadline has passed, create IMMEDIATE entries
-  if (deadline <= now && conditionType !== 'panic_trigger') {
+  if (deadline <= now) {
     console.log(`[REMINDER-SERVICE] Deadline has passed! Creating IMMEDIATE entries`);
     
     // Immediate check-in reminder (for past-due check-ins)
@@ -220,23 +215,6 @@ function calculateScheduleTimes(params: ReminderScheduleParams): any[] {
   
   // FIXED: Handle reminder minutes properly
   const validReminderMinutes = Array.isArray(reminderMinutes) ? reminderMinutes : [];
-  
-  // For panic triggers, create a simple schedule that can be activated manually
-  if (conditionType === 'panic_trigger') {
-    // Don't create advance reminders for panic triggers - they're manually activated
-    scheduleEntries.push({
-      message_id: messageId,
-      condition_id: conditionId,
-      scheduled_at: deadline.toISOString(),
-      reminder_type: 'final_delivery',
-      status: 'pending',
-      delivery_priority: 'critical',
-      retry_strategy: 'aggressive'
-    });
-    
-    console.log(`[REMINDER-SERVICE] Created panic trigger schedule entry`);
-    return scheduleEntries;
-  }
   
   // Create check-in reminders at specified intervals before deadline
   for (const minutes of validReminderMinutes) {

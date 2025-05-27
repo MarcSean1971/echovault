@@ -5,7 +5,7 @@ import { useConditionUpdates } from "./useConditionUpdates";
 import { createOrUpdateReminderSchedule } from "@/services/messages/reminder/scheduleService";
 
 /**
- * FIXED: Hook for handling arming message operations with proper reminder schedule creation
+ * FIXED: Hook for handling arming message operations - NO reminder schedules for panic triggers
  */
 export function useArmOperations() {
   const { 
@@ -48,6 +48,7 @@ export function useArmOperations() {
       const messageId = currentCondition.message_id;
       
       console.log(`[useArmOperations] Found condition:`, currentCondition);
+      console.log(`[useArmOperations] Condition type: ${currentCondition.condition_type}`);
       
       // Invalidate cache immediately
       invalidateCache(messageId);
@@ -79,8 +80,9 @@ export function useArmOperations() {
       if (updatedCondition.condition_type === "scheduled" && updatedCondition.trigger_date) {
         deadlineDate = new Date(updatedCondition.trigger_date);
       } else if (updatedCondition.condition_type === "panic_trigger") {
-        // For panic triggers, set a future deadline for display purposes
+        // For panic triggers, set a future deadline for display purposes ONLY
         deadlineDate = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
+        console.log(`[useArmOperations] Panic trigger armed - NO reminder schedule needed`);
       } else if (updatedCondition.hours_threshold) {
         const hoursInMs = updatedCondition.hours_threshold * 60 * 60 * 1000;
         const minutesInMs = (updatedCondition.minutes_threshold || 0) * 60 * 1000;
@@ -89,67 +91,67 @@ export function useArmOperations() {
       
       console.log(`[useArmOperations] Calculated deadline: ${deadlineDate?.toISOString() || 'none'}`);
       
-      // CRITICAL FIX: Always create reminder schedule for armed messages
-      try {
-        console.log(`[useArmOperations] Creating reminder schedule for armed message`);
+      // CRITICAL FIX: Only create reminder schedules for time-based conditions
+      const timeBasedConditions = ['no_check_in', 'regular_check_in', 'inactivity_to_date', 'scheduled'];
+      
+      if (timeBasedConditions.includes(updatedCondition.condition_type)) {
+        console.log(`[useArmOperations] Creating reminder schedule for time-based condition: ${updatedCondition.condition_type}`);
         
-        // Parse reminder minutes from reminder_hours
-        let reminderMinutes: number[] = [];
-        
-        if (updatedCondition.reminder_hours && Array.isArray(updatedCondition.reminder_hours)) {
-          reminderMinutes = updatedCondition.reminder_hours.map(h => h * 60);
-        } else if (updatedCondition.reminder_hours) {
-          // Handle non-array values
-          const hours = Array.isArray(updatedCondition.reminder_hours) 
-            ? updatedCondition.reminder_hours 
-            : [updatedCondition.reminder_hours];
-          reminderMinutes = hours.map(h => Number(h) * 60).filter(m => !isNaN(m));
-        }
-        
-        // Default to 24 hours (1440 minutes) for panic triggers if no reminders specified
-        if (reminderMinutes.length === 0 && updatedCondition.condition_type === "panic_trigger") {
-          reminderMinutes = [1440]; // 24 hours in minutes
-        }
-        
-        console.log(`[useArmOperations] Using reminder minutes:`, reminderMinutes);
-        
-        const reminderResult = await createOrUpdateReminderSchedule({
-          messageId: messageId,
-          conditionId: conditionId,
-          conditionType: updatedCondition.condition_type,
-          reminderMinutes: reminderMinutes,
-          lastChecked: updatedCondition.last_checked,
-          hoursThreshold: updatedCondition.hours_threshold,
-          minutesThreshold: updatedCondition.minutes_threshold,
-          triggerDate: updatedCondition.trigger_date
-        }, false);
-        
-        if (!reminderResult) {
-          console.error(`[useArmOperations] CRITICAL: Failed to create reminder schedule for message ${messageId}`);
+        try {
+          // Parse reminder minutes from reminder_hours
+          let reminderMinutes: number[] = [];
           
-          // Show error but don't fail the entire operation
-          showArmError("Message armed but reminder schedule creation failed. Reminders may not work properly.");
+          if (updatedCondition.reminder_hours && Array.isArray(updatedCondition.reminder_hours)) {
+            reminderMinutes = updatedCondition.reminder_hours.map(h => h * 60);
+          } else if (updatedCondition.reminder_hours) {
+            // Handle non-array values
+            const hours = Array.isArray(updatedCondition.reminder_hours) 
+              ? updatedCondition.reminder_hours 
+              : [updatedCondition.reminder_hours];
+            reminderMinutes = hours.map(h => Number(h) * 60).filter(m => !isNaN(m));
+          }
           
-          // Still emit confirmed update so UI shows armed state
-          emitConfirmedUpdate(
-            conditionId, 
-            messageId, 
-            'arm',
-            deadlineDate?.toISOString()
-          );
+          // Default reminder if none specified for time-based conditions
+          if (reminderMinutes.length === 0) {
+            reminderMinutes = [60]; // 1 hour before deadline
+          }
           
-          return deadlineDate;
+          console.log(`[useArmOperations] Using reminder minutes:`, reminderMinutes);
+          
+          const reminderResult = await createOrUpdateReminderSchedule({
+            messageId: messageId,
+            conditionId: conditionId,
+            conditionType: updatedCondition.condition_type,
+            reminderMinutes: reminderMinutes,
+            lastChecked: updatedCondition.last_checked,
+            hoursThreshold: updatedCondition.hours_threshold,
+            minutesThreshold: updatedCondition.minutes_threshold,
+            triggerDate: updatedCondition.trigger_date
+          }, false);
+          
+          if (!reminderResult) {
+            console.error(`[useArmOperations] Failed to create reminder schedule for message ${messageId}`);
+            showArmError("Message armed but reminder schedule creation failed. Reminders may not work properly.");
+            
+            // Still emit confirmed update so UI shows armed state
+            emitConfirmedUpdate(
+              conditionId, 
+              messageId, 
+              'arm',
+              deadlineDate?.toISOString()
+            );
+            
+            return deadlineDate;
+          }
+          
+          console.log(`[useArmOperations] Successfully created reminder schedule for message ${messageId}`);
+          
+        } catch (reminderError) {
+          console.error(`[useArmOperations] Error creating reminder schedule:`, reminderError);
+          showArmError("Message armed but reminder setup failed. Please try disarming and arming again.");
         }
-        
-        console.log(`[useArmOperations] Successfully created reminder schedule for message ${messageId}`);
-        
-      } catch (reminderError) {
-        console.error(`[useArmOperations] Error creating reminder schedule:`, reminderError);
-        
-        // Show specific error for reminder creation failure
-        showArmError("Message armed but reminder setup failed. Please try disarming and arming again.");
-        
-        // Still continue with success flow since the message is armed
+      } else {
+        console.log(`[useArmOperations] Skipping reminder schedule creation for condition type: ${updatedCondition.condition_type}`);
       }
       
       // Show success

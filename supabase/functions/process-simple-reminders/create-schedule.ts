@@ -8,6 +8,12 @@ export async function createReminderSchedule(params: any): Promise<boolean> {
     const supabase = supabaseClient();
     const { messageId, conditionId, conditionType, reminderMinutes, triggerDate, lastChecked, hoursThreshold, minutesThreshold } = params;
     
+    // CRITICAL: Reject panic triggers at server level
+    if (conditionType === 'panic_trigger') {
+      console.log("[CREATE-SCHEDULE] REJECTING panic trigger - panic triggers do not have reminder schedules!");
+      return false;
+    }
+    
     // Calculate deadline
     let deadline: Date | null = null;
     const now = new Date();
@@ -36,7 +42,7 @@ export async function createReminderSchedule(params: any): Promise<boolean> {
     }
     
     const scheduleEntries = [];
-    const validReminderMinutes = Array.isArray(reminderMinutes) ? reminderMinutes : [1440]; // Default to 24 hours
+    const validReminderMinutes = Array.isArray(reminderMinutes) ? reminderMinutes : [60]; // Default to 1 hour
     
     // If deadline has passed, create immediate entries
     if (deadline <= now) {
