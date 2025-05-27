@@ -42,10 +42,17 @@ export function SubscriptionPlans() {
 
       if (error) throw error;
       
-      // Transform the data to match our interface
+      // Transform the data to match our interface with proper type casting
       const transformedPlans = data?.map(plan => ({
         ...plan,
-        features: Array.isArray(plan.features) ? plan.features : []
+        features: Array.isArray(plan.features) 
+          ? plan.features.filter((feature): feature is string => typeof feature === 'string')
+          : [],
+        description: plan.description || '',
+        price_yearly: plan.price_yearly ? Number(plan.price_yearly) : null,
+        price_monthly: Number(plan.price_monthly),
+        max_messages: plan.max_messages || 0,
+        max_recipients: plan.max_recipients || 0
       })) || [];
       
       setPlans(transformedPlans);
