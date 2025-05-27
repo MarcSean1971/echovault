@@ -4,7 +4,7 @@ import { corsHeaders } from "./utils/cors.ts";
 import { supabaseClient } from "./supabase-client.ts";
 import { sendCreatorReminder } from "./services/reminder-sender.ts";
 
-console.log("===== SEND REMINDER EMAILS FUNCTION (CHECK-IN REMINDERS ONLY) =====");
+console.log("===== SEND REMINDER EMAILS FUNCTION (SCHEDULED REMINDERS ONLY) =====");
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -23,52 +23,61 @@ serve(async (req) => {
       source = "manual"
     } = body;
     
-    console.log(`Processing check-in reminders for creators only`);
+    console.log(`Processing scheduled reminders from reminder_schedule table`);
     console.log(`Parameters: messageId=${messageId}, debug=${debug}, forceSend=${forceSend}, source=${source}`);
     
     const supabase = supabaseClient();
     
-    // Get armed conditions that need check-in reminders
+    // Get DUE reminders from the reminder_schedule table
     let query = supabase
-      .from('message_conditions')
+      .from('reminder_schedule')
       .select(`
         id,
         message_id,
-        condition_type,
-        active,
-        last_checked,
-        hours_threshold,
-        minutes_threshold,
+        condition_id,
+        scheduled_at,
+        reminder_type,
+        status,
         messages!inner(
           id,
           title,
           user_id
+        ),
+        message_conditions!inner(
+          id,
+          condition_type,
+          hours_threshold,
+          minutes_threshold,
+          last_checked
         )
       `)
-      .eq('active', true)
-      .in('condition_type', ['no_check_in', 'recurring_check_in', 'inactivity_to_date']);
+      .eq('status', 'pending')
+      .lte('scheduled_at', new Date().toISOString())
+      .in('reminder_type', ['reminder']); // Only process check-in reminders, not final deliveries
 
     if (messageId) {
       query = query.eq('message_id', messageId);
     }
 
-    const { data: conditions, error: conditionsError } = await query;
+    const { data: dueReminders, error: remindersError } = await query;
 
-    if (conditionsError) {
-      console.error("Error fetching conditions:", conditionsError);
-      throw conditionsError;
+    if (remindersError) {
+      console.error("Error fetching due reminders:", remindersError);
+      throw remindersError;
     }
 
-    console.log(`Found ${conditions?.length || 0} armed conditions`);
+    console.log(`Found ${dueReminders?.length || 0} due reminders in schedule`);
 
-    if (!conditions || conditions.length === 0) {
+    if (!dueReminders || dueReminders.length === 0) {
+      console.log("No due reminders found in schedule");
       return new Response(
         JSON.stringify({
           success: true,
           processedCount: 0,
           successCount: 0,
           failedCount: 0,
-          results: []
+          results: [],
+          message: "No due reminders found"
         }),
         { 
           status: 200, 
@@ -81,12 +90,15 @@ serve(async (req) => {
     let successCount = 0;
     let failedCount = 0;
 
-    // Process each condition for check-in reminders
-    for (const condition of conditions) {
+    // Process each DUE reminder
+    for (const reminder of dueReminders) {
       try {
-        const message = condition.messages;
+        const message = reminder.messages;
+        const condition = reminder.message_conditions;
         
-        // Calculate time until deadline
+        console.log(`Processing scheduled reminder ${reminder.id} for message ${message.id} (scheduled for ${reminder.scheduled_at})`);
+        
+        // Calculate time until deadline for context
         const now = new Date();
         const lastChecked = new Date(condition.last_checked);
         const deadline = new Date(lastChecked);
@@ -96,8 +108,6 @@ serve(async (req) => {
         const diffMs = deadline.getTime() - now.getTime();
         const diffHours = Math.max(0, diffMs / (1000 * 60 * 60));
         
-        console.log(`Processing check-in reminder for message ${message.id}, hours until deadline: ${diffHours.toFixed(2)}`);
-        
         // Send check-in reminder to creator
         const reminderResults = await sendCreatorReminder(
           message.id,
@@ -105,7 +115,7 @@ serve(async (req) => {
           message.title,
           message.user_id,
           diffHours,
-          new Date().toISOString(),
+          reminder.scheduled_at,
           debug
         );
         
@@ -113,35 +123,77 @@ serve(async (req) => {
         
         if (conditionSuccessCount > 0) {
           successCount++;
+          
+          // Mark reminder as sent in the schedule
+          await supabase
+            .from('reminder_schedule')
+            .update({ 
+              status: 'sent',
+              last_attempt_at: new Date().toISOString()
+            })
+            .eq('id', reminder.id);
+            
+          console.log(`Marked reminder ${reminder.id} as sent`);
         } else {
           failedCount++;
+          
+          // Mark reminder as failed
+          await supabase
+            .from('reminder_schedule')
+            .update({ 
+              status: 'failed',
+              last_attempt_at: new Date().toISOString(),
+              retry_count: (reminder.retry_count || 0) + 1
+            })
+            .eq('id', reminder.id);
+            
+          console.log(`Marked reminder ${reminder.id} as failed`);
         }
         
         results.push({
+          reminderId: reminder.id,
           messageId: message.id,
           conditionId: condition.id,
+          scheduledAt: reminder.scheduled_at,
           success: conditionSuccessCount > 0,
           reminderResults: reminderResults
         });
         
       } catch (error: any) {
-        console.error(`Error processing condition ${condition.id}:`, error);
+        console.error(`Error processing reminder ${reminder.id}:`, error);
         failedCount++;
+        
+        // Mark reminder as failed
+        try {
+          await supabase
+            .from('reminder_schedule')
+            .update({ 
+              status: 'failed',
+              last_attempt_at: new Date().toISOString(),
+              retry_count: (reminder.retry_count || 0) + 1
+            })
+            .eq('id', reminder.id);
+        } catch (updateError) {
+          console.error(`Failed to update reminder ${reminder.id} status:`, updateError);
+        }
+        
         results.push({
-          messageId: condition.message_id,
-          conditionId: condition.id,
+          reminderId: reminder.id,
+          messageId: reminder.message_id,
+          conditionId: reminder.condition_id,
+          scheduledAt: reminder.scheduled_at,
           success: false,
           error: error.message
         });
       }
     }
 
-    console.log(`Check-in reminder processing complete: ${successCount} successful, ${failedCount} failed out of ${conditions.length} total`);
+    console.log(`Scheduled reminder processing complete: ${successCount} successful, ${failedCount} failed out of ${dueReminders.length} total`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        processedCount: conditions.length,
+        processedCount: dueReminders.length,
         successCount,
         failedCount,
         results
