@@ -1,3 +1,4 @@
+
 import { Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -37,7 +38,6 @@ const CreateMessagePage = lazy(() => import("@/pages/CreateMessage"));
 const MessageDetailPage = lazy(() => import("@/pages/MessageDetail"));
 const MessageEdit = lazy(() => import("@/pages/MessageEdit"));
 const ProfilePage = lazy(() => import("@/pages/Profile"));
-const SubscriptionPage = lazy(() => import("@/pages/Subscription"));
 const RecipientsPage = lazy(() => import("@/pages/Recipients"));
 const AdminPage = lazy(() => import("@/pages/Admin"));
 const PublicMessageAccess = lazy(() => import("@/pages/PublicMessageAccess"));
@@ -127,7 +127,6 @@ export default function App() {
                 <Route path="message/:id" element={<MessageDetailPage />} />
                 <Route path="message/:id/edit" element={<MessageEdit />} />
                 <Route path="profile" element={<ProfilePage />} />
-                <Route path="subscription" element={<SubscriptionPage />} />
                 <Route path="recipients" element={<RecipientsPage />} />
                 <Route path="admin" element={<AdminPage />} />
               </Route>

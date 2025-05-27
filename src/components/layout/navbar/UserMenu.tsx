@@ -1,17 +1,11 @@
 
-import { User, LogOut, Settings, CreditCard, Shield, MessageSquare, Users } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/components/ui/use-toast";
+import { Link } from "react-router-dom";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { LogOut, User, Settings, Users, MessageSquare, Home, Share } from "lucide-react";
+import { ICON_HOVER_EFFECTS } from "@/utils/hoverEffects";
+import { shareEchoVault } from "@/utils/shareUtils";
 
 interface UserMenuProps {
   userImage: string | null;
@@ -19,79 +13,85 @@ interface UserMenuProps {
 }
 
 export function UserMenu({ userImage, initials }: UserMenuProps) {
-  const { profile } = useAuth();
-  const navigate = useNavigate();
+  const { signOut, user } = useAuth();
 
-  const handleSignOut = async () => {
-    try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      
-      navigate('/');
-      toast({
-        title: "Signed out successfully",
-        description: "You have been signed out of your account.",
-      });
-    } catch (error) {
-      console.error('Error signing out:', error);
-      toast({
-        title: "Error signing out",
-        description: "There was a problem signing you out. Please try again.",
-        variant: "destructive",
-      });
-    }
+  const handleSignOut = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    console.log("Sign out clicked");
+    await signOut();
   };
 
-  const isAdmin = profile?.email === 'marc.s@seelenbinderconsulting.com';
+  const handleShare = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    await shareEchoVault();
+  };
+
+  // Check if user has admin access
+  const isAdmin = user?.email === "marc.s@seelenbinderconsulting.com";
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Avatar className="h-8 w-8 cursor-pointer hover:ring-2 hover:ring-primary/20 transition-all">
-          <AvatarImage src={userImage || undefined} alt="User avatar" />
-          <AvatarFallback className="bg-primary/10 text-primary font-medium">
-            {initials}
-          </AvatarFallback>
-        </Avatar>
+        <div 
+          className="relative h-12 w-12 rounded-full border-2 border-border/60 cursor-pointer focus:outline-none hover:border-primary/40 transition-all duration-200 shadow-sm hover:shadow-md"
+          role="button"
+          tabIndex={0}
+        >
+          <Avatar className="h-11 w-11 rounded-full">
+            {userImage ? (
+              <AvatarImage src={userImage} alt="Profile picture" />
+            ) : (
+              <AvatarFallback className="bg-primary/10 text-primary">
+                {initials}
+              </AvatarFallback>
+            )}
+          </Avatar>
+        </div>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        {/* Main Navigation Items */}
-        <DropdownMenuItem onClick={() => navigate('/messages')} className="cursor-pointer hover:bg-primary/10 transition-colors">
-          <MessageSquare className="mr-2 h-4 w-4" />
-          Messages
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => navigate('/recipients')} className="cursor-pointer hover:bg-primary/10 transition-colors">
-          <Users className="mr-2 h-4 w-4" />
-          Recipients
-        </DropdownMenuItem>
-        
+      <DropdownMenuContent className="w-56 bg-popover shadow-md" align="end" forceMount sideOffset={8} side="bottom">
         <DropdownMenuSeparator />
-        
-        {/* Account Settings */}
-        <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer hover:bg-primary/10 transition-colors">
-          <User className="mr-2 h-4 w-4" />
-          Profile
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => navigate('/subscription')} className="cursor-pointer hover:bg-primary/10 transition-colors">
-          <CreditCard className="mr-2 h-4 w-4" />
-          Subscription
-        </DropdownMenuItem>
-        
-        {isAdmin && (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => navigate('/admin')} className="cursor-pointer hover:bg-primary/10 transition-colors">
-              <Shield className="mr-2 h-4 w-4" />
-              Admin Dashboard
+        <DropdownMenuGroup>
+          <DropdownMenuItem asChild>
+            <Link to="/" className="w-full cursor-pointer hover:opacity-90 transition-opacity">
+              <Home className={`mr-2 h-4 w-4 ${ICON_HOVER_EFFECTS.muted}`} />
+              <span>Home</span>
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link to="/messages" className="w-full cursor-pointer hover:opacity-90 transition-opacity">
+              <MessageSquare className={`mr-2 h-4 w-4 ${ICON_HOVER_EFFECTS.muted}`} />
+              <span>Messages</span>
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link to="/recipients" className="w-full cursor-pointer hover:opacity-90 transition-opacity">
+              <Users className={`mr-2 h-4 w-4 ${ICON_HOVER_EFFECTS.muted}`} />
+              <span>Recipients</span>
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={handleShare} className="cursor-pointer hover:opacity-90 transition-opacity">
+            <Share className={`mr-2 h-4 w-4 ${ICON_HOVER_EFFECTS.muted}`} />
+            <span>Share EchoVault</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link to="/profile" className="w-full cursor-pointer hover:opacity-90 transition-opacity">
+              <User className={`mr-2 h-4 w-4 ${ICON_HOVER_EFFECTS.muted}`} />
+              <span>Profile</span>
+            </Link>
+          </DropdownMenuItem>
+          {isAdmin && (
+            <DropdownMenuItem asChild>
+              <Link to="/admin" className="w-full cursor-pointer hover:opacity-90 transition-opacity">
+                <Settings className={`mr-2 h-4 w-4 ${ICON_HOVER_EFFECTS.muted}`} />
+                <span>Admin Dashboard</span>
+              </Link>
             </DropdownMenuItem>
-          </>
-        )}
-        
+          )}
+        </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        
-        <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer text-red-600 hover:bg-red-50 transition-colors">
-          <LogOut className="mr-2 h-4 w-4" />
-          Sign out
+        <DropdownMenuItem onClick={handleSignOut} className="cursor-pointer hover:opacity-90 transition-opacity">
+          <LogOut className={`mr-2 h-4 w-4 ${ICON_HOVER_EFFECTS.muted}`} />
+          <span>Log out</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

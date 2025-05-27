@@ -1,3 +1,4 @@
+
 import {
   trackMessageNotification,
   updateConditionStatus,
@@ -6,13 +7,18 @@ import {
 } from "./db/index.ts";
 import { Message, Condition } from "./types.ts";
 import { notifyRecipient } from "./services/recipient-notification-service.ts";
+import { generateAccessUrl } from "./utils/url-generator.ts";
 
 // Map to track recent message notifications (messageId -> timestamp)
 const recentNotifications = new Map<string, number>();
+// CRITICAL FIX: Track notification attempts by source
+const notificationAttemptsBySource = new Map<string, Map<string, number>>();
 
 interface NotificationOptions {
   isEmergency?: boolean;
   debug?: boolean;
+  deduplicationId?: string;
+  timestamp?: number;
   forceSend?: boolean;
   bypassDeduplication?: boolean;
   source?: string;
@@ -20,8 +26,58 @@ interface NotificationOptions {
 }
 
 /**
- * SIMPLIFIED: Send final message to recipients when deadline is reached
+ * ENHANCED: Added strict deadline validation to prevent premature final delivery
  */
+function validateDeadlineForRecipientNotification(condition: Condition, debug: boolean = false): boolean {
+  const now = new Date();
+  
+  // Only apply deadline validation for check-in based conditions
+  if (condition.condition_type === 'no_check_in' && condition.last_checked) {
+    const lastChecked = new Date(condition.last_checked);
+    const hoursThreshold = condition.hours_threshold || 0;
+    const minutesThreshold = condition.minutes_threshold || 0;
+    const actualDeadline = new Date(lastChecked);
+    
+    actualDeadline.setHours(actualDeadline.getHours() + hoursThreshold);
+    actualDeadline.setMinutes(actualDeadline.getMinutes() + minutesThreshold);
+    
+    const minutesUntilDeadline = (actualDeadline.getTime() - now.getTime()) / (1000 * 60);
+    
+    if (debug) {
+      console.log(`[RECIPIENT-VALIDATION] Deadline check for condition ${condition.id}`);
+      console.log(`[RECIPIENT-VALIDATION] Last checked: ${lastChecked.toISOString()}`);
+      console.log(`[RECIPIENT-VALIDATION] Actual deadline: ${actualDeadline.toISOString()}`);
+      console.log(`[RECIPIENT-VALIDATION] Current time: ${now.toISOString()}`);
+      console.log(`[RECIPIENT-VALIDATION] Minutes until deadline: ${minutesUntilDeadline.toFixed(2)}`);
+    }
+    
+    // STRICT VALIDATION: Must be past the actual deadline
+    if (now < actualDeadline) {
+      if (debug) {
+        console.log(`[RECIPIENT-VALIDATION] BLOCKING recipient notification - deadline not reached (${minutesUntilDeadline.toFixed(2)} minutes remaining)`);
+      }
+      return false;
+    }
+    
+    // ADDITIONAL SAFEGUARD: Check for recent check-ins (within last 5 minutes)
+    const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+    if (lastChecked > fiveMinutesAgo) {
+      if (debug) {
+        console.log(`[RECIPIENT-VALIDATION] BLOCKING recipient notification - recent check-in detected at ${lastChecked.toISOString()}`);
+      }
+      return false;
+    }
+    
+    if (debug) {
+      console.log(`[RECIPIENT-VALIDATION] APPROVED recipient notification - deadline passed and no recent check-in`);
+    }
+    return true;
+  }
+  
+  // For other condition types, allow notification (they have their own validation logic)
+  return true;
+}
+
 export async function sendMessageNotification(
   data: {message: Message, condition: Condition}, 
   options: NotificationOptions = {}
@@ -30,6 +86,8 @@ export async function sendMessageNotification(
   const { 
     isEmergency = false, 
     debug = false, 
+    deduplicationId, 
+    timestamp, 
     forceSend = false,
     bypassDeduplication = false, 
     source = 'api',
@@ -44,31 +102,129 @@ export async function sendMessageNotification(
   
   try {
     if (debug) {
-      console.log(`[FINAL-DELIVERY] Processing final message delivery for message ${message.id}`);
-      console.log(`[FINAL-DELIVERY] Message title: "${message.title}"`);
-      console.log(`[FINAL-DELIVERY] Number of recipients: ${condition.recipients.length}`);
+      console.log(`Processing message notification for message ${message.id}`);
+      console.log(`Message condition type: ${condition.condition_type}`);
+      console.log(`Is emergency flag: ${isEmergency}`);
+      console.log(`Force send flag: ${forceSend}`);
+      console.log(`Bypass deduplication flag: ${bypassDeduplication}`);
+      console.log(`Source: ${source}`);
+      console.log(`Skip recipient notifications: ${skipRecipientNotifications}`);
+      console.log(`Message title: "${message.title}"`);
+      console.log(`Number of recipients: ${condition.recipients.length}`);
     }
     
-    // SIMPLIFIED: For final delivery, we ALWAYS send to recipients
-    if (skipRecipientNotifications) {
-      if (debug) {
-        console.log(`[FINAL-DELIVERY] Skip flag is set, but this is final delivery - proceeding anyway`);
-      }
+    // CRITICAL FIX: Determine if this should skip recipient notifications
+    const isFromWhatsApp = source && (
+      source === 'whatsapp_trigger_single' || 
+      source === 'whatsapp_selection_single' || 
+      source === 'whatsapp_selection_all' ||
+      source === 'whatsapp_selection_fallback' ||
+      source === 'whatsapp-checkin'
+    );
+    
+    // CRITICAL FIX: More specific detection of reminder-triggered calls that should skip recipients
+    const isReminderCheckOnly = source && (
+      source === 'reminder_schedule_trigger' ||
+      source === 'reminder-schedule-direct-trigger' ||
+      source === 'reminder-schedule-update' ||
+      source === 'obsolete-immediate-check'
+    ) && !forceSend; // Important: forceSend overrides the skip logic
+    
+    // CRITICAL FIX: Final delivery calls should ALWAYS send to recipients
+    const isFinalDeliveryCall = source && (
+      source === 'final-delivery-processor' ||
+      source === 'cron_job' ||
+      forceSend
+    );
+    
+    if (debug) {
+      console.log(`[NOTIFICATION-SERVICE] Source analysis:`);
+      console.log(`  - Is from WhatsApp: ${isFromWhatsApp}`);
+      console.log(`  - Is reminder check only: ${isReminderCheckOnly}`);
+      console.log(`  - Is final delivery call: ${isFinalDeliveryCall}`);
+      console.log(`  - Skip recipient notifications override: ${skipRecipientNotifications}`);
     }
     
-    // Simple deduplication check
-    const now = Date.now();
-    const lastNotificationTime = recentNotifications.get(message.id);
-    
-    // Only skip if notified within last 5 minutes AND not bypassing deduplication
-    if (lastNotificationTime && now - lastNotificationTime < 300000 && !bypassDeduplication) {
+    // CRITICAL FIX: Only skip recipient notifications for reminder checks, NOT final deliveries
+    if ((isReminderCheckOnly && !isFinalDeliveryCall) || skipRecipientNotifications) {
       if (debug) {
-        console.log(`[FINAL-DELIVERY] Message ${message.id} was delivered ${(now - lastNotificationTime) / 1000}s ago. Skipping duplicate.`);
+        console.log(`[NOTIFICATION-SERVICE] SKIPPING recipient notifications for message ${message.id}`);
+        console.log(`[NOTIFICATION-SERVICE] Reason: ${isReminderCheckOnly ? 'Reminder check only' : 'Skip override set'}`);
+        console.log(`[NOTIFICATION-SERVICE] This prevents dual notifications when reminder system handles check-in reminders`);
       }
       
       return { 
         success: true, 
-        details: "Skipped duplicate final delivery", 
+        details: "Skipped recipient notifications - reminder check only",
+        skipReason: isReminderCheckOnly ? "Reminder check only" : "Skip override"
+      };
+    }
+    
+    // CRITICAL NEW VALIDATION: Check deadline before proceeding with recipient notifications
+    if (!forceSend && !isEmergency && !isFinalDeliveryCall) {
+      const deadlineValid = validateDeadlineForRecipientNotification(condition, debug);
+      if (!deadlineValid) {
+        if (debug) {
+          console.log(`[NOTIFICATION-SERVICE] BLOCKED - Deadline validation failed for message ${message.id}`);
+        }
+        return { 
+          success: false, 
+          error: "Deadline not reached or recent check-in detected",
+          details: "Notification blocked by deadline validation"
+        };
+      }
+    }
+    
+    if (debug) {
+      console.log(`[NOTIFICATION-SERVICE] PROCEEDING with recipient notifications for message ${message.id}`);
+      console.log(`[NOTIFICATION-SERVICE] Will send to ${condition.recipients.length} recipients`);
+    }
+    
+    if (isFromWhatsApp && debug) {
+      console.log(`CRITICAL: This is a WhatsApp-triggered notification from ${source}. Bypassing deduplication.`);
+    }
+    
+    if (isFinalDeliveryCall && debug) {
+      console.log(`CRITICAL: This is a final delivery call from ${source}. Sending to recipients.`);
+    }
+    
+    // CRITICAL FIX: More intelligent deduplication with source tracking
+    const now = Date.now();
+    const lastNotificationTime = recentNotifications.get(message.id);
+    
+    // Track attempts by source
+    if (!notificationAttemptsBySource.has(source)) {
+      notificationAttemptsBySource.set(source, new Map<string, number>());
+    }
+    const sourceMap = notificationAttemptsBySource.get(source)!;
+    const lastSourceAttempt = sourceMap.get(message.id) || 0;
+    sourceMap.set(message.id, now);
+    
+    // If this message was notified within the last 15 seconds, don't send another notification
+    // UNLESS it's a WhatsApp selection, final delivery call, or bypassDeduplication is set to true
+    if (lastNotificationTime && now - lastNotificationTime < 15000 && 
+        !bypassDeduplication && !isFromWhatsApp && !isFinalDeliveryCall) {
+      
+      // For the same source, require a longer delay (30 seconds) to prevent rapid firing
+      if (now - lastSourceAttempt < 30000) {
+        if (debug) {
+          console.log(`Message ${message.id} was already notified by source ${source} ${(now - lastSourceAttempt) / 1000}s ago. Skipping duplicate notification.`);
+        }
+        
+        return { 
+          success: true, 
+          details: "Skipped duplicate notification from same source", 
+          isDuplicate: true 
+        };
+      }
+      
+      if (debug) {
+        console.log(`Message ${message.id} was already notified ${(now - lastNotificationTime) / 1000}s ago. Skipping duplicate notification.`);
+      }
+      
+      return { 
+        success: true, 
+        details: "Skipped duplicate notification", 
         isDuplicate: true 
       };
     }
@@ -76,37 +232,67 @@ export async function sendMessageNotification(
     // Set this message as recently notified
     recentNotifications.set(message.id, now);
     
-    // Cleanup old entries
+    // Cleanup old entries from the deduplication map
     for (const [msgId, time] of recentNotifications.entries()) {
-      if (now - time > 600000) { // Remove entries older than 10 minutes
+      if (now - time > 60000) { // Remove entries older than 1 minute
         recentNotifications.delete(msgId);
       }
     }
     
-    // Check if this is an emergency/panic message
+    // Also cleanup source tracking
+    for (const [src, msgMap] of notificationAttemptsBySource.entries()) {
+      for (const [msgId, time] of msgMap.entries()) {
+        if (now - time > 120000) { // 2 minutes
+          msgMap.delete(msgId);
+        }
+      }
+      if (msgMap.size === 0) {
+        notificationAttemptsBySource.delete(src);
+      }
+    }
+    
+    // Check if this is an emergency/panic message for special handling
+    // Either from condition type or from the isEmergency flag
     const isEmergencyMessage = condition.condition_type === 'panic_trigger' || isEmergency;
     
     if (isEmergencyMessage && debug) {
-      console.log("[FINAL-DELIVERY] Emergency message - high priority delivery");
+      console.log("THIS IS AN EMERGENCY MESSAGE - Special handling activated");
     }
     
-    // Track the notification in the database
+    // Track the notifications in the database - important to do this ONCE before sending any notifications
     try {
       await trackMessageNotification(message.id, condition.id);
-      if (debug) console.log(`[FINAL-DELIVERY] Successfully tracked notification for message ${message.id}`);
+      if (debug) console.log(`Successfully tracked notification for message ${message.id}`);
     } catch (trackError) {
-      console.error(`[FINAL-DELIVERY] Error tracking message notification: ${trackError}`);
-      // Continue despite tracking error
+      console.error(`Error tracking message notification: ${trackError}`);
+      // Continue despite tracking error - don't block email sending
     }
     
-    // Create a Set to track recipients who have already been notified
+    // For emergency messages, attempt multiple deliveries with retry
+    const maxRetries = isEmergencyMessage ? 2 : 1; // Reduced max retries from 3 to 2
+    const retryDelay = 5000; // 5 seconds between retries for emergency messages
+    
+    // Check if this is a WhatsApp-enabled panic trigger
+    let isWhatsAppEnabled = false;
+    let triggerKeyword = "";
+    
+    if (condition.condition_type === 'panic_trigger') {
+      const panicConfig = condition.panic_config || {};
+      if (panicConfig.methods && panicConfig.methods.includes('whatsapp')) {
+        isWhatsAppEnabled = true;
+        triggerKeyword = panicConfig.trigger_keyword || "SOS";
+        if (debug) console.log(`WhatsApp triggers enabled with keyword: ${triggerKeyword}`);
+      }
+    }
+    
+    // Create a Set to track recipients who have already been notified to prevent duplicates
     const notifiedRecipients = new Set();
     
-    // Send notification to each recipient
+    // Send a notification to each recipient - ONCE only!
     const recipientResults = await Promise.all(condition.recipients.map(async recipient => {
       // Skip if this recipient has already been processed
       if (notifiedRecipients.has(recipient.id)) {
-        console.log(`[FINAL-DELIVERY] Skipping duplicate recipient ${recipient.id} (${recipient.email})`);
+        console.log(`Skipping duplicate notification for recipient ${recipient.id} (${recipient.email})`);
         return { 
           success: true, 
           recipient: recipient.email, 
@@ -115,14 +301,17 @@ export async function sendMessageNotification(
         };
       }
       
-      // Mark recipient as notified
+      // Mark recipient as notified to prevent duplicates
       notifiedRecipients.add(recipient.id);
       
-      // Create delivery record
+      // Create delivery record for each recipient BEFORE sending notification
+      // This ensures the delivery record exists when the recipient clicks the link
       try {
+        // Generate a unique delivery ID - CRITICAL FIX: This is stored as TEXT in the database
         const deliveryId = crypto.randomUUID();
-        console.log(`[FINAL-DELIVERY] Creating delivery record for message ${message.id}, recipient ${recipient.id}, deliveryId ${deliveryId}`);
+        console.log(`Creating delivery record for message ${message.id}, recipient ${recipient.id}, deliveryId ${deliveryId}`);
         
+        // Record the delivery in the database
         await recordMessageDelivery(
           message.id,
           condition.id,
@@ -130,19 +319,20 @@ export async function sendMessageNotification(
           deliveryId
         );
         
+        // Attach the deliveryId to the recipient for use in notification
         recipient.deliveryId = deliveryId;
       } catch (deliveryError) {
-        console.error(`[FINAL-DELIVERY] Error creating delivery record for recipient ${recipient.id}:`, deliveryError);
-        // Continue anyway
+        console.error(`Error creating delivery record for recipient ${recipient.id}:`, deliveryError);
+        // Continue anyway to attempt notification delivery
       }
       
       return notifyRecipient(recipient, message, condition, {
         isEmergency: isEmergencyMessage,
         debug,
-        maxRetries: isEmergencyMessage ? 2 : 1,
-        retryDelay: 5000,
-        isWhatsAppEnabled: condition.panic_config?.methods?.includes('whatsapp') || false,
-        triggerKeyword: condition.panic_config?.trigger_keyword || "",
+        maxRetries,
+        retryDelay,
+        isWhatsAppEnabled,
+        triggerKeyword,
         forceSend,
         source
       });
@@ -152,38 +342,47 @@ export async function sendMessageNotification(
     const allFailed = recipientResults.every(r => !r.success);
     
     if (debug) {
-      console.log(`[FINAL-DELIVERY] Delivery summary: ${recipientResults.filter(r => r.success).length}/${recipientResults.length} successful`);
+      console.log(`Email sending summary: ${recipientResults.filter(r => r.success).length}/${recipientResults.length} successful`);
       if (allFailed) {
-        console.error("[FINAL-DELIVERY] ALL DELIVERIES FAILED");
+        console.error("ALL EMAIL DELIVERIES FAILED. Check logs for details.");
       }
     }
     
-    // Deactivate condition after successful delivery (except for recurring conditions)
-    if (anySuccessful && condition.condition_type !== 'recurring_check_in') {
-      // For panic triggers, check keep_armed setting
+    // Only mark the condition as inactive if it's not a recurring trigger or special case
+    if (condition.condition_type !== 'recurring_check_in') {
+      // For panic triggers, we need to check if keep_armed is true
       if (condition.condition_type === 'panic_trigger') {
         try {
+          // Get the keep_armed setting directly from the panic_config
           let keepArmed = true; // Default to true for safety
           
-          if (condition.panic_config?.keep_armed === false) {
-            keepArmed = false;
+          if (condition.panic_config) {
+            // If keep_armed is explicitly set to false, we'll deactivate the condition
+            if (condition.panic_config.keep_armed === false) {
+              keepArmed = false;
+            }
+            if (debug) console.log(`Panic trigger - keep_armed setting from condition is: ${keepArmed}`);
           } else {
+            // If no panic_config, try to get it from the database
             const panicConfig = await getPanicConfig(condition.id);
             keepArmed = panicConfig?.keep_armed ?? true;
+            if (debug) console.log(`Panic trigger - keep_armed setting from database is: ${keepArmed}`);
           }
           
           if (!keepArmed) {
-            if (debug) console.log(`[FINAL-DELIVERY] Deactivating panic condition ${condition.id}`);
+            // Deactivate the condition
+            if (debug) console.log(`Deactivating condition ${condition.id}`);
             await updateConditionStatus(condition.id, false);
           } else {
-            if (debug) console.log(`[FINAL-DELIVERY] Keeping panic condition ${condition.id} active`);
+            if (debug) console.log(`Keeping condition ${condition.id} active as keep_armed is true`);
           }
         } catch (configError) {
-          console.error("[FINAL-DELIVERY] Error checking panic_config:", configError);
+          console.error("Error checking panic_config:", configError);
+          // Default to not deactivating in case of error
         }
       } else {
-        // For all other conditions, deactivate after delivery
-        if (debug) console.log(`[FINAL-DELIVERY] Deactivating condition ${condition.id} after successful delivery`);
+        // For all other non-recurring conditions, mark as inactive after delivery
+        if (debug) console.log(`Deactivating non-recurring condition ${condition.id} after delivery`);
         await updateConditionStatus(condition.id, false);
       }
     }
@@ -191,10 +390,10 @@ export async function sendMessageNotification(
     return { 
       success: anySuccessful, 
       details: recipientResults,
-      error: allFailed ? "All deliveries failed" : undefined
+      error: allFailed ? "All email deliveries failed" : undefined
     };
   } catch (error: any) {
-    console.error(`[FINAL-DELIVERY] Error delivering final message ${message.id}:`, error);
+    console.error(`Error notifying recipients for message ${message.id}:`, error);
     return { success: false, error: error.message };
   }
 }
