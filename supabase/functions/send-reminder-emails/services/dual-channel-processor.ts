@@ -4,7 +4,7 @@ import { sendCheckInWhatsAppToCreator } from "./whatsapp-sender.ts";
 import { reminderLogger } from "./reminder-logger.ts";
 
 /**
- * SIMPLIFIED: Dual-channel processor focused on ensuring final delivery works
+ * FIXED: Dual-channel processor with proper final delivery verification
  */
 export async function processDualChannelReminders(
   messageId?: string,
@@ -14,7 +14,7 @@ export async function processDualChannelReminders(
   try {
     const supabase = supabaseClient();
     
-    console.log(`[DUAL-CHANNEL-PROCESSOR] SIMPLIFIED processing for message: ${messageId || 'all'}`);
+    console.log(`[DUAL-CHANNEL-PROCESSOR] FIXED processing for message: ${messageId || 'all'}`);
     
     // Clean up stuck reminders first
     await supabase
@@ -23,7 +23,7 @@ export async function processDualChannelReminders(
       .eq('status', 'processing')
       .lt('scheduled_at', new Date(Date.now() - 10 * 60 * 1000).toISOString());
     
-    // Build query for due reminders - SIMPLIFIED
+    // Build query for due reminders
     let query = supabase
       .from('reminder_schedule')
       .select(`
@@ -117,6 +117,14 @@ export async function processDualChannelReminders(
           console.log(`[DUAL-CHANNEL-PROCESSOR] FINAL DELIVERY PROCESSING for message ${message.id}`);
           
           try {
+            // CRITICAL FIX: Store initial delivery count before triggering
+            const { count: initialDeliveryCount } = await supabase
+              .from('delivered_messages')
+              .select('*', { count: 'exact', head: true })
+              .eq('message_id', message.id);
+            
+            console.log(`[DUAL-CHANNEL-PROCESSOR] Initial delivery count: ${initialDeliveryCount || 0}`);
+            
             // STEP 1: Trigger message delivery to recipients
             console.log(`[DUAL-CHANNEL-PROCESSOR] Triggering recipient message delivery`);
             
@@ -133,13 +141,28 @@ export async function processDualChannelReminders(
             });
             
             if (deliveryResult.error) {
-              console.error(`[DUAL-CHANNEL-PROCESSOR] Delivery failed:`, deliveryResult.error);
-              throw new Error(`Message delivery failed: ${deliveryResult.error.message}`);
+              console.error(`[DUAL-CHANNEL-PROCESSOR] Delivery invocation failed:`, deliveryResult.error);
+              throw new Error(`Message delivery invocation failed: ${deliveryResult.error.message}`);
             }
             
             console.log(`[DUAL-CHANNEL-PROCESSOR] Message delivery triggered successfully`);
             
-            // STEP 2: Update reminder status
+            // STEP 2: CRITICAL FIX - Wait for and verify actual delivery
+            console.log(`[DUAL-CHANNEL-PROCESSOR] Waiting for delivery verification...`);
+            
+            const deliveryVerified = await verifyRecipientDelivery(
+              supabase, 
+              message.id, 
+              condition.recipients?.length || 0, 
+              initialDeliveryCount || 0,
+              debug
+            );
+            
+            if (!deliveryVerified) {
+              throw new Error('Recipients did not receive the message within timeout period');
+            }
+            
+            // STEP 3: Only update reminder status AFTER delivery is verified
             await supabase
               .from('reminder_schedule')
               .update({ 
@@ -148,7 +171,7 @@ export async function processDualChannelReminders(
               })
               .eq('id', reminder.id);
             
-            // STEP 3: Deactivate condition
+            // STEP 4: Deactivate condition
             await supabase
               .from('message_conditions')
               .update({ 
@@ -157,7 +180,7 @@ export async function processDualChannelReminders(
               })
               .eq('id', condition.id);
             
-            // STEP 4: Log success
+            // STEP 5: Log success
             await reminderLogger.logDelivery(
               reminder.id,
               message.id,
@@ -170,27 +193,38 @@ export async function processDualChannelReminders(
                 reminder_type: 'final_delivery',
                 recipients_notified: true,
                 condition_deactivated: true,
-                processed_at: new Date().toISOString()
+                processed_at: new Date().toISOString(),
+                delivery_verified: true
               }
             );
             
-            console.log(`[DUAL-CHANNEL-PROCESSOR] Final delivery completed for message ${message.id}`);
+            console.log(`[DUAL-CHANNEL-PROCESSOR] Final delivery completed and verified for message ${message.id}`);
             successCount++;
             
           } catch (finalDeliveryError) {
             console.error(`[DUAL-CHANNEL-PROCESSOR] Final delivery failed:`, finalDeliveryError);
             
+            // CRITICAL: Keep reminder in processing state for retry if delivery failed
+            const shouldRetry = (reminder.retry_count || 0) < 3;
+            const newStatus = shouldRetry ? 'pending' : 'failed';
+            
             await supabase
               .from('reminder_schedule')
-              .update({ status: 'failed' })
+              .update({ 
+                status: newStatus,
+                scheduled_at: shouldRetry ? new Date(Date.now() + 5 * 60 * 1000).toISOString() : reminder.scheduled_at
+              })
               .eq('id', reminder.id);
+            
+            console.log(`[DUAL-CHANNEL-PROCESSOR] Reminder ${reminder.id} marked as ${newStatus} for ${shouldRetry ? 'retry' : 'permanent failure'}`);
             
             errors.push(`Final delivery failed for ${message.title}: ${finalDeliveryError.message}`);
             failedCount++;
           }
           
         } else {
-          // Regular check-in reminder processing
+          // Regular check-in reminder processing (unchanged)
+          // ... keep existing code (check-in reminder processing logic)
           console.log(`[DUAL-CHANNEL-PROCESSOR] Processing check-in reminder for message ${message.id}`);
           
           // Get creator's profile
@@ -304,6 +338,63 @@ export async function processDualChannelReminders(
       errors: [error.message]
     };
   }
+}
+
+/**
+ * CRITICAL FIX: Verify that recipients actually received the message
+ */
+async function verifyRecipientDelivery(
+  supabase: any,
+  messageId: string,
+  expectedRecipientCount: number,
+  initialDeliveryCount: number,
+  debug: boolean = false
+): Promise<boolean> {
+  const maxWaitTime = 30000; // 30 seconds timeout
+  const checkInterval = 2000; // Check every 2 seconds
+  const startTime = Date.now();
+  
+  console.log(`[DELIVERY-VERIFICATION] Starting verification for message ${messageId}`);
+  console.log(`[DELIVERY-VERIFICATION] Expected recipients: ${expectedRecipientCount}, Initial deliveries: ${initialDeliveryCount}`);
+  
+  while (Date.now() - startTime < maxWaitTime) {
+    try {
+      // Check current delivery count
+      const { count: currentDeliveryCount, error } = await supabase
+        .from('delivered_messages')
+        .select('*', { count: 'exact', head: true })
+        .eq('message_id', messageId);
+      
+      if (error) {
+        console.error(`[DELIVERY-VERIFICATION] Error checking deliveries:`, error);
+        await new Promise(resolve => setTimeout(resolve, checkInterval));
+        continue;
+      }
+      
+      const newDeliveries = (currentDeliveryCount || 0) - initialDeliveryCount;
+      
+      if (debug) {
+        console.log(`[DELIVERY-VERIFICATION] Current deliveries: ${currentDeliveryCount || 0}, New deliveries: ${newDeliveries}`);
+      }
+      
+      // Success: We have new deliveries that match expected recipients
+      if (newDeliveries >= expectedRecipientCount) {
+        console.log(`[DELIVERY-VERIFICATION] SUCCESS: ${newDeliveries} recipients received the message`);
+        return true;
+      }
+      
+      // Wait before next check
+      await new Promise(resolve => setTimeout(resolve, checkInterval));
+      
+    } catch (error) {
+      console.error(`[DELIVERY-VERIFICATION] Error during verification:`, error);
+      await new Promise(resolve => setTimeout(resolve, checkInterval));
+    }
+  }
+  
+  // Timeout reached
+  console.error(`[DELIVERY-VERIFICATION] TIMEOUT: Recipients did not receive message ${messageId} within ${maxWaitTime}ms`);
+  return false;
 }
 
 /**
