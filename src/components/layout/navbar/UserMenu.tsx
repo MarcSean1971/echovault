@@ -1,5 +1,5 @@
 
-import { User, LogOut, Settings, CreditCard, Shield, Home, MessageSquare, Users } from "lucide-react";
+import { User, LogOut, Settings, CreditCard, Shield, MessageSquare, Users } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -56,10 +56,6 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         {/* Main Navigation Items */}
-        <DropdownMenuItem onClick={() => navigate('/dashboard')} className="cursor-pointer hover:bg-primary/10 transition-colors">
-          <Home className="mr-2 h-4 w-4" />
-          Dashboard
-        </DropdownMenuItem>
         <DropdownMenuItem onClick={() => navigate('/messages')} className="cursor-pointer hover:bg-primary/10 transition-colors">
           <MessageSquare className="mr-2 h-4 w-4" />
           Messages
