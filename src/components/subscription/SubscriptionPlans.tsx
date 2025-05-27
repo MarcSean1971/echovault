@@ -41,7 +41,14 @@ export function SubscriptionPlans() {
         .order('sort_order');
 
       if (error) throw error;
-      setPlans(data || []);
+      
+      // Transform the data to match our interface
+      const transformedPlans = data?.map(plan => ({
+        ...plan,
+        features: Array.isArray(plan.features) ? plan.features : []
+      })) || [];
+      
+      setPlans(transformedPlans);
     } catch (error) {
       console.error('Error fetching plans:', error);
       toast({
@@ -127,7 +134,7 @@ export function SubscriptionPlans() {
             variant={selectedBilling === 'monthly' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => setSelectedBilling('monthly')}
-            className="rounded-md"
+            className="rounded-md hover:bg-primary/20 transition-colors"
           >
             Monthly
           </Button>
@@ -135,7 +142,7 @@ export function SubscriptionPlans() {
             variant={selectedBilling === 'yearly' ? 'default' : 'ghost'}
             size="sm"
             onClick={() => setSelectedBilling('yearly')}
-            className="rounded-md"
+            className="rounded-md hover:bg-primary/20 transition-colors"
           >
             Yearly
             <Badge variant="secondary" className="ml-2 text-xs">
@@ -154,7 +161,7 @@ export function SubscriptionPlans() {
               plan.name === 'core' 
                 ? 'border-primary shadow-lg scale-105' 
                 : ''
-            }`}
+            } hover:shadow-lg transition-shadow`}
           >
             {plan.name === 'core' && (
               <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
@@ -191,7 +198,7 @@ export function SubscriptionPlans() {
               {/* Action Button */}
               <div className="pt-4">
                 {plan.name === 'free' ? (
-                  <Button variant="outline" className="w-full" disabled>
+                  <Button variant="outline" className="w-full hover:bg-primary/10 transition-colors" disabled>
                     Current Plan
                   </Button>
                 ) : isSignedIn ? (
@@ -231,7 +238,7 @@ export function SubscriptionPlans() {
                     />
                   </PayPalScriptProvider>
                 ) : (
-                  <Button variant="outline" className="w-full" disabled>
+                  <Button variant="outline" className="w-full hover:bg-primary/10 transition-colors" disabled>
                     Sign in to Subscribe
                   </Button>
                 )}
