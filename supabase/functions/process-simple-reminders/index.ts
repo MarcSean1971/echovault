@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { supabaseClient } from "./supabase-client.ts";
 import { sendCheckInReminderToCreator } from "./send-checkin-reminder.ts";
 import { sendFinalMessageToRecipients } from "./send-final-message.ts";
+import { createReminderSchedule } from "./create-schedule.ts";
 
 console.log("===== SIMPLE REMINDER PROCESSOR =====");
 
@@ -17,6 +18,26 @@ serve(async (req) => {
   }
 
   try {
+    const { action, ...body } = await req.json();
+    
+    // Handle schedule creation requests
+    if (action === 'create_schedule') {
+      console.log("Processing schedule creation request...");
+      const success = await createReminderSchedule(body);
+      
+      return new Response(
+        JSON.stringify({
+          success,
+          message: success ? "Schedule created successfully" : "Failed to create schedule"
+        }),
+        { 
+          status: success ? 200 : 500, 
+          headers: { ...corsHeaders, "Content-Type": "application/json" }
+        }
+      );
+    }
+    
+    // Default reminder processing logic
     console.log("Processing simple reminders...");
     
     const supabase = supabaseClient();
