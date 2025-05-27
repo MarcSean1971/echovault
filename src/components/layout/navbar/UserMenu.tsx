@@ -42,7 +42,7 @@ export function UserMenu({ userImage, initials }: UserMenuProps) {
     }
   };
 
-  const isAdmin = profile?.email === 'admin@echovault.app';
+  const isAdmin = profile?.email === 'marc.s@seelenbinderconsulting.com';
 
   return (
     <DropdownMenu>
