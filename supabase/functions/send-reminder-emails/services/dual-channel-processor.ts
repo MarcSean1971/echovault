@@ -1,10 +1,11 @@
+
 import { supabaseClient } from "../supabase-client.ts";
 import { sendCheckInEmailToCreator } from "./email-sender.ts";
 import { sendCheckInWhatsAppToCreator } from "./whatsapp-sender.ts";
 import { reminderLogger } from "./reminder-logger.ts";
 
 /**
- * SIMPLIFIED: Dual-channel processor focused on ensuring final delivery works
+ * SIMPLIFIED: Dual-channel processor focused on correct final delivery vs check-in handling
  */
 export async function processDualChannelReminders(
   messageId?: string,
@@ -23,7 +24,7 @@ export async function processDualChannelReminders(
       .eq('status', 'processing')
       .lt('scheduled_at', new Date(Date.now() - 10 * 60 * 1000).toISOString());
     
-    // Build query for due reminders - SIMPLIFIED
+    // Build query for due reminders
     let query = supabase
       .from('reminder_schedule')
       .select(`
@@ -114,12 +115,10 @@ export async function processDualChannelReminders(
         console.log(`[DUAL-CHANNEL-PROCESSOR] Processing ${reminder.reminder_type} for message "${message.title}"`);
         
         if (reminder.reminder_type === 'final_delivery') {
-          console.log(`[DUAL-CHANNEL-PROCESSOR] FINAL DELIVERY PROCESSING for message ${message.id}`);
+          console.log(`[DUAL-CHANNEL-PROCESSOR] FINAL DELIVERY - sending to RECIPIENTS`);
           
           try {
-            // STEP 1: Trigger message delivery to recipients
-            console.log(`[DUAL-CHANNEL-PROCESSOR] Triggering recipient message delivery`);
-            
+            // Send message to recipients via send-message-notifications
             const deliveryResult = await supabase.functions.invoke('send-message-notifications', {
               body: {
                 messageId: message.id,
@@ -133,13 +132,13 @@ export async function processDualChannelReminders(
             });
             
             if (deliveryResult.error) {
-              console.error(`[DUAL-CHANNEL-PROCESSOR] Delivery failed:`, deliveryResult.error);
+              console.error(`[DUAL-CHANNEL-PROCESSOR] Final delivery failed:`, deliveryResult.error);
               throw new Error(`Message delivery failed: ${deliveryResult.error.message}`);
             }
             
-            console.log(`[DUAL-CHANNEL-PROCESSOR] Message delivery triggered successfully`);
+            console.log(`[DUAL-CHANNEL-PROCESSOR] Final delivery to recipients completed successfully`);
             
-            // STEP 2: Update reminder status
+            // Mark reminder as completed
             await supabase
               .from('reminder_schedule')
               .update({ 
@@ -148,7 +147,7 @@ export async function processDualChannelReminders(
               })
               .eq('id', reminder.id);
             
-            // STEP 3: Deactivate condition
+            // Deactivate condition
             await supabase
               .from('message_conditions')
               .update({ 
@@ -157,12 +156,12 @@ export async function processDualChannelReminders(
               })
               .eq('id', condition.id);
             
-            // STEP 4: Log success
+            // Log success
             await reminderLogger.logDelivery(
               reminder.id,
               message.id,
               condition.id,
-              'system',
+              'recipients',
               'final_delivery',
               1,
               'completed',
@@ -174,7 +173,6 @@ export async function processDualChannelReminders(
               }
             );
             
-            console.log(`[DUAL-CHANNEL-PROCESSOR] Final delivery completed for message ${message.id}`);
             successCount++;
             
           } catch (finalDeliveryError) {
@@ -189,87 +187,100 @@ export async function processDualChannelReminders(
             failedCount++;
           }
           
-        } else {
-          // Regular check-in reminder processing
-          console.log(`[DUAL-CHANNEL-PROCESSOR] Processing check-in reminder for message ${message.id}`);
+        } else if (reminder.reminder_type === 'reminder') {
+          console.log(`[DUAL-CHANNEL-PROCESSOR] CHECK-IN REMINDER - sending to CREATOR`);
           
-          // Get creator's profile
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('whatsapp_number, email, first_name, last_name')
-            .eq('id', message.user_id)
-            .single();
-          
-          if (!profile) {
-            console.error(`[DUAL-CHANNEL-PROCESSOR] No profile found for user ${message.user_id}`);
+          try {
+            // Get creator's profile
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('whatsapp_number, email, first_name, last_name')
+              .eq('id', message.user_id)
+              .single();
+            
+            if (!profile) {
+              console.error(`[DUAL-CHANNEL-PROCESSOR] No profile found for creator ${message.user_id}`);
+              await supabase
+                .from('reminder_schedule')
+                .update({ status: 'failed' })
+                .eq('id', reminder.id);
+              failedCount++;
+              continue;
+            }
+            
+            // Calculate hours until deadline
+            const now = new Date();
+            const lastChecked = new Date(condition.last_checked);
+            const hoursThreshold = condition.hours_threshold || 0;
+            const minutesThreshold = condition.minutes_threshold || 0;
+            
+            const deadline = new Date(lastChecked);
+            deadline.setHours(deadline.getHours() + hoursThreshold);
+            deadline.setMinutes(deadline.getMinutes() + minutesThreshold);
+            
+            const hoursUntilDeadline = Math.max(0, (deadline.getTime() - now.getTime()) / (1000 * 60 * 60));
+            
+            // Send email reminder to creator
+            const emailResult = await sendCheckInEmailToCreator(
+              profile.email,
+              message.title,
+              message.id,
+              hoursUntilDeadline,
+              profile.first_name || 'User'
+            );
+            
+            let whatsappResult = { success: true };
+            
+            // Send WhatsApp reminder to creator if available
+            if (profile.whatsapp_number) {
+              whatsappResult = await sendCheckInWhatsAppToCreator(
+                profile.whatsapp_number,
+                message.title,
+                message.id,
+                hoursUntilDeadline
+              );
+            }
+            
+            if (emailResult.success || whatsappResult.success) {
+              await supabase
+                .from('reminder_schedule')
+                .update({ 
+                  status: 'completed',
+                  last_attempt_at: new Date().toISOString()
+                })
+                .eq('id', reminder.id);
+              
+              await reminderLogger.logDelivery(
+                reminder.id,
+                message.id,
+                condition.id,
+                profile.email,
+                'check_in_reminder',
+                1,
+                'completed',
+                {
+                  email_success: emailResult.success,
+                  whatsapp_success: whatsappResult.success,
+                  hours_until_deadline: hoursUntilDeadline
+                }
+              );
+              
+              console.log(`[DUAL-CHANNEL-PROCESSOR] Check-in reminder sent to creator successfully`);
+              successCount++;
+            } else {
+              throw new Error(`Both email and WhatsApp delivery failed for creator`);
+            }
+            
+          } catch (reminderError) {
+            console.error(`[DUAL-CHANNEL-PROCESSOR] Check-in reminder failed:`, reminderError);
+            
             await supabase
               .from('reminder_schedule')
               .update({ status: 'failed' })
               .eq('id', reminder.id);
+            
+            errors.push(`Check-in reminder failed for ${message.title}: ${reminderError.message}`);
             failedCount++;
-            continue;
-          }
-          
-          // Calculate hours until deadline
-          const now = new Date();
-          const lastChecked = new Date(condition.last_checked);
-          const hoursThreshold = condition.hours_threshold || 0;
-          const minutesThreshold = condition.minutes_threshold || 0;
-          
-          const deadline = new Date(lastChecked);
-          deadline.setHours(deadline.getHours() + hoursThreshold);
-          deadline.setMinutes(deadline.getMinutes() + minutesThreshold);
-          
-          const hoursUntilDeadline = Math.max(0, (deadline.getTime() - now.getTime()) / (1000 * 60 * 60));
-          
-          // Send email reminder
-          const emailResult = await sendCheckInEmailToCreator(
-            profile.email,
-            message.title,
-            message.id,
-            hoursUntilDeadline,
-            profile.first_name || 'User'
-          );
-          
-          let whatsappResult = { success: true };
-          
-          // Send WhatsApp reminder if available
-          if (profile.whatsapp_number) {
-            whatsappResult = await sendCheckInWhatsAppToCreator(
-              profile.whatsapp_number,
-              message.title,
-              message.id,
-              hoursUntilDeadline
-            );
-          }
-          
-          if (emailResult.success || whatsappResult.success) {
-            await supabase
-              .from('reminder_schedule')
-              .update({ 
-                status: 'completed',
-                last_attempt_at: new Date().toISOString()
-              })
-              .eq('id', reminder.id);
-            
-            await reminderLogger.logDelivery(
-              reminder.id,
-              message.id,
-              condition.id,
-              profile.email,
-              'check_in_reminder',
-              1,
-              'completed',
-              {
-                email_success: emailResult.success,
-                whatsapp_success: whatsappResult.success,
-                hours_until_deadline: hoursUntilDeadline
-              }
-            );
-            
-            successCount++;
-          } else {
-            throw new Error(`Both email and WhatsApp delivery failed`);
           }
         }
         

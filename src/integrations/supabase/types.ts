@@ -255,6 +255,8 @@ export type Database = {
           first_name: string
           id: string
           last_name: string
+          subscription_plan: string | null
+          subscription_status: string | null
           updated_at: string
           whatsapp_number: string | null
         }
@@ -267,6 +269,8 @@ export type Database = {
           first_name: string
           id: string
           last_name: string
+          subscription_plan?: string | null
+          subscription_status?: string | null
           updated_at?: string
           whatsapp_number?: string | null
         }
@@ -279,6 +283,8 @@ export type Database = {
           first_name?: string
           id?: string
           last_name?: string
+          subscription_plan?: string | null
+          subscription_status?: string | null
           updated_at?: string
           whatsapp_number?: string | null
         }
@@ -469,6 +475,113 @@ export type Database = {
             columns: ["message_id"]
             isOneToOne: false
             referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_plans: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_name: string
+          features: Json | null
+          id: string
+          is_active: boolean
+          max_messages: number | null
+          max_recipients: number | null
+          name: string
+          paypal_plan_id_monthly: string | null
+          paypal_plan_id_yearly: string | null
+          price_monthly: number
+          price_yearly: number | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_name: string
+          features?: Json | null
+          id?: string
+          is_active?: boolean
+          max_messages?: number | null
+          max_recipients?: number | null
+          name: string
+          paypal_plan_id_monthly?: string | null
+          paypal_plan_id_yearly?: string | null
+          price_monthly: number
+          price_yearly?: number | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_name?: string
+          features?: Json | null
+          id?: string
+          is_active?: boolean
+          max_messages?: number | null
+          max_recipients?: number | null
+          name?: string
+          paypal_plan_id_monthly?: string | null
+          paypal_plan_id_yearly?: string | null
+          price_monthly?: number
+          price_yearly?: number | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_subscriptions: {
+        Row: {
+          billing_cycle: string
+          cancel_at_period_end: boolean
+          cancelled_at: string | null
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          id: string
+          paypal_subscription_id: string | null
+          plan_id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          billing_cycle?: string
+          cancel_at_period_end?: boolean
+          cancelled_at?: string | null
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          paypal_subscription_id?: string | null
+          plan_id: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          billing_cycle?: string
+          cancel_at_period_end?: boolean
+          cancelled_at?: string | null
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          paypal_subscription_id?: string | null
+          plan_id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
             referencedColumns: ["id"]
           },
         ]
