@@ -2,9 +2,10 @@
 import { supabase } from "@/integrations/supabase/client";
 import { useActionToasts } from "./useActionToasts";
 import { useConditionUpdates } from "./useConditionUpdates";
+import { createOrUpdateReminderSchedule } from "@/services/messages/reminder/scheduleService";
 
 /**
- * Hook for handling arming message operations - SIMPLIFIED for final delivery
+ * SIMPLIFIED: Hook for handling arming message operations
  */
 export function useArmOperations() {
   const { 
@@ -25,13 +26,13 @@ export function useArmOperations() {
       return null;
     }
     
-    console.log(`[useArmOperations] Arming message with condition ${conditionId}`);
+    console.log(`[useArmOperations] SIMPLE arming message with condition ${conditionId}`);
     
     try {
       // Get the current condition
       const { data: currentCondition, error: fetchError } = await supabase
         .from("message_conditions")
-        .select("message_id, condition_type, hours_threshold, minutes_threshold, last_checked")
+        .select("message_id, condition_type, hours_threshold, minutes_threshold, last_checked, reminder_hours, trigger_date")
         .eq("id", conditionId)
         .single();
         
@@ -55,7 +56,7 @@ export function useArmOperations() {
           last_checked: new Date().toISOString() 
         })
         .eq("id", conditionId)
-        .select("id, message_id, condition_type, hours_threshold, minutes_threshold, last_checked")
+        .select("id, message_id, condition_type, hours_threshold, minutes_threshold, last_checked, reminder_hours, trigger_date")
         .single();
       
       if (error) {
@@ -66,17 +67,8 @@ export function useArmOperations() {
       
       // Calculate deadline for UI feedback
       let deadlineDate: Date | null = null;
-      if (data.condition_type === "scheduled") {
-        // For scheduled conditions, get trigger_date
-        const { data: fullCondition } = await supabase
-          .from("message_conditions")
-          .select("trigger_date")
-          .eq("id", conditionId)
-          .single();
-        
-        if (fullCondition?.trigger_date) {
-          deadlineDate = new Date(fullCondition.trigger_date);
-        }
+      if (data.condition_type === "scheduled" && data.trigger_date) {
+        deadlineDate = new Date(data.trigger_date);
       } else if (data.hours_threshold) {
         const hoursInMs = data.hours_threshold * 60 * 60 * 1000;
         const minutesInMs = (data.minutes_threshold || 0) * 60 * 1000;
@@ -85,28 +77,25 @@ export function useArmOperations() {
       
       console.log(`[useArmOperations] Deadline calculated: ${deadlineDate?.toISOString() || 'unknown'}`);
       
-      // Check if deadline has already passed and trigger immediate final delivery
-      if (deadlineDate && deadlineDate <= new Date()) {
-        console.log(`[useArmOperations] Deadline has passed - triggering immediate final delivery`);
+      // SIMPLIFIED: Create reminder schedule entries
+      if (deadlineDate) {
+        console.log(`[useArmOperations] Creating reminder schedule for armed message`);
         
-        try {
-          const { error: triggerError } = await supabase.functions.invoke('send-message-notifications', {
-            body: {
-              messageId: actualMessageId,
-              forceSend: true,
-              debug: true,
-              source: 'immediate_arm_delivery'
-            }
-          });
-          
-          if (triggerError) {
-            console.error(`[useArmOperations] Error triggering immediate delivery:`, triggerError);
-          } else {
-            console.log(`[useArmOperations] Successfully triggered immediate delivery`);
-          }
-        } catch (deliveryError) {
-          console.error(`[useArmOperations] Exception triggering immediate delivery:`, deliveryError);
-        }
+        // Parse reminder minutes from reminder_hours
+        const reminderMinutes = (data.reminder_hours || [24]).map((hours: number) => hours * 60);
+        
+        await createOrUpdateReminderSchedule({
+          messageId: actualMessageId,
+          conditionId: conditionId,
+          conditionType: data.condition_type,
+          reminderMinutes: reminderMinutes,
+          lastChecked: data.last_checked,
+          hoursThreshold: data.hours_threshold,
+          minutesThreshold: data.minutes_threshold,
+          triggerDate: data.trigger_date
+        }, false);
+        
+        console.log(`[useArmOperations] Reminder schedule created for message ${actualMessageId}`);
       }
       
       // Show success
