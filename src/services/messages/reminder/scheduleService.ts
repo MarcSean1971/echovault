@@ -1,7 +1,7 @@
 
 /**
  * Service functions for creating and managing reminder schedules
- * FIXED: Ensure final delivery is always scheduled and immediate entries for past-due conditions
+ * FIXED: Now generates 3 distinct reminder types: reminder, final_notice, final_delivery
  */
 
 import { supabase } from "@/integrations/supabase/client";
@@ -10,18 +10,18 @@ import { markRemindersAsObsolete } from "./utils";
 import { ReminderScheduleParams, ReminderResult } from "./types";
 
 /**
- * Create or update reminder schedule - SIMPLIFIED with immediate final delivery for past-due
+ * Create or update reminder schedule with 3-type system
  */
 export async function createOrUpdateReminderSchedule(params: ReminderScheduleParams, isEdit: boolean = false): Promise<boolean> {
   try {
-    console.log("[REMINDER-SERVICE] Creating reminder schedule for:", params);
+    console.log("[REMINDER-SERVICE] Creating 3-type reminder schedule for:", params);
     console.log("[REMINDER-SERVICE] Is edit operation:", isEdit);
     
     // Mark existing reminders as obsolete first
     await markRemindersAsObsolete(params.messageId, params.conditionId, isEdit);
     
-    // Calculate scheduled times with IMMEDIATE final delivery for past-due conditions
-    const scheduleTimes = calculateScheduleTimesWithImmediateDelivery(params);
+    // Calculate scheduled times with 3 distinct types
+    const scheduleTimes = calculateThreeTypeSchedule(params);
     
     if (scheduleTimes.length === 0) {
       console.warn("[REMINDER-SERVICE] No schedule times generated");
@@ -91,9 +91,9 @@ export async function createOrUpdateReminderSchedule(params: ReminderSchedulePar
 }
 
 /**
- * SIMPLIFIED: Calculate reminder schedule times with immediate final delivery for past-due conditions
+ * Calculate reminder schedule times with 3 distinct types
  */
-function calculateScheduleTimesWithImmediateDelivery(params: ReminderScheduleParams): any[] {
+function calculateThreeTypeSchedule(params: ReminderScheduleParams): any[] {
   const { messageId, conditionId, conditionType, triggerDate, reminderMinutes, lastChecked, hoursThreshold, minutesThreshold } = params;
   
   // Calculate effective deadline
@@ -127,7 +127,7 @@ function calculateScheduleTimesWithImmediateDelivery(params: ReminderSchedulePar
   
   const scheduleEntries = [];
   
-  // CRITICAL FIX: If deadline has passed, create IMMEDIATE final delivery
+  // If deadline has passed, create IMMEDIATE final delivery only
   if (effectiveDeadline <= now) {
     console.log(`[REMINDER-SERVICE] CRITICAL: Deadline has passed! Creating IMMEDIATE final delivery`);
     const immediateTime = new Date(now.getTime() + 10000); // 10 seconds from now
@@ -142,14 +142,12 @@ function calculateScheduleTimesWithImmediateDelivery(params: ReminderSchedulePar
       retry_strategy: 'aggressive'
     });
     
-    return scheduleEntries; // Return immediately with just the final delivery
+    return scheduleEntries;
   }
   
-  // For future deadlines, create normal reminder schedule
-  const totalDurationMinutes = (effectiveDeadline.getTime() - now.getTime()) / (60 * 1000);
-  console.log(`[REMINDER-SERVICE] Total duration: ${totalDurationMinutes.toFixed(1)} minutes`);
+  // For future deadlines, create all 3 types of reminders
   
-  // Create check-in reminders
+  // 1. Create check-in reminders (send to creator)
   for (const minutes of reminderMinutes) {
     const scheduledAt = new Date(effectiveDeadline.getTime() - (minutes * 60 * 1000));
     
@@ -172,7 +170,23 @@ function calculateScheduleTimesWithImmediateDelivery(params: ReminderSchedulePar
     });
   }
   
-  // ALWAYS add final delivery at exact deadline
+  // 2. Create final notice (send to creator) - 15 minutes before deadline
+  const finalNoticeTime = new Date(effectiveDeadline.getTime() - (15 * 60 * 1000));
+  if (finalNoticeTime > now) {
+    console.log(`[REMINDER-SERVICE] Adding final notice at: ${finalNoticeTime.toISOString()}`);
+    
+    scheduleEntries.push({
+      message_id: messageId,
+      condition_id: conditionId,
+      scheduled_at: finalNoticeTime.toISOString(),
+      reminder_type: 'final_notice',
+      status: 'pending',
+      delivery_priority: 'high',
+      retry_strategy: 'standard'
+    });
+  }
+  
+  // 3. ALWAYS add final delivery at exact deadline (send to recipients)
   console.log(`[REMINDER-SERVICE] Adding final delivery at exact deadline: ${effectiveDeadline.toISOString()}`);
   
   scheduleEntries.push({
