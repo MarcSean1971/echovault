@@ -4,7 +4,7 @@ import { sendCheckInWhatsAppToCreator } from "./whatsapp-sender.ts";
 import { reminderLogger } from "./reminder-logger.ts";
 
 /**
- * FIXED: 3-Type dual-channel processor with separate function calls for each type
+ * SIMPLIFIED: Direct email delivery without complex routing
  */
 export async function processDualChannelReminders(
   messageId?: string,
@@ -14,7 +14,7 @@ export async function processDualChannelReminders(
   try {
     const supabase = supabaseClient();
     
-    console.log(`[DUAL-CHANNEL-PROCESSOR] 3-TYPE processing for message: ${messageId || 'all'}`);
+    console.log(`[DUAL-CHANNEL-PROCESSOR] SIMPLIFIED processing for message: ${messageId || 'all'}`);
     
     // Clean up stuck reminders first
     await supabase
@@ -83,7 +83,7 @@ export async function processDualChannelReminders(
     let failedCount = 0;
     const errors: string[] = [];
     
-    // Process each due reminder with the correct handler
+    // Process each due reminder with SIMPLIFIED handlers
     for (const reminder of dueReminders) {
       try {
         processedCount++;
@@ -115,18 +115,18 @@ export async function processDualChannelReminders(
         
         let success = false;
         
-        // CRITICAL: Route to the correct handler based on reminder type
+        // SIMPLIFIED: Direct processing based on reminder type
         if (reminder.reminder_type === 'reminder') {
-          console.log(`[DUAL-CHANNEL-PROCESSOR] CHECK-IN REMINDER - sending to CREATOR via email/WhatsApp`);
+          console.log(`[DUAL-CHANNEL-PROCESSOR] CHECK-IN REMINDER - sending to CREATOR`);
           success = await processCreatorReminder(reminder, message, condition, debug);
           
         } else if (reminder.reminder_type === 'final_notice') {
-          console.log(`[DUAL-CHANNEL-PROCESSOR] FINAL NOTICE - sending to CREATOR via email/WhatsApp`);
+          console.log(`[DUAL-CHANNEL-PROCESSOR] FINAL NOTICE - sending to CREATOR`);
           success = await processFinalNotice(reminder, message, condition, debug);
           
         } else if (reminder.reminder_type === 'final_delivery') {
-          console.log(`[DUAL-CHANNEL-PROCESSOR] FINAL DELIVERY - sending to RECIPIENTS via send-message-notifications`);
-          success = await processFinalDelivery(reminder, message, condition, debug);
+          console.log(`[DUAL-CHANNEL-PROCESSOR] FINAL DELIVERY - DIRECT EMAIL TO RECIPIENTS`);
+          success = await processDirectFinalDelivery(reminder, message, condition, debug);
         }
         
         if (success) {
@@ -332,34 +332,92 @@ async function processFinalNotice(reminder: any, message: any, condition: any, d
 }
 
 /**
- * CRITICAL: Process final delivery - send to recipients via send-message-notifications
+ * SIMPLIFIED: Direct email delivery to recipients - NO COMPLEX ROUTING
  */
-async function processFinalDelivery(reminder: any, message: any, condition: any, debug: boolean): Promise<boolean> {
+async function processDirectFinalDelivery(reminder: any, message: any, condition: any, debug: boolean): Promise<boolean> {
   const supabase = supabaseClient();
   
   try {
-    console.log(`[DUAL-CHANNEL-PROCESSOR] FINAL DELIVERY - sending to RECIPIENTS`);
+    console.log(`[DUAL-CHANNEL-PROCESSOR] DIRECT FINAL DELIVERY - sending emails to recipients`);
     
-    // CRITICAL: Call send-message-notifications with specific parameters for final delivery
-    const deliveryResult = await supabase.functions.invoke('send-message-notifications', {
-      body: {
-        messageId: message.id,
-        conditionId: condition.id,
-        forceSend: true,
-        isEmergency: false,
-        debug: debug,
-        source: 'final-delivery-processor',
-        bypassDeduplication: true,
-        reminderType: 'final_delivery'
-      }
-    });
-    
-    if (deliveryResult.error) {
-      console.error(`[DUAL-CHANNEL-PROCESSOR] Final delivery failed:`, deliveryResult.error);
-      throw new Error(`Message delivery failed: ${deliveryResult.error.message}`);
+    if (!condition.recipients || condition.recipients.length === 0) {
+      console.log(`[DUAL-CHANNEL-PROCESSOR] No recipients for message ${message.id}`);
+      return true; // Not a failure, just no recipients
     }
     
-    console.log(`[DUAL-CHANNEL-PROCESSOR] Final delivery to recipients completed successfully`);
+    // Get sender details
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('first_name, last_name')
+      .eq('id', message.user_id)
+      .single();
+    
+    const senderName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'A user' : 'A user';
+    
+    console.log(`[DUAL-CHANNEL-PROCESSOR] Sending to ${condition.recipients.length} recipients from ${senderName}`);
+    
+    // DIRECT EMAIL SENDING - No routing, no complex logic
+    let successCount = 0;
+    
+    for (const recipient of condition.recipients) {
+      try {
+        console.log(`[DUAL-CHANNEL-PROCESSOR] Sending email directly to ${recipient.email}`);
+        
+        // Create delivery record
+        const deliveryId = crypto.randomUUID();
+        await supabase
+          .from('delivered_messages')
+          .insert({
+            message_id: message.id,
+            condition_id: condition.id,
+            recipient_id: recipient.id,
+            delivery_id: deliveryId,
+            delivered_at: new Date().toISOString()
+          });
+        
+        // DIRECT RESEND EMAIL CALL - No routing through other functions
+        const resendApiKey = Deno.env.get("RESEND_API_KEY");
+        if (!resendApiKey) {
+          throw new Error("Missing RESEND_API_KEY");
+        }
+        
+        const emailPayload = {
+          from: "EchoVault <notifications@echo-vault.app>",
+          to: [recipient.email],
+          subject: `${senderName} sent you a secure message: "${message.title}"`,
+          html: `
+            <h1>Secure Message from ${senderName}</h1>
+            <h2>${message.title}</h2>
+            <p>${senderName} has sent you a secure message through EchoVault.</p>
+            <div style="margin: 20px 0; padding: 15px; background-color: #f8f9fa; border-radius: 5px;">
+              <h3>Message Content:</h3>
+              <p>${message.text_content || message.content || 'No text content available'}</p>
+            </div>
+            <p>This message was automatically delivered by EchoVault's secure messaging system.</p>
+          `
+        };
+        
+        const response = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${resendApiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(emailPayload),
+        });
+        
+        if (response.ok) {
+          console.log(`[DUAL-CHANNEL-PROCESSOR] Email sent successfully to ${recipient.email}`);
+          successCount++;
+        } else {
+          const errorText = await response.text();
+          console.error(`[DUAL-CHANNEL-PROCESSOR] Email failed to ${recipient.email}:`, errorText);
+        }
+        
+      } catch (emailError) {
+        console.error(`[DUAL-CHANNEL-PROCESSOR] Email error for ${recipient.email}:`, emailError);
+      }
+    }
     
     // Mark reminder as completed
     await supabase
@@ -389,17 +447,18 @@ async function processFinalDelivery(reminder: any, message: any, condition: any,
       1,
       'completed',
       {
-        reminder_type: 'final_delivery',
-        recipients_notified: true,
-        condition_deactivated: true,
+        recipients_emailed: successCount,
+        total_recipients: condition.recipients.length,
         processed_at: new Date().toISOString()
       }
     );
     
-    return true;
+    console.log(`[DUAL-CHANNEL-PROCESSOR] Direct delivery complete: ${successCount}/${condition.recipients.length} emails sent`);
+    
+    return successCount > 0;
     
   } catch (error) {
-    console.error(`[DUAL-CHANNEL-PROCESSOR] Final delivery failed:`, error);
+    console.error(`[DUAL-CHANNEL-PROCESSOR] Direct delivery failed:`, error);
     return false;
   }
 }
