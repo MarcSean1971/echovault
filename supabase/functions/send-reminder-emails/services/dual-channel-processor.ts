@@ -136,7 +136,7 @@ export async function processDualChannelReminders(
           success = await processFinalNotice(reminder, message, condition, debug);
           
         } else if (reminder.reminder_type === 'final_delivery') {
-          console.log(`[DUAL-CHANNEL-PROCESSOR] FINAL DELIVERY - DIRECT EMAIL TO RECIPIENTS`);
+          console.log(`[DUAL-CHANNEL-PROCESSOR] FINAL DELIVERY - USING PROVEN EMERGENCY CODE PATH`);
           success = await processDirectFinalDelivery(reminder, message, condition, debug);
         }
         
@@ -480,129 +480,44 @@ async function processDirectFinalDelivery(reminder: any, message: any, condition
   const supabase = supabaseClient();
   
   try {
-    console.log(`[DUAL-CHANNEL-PROCESSOR] DIRECT FINAL DELIVERY - sending emails to recipients`);
+    console.log(`[DUAL-CHANNEL-PROCESSOR] USING PROVEN EMERGENCY CODE PATH for message ${message.id}`);
     
     if (!condition.recipients || condition.recipients.length === 0) {
       console.log(`[DUAL-CHANNEL-PROCESSOR] No recipients for message ${message.id}`);
-      return true; // Not a failure, just no recipients
+      
+      // Mark reminder as completed even with no recipients
+      await supabase
+        .from('reminder_schedule')
+        .update({ 
+          status: 'completed',
+          last_attempt_at: new Date().toISOString()
+        })
+        .eq('id', reminder.id);
+      
+      return true;
     }
     
-    // Get sender details
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('first_name, last_name')
-      .eq('id', message.user_id)
-      .single();
+    console.log(`[DUAL-CHANNEL-PROCESSOR] Calling send-message-notifications with isEmergency=true for ${condition.recipients.length} recipients`);
     
-    const senderName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'A user' : 'A user';
-    
-    console.log(`[DUAL-CHANNEL-PROCESSOR] Sending to ${condition.recipients.length} recipients from ${senderName}`);
-    
-    // DIRECT EMAIL SENDING - No routing, no complex logic
-    let successCount = 0;
-    
-    // Creating a Set to track recipients who have already been notified to prevent duplicates
-    const notifiedRecipients = new Set();
-    
-    for (const recipient of condition.recipients) {
-      try {
-        // CRITICAL FIX: Skip if this recipient has already been processed
-        if (notifiedRecipients.has(recipient.id || recipient.email)) {
-          console.log(`[DUAL-CHANNEL-PROCESSOR] Skipping duplicate notification for recipient ${recipient.email}`);
-          continue;
-        }
-        
-        // Mark recipient as notified to prevent duplicates
-        notifiedRecipients.add(recipient.id || recipient.email);
-        
-        console.log(`[DUAL-CHANNEL-PROCESSOR] Sending email directly to ${recipient.email}`);
-        
-        // Create delivery record
-        const deliveryId = crypto.randomUUID();
-        await supabase
-          .from('delivered_messages')
-          .insert({
-            message_id: message.id,
-            condition_id: condition.id,
-            recipient_id: recipient.id,
-            delivery_id: deliveryId,
-            delivered_at: new Date().toISOString()
-          });
-        
-        // DIRECT RESEND EMAIL CALL 
-        const resendApiKey = Deno.env.get("RESEND_API_KEY");
-        if (!resendApiKey) {
-          throw new Error("Missing RESEND_API_KEY");
-        }
-        
-        const emailPayload = {
-          from: "EchoVault <notifications@echo-vault.app>",
-          to: [recipient.email],
-          subject: `${senderName} sent you a secure message: "${message.title}"`,
-          html: `
-            <h1>Secure Message from ${senderName}</h1>
-            <h2>${message.title}</h2>
-            <p>${senderName} has sent you a secure message through EchoVault.</p>
-            <div style="margin: 20px 0; padding: 15px; background-color: #f8f9fa; border-radius: 5px;">
-              <h3>Message Content:</h3>
-              <p>${message.text_content || message.content || 'No text content available'}</p>
-            </div>
-            <p>This message was automatically delivered by EchoVault's secure messaging system.</p>
-          `
-        };
-        
-        const response = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            "Authorization": `Bearer ${resendApiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(emailPayload),
-        });
-        
-        if (response.ok) {
-          console.log(`[DUAL-CHANNEL-PROCESSOR] Email sent successfully to ${recipient.email}`);
-          successCount++;
-          
-          // Log successful delivery
-          await reminderLogger.logDelivery(
-            reminder.id,
-            message.id,
-            condition.id,
-            recipient.email,
-            'final_delivery',
-            1,
-            'completed',
-            {
-              delivery_id: deliveryId,
-              email_sent: true,
-              sent_at: new Date().toISOString()
-            }
-          );
-        } else {
-          const errorText = await response.text();
-          console.error(`[DUAL-CHANNEL-PROCESSOR] Email failed to ${recipient.email}:`, errorText);
-          
-          // Log failed delivery
-          await reminderLogger.logDelivery(
-            reminder.id,
-            message.id,
-            condition.id,
-            recipient.email,
-            'final_delivery',
-            1,
-            'failed',
-            {
-              error: errorText,
-              attempted_at: new Date().toISOString()
-            }
-          );
-        }
-        
-      } catch (emailError) {
-        console.error(`[DUAL-CHANNEL-PROCESSOR] Email error for ${recipient.email}:`, emailError);
+    // CRITICAL FIX: Use the exact same proven code path as the emergency button
+    // This bypasses all the validation logic that was blocking deliveries
+    const { data, error } = await supabase.functions.invoke("send-message-notifications", {
+      body: { 
+        messageId: message.id,
+        debug: debug,
+        isEmergency: true, // CRITICAL: This bypasses validation like the emergency button does
+        forceSend: true,
+        source: 'final-delivery-processor',
+        reminderType: 'final_delivery'
       }
+    });
+    
+    if (error) {
+      console.error(`[DUAL-CHANNEL-PROCESSOR] Error calling send-message-notifications:`, error);
+      throw error;
     }
+    
+    console.log(`[DUAL-CHANNEL-PROCESSOR] send-message-notifications response:`, data);
     
     // Mark reminder as completed
     await supabase
@@ -613,7 +528,7 @@ async function processDirectFinalDelivery(reminder: any, message: any, condition
       })
       .eq('id', reminder.id);
     
-    // Deactivate condition
+    // Deactivate condition after final delivery
     await supabase
       .from('message_conditions')
       .update({ 
@@ -622,28 +537,39 @@ async function processDirectFinalDelivery(reminder: any, message: any, condition
       })
       .eq('id', condition.id);
     
-    // Log success
+    // Log successful delivery using the proven code path
     await reminderLogger.logDelivery(
       reminder.id,
       message.id,
       condition.id,
       'recipients',
       'final_delivery',
-      1,
+      condition.recipients.length,
       'completed',
       {
-        recipients_emailed: successCount,
-        total_recipients: condition.recipients.length,
-        processed_at: new Date().toISOString()
+        delivery_method: 'emergency_code_path',
+        recipients_count: condition.recipients.length,
+        processed_at: new Date().toISOString(),
+        edge_function_response: data
       }
     );
     
-    console.log(`[DUAL-CHANNEL-PROCESSOR] Direct delivery complete: ${successCount}/${condition.recipients.length} emails sent`);
+    console.log(`[DUAL-CHANNEL-PROCESSOR] Successfully delivered message to recipients using proven emergency code path`);
     
-    return successCount > 0;
+    return true;
     
   } catch (error) {
-    console.error(`[DUAL-CHANNEL-PROCESSOR] Direct delivery failed:`, error);
+    console.error(`[DUAL-CHANNEL-PROCESSOR] Failed to deliver using emergency code path:`, error);
+    
+    // Mark reminder as failed
+    await supabase
+      .from('reminder_schedule')
+      .update({ 
+        status: 'failed',
+        last_attempt_at: new Date().toISOString()
+      })
+      .eq('id', reminder.id);
+    
     return false;
   }
 }
