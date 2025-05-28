@@ -1,9 +1,7 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Enhanced reminder monitoring service with improved reset and retry logic
- * FIXED: Reduced check frequency from 30 seconds to 5 minutes to prevent duplicate emails
  */
 export class ReminderMonitor {
   private intervalId: NodeJS.Timeout | null = null;
@@ -14,10 +12,10 @@ export class ReminderMonitor {
   start() {
     console.log("[REMINDER-MONITOR] Starting reminder monitoring service");
     
-    // FIXED: Check every 5 minutes instead of 30 seconds to prevent over-processing
+    // Check every 30 seconds
     this.intervalId = setInterval(() => {
       this.checkMissedReminders();
-    }, 5 * 60 * 1000); // 5 minutes
+    }, 30000);
     
     // Run initial check
     this.checkMissedReminders();

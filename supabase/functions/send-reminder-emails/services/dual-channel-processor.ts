@@ -4,8 +4,7 @@ import { sendCheckInWhatsAppToCreator } from "./whatsapp-sender.ts";
 import { reminderLogger } from "./reminder-logger.ts";
 
 /**
- * SIMPLIFIED: Direct email delivery without complex routing
- * FIXED: Added deduplication to prevent multiple check-in emails
+ * FIXED: 3-Type dual-channel processor with separate function calls for each type
  */
 export async function processDualChannelReminders(
   messageId?: string,
@@ -15,7 +14,7 @@ export async function processDualChannelReminders(
   try {
     const supabase = supabaseClient();
     
-    console.log(`[DUAL-CHANNEL-PROCESSOR] SIMPLIFIED processing for message: ${messageId || 'all'}`);
+    console.log(`[DUAL-CHANNEL-PROCESSOR] 3-TYPE processing for message: ${messageId || 'all'}`);
     
     // Clean up stuck reminders first
     await supabase
@@ -23,12 +22,6 @@ export async function processDualChannelReminders(
       .update({ status: 'failed' })
       .eq('status', 'processing')
       .lt('scheduled_at', new Date(Date.now() - 10 * 60 * 1000).toISOString());
-    
-    // CRITICAL FIX: Clean up duplicate reminders before processing
-    if (!messageId) {
-      // If processing all messages, clean up system-wide duplicates
-      await cleanupDuplicateReminders(supabase);
-    }
     
     // Build query for due reminders
     let query = supabase
@@ -85,17 +78,13 @@ export async function processDualChannelReminders(
       return { processedCount: 0, successCount: 0, failedCount: 0, errors: [] };
     }
     
-    // CRITICAL FIX: Deduplicate reminders by message/condition/type before processing
-    const uniqueReminders = deduplicateReminders(dueReminders);
-    console.log(`[DUAL-CHANNEL-PROCESSOR] Processing ${uniqueReminders.length} unique reminders (removed ${dueReminders.length - uniqueReminders.length} duplicates)`);
-    
     let processedCount = 0;
     let successCount = 0;
     let failedCount = 0;
     const errors: string[] = [];
     
-    // Process each unique due reminder with SIMPLIFIED handlers
-    for (const reminder of uniqueReminders) {
+    // Process each due reminder with the correct handler
+    for (const reminder of dueReminders) {
       try {
         processedCount++;
         
@@ -126,18 +115,18 @@ export async function processDualChannelReminders(
         
         let success = false;
         
-        // SIMPLIFIED: Direct processing based on reminder type
+        // CRITICAL: Route to the correct handler based on reminder type
         if (reminder.reminder_type === 'reminder') {
-          console.log(`[DUAL-CHANNEL-PROCESSOR] CHECK-IN REMINDER - sending to CREATOR`);
+          console.log(`[DUAL-CHANNEL-PROCESSOR] CHECK-IN REMINDER - sending to CREATOR via email/WhatsApp`);
           success = await processCreatorReminder(reminder, message, condition, debug);
           
         } else if (reminder.reminder_type === 'final_notice') {
-          console.log(`[DUAL-CHANNEL-PROCESSOR] FINAL NOTICE - sending to CREATOR`);
+          console.log(`[DUAL-CHANNEL-PROCESSOR] FINAL NOTICE - sending to CREATOR via email/WhatsApp`);
           success = await processFinalNotice(reminder, message, condition, debug);
           
         } else if (reminder.reminder_type === 'final_delivery') {
-          console.log(`[DUAL-CHANNEL-PROCESSOR] FINAL DELIVERY - USING PROVEN EMERGENCY CODE PATH`);
-          success = await processDirectFinalDelivery(reminder, message, condition, debug);
+          console.log(`[DUAL-CHANNEL-PROCESSOR] FINAL DELIVERY - sending to RECIPIENTS via send-message-notifications`);
+          success = await processFinalDelivery(reminder, message, condition, debug);
         }
         
         if (success) {
@@ -182,143 +171,12 @@ export async function processDualChannelReminders(
 }
 
 /**
- * CRITICAL FIX: Clean up duplicate reminders by marking all but the most recent one as obsolete
- */
-async function cleanupDuplicateReminders(supabase: any) {
-  try {
-    console.log("[DUAL-CHANNEL-PROCESSOR] Cleaning up duplicate reminders system-wide");
-    
-    // Get all message/condition/type combinations that have more than one pending reminder
-    const { data: duplicates, error } = await supabase.rpc('find_duplicate_reminders');
-    
-    if (error) {
-      console.error("[DUAL-CHANNEL-PROCESSOR] Error finding duplicates:", error);
-      return;
-    }
-    
-    if (!duplicates || duplicates.length === 0) {
-      console.log("[DUAL-CHANNEL-PROCESSOR] No duplicates found");
-      return;
-    }
-    
-    console.log(`[DUAL-CHANNEL-PROCESSOR] Found ${duplicates.length} message/condition/type combinations with duplicates`);
-    
-    // For each combination, keep only the most recent reminder
-    for (const dup of duplicates) {
-      try {
-        const { data: reminders } = await supabase
-          .from('reminder_schedule')
-          .select('id')
-          .eq('message_id', dup.message_id)
-          .eq('condition_id', dup.condition_id)
-          .eq('reminder_type', dup.reminder_type)
-          .eq('status', 'pending')
-          .order('created_at', { ascending: false })
-          .limit(1000);
-        
-        if (reminders.length <= 1) continue;
-        
-        // Keep the first one (most recent), mark the rest as obsolete
-        const keepId = reminders[0].id;
-        const obsoleteIds = reminders.slice(1).map(r => r.id);
-        
-        console.log(`[DUAL-CHANNEL-PROCESSOR] For ${dup.message_id}/${dup.condition_id}/${dup.reminder_type}: Keeping ${keepId}, marking ${obsoleteIds.length} as obsolete`);
-        
-        await supabase
-          .from('reminder_schedule')
-          .update({ status: 'obsolete' })
-          .in('id', obsoleteIds);
-          
-      } catch (dupError) {
-        console.error(`[DUAL-CHANNEL-PROCESSOR] Error cleaning duplicate for ${dup.message_id}/${dup.condition_id}:`, dupError);
-      }
-    }
-  } catch (error) {
-    console.error("[DUAL-CHANNEL-PROCESSOR] Error in cleanupDuplicateReminders:", error);
-  }
-}
-
-/**
- * CRITICAL FIX: Deduplicate reminders by message/condition/type - keep only the most recent
- */
-function deduplicateReminders(reminders: any[]): any[] {
-  if (!reminders || reminders.length <= 1) return reminders;
-  
-  const uniqueKeyCombos = new Map();
-  const results = [];
-  
-  // Group by message_id + condition_id + reminder_type
-  for (const reminder of reminders) {
-    const key = `${reminder.message_id}:${reminder.condition_id}:${reminder.reminder_type}`;
-    
-    if (!uniqueKeyCombos.has(key)) {
-      uniqueKeyCombos.set(key, reminder);
-      results.push(reminder);
-    } else {
-      // If we have a more recent scheduled_at date, use that one instead
-      const existing = uniqueKeyCombos.get(key);
-      if (new Date(reminder.scheduled_at) > new Date(existing.scheduled_at)) {
-        // Remove the older one from results
-        const index = results.indexOf(existing);
-        if (index !== -1) {
-          results.splice(index, 1);
-        }
-        // Add the newer one
-        uniqueKeyCombos.set(key, reminder);
-        results.push(reminder);
-      }
-    }
-  }
-  
-  return results;
-}
-
-/**
  * Process check-in reminder - send to creator via email/WhatsApp
  */
 async function processCreatorReminder(reminder: any, message: any, condition: any, debug: boolean): Promise<boolean> {
   const supabase = supabaseClient();
   
   try {
-    // CRITICAL FIX: Check if a reminder has already been sent recently to avoid duplicates
-    const recentReminderCheck = new Date();
-    recentReminderCheck.setHours(recentReminderCheck.getHours() - 2); // Check for reminders in the last 2 hours
-    
-    const { data: recentReminders } = await supabase
-      .from('reminder_delivery_log')
-      .select('id')
-      .eq('message_id', message.id)
-      .eq('delivery_channel', 'email')
-      .gt('created_at', recentReminderCheck.toISOString())
-      .limit(1);
-    
-    if (recentReminders && recentReminders.length > 0) {
-      console.log(`[DUAL-CHANNEL-PROCESSOR] Found recent reminder already sent for message ${message.id}, skipping`);
-      
-      // Mark this reminder as completed since another one was already sent
-      await supabase
-        .from('reminder_schedule')
-        .update({ 
-          status: 'completed',
-          last_attempt_at: new Date().toISOString()
-        })
-        .eq('id', reminder.id);
-        
-      // Log the skipped reminder
-      await reminderLogger.logDelivery(
-        reminder.id,
-        message.id,
-        condition.id,
-        'skipped-duplicate',
-        'check_in_reminder',
-        1,
-        'skipped',
-        { reason: 'Recent reminder already sent' }
-      );
-      
-      return true; // Consider this a success since we're avoiding duplications
-    }
-    
     // Get creator's profile
     const { data: profile } = await supabase
       .from('profiles')
@@ -474,50 +332,34 @@ async function processFinalNotice(reminder: any, message: any, condition: any, d
 }
 
 /**
- * SIMPLIFIED: Direct email delivery to recipients - NO COMPLEX ROUTING
+ * CRITICAL: Process final delivery - send to recipients via send-message-notifications
  */
-async function processDirectFinalDelivery(reminder: any, message: any, condition: any, debug: boolean): Promise<boolean> {
+async function processFinalDelivery(reminder: any, message: any, condition: any, debug: boolean): Promise<boolean> {
   const supabase = supabaseClient();
   
   try {
-    console.log(`[DUAL-CHANNEL-PROCESSOR] USING PROVEN EMERGENCY CODE PATH for message ${message.id}`);
+    console.log(`[DUAL-CHANNEL-PROCESSOR] FINAL DELIVERY - sending to RECIPIENTS`);
     
-    if (!condition.recipients || condition.recipients.length === 0) {
-      console.log(`[DUAL-CHANNEL-PROCESSOR] No recipients for message ${message.id}`);
-      
-      // Mark reminder as completed even with no recipients
-      await supabase
-        .from('reminder_schedule')
-        .update({ 
-          status: 'completed',
-          last_attempt_at: new Date().toISOString()
-        })
-        .eq('id', reminder.id);
-      
-      return true;
-    }
-    
-    console.log(`[DUAL-CHANNEL-PROCESSOR] Calling send-message-notifications with isEmergency=true for ${condition.recipients.length} recipients`);
-    
-    // CRITICAL FIX: Use the exact same proven code path as the emergency button
-    // This bypasses all the validation logic that was blocking deliveries
-    const { data, error } = await supabase.functions.invoke("send-message-notifications", {
-      body: { 
+    // CRITICAL: Call send-message-notifications with specific parameters for final delivery
+    const deliveryResult = await supabase.functions.invoke('send-message-notifications', {
+      body: {
         messageId: message.id,
-        debug: debug,
-        isEmergency: true, // CRITICAL: This bypasses validation like the emergency button does
+        conditionId: condition.id,
         forceSend: true,
+        isEmergency: false,
+        debug: debug,
         source: 'final-delivery-processor',
+        bypassDeduplication: true,
         reminderType: 'final_delivery'
       }
     });
     
-    if (error) {
-      console.error(`[DUAL-CHANNEL-PROCESSOR] Error calling send-message-notifications:`, error);
-      throw error;
+    if (deliveryResult.error) {
+      console.error(`[DUAL-CHANNEL-PROCESSOR] Final delivery failed:`, deliveryResult.error);
+      throw new Error(`Message delivery failed: ${deliveryResult.error.message}`);
     }
     
-    console.log(`[DUAL-CHANNEL-PROCESSOR] send-message-notifications response:`, data);
+    console.log(`[DUAL-CHANNEL-PROCESSOR] Final delivery to recipients completed successfully`);
     
     // Mark reminder as completed
     await supabase
@@ -528,7 +370,7 @@ async function processDirectFinalDelivery(reminder: any, message: any, condition
       })
       .eq('id', reminder.id);
     
-    // Deactivate condition after final delivery
+    // Deactivate condition
     await supabase
       .from('message_conditions')
       .update({ 
@@ -537,39 +379,27 @@ async function processDirectFinalDelivery(reminder: any, message: any, condition
       })
       .eq('id', condition.id);
     
-    // Log successful delivery using the proven code path
+    // Log success
     await reminderLogger.logDelivery(
       reminder.id,
       message.id,
       condition.id,
       'recipients',
       'final_delivery',
-      condition.recipients.length,
+      1,
       'completed',
       {
-        delivery_method: 'emergency_code_path',
-        recipients_count: condition.recipients.length,
-        processed_at: new Date().toISOString(),
-        edge_function_response: data
+        reminder_type: 'final_delivery',
+        recipients_notified: true,
+        condition_deactivated: true,
+        processed_at: new Date().toISOString()
       }
     );
-    
-    console.log(`[DUAL-CHANNEL-PROCESSOR] Successfully delivered message to recipients using proven emergency code path`);
     
     return true;
     
   } catch (error) {
-    console.error(`[DUAL-CHANNEL-PROCESSOR] Failed to deliver using emergency code path:`, error);
-    
-    // Mark reminder as failed
-    await supabase
-      .from('reminder_schedule')
-      .update({ 
-        status: 'failed',
-        last_attempt_at: new Date().toISOString()
-      })
-      .eq('id', reminder.id);
-    
+    console.error(`[DUAL-CHANNEL-PROCESSOR] Final delivery failed:`, error);
     return false;
   }
 }
@@ -622,7 +452,6 @@ async function sendFinalNoticeWhatsApp(
 
 /**
  * Generate missing reminder schedules for armed conditions
- * FIXED: Add deduplication when generating missing reminders
  */
 export async function generateMissingReminders(debug: boolean = false): Promise<number> {
   try {
@@ -651,14 +480,18 @@ export async function generateMissingReminders(debug: boolean = false): Promise<
       // Check if this condition already has pending reminders
       const { data: existingReminders } = await supabase
         .from('reminder_schedule')
-        .select('id, reminder_type')
+        .select('id')
         .eq('condition_id', condition.id)
-        .eq('status', 'pending');
+        .eq('status', 'pending')
+        .limit(1);
       
-      // Create a map of existing reminder types to check for duplicates
-      const existingTypes = new Set();
-      if (existingReminders) {
-        existingReminders.forEach(r => existingTypes.add(r.reminder_type));
+      if (existingReminders && existingReminders.length > 0) {
+        continue; // Skip if reminders already exist
+      }
+      
+      // Generate new reminder schedule with 3 types
+      if (debug) {
+        console.log(`[DUAL-CHANNEL-PROCESSOR] Generating 3-type reminders for condition ${condition.id}`);
       }
       
       // Calculate deadline
@@ -667,36 +500,41 @@ export async function generateMissingReminders(debug: boolean = false): Promise<
       deadline.setHours(deadline.getHours() + (condition.hours_threshold || 0));
       deadline.setMinutes(deadline.getMinutes() + (condition.minutes_threshold || 0));
       
+      // Generate all 3 types of reminder entries
+      const reminderHours = condition.reminder_hours || [24 * 60]; // Default to 24 hours
       const reminderEntries = [];
       
-      // Only add reminder if none of this type exists already
-      if (!existingTypes.has('reminder')) {
-        // Get earliest valid reminder time
-        const reminderHours = condition.reminder_hours || [24 * 60]; // Default to 24 hours
-        let earliestValidTime = null;
+      // 1. Check-in reminders
+      for (const minutes of reminderHours) {
+        const scheduledAt = new Date(deadline.getTime() - (minutes * 60 * 1000));
         
-        for (const minutes of reminderHours) {
-          const reminderTime = new Date(deadline.getTime() - (minutes * 60 * 1000));
-          if (reminderTime > new Date()) {
-            earliestValidTime = reminderTime;
-            break;
-          }
-        }
-        
-        if (earliestValidTime) {
+        if (scheduledAt > new Date()) {
           reminderEntries.push({
             message_id: condition.message_id,
             condition_id: condition.id,
-            scheduled_at: earliestValidTime.toISOString(),
+            scheduled_at: scheduledAt.toISOString(),
             reminder_type: 'reminder',
             status: 'pending',
-            delivery_priority: 'normal'
+            delivery_priority: minutes < 60 ? 'high' : 'normal'
           });
         }
       }
       
-      // Only add final delivery if none exists already
-      if (!existingTypes.has('final_delivery') && deadline > new Date()) {
+      // 2. Final notice (15 minutes before deadline)
+      const finalNoticeTime = new Date(deadline.getTime() - (15 * 60 * 1000));
+      if (finalNoticeTime > new Date()) {
+        reminderEntries.push({
+          message_id: condition.message_id,
+          condition_id: condition.id,
+          scheduled_at: finalNoticeTime.toISOString(),
+          reminder_type: 'final_notice',
+          status: 'pending',
+          delivery_priority: 'high'
+        });
+      }
+      
+      // 3. Final delivery (at exact deadline)
+      if (deadline > new Date()) {
         reminderEntries.push({
           message_id: condition.message_id,
           condition_id: condition.id,
@@ -717,7 +555,7 @@ export async function generateMissingReminders(debug: boolean = false): Promise<
     }
     
     if (debug) {
-      console.log(`[DUAL-CHANNEL-PROCESSOR] Generated ${generatedCount} missing reminders with deduplication`);
+      console.log(`[DUAL-CHANNEL-PROCESSOR] Generated ${generatedCount} missing reminders`);
     }
     
     return generatedCount;
