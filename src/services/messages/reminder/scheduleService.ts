@@ -99,12 +99,16 @@ export async function createOrUpdateReminderSchedule(params: ReminderSchedulePar
 function calculateFixedSchedule(params: ReminderScheduleParams): any[] {
   const { messageId, conditionId, conditionType, triggerDate, reminderMinutes, lastChecked, hoursThreshold, minutesThreshold } = params;
   
-  // Calculate effective deadline
-  let effectiveDeadline: Date | null = null;
   const now = new Date();
+  console.log(`[REMINDER-SERVICE] Current time: ${now.toISOString()}`);
+  
+  // Calculate effective deadline with FIXED logic
+  let effectiveDeadline: Date | null = null;
   
   if (['no_check_in', 'regular_check_in', 'inactivity_to_date'].includes(conditionType) && lastChecked && (hoursThreshold !== undefined || minutesThreshold !== undefined)) {
     const lastCheckedDate = new Date(lastChecked);
+    
+    // CRITICAL FIX: Calculate deadline as lastChecked + threshold (not just lastChecked)
     effectiveDeadline = new Date(lastCheckedDate);
     
     if (hoursThreshold) {
@@ -115,7 +119,12 @@ function calculateFixedSchedule(params: ReminderScheduleParams): any[] {
       effectiveDeadline.setMinutes(effectiveDeadline.getMinutes() + minutesThreshold);
     }
     
-    console.log(`[REMINDER-SERVICE] Check-in deadline: ${effectiveDeadline.toISOString()}`);
+    console.log(`[REMINDER-SERVICE] FIXED Check-in deadline calculation:`);
+    console.log(`[REMINDER-SERVICE] - Last checked: ${lastCheckedDate.toISOString()}`);
+    console.log(`[REMINDER-SERVICE] - Hours threshold: ${hoursThreshold || 0}`);
+    console.log(`[REMINDER-SERVICE] - Minutes threshold: ${minutesThreshold || 0}`);
+    console.log(`[REMINDER-SERVICE] - Calculated deadline: ${effectiveDeadline.toISOString()}`);
+    
   } else if (triggerDate) {
     effectiveDeadline = new Date(triggerDate);
     console.log(`[REMINDER-SERVICE] Using trigger date: ${effectiveDeadline.toISOString()}`);
@@ -130,18 +139,18 @@ function calculateFixedSchedule(params: ReminderScheduleParams): any[] {
   
   const scheduleEntries = [];
   
-  // CRITICAL FIX: Ensure deadline is in the future for new conditions
+  // CRITICAL FIX: Ensure deadline is in the future
   if (effectiveDeadline <= now) {
-    console.log(`[REMINDER-SERVICE] Deadline is in the past or too close - adjusting to future time`);
+    console.log(`[REMINDER-SERVICE] Deadline ${effectiveDeadline.toISOString()} is in the past or too close - adjusting to future time`);
     
     // For check-in conditions that are overdue, set a reasonable future deadline
     if (['no_check_in', 'regular_check_in', 'inactivity_to_date'].includes(conditionType)) {
-      // Set deadline to at least 10 minutes from now
-      effectiveDeadline = new Date(now.getTime() + 10 * 60 * 1000);
+      // Set deadline to at least 30 minutes from now for overdue check-ins
+      effectiveDeadline = new Date(now.getTime() + 30 * 60 * 1000);
       console.log(`[REMINDER-SERVICE] Adjusted check-in deadline to: ${effectiveDeadline.toISOString()}`);
     } else {
       // For other conditions, create immediate final delivery
-      const immediateTime = new Date(now.getTime() + 30000); // 30 seconds from now
+      const immediateTime = new Date(now.getTime() + 2 * 60 * 1000); // 2 minutes from now
       
       scheduleEntries.push({
         message_id: messageId,
@@ -153,20 +162,28 @@ function calculateFixedSchedule(params: ReminderScheduleParams): any[] {
         retry_strategy: 'aggressive'
       });
       
+      console.log(`[REMINDER-SERVICE] Created immediate final delivery at ${immediateTime.toISOString()}`);
       return scheduleEntries;
     }
   }
   
   // FIXED: Create reminder entries with proper future time validation
   if (reminderMinutes && reminderMinutes.length > 0) {
-    // Find the earliest valid reminder time that's in the future
-    const sortedMinutes = [...reminderMinutes].sort((a, b) => b - a); // Sort descending to get earliest reminder first
+    // Sort reminder minutes in descending order to get the earliest (largest) one first
+    const sortedMinutes = [...reminderMinutes].sort((a, b) => b - a);
     
     for (const minutes of sortedMinutes) {
+      // CRITICAL FIX: Calculate reminder time as deadline MINUS the minutes
       const reminderTime = new Date(effectiveDeadline.getTime() - (minutes * 60 * 1000));
       
-      // CRITICAL FIX: Only create reminders that are in the future
-      if (reminderTime > new Date(now.getTime() + 60000)) { // At least 1 minute in the future
+      console.log(`[REMINDER-SERVICE] Checking reminder ${minutes} minutes before deadline:`);
+      console.log(`[REMINDER-SERVICE] - Deadline: ${effectiveDeadline.toISOString()}`);
+      console.log(`[REMINDER-SERVICE] - Reminder time: ${reminderTime.toISOString()}`);
+      console.log(`[REMINDER-SERVICE] - Current time: ${now.toISOString()}`);
+      console.log(`[REMINDER-SERVICE] - Is future? ${reminderTime > now}`);
+      
+      // CRITICAL FIX: Only create reminders that are in the future (at least 2 minutes)
+      if (reminderTime > new Date(now.getTime() + 2 * 60 * 1000)) {
         scheduleEntries.push({
           message_id: messageId,
           condition_id: conditionId,
@@ -177,16 +194,16 @@ function calculateFixedSchedule(params: ReminderScheduleParams): any[] {
           retry_strategy: 'standard'
         });
         
-        console.log(`[REMINDER-SERVICE] Created reminder for ${minutes} minutes before deadline at ${reminderTime.toISOString()}`);
+        console.log(`[REMINDER-SERVICE] ✓ Created reminder for ${minutes} minutes before deadline at ${reminderTime.toISOString()}`);
         break; // Only create ONE reminder to prevent duplicates
       } else {
-        console.log(`[REMINDER-SERVICE] Skipping reminder ${minutes} minutes before deadline - would be at ${reminderTime.toISOString()} (too close to now)`);
+        console.log(`[REMINDER-SERVICE] ✗ Skipping reminder ${minutes} minutes before deadline - would be at ${reminderTime.toISOString()} (too close to now)`);
       }
     }
   }
   
   // ALWAYS add final delivery at deadline if it's in the future
-  if (effectiveDeadline > new Date(now.getTime() + 60000)) { // At least 1 minute in the future
+  if (effectiveDeadline > new Date(now.getTime() + 2 * 60 * 1000)) {
     scheduleEntries.push({
       message_id: messageId,
       condition_id: conditionId,
@@ -197,12 +214,23 @@ function calculateFixedSchedule(params: ReminderScheduleParams): any[] {
       retry_strategy: 'aggressive'
     });
     
-    console.log(`[REMINDER-SERVICE] Created final delivery at ${effectiveDeadline.toISOString()}`);
+    console.log(`[REMINDER-SERVICE] ✓ Created final delivery at ${effectiveDeadline.toISOString()}`);
   } else {
-    console.warn(`[REMINDER-SERVICE] Deadline ${effectiveDeadline.toISOString()} is too close to now, skipping final delivery`);
+    console.warn(`[REMINDER-SERVICE] ✗ Deadline ${effectiveDeadline.toISOString()} is too close to now, skipping final delivery`);
   }
   
-  console.log(`[REMINDER-SERVICE] Created ${scheduleEntries.length} total reminder entries with proper future times`);
+  console.log(`[REMINDER-SERVICE] FINAL: Created ${scheduleEntries.length} total reminder entries with proper future times`);
+  
+  // VALIDATION: Ensure all reminders are in the future
+  const invalidReminders = scheduleEntries.filter(entry => new Date(entry.scheduled_at) <= now);
+  if (invalidReminders.length > 0) {
+    console.error(`[REMINDER-SERVICE] ERROR: Found ${invalidReminders.length} reminders with past times!`);
+    invalidReminders.forEach(entry => {
+      console.error(`[REMINDER-SERVICE] - Invalid: ${entry.reminder_type} at ${entry.scheduled_at}`);
+    });
+    return []; // Don't create any reminders if validation fails
+  }
+  
   return scheduleEntries;
 }
 
