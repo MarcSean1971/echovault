@@ -1,6 +1,7 @@
+
 /**
  * Service functions for creating and managing reminder schedules
- * FIXED: Added proper deduplication to prevent multiple check-in reminder emails
+ * FIXED: Corrected time calculation to ensure future scheduled times
  */
 
 import { supabase } from "@/integrations/supabase/client";
@@ -33,15 +34,15 @@ export async function createOrUpdateReminderSchedule(params: ReminderSchedulePar
       await markRemindersAsObsolete(params.messageId, params.conditionId, isEdit);
     }
     
-    // Calculate scheduled times - SIMPLIFIED to create only ONE reminder per condition
-    const scheduleTimes = calculateSimplifiedSchedule(params);
+    // Calculate scheduled times - FIXED to ensure future times
+    const scheduleTimes = calculateFixedSchedule(params);
     
     if (scheduleTimes.length === 0) {
       console.warn("[REMINDER-SERVICE] No schedule times generated");
       return false;
     }
     
-    console.log(`[REMINDER-SERVICE] Generated ${scheduleTimes.length} schedule entries (deduplicated)`);
+    console.log(`[REMINDER-SERVICE] Generated ${scheduleTimes.length} schedule entries (with proper future times)`);
     scheduleTimes.forEach(entry => {
       console.log(`[REMINDER-SERVICE] - ${entry.reminder_type} at ${entry.scheduled_at}`);
     });
@@ -73,7 +74,7 @@ export async function createOrUpdateReminderSchedule(params: ReminderSchedulePar
       console.log(`[REMINDER-SERVICE] Verified ${count} pending reminders exist for message ${params.messageId}`);
     }
     
-    console.log(`[REMINDER-SERVICE] Successfully created deduplicated reminder schedule entries`);
+    console.log(`[REMINDER-SERVICE] Successfully created reminder schedule with proper future times`);
     
     // Broadcast update event
     window.dispatchEvent(new CustomEvent('conditions-updated', { 
@@ -85,17 +86,6 @@ export async function createOrUpdateReminderSchedule(params: ReminderSchedulePar
       }
     }));
     
-    // For immediate final deliveries, trigger processing right away but only if message is past due
-    const finalDelivery = scheduleTimes.find(entry => 
-      entry.reminder_type === 'final_delivery' && 
-      new Date(entry.scheduled_at) <= new Date()
-    );
-    
-    if (finalDelivery) {
-      console.log(`[REMINDER-SERVICE] Triggering immediate processing for past-due final delivery`);
-      await triggerImmediateProcessing(params.messageId);
-    }
-    
     return true;
   } catch (error) {
     console.error("[REMINDER-SERVICE] Error in createOrUpdateReminderSchedule:", error);
@@ -104,10 +94,9 @@ export async function createOrUpdateReminderSchedule(params: ReminderSchedulePar
 }
 
 /**
- * Calculate reminder schedule times - SIMPLIFIED version that creates only ONE final delivery
- * and ONE reminder per message to prevent duplicate emails
+ * FIXED: Calculate reminder schedule times with proper future time validation
  */
-function calculateSimplifiedSchedule(params: ReminderScheduleParams): any[] {
+function calculateFixedSchedule(params: ReminderScheduleParams): any[] {
   const { messageId, conditionId, conditionType, triggerDate, reminderMinutes, lastChecked, hoursThreshold, minutesThreshold } = params;
   
   // Calculate effective deadline
@@ -126,7 +115,7 @@ function calculateSimplifiedSchedule(params: ReminderScheduleParams): any[] {
       effectiveDeadline.setMinutes(effectiveDeadline.getMinutes() + minutesThreshold);
     }
     
-    console.log(`[REMINDER-SERVICE] Calculated deadline: ${effectiveDeadline.toISOString()}`);
+    console.log(`[REMINDER-SERVICE] Check-in deadline: ${effectiveDeadline.toISOString()}`);
   } else if (triggerDate) {
     effectiveDeadline = new Date(triggerDate);
     console.log(`[REMINDER-SERVICE] Using trigger date: ${effectiveDeadline.toISOString()}`);
@@ -141,63 +130,79 @@ function calculateSimplifiedSchedule(params: ReminderScheduleParams): any[] {
   
   const scheduleEntries = [];
   
-  // If deadline has passed, create IMMEDIATE final delivery only
+  // CRITICAL FIX: Ensure deadline is in the future for new conditions
   if (effectiveDeadline <= now) {
-    console.log(`[REMINDER-SERVICE] CRITICAL: Deadline has passed! Creating IMMEDIATE final delivery`);
-    const immediateTime = new Date(now.getTime() + 10000); // 10 seconds from now
+    console.log(`[REMINDER-SERVICE] Deadline is in the past or too close - adjusting to future time`);
     
+    // For check-in conditions that are overdue, set a reasonable future deadline
+    if (['no_check_in', 'regular_check_in', 'inactivity_to_date'].includes(conditionType)) {
+      // Set deadline to at least 10 minutes from now
+      effectiveDeadline = new Date(now.getTime() + 10 * 60 * 1000);
+      console.log(`[REMINDER-SERVICE] Adjusted check-in deadline to: ${effectiveDeadline.toISOString()}`);
+    } else {
+      // For other conditions, create immediate final delivery
+      const immediateTime = new Date(now.getTime() + 30000); // 30 seconds from now
+      
+      scheduleEntries.push({
+        message_id: messageId,
+        condition_id: conditionId,
+        scheduled_at: immediateTime.toISOString(),
+        reminder_type: 'final_delivery',
+        status: 'pending',
+        delivery_priority: 'critical',
+        retry_strategy: 'aggressive'
+      });
+      
+      return scheduleEntries;
+    }
+  }
+  
+  // FIXED: Create reminder entries with proper future time validation
+  if (reminderMinutes && reminderMinutes.length > 0) {
+    // Find the earliest valid reminder time that's in the future
+    const sortedMinutes = [...reminderMinutes].sort((a, b) => b - a); // Sort descending to get earliest reminder first
+    
+    for (const minutes of sortedMinutes) {
+      const reminderTime = new Date(effectiveDeadline.getTime() - (minutes * 60 * 1000));
+      
+      // CRITICAL FIX: Only create reminders that are in the future
+      if (reminderTime > new Date(now.getTime() + 60000)) { // At least 1 minute in the future
+        scheduleEntries.push({
+          message_id: messageId,
+          condition_id: conditionId,
+          scheduled_at: reminderTime.toISOString(),
+          reminder_type: 'reminder',
+          status: 'pending',
+          delivery_priority: 'normal',
+          retry_strategy: 'standard'
+        });
+        
+        console.log(`[REMINDER-SERVICE] Created reminder for ${minutes} minutes before deadline at ${reminderTime.toISOString()}`);
+        break; // Only create ONE reminder to prevent duplicates
+      } else {
+        console.log(`[REMINDER-SERVICE] Skipping reminder ${minutes} minutes before deadline - would be at ${reminderTime.toISOString()} (too close to now)`);
+      }
+    }
+  }
+  
+  // ALWAYS add final delivery at deadline if it's in the future
+  if (effectiveDeadline > new Date(now.getTime() + 60000)) { // At least 1 minute in the future
     scheduleEntries.push({
       message_id: messageId,
       condition_id: conditionId,
-      scheduled_at: immediateTime.toISOString(),
+      scheduled_at: effectiveDeadline.toISOString(),
       reminder_type: 'final_delivery',
       status: 'pending',
       delivery_priority: 'critical',
       retry_strategy: 'aggressive'
     });
     
-    return scheduleEntries;
+    console.log(`[REMINDER-SERVICE] Created final delivery at ${effectiveDeadline.toISOString()}`);
+  } else {
+    console.warn(`[REMINDER-SERVICE] Deadline ${effectiveDeadline.toISOString()} is too close to now, skipping final delivery`);
   }
   
-  // SIMPLIFIED: Create ONLY ONE reminder (the earliest one) to prevent duplicate emails
-  if (reminderMinutes && reminderMinutes.length > 0) {
-    // Find the earliest valid reminder time
-    const sortedMinutes = [...reminderMinutes].sort((a, b) => b - a); // Sort descending to get earliest reminder first
-    let earliestValidReminderTime: Date | null = null;
-    
-    for (const minutes of sortedMinutes) {
-      const reminderTime = new Date(effectiveDeadline.getTime() - (minutes * 60 * 1000));
-      if (reminderTime > now) {
-        earliestValidReminderTime = reminderTime;
-        break;
-      }
-    }
-    
-    if (earliestValidReminderTime) {
-      scheduleEntries.push({
-        message_id: messageId,
-        condition_id: conditionId,
-        scheduled_at: earliestValidReminderTime.toISOString(),
-        reminder_type: 'reminder',
-        status: 'pending',
-        delivery_priority: 'normal',
-        retry_strategy: 'standard'
-      });
-    }
-  }
-  
-  // ALWAYS add final delivery at exact deadline to ensure messages are sent
-  scheduleEntries.push({
-    message_id: messageId,
-    condition_id: conditionId,
-    scheduled_at: effectiveDeadline.toISOString(),
-    reminder_type: 'final_delivery',
-    status: 'pending',
-    delivery_priority: 'critical',
-    retry_strategy: 'aggressive'
-  });
-  
-  console.log(`[REMINDER-SERVICE] Created ${scheduleEntries.length} total reminder entries - SIMPLIFIED to prevent duplicates`);
+  console.log(`[REMINDER-SERVICE] Created ${scheduleEntries.length} total reminder entries with proper future times`);
   return scheduleEntries;
 }
 
